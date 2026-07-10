@@ -811,6 +811,7 @@ const BUILTIN_VIEWS=[
   {id:'projects',label:'案件管理',icon:'🎬'},
   {id:'pipeline',label:'商談管理',icon:'🤝'},
   {id:'teamgoals',label:'チームKGI/KPI',icon:'📈'},
+  {id:'bizinfo',label:'事業情報',icon:'📚'},
   {id:'posts',label:'投稿管理',icon:'📅'},
   {id:'docs',label:'ドキュメント',icon:'📁'},
   {id:'workers',label:'ワーカー管理',icon:'👥'},
@@ -885,7 +886,7 @@ function _applyCloudData(json){
   S=migrate(Object.assign(def,cloud));
   TEAM_KEYS.forEach(k=>{if(keepTeam[k]!==undefined)S[k]=keepTeam[k];});
   if(keepBiz!==undefined)S.bizBoard=keepBiz;
-  ['tasks','habits','jobs','logs','journals','goals','clients','workers','checkIns','customPages','customEx','navConfig','meals','workouts','pipeline','teamKgis','teamKpis','teamPosts','teamDocs','teamPages','bizUnits','teamMeetings','salesLeads','hpFees','salesSites','templates'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=def[k]||[];});
+  ['tasks','habits','jobs','logs','journals','goals','clients','workers','checkIns','customPages','customEx','navConfig','meals','workouts','pipeline','teamKgis','teamKpis','teamPosts','teamDocs','teamPages','bizUnits','teamMeetings','salesLeads','hpFees','salesSites','templates','bizInfo'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=def[k]||[];});
   if(FB_USER)S._uid=FB_USER.uid;
   localStorage.setItem(DB,JSON.stringify(S));
 }
@@ -947,7 +948,7 @@ function fbSetupRealtimeSync(){
 // チームデータは社内アプリ専用の shared/mcapp に保存(EditFlow の shared/team とは別物)。
 // Firestoreルールが共有アクセスを許可していれば自動で有効化。許可されない場合は
 // permission-denied を検知して自動で個人モードへフォールバック（現状維持・無害）。
-const TEAM_KEYS=['jobs','clients','workers','pipeline','teamKgis','teamKpis','teamPosts','teamDocs','teamPages','bizUnits','teamMeetings','salesLeads','hpFees','salesSites','templates'];
+const TEAM_KEYS=['jobs','clients','workers','pipeline','teamKgis','teamKpis','teamPosts','teamDocs','teamPages','bizUnits','teamMeetings','salesLeads','hpFees','salesSites','templates','bizInfo'];
 let TEAM_SHARE_OK=null;      // null=未判定 / true=共有有効 / false=個人モード
 let _teamUnsub=null;
 window._teamSnap=window._teamSnap||{};
@@ -1723,7 +1724,7 @@ let JOB_SORT='deadline'; // job sort order
 
 function defState(){return{
   tasks:[], clients:[], jobs:[], habits:[], goals:[], journals:[], logs:[], rewards:[],
-  checkIns:[], workouts:[], workers:[], memos:[], meals:[], pipeline:[], teamKgis:[], teamKpis:[], teamPosts:[], teamDocs:[], teamPages:[], salesLeads:[], hpFees:[], salesSites:[], templates:[],
+  checkIns:[], workouts:[], workers:[], memos:[], meals:[], pipeline:[], teamKgis:[], teamKpis:[], teamPosts:[], teamDocs:[], teamPages:[], salesLeads:[], hpFees:[], salesSites:[], templates:[], bizInfo:[],
   fs:JSON.parse(JSON.stringify(DEFAULT_FS)),
   dailySchedules:{},
   goalReviews:{},
@@ -2449,7 +2450,7 @@ function render(){
     }
     sessionStorage.setItem('ef_team_view',V);
     if(V==='kpi'){V='goals';} // KPI管理は目標・KPI統合ページにリダイレクト
-    const views={dashboard:rDash,tasks:rTasks,projects:rProjects,pipeline:rPipeline,teamgoals:rTeamGoals,posts:rPosts,docs:rDocs,workers:rWorkers,habits:rHabits,goals:rGoals,journal:rJournal,revenue:rRevenue,memo:rMemo,settings:rSettings,customize:rCustomize,aichat:rAIChat,fitness:rFitness,kpi:rKpi,bizboard:rBizBoard,bizunits:rBizUnits,minutes:rMinutes,salesleads:rSalesLeads,hpfee:rHpFee,salessites:rSalesSites,templates:rTemplates};
+    const views={dashboard:rDash,tasks:rTasks,projects:rProjects,pipeline:rPipeline,teamgoals:rTeamGoals,posts:rPosts,docs:rDocs,workers:rWorkers,habits:rHabits,goals:rGoals,journal:rJournal,revenue:rRevenue,memo:rMemo,settings:rSettings,customize:rCustomize,aichat:rAIChat,fitness:rFitness,kpi:rKpi,bizboard:rBizBoard,bizunits:rBizUnits,bizinfo:rBizInfo,minutes:rMinutes,salesleads:rSalesLeads,hpfee:rHpFee,salessites:rSalesSites,templates:rTemplates};
     let html;
     if(V.startsWith('tp_')){
       // チーム共有ページ(teamPages)を既存ブロックエディタで表示。BUILTIN_VIEWSガードを迂回する。
@@ -6064,6 +6065,59 @@ function tdSaveDoc(){
   save();closeModal();render();toast('ドキュメントを保存しました 📁');
 }
 function tdDelDoc(id){const d=(S.teamDocs||[]).find(x=>x.id===id);if(!d)return;d.deleted=true;d.updatedAt=Date.now();save();closeModal();render();toast('ドキュメントを削除しました');}
+// ===事業情報（事業部ごとのサービス情報・チーム共有）===
+let BI_BU='すべて';
+const BIZINFO_BUS=['HP制作&公式LINE構築・運用','Instagram運用代行','シフトさん','AI顧問','社内アプリ開発'];
+function _bizInfo(){return (S.bizInfo||[]).filter(c=>!c.deleted);}
+function _biBuList(){const extra=[...new Set([...(S.bizUnits||[]).map(u=>u.name),..._bizInfo().map(c=>c.bu)].filter(Boolean))].filter(n=>!BIZINFO_BUS.includes(n));return['すべて',...BIZINFO_BUS,...extra];}
+function biSetBu(i){const l=_biBuList();BI_BU=l[i]||'すべて';render();}
+function rBizInfo(){
+  const bus=_biBuList();
+  if(!bus.includes(BI_BU))BI_BU='すべて';
+  const cards=_bizInfo().filter(c=>BI_BU==='すべて'||c.bu===BI_BU).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  return`${secTitle('📚 事業情報')}
+<div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+  ${bus.map((b,i)=>`<button class="btn ${b===BI_BU?'btn-p':'btn-g'} btn-xs" onclick="biSetBu(${i})">${esc(b)}</button>`).join('')}
+</div>
+<div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+  <button class="btn btn-p btn-sm" onclick="biOpenCard()">＋ 情報カードを追加</button>
+  <span style="font-size:13px;color:var(--t2);align-self:center">${cards.length}件</span>
+</div>
+<div style="font-size:11px;color:var(--t3);margin-bottom:12px">プラン・価格・営業トークなど、事業部ごとのサービス情報をチームで共有します。</div>
+${!cards.length?`<div class="empty"><div class="empty-icon">📚</div><div class="empty-title">まだ情報カードがありません</div></div>`:cards.map(c=>`
+<div class="card" style="margin-bottom:10px">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+    <div style="min-width:0">
+      <div style="font-size:11px;font-weight:800;color:var(--pl);margin-bottom:2px">${esc(c.bu||'未分類')}</div>
+      <div style="font-weight:800;font-size:15px">${esc(c.title||'無題')}</div>
+    </div>
+    <button class="btn btn-g btn-xs" style="flex-shrink:0" onclick="biOpenCard('${c.id}')">✏️</button>
+  </div>
+  <div style="font-size:13px;color:var(--t2);margin-top:8px;white-space:pre-wrap;line-height:1.75">${esc(c.body||'')}</div>
+  <div style="font-size:10px;color:var(--t3);margin-top:8px">更新 ${c.updatedAt?tpFmtDate(c.updatedAt):'-'}</div>
+</div>`).join('')}`;
+}
+function biOpenCard(id){
+  const c=id?(S.bizInfo||[]).find(x=>x.id===id):null;
+  const bus=_biBuList().filter(b=>b!=='すべて');
+  openModalLg(`<div class="mhdr"><div class="mtitle">${c?'情報カードを編集':'情報カードを追加'}</div><button class="mclose" onclick="closeModal()">✕</button></div>
+<input type="hidden" id="bi-id" value="${c?c.id:''}">
+<div class="fg"><div class="fl">事業部 *</div><select id="bi-bu">${bus.map(b=>`<option${c&&c.bu===b?' selected':''}>${esc(b)}</option>`).join('')}</select></div>
+<div class="fg"><div class="fl">タイトル *</div><input id="bi-title" value="${esc(c?.title||'')}" placeholder="例: プラン一覧 / 営業トーク"></div>
+<div class="fg"><div class="fl">内容</div><textarea id="bi-body" rows="10">${esc(c?.body||'')}</textarea></div>
+<div class="mfooter"><button class="btn btn-g" onclick="closeModal()">キャンセル</button>${c?`<button class="btn btn-red" onclick="biDelCard('${c.id}')">削除</button>`:''}<button class="btn btn-p" onclick="biSaveCard()">保存</button></div>`);
+}
+function biSaveCard(){
+  const title=document.getElementById('bi-title').value.trim();
+  if(!title){toast('タイトルを入力してください','warn');return;}
+  const id=document.getElementById('bi-id').value;
+  const data={bu:document.getElementById('bi-bu').value,title,body:document.getElementById('bi-body').value.trim()};
+  if(!S.bizInfo)S.bizInfo=[];
+  if(id){const c=S.bizInfo.find(x=>x.id===id);if(c)Object.assign(c,data,{updatedAt:Date.now()});}
+  else{S.bizInfo.push(Object.assign({id:uid(),createdAt:today(),updatedAt:Date.now()},data));}
+  save();closeModal();render();toast('情報カードを保存しました 📚');
+}
+function biDelCard(id){if(!confirm('このカードを削除しますか？'))return;const c=(S.bizInfo||[]).find(x=>x.id===id);if(!c)return;c.deleted=true;c.updatedAt=Date.now();save();closeModal();render();toast('情報カードを削除しました');}
 // ===チームKGI/KPI（全アカウント共有・個人目標とは別）===
 function _pct(cur,tgt){tgt=+tgt||0;if(!tgt)return 0;return Math.max(0,Math.min(100,Math.round((+cur||0)/tgt*100)));}
 // 事業部フィルタ。項目のbuフィールド=事業部名(unitは既存の「単位」フィールドのため別名)。未設定は「全社」扱い。
@@ -11112,7 +11166,7 @@ initReminders();
 checkClientDraftTasks();
 slMigrateRegions();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260710-07';
+const APP_VERSION='20260710-08';
 
 render();
 function forceAppUpdate(){
