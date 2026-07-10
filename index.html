@@ -820,7 +820,7 @@ const BUILTIN_VIEWS=[
   {id:'salesleads',label:'営業リスト',icon:'📞'},
   {id:'hpfee',label:'維持費',icon:'💴'},
   {id:'salessites',label:'営業用サイト',icon:'🌐'},
-  {id:'templates',label:'テンプレ保管',icon:'🗂'},
+  // テンプレ保管(templates)は会長指示で非表示化(2026-07-10)。S.templates/TEAM_KEYS/rTemplatesは残置し復活可能。
 ];
 
 const DB_OLD='ef_team_v4';
@@ -5869,14 +5869,21 @@ const POST_STATUS=['下書き','予約済','投稿済'];
 const POST_BG={'下書き':'bk','予約済':'bb','投稿済':'bg'};
 const POST_ICON={'X':'𝕏','Threads':'@','Instagram':'📷','YouTube':'▶️','TikTok':'🎵','その他':'📱'};
 function _teamPosts(){return (S.teamPosts||[]).filter(p=>!p.deleted);}
+// アカウント別フィルタ(例: mono.create_X / ぽいっとHP_IG)。account未設定の既存投稿は「すべて」タブでのみ表示。
+let POSTS_ACC='すべて';
+function _postsAccList(){return['すべて',...[...new Set(_teamPosts().map(p=>p.account).filter(Boolean))].sort()];}
+function tpSetAcc(i){const l=_postsAccList();POSTS_ACC=l[i]||'すべて';render();}
 function rPosts(){
-  const posts=_teamPosts().slice().sort((a,b)=>((a.scheduledDate||'')+(a.scheduledTime||''))>((b.scheduledDate||'')+(b.scheduledTime||''))?1:-1);
+  const accs=_postsAccList();
+  if(!accs.includes(POSTS_ACC))POSTS_ACC='すべて';
+  const posts=_teamPosts().filter(p=>POSTS_ACC==='すべて'||p.account===POSTS_ACC)
+    .slice().sort((a,b)=>((a.scheduledDate||'')+(a.scheduledTime||''))>((b.scheduledDate||'')+(b.scheduledTime||''))?1:-1);
   const upcoming=posts.filter(p=>p.status!=='投稿済');
   const done=posts.filter(p=>p.status==='投稿済');
   const card=p=>`<div class="card" style="margin-bottom:8px;cursor:pointer" onclick="tpOpenPost('${p.id}')">
     <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
       <div style="min-width:0">
-        <div style="font-size:12px;color:var(--t2)">${POST_ICON[p.platform]||'📱'} ${esc(p.platform||'')} ・ <span class="badge ${POST_BG[p.status]||'bk'}" style="font-size:10px">${esc(p.status||'下書き')}</span></div>
+        <div style="font-size:12px;color:var(--t2)">${POST_ICON[p.platform]||'📱'} ${esc(p.platform||'')}${p.account?` ・ <span class="badge bk" style="font-size:10px">${esc(p.account)}</span>`:''} ・ <span class="badge ${POST_BG[p.status]||'bk'}" style="font-size:10px">${esc(p.status||'下書き')}</span></div>
         <div style="font-weight:600;font-size:13px;margin-top:3px;white-space:pre-wrap">${esc((p.content||'').slice(0,90))}${(p.content||'').length>90?'…':''}</div>
       </div>
       <div style="text-align:right;flex-shrink:0;font-size:11px;color:var(--t3)">${p.scheduledDate||''}<br>${p.scheduledTime||''}</div>
@@ -5887,6 +5894,7 @@ function rPosts(){
     </div>
   </div>`;
   return`${secTitle('📅 投稿管理')}
+<div class="sub-tabs" id="posts-acc-tabs">${accs.map((a,i)=>`<div class="stab${POSTS_ACC===a?' act':''}" onclick="tpSetAcc(${i})">${esc(a)}</div>`).join('')}</div>
 <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
   <button class="btn btn-p btn-sm" onclick="tpOpenPost()">＋ 投稿を追加</button>
   <span style="font-size:13px;color:var(--t2);align-self:center">予定 ${upcoming.length}件・投稿済 ${done.length}件</span>
@@ -5899,12 +5907,15 @@ ${done.length?`<div style="font-weight:800;font-size:14px;color:var(--t2);margin
 function tpMarkPosted(id){const p=(S.teamPosts||[]).find(x=>x.id===id);if(!p)return;p.status='投稿済';p.updatedAt=Date.now();save();render();toast('投稿済みにしました ✅');}
 function tpOpenPost(id){
   const p=id?(S.teamPosts||[]).find(x=>x.id===id):null;
+  const accCands=[...new Set(_teamPosts().map(x=>x.account).filter(Boolean))].sort();
+  const accDefault=p?(p.account||''):(POSTS_ACC!=='すべて'?POSTS_ACC:'');
   openModalLg(`<div class="mhdr"><div class="mtitle">${p?'投稿を編集':'投稿を追加'}</div><button class="mclose" onclick="closeModal()">✕</button></div>
 <input type="hidden" id="pt-id" value="${p?p.id:''}">
 <div class="frow">
   <div class="fg"><div class="fl">プラットフォーム</div><select id="pt-platform">${POST_PLATFORMS.map(pl=>`<option ${(p?.platform||'X')===pl?'selected':''}>${pl}</option>`).join('')}</select></div>
   <div class="fg"><div class="fl">ステータス</div><select id="pt-status">${POST_STATUS.map(s=>`<option ${(p?.status||'下書き')===s?'selected':''}>${s}</option>`).join('')}</select></div>
 </div>
+<div class="fg"><div class="fl">アカウント</div><input id="pt-account" value="${esc(accDefault)}" placeholder="例: mono.create_X / ぽいっとHP_IG" list="pt-acc-list"><datalist id="pt-acc-list">${accCands.map(a=>`<option value="${esc(a)}">`).join('')}</datalist></div>
 <div class="frow">
   <div class="fg"><div class="fl">投稿予定日</div><input type="date" id="pt-date" value="${p?.scheduledDate||''}"></div>
   <div class="fg"><div class="fl">時刻</div><input type="time" id="pt-time" value="${p?.scheduledTime||''}"></div>
@@ -5918,7 +5929,7 @@ function tpSavePost(){
   const content=document.getElementById('pt-content').value.trim();
   if(!content){toast('投稿内容を入力してください','warn');return;}
   const id=document.getElementById('pt-id').value;
-  const data={platform:document.getElementById('pt-platform').value,status:document.getElementById('pt-status').value,scheduledDate:document.getElementById('pt-date').value||null,scheduledTime:document.getElementById('pt-time').value||null,content,url:document.getElementById('pt-url').value.trim()||null,notes:document.getElementById('pt-notes').value.trim()};
+  const data={platform:document.getElementById('pt-platform').value,status:document.getElementById('pt-status').value,account:document.getElementById('pt-account')?.value.trim()||null,scheduledDate:document.getElementById('pt-date').value||null,scheduledTime:document.getElementById('pt-time').value||null,content,url:document.getElementById('pt-url').value.trim()||null,notes:document.getElementById('pt-notes').value.trim()};
   if(!S.teamPosts)S.teamPosts=[];
   if(id){const p=S.teamPosts.find(x=>x.id===id);if(p)Object.assign(p,data,{updatedAt:Date.now()});}
   else{S.teamPosts.push(Object.assign({id:uid(),createdAt:today(),updatedAt:Date.now()},data));}
@@ -6055,12 +6066,20 @@ function tdSaveDoc(){
 function tdDelDoc(id){const d=(S.teamDocs||[]).find(x=>x.id===id);if(!d)return;d.deleted=true;d.updatedAt=Date.now();save();closeModal();render();toast('ドキュメントを削除しました');}
 // ===チームKGI/KPI（全アカウント共有・個人目標とは別）===
 function _pct(cur,tgt){tgt=+tgt||0;if(!tgt)return 0;return Math.max(0,Math.min(100,Math.round((+cur||0)/tgt*100)));}
+// 事業部フィルタ。項目のbuフィールド=事業部名(unitは既存の「単位」フィールドのため別名)。未設定は「全社」扱い。
+let TG_BU='全社';
+function _tgBuList(){return['全社',...(S.bizUnits||[]).map(u=>u.name).filter(Boolean)];}
+function tgSetBu(i){const l=_tgBuList();TG_BU=l[i]||'全社';render();}
+function _tgBuOf(k){return k.bu||'全社';}
 function rTeamGoals(){
-  const kgis=(S.teamKgis||[]).filter(k=>!k.deleted);
-  const kpis=(S.teamKpis||[]).filter(k=>!k.deleted);
-  const kgiName=id=>kgis.find(k=>k.id===id)?.title||'';
+  const bus=_tgBuList();
+  if(!bus.includes(TG_BU))TG_BU='全社';
+  const kgis=(S.teamKgis||[]).filter(k=>!k.deleted&&_tgBuOf(k)===TG_BU);
+  const kpis=(S.teamKpis||[]).filter(k=>!k.deleted&&_tgBuOf(k)===TG_BU);
+  const kgiName=id=>(S.teamKgis||[]).find(k=>!k.deleted&&k.id===id)?.title||'';
   return`${secTitle('📈 チーム KGI / KPI')}
 <div style="font-size:11px;color:var(--t3);margin-bottom:12px">チーム全体の重要目標（KGI）と、それを動かす指標（KPI）。全アカウントで共有されます。<b>個人の目標とは別</b>です。</div>
+<div class="sub-tabs" id="tg-bu-tabs">${bus.map((b,i)=>`<div class="stab${TG_BU===b?' act':''}" onclick="tgSetBu(${i})">${esc(b)}</div>`).join('')}</div>
 <div style="display:flex;justify-content:space-between;align-items:center;margin:4px 0 8px">
   <div style="font-weight:800;font-size:15px;color:var(--purple)">🎯 KGI（重要目標）</div>
   <button class="btn btn-p btn-sm" onclick="tgOpenKgi()">＋ KGIを追加</button>
@@ -6106,6 +6125,7 @@ function tgOpenKgi(id){
   <div class="fg"><div class="fl">単位</div><input id="kg-unit" value="${esc(k?.unit||'')}" placeholder="円 / 社 / 件"></div>
   <div class="fg"><div class="fl">期限</div><input type="date" id="kg-deadline" value="${k?.deadline||''}"></div>
 </div>
+<div class="fg"><div class="fl">事業部</div><select id="kg-bu">${_tgBuList().map(b=>`<option value="${esc(b)}" ${(k?_tgBuOf(k):TG_BU)===b?'selected':''}>${esc(b)}</option>`).join('')}</select></div>
 <div class="fg"><div class="fl">メモ</div><textarea id="kg-note" rows="2">${esc(k?.note||'')}</textarea></div>
 <div class="mfooter"><button class="btn btn-g" onclick="closeModal()">キャンセル</button>${k?`<button class="btn btn-red" onclick="tgDelKgi('${k.id}')">削除</button>`:''}<button class="btn btn-p" onclick="tgSaveKgi()">保存</button></div>`);
 }
@@ -6113,7 +6133,7 @@ function tgSaveKgi(){
   const title=document.getElementById('kg-title').value.trim();
   if(!title){toast('目標名を入力してください','warn');return;}
   const id=document.getElementById('kg-id').value;
-  const data={title,target:parseFloat(document.getElementById('kg-target').value)||0,current:parseFloat(document.getElementById('kg-current').value)||0,unit:document.getElementById('kg-unit').value.trim(),deadline:document.getElementById('kg-deadline').value||null,note:document.getElementById('kg-note').value.trim()};
+  const data={title,target:parseFloat(document.getElementById('kg-target').value)||0,current:parseFloat(document.getElementById('kg-current').value)||0,unit:document.getElementById('kg-unit').value.trim(),deadline:document.getElementById('kg-deadline').value||null,bu:document.getElementById('kg-bu')?.value||'全社',note:document.getElementById('kg-note').value.trim()};
   if(!S.teamKgis)S.teamKgis=[];
   if(id){const k=S.teamKgis.find(x=>x.id===id);if(k)Object.assign(k,data,{updatedAt:Date.now()});}
   else{S.teamKgis.push(Object.assign({id:uid(),createdAt:today(),updatedAt:Date.now()},data));}
@@ -6136,6 +6156,7 @@ function tgOpenKpi(id){
   <div class="fg"><div class="fl">集計期間</div><select id="kp-period">${periods.map(p=>`<option ${(k?.period||'月次')===p?'selected':''}>${p}</option>`).join('')}</select></div>
 </div>
 <div class="fg"><div class="fl">紐づくKGI</div><select id="kp-kgi"><option value="">なし</option>${kgis.map(g=>`<option value="${g.id}" ${k?.kgiId===g.id?'selected':''}>${esc(g.title)}</option>`).join('')}</select></div>
+<div class="fg"><div class="fl">事業部</div><select id="kp-bu">${_tgBuList().map(b=>`<option value="${esc(b)}" ${(k?_tgBuOf(k):TG_BU)===b?'selected':''}>${esc(b)}</option>`).join('')}</select></div>
 <div class="fg"><div class="fl">メモ</div><textarea id="kp-note" rows="2">${esc(k?.note||'')}</textarea></div>
 <div class="mfooter"><button class="btn btn-g" onclick="closeModal()">キャンセル</button>${k?`<button class="btn btn-red" onclick="tgDelKpi('${k.id}')">削除</button>`:''}<button class="btn btn-p" onclick="tgSaveKpi()">保存</button></div>`);
 }
@@ -6143,7 +6164,7 @@ function tgSaveKpi(){
   const title=document.getElementById('kp-title').value.trim();
   if(!title){toast('指標名を入力してください','warn');return;}
   const id=document.getElementById('kp-id').value;
-  const data={title,target:parseFloat(document.getElementById('kp-target').value)||0,current:parseFloat(document.getElementById('kp-current').value)||0,unit:document.getElementById('kp-unit').value.trim(),period:document.getElementById('kp-period').value,kgiId:document.getElementById('kp-kgi').value||null,note:document.getElementById('kp-note').value.trim()};
+  const data={title,target:parseFloat(document.getElementById('kp-target').value)||0,current:parseFloat(document.getElementById('kp-current').value)||0,unit:document.getElementById('kp-unit').value.trim(),period:document.getElementById('kp-period').value,kgiId:document.getElementById('kp-kgi').value||null,bu:document.getElementById('kp-bu')?.value||'全社',note:document.getElementById('kp-note').value.trim()};
   if(!S.teamKpis)S.teamKpis=[];
   if(id){const k=S.teamKpis.find(x=>x.id===id);if(k)Object.assign(k,data,{updatedAt:Date.now()});}
   else{S.teamKpis.push(Object.assign({id:uid(),createdAt:today(),updatedAt:Date.now()},data));}
@@ -11091,7 +11112,7 @@ initReminders();
 checkClientDraftTasks();
 slMigrateRegions();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260710-05';
+const APP_VERSION='20260710-06';
 
 render();
 function forceAppUpdate(){
