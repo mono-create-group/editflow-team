@@ -810,6 +810,7 @@ const DB='ef_team_v5';
 const BUILTIN_VIEWS=[
   {id:'projects',label:'案件管理',icon:'🎬'},
   {id:'pipeline',label:'商談管理',icon:'🤝'},
+  {id:'inquiries',label:'お問い合わせ',icon:'📮'},
   {id:'teamgoals',label:'チームKGI/KPI',icon:'📈'},
   {id:'bizinfo',label:'事業情報',icon:'📚'},
   {id:'posts',label:'投稿管理',icon:'📅'},
@@ -2450,7 +2451,7 @@ function render(){
     }
     sessionStorage.setItem('ef_team_view',V);
     if(V==='kpi'){V='goals';} // KPI管理は目標・KPI統合ページにリダイレクト
-    const views={dashboard:rDash,tasks:rTasks,projects:rProjects,pipeline:rPipeline,teamgoals:rTeamGoals,posts:rPosts,docs:rDocs,workers:rWorkers,habits:rHabits,goals:rGoals,journal:rJournal,revenue:rRevenue,memo:rMemo,settings:rSettings,customize:rCustomize,aichat:rAIChat,fitness:rFitness,kpi:rKpi,bizboard:rBizBoard,bizunits:rBizUnits,bizinfo:rBizInfo,minutes:rMinutes,salesleads:rSalesLeads,hpfee:rHpFee,salessites:rSalesSites,templates:rTemplates};
+    const views={dashboard:rDash,tasks:rTasks,projects:rProjects,pipeline:rPipeline,teamgoals:rTeamGoals,posts:rPosts,docs:rDocs,workers:rWorkers,habits:rHabits,goals:rGoals,journal:rJournal,revenue:rRevenue,memo:rMemo,settings:rSettings,customize:rCustomize,aichat:rAIChat,fitness:rFitness,kpi:rKpi,bizboard:rBizBoard,bizunits:rBizUnits,bizinfo:rBizInfo,minutes:rMinutes,salesleads:rSalesLeads,hpfee:rHpFee,salessites:rSalesSites,inquiries:rInquiries,templates:rTemplates};
     let html;
     if(V.startsWith('tp_')){
       // チーム共有ページ(teamPages)を既存ブロックエディタで表示。BUILTIN_VIEWSガードを迂回する。
@@ -6118,6 +6119,90 @@ function biSaveCard(){
   save();closeModal();render();toast('情報カードを保存しました 📚');
 }
 function biDelCard(id){if(!confirm('このカードを削除しますか？'))return;const c=(S.bizInfo||[]).find(x=>x.id===id);if(!c)return;c.deleted=true;c.updatedAt=Date.now();save();closeModal();render();toast('情報カードを削除しました');}
+// ===お問い合わせ(ぽいっとHPのお問い合わせをGAS経由で一覧・対応状況管理)===
+// GAS側が唯一の真実。Firestoreには何も保存しない(TEAM_KEYS非追加)。ADMIN_KEYはshared/configのpoittoKeyから実行時取得(コードに書かない)。
+const POITTO_EXEC='https://script.google.com/macros/s/AKfycbzftG_O0GsR_8_TYwUwSGfSFPMCjXscWfw0jmTIB54H8NrH0SnjgH445IDDOKoHnNt8XA/exec';
+const INQ_STATUSES=['未対応','連絡済み','商談中','成約','見送り'];
+let INQ_STATE='idle'; // idle | loading | ready | error | noconfig
+let INQ_ERR='';
+async function _poittoKey(){
+  try{const doc=await fbDb.collection('shared').doc('config').get();const k=doc.exists?(doc.data()||{}).poittoKey:'';return (k||'').trim();}catch(e){return '';}
+}
+async function inqLoad(force){
+  if(INQ_STATE==='loading')return;
+  if(!force&&Array.isArray(window.__poittoRows)){INQ_STATE='ready';return;}
+  INQ_STATE='loading';INQ_ERR='';render();
+  const key=await _poittoKey();
+  if(!key){INQ_STATE='noconfig';render();return;}
+  try{
+    const res=await fetch(`${POITTO_EXEC}?key=${encodeURIComponent(key)}`);
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    if(!data||!Array.isArray(data.rows))throw new Error('rowsが取得できませんでした');
+    window.__poittoRows=data.rows;
+    INQ_STATE='ready';render();
+  }catch(e){INQ_ERR=String(e&&e.message||e);INQ_STATE='error';render();}
+}
+function inqReload(){window.__poittoRows=null;inqLoad(true);}
+function rInquiries(){
+  if(INQ_STATE==='idle'){setTimeout(()=>inqLoad(false),0);}
+  const head=`${secTitle('📮 お問い合わせ')}
+<div style="font-size:11px;color:var(--t3);margin-bottom:12px">ぽいっとHP(HP制作事業)のお問い合わせ一覧。データはGAS(スプレッドシート)が正で、この画面から対応状況を更新できます。</div>`;
+  if(INQ_STATE==='noconfig'){
+    return`${head}<div class="card" style="border-left:3px solid var(--amber)"><div style="font-weight:800;margin-bottom:6px">設定未完了</div><div style="font-size:13px;color:var(--t2);line-height:1.7">shared/config の poittoKey を設定してください。</div></div>`;
+  }
+  if(INQ_STATE==='loading'||INQ_STATE==='idle'){
+    return`${head}<div class="card"><div style="color:var(--t2);font-size:13px">読み込み中…</div></div>`;
+  }
+  if(INQ_STATE==='error'){
+    return`${head}<div class="card" style="border-left:3px solid var(--red)"><div style="font-weight:800;margin-bottom:6px">読み込みに失敗しました</div><div style="font-size:12px;color:var(--t2);white-space:pre-wrap;line-height:1.7">${esc(INQ_ERR)}</div><div style="margin-top:10px"><button class="btn btn-p btn-sm" onclick="inqReload()">🔄 再読み込み</button></div></div>`;
+  }
+  const rows=Array.isArray(window.__poittoRows)?window.__poittoRows:[];
+  // rows[0]=ヘッダー行(シート1行目)。データはrows[1..]。rows[i]のシート行番号=i+1。
+  const items=[];
+  for(let i=1;i<rows.length;i++){items.push({r:rows[i]||[],sheetRow:i+1});}
+  items.reverse(); // 新しい順
+  const total=items.length;
+  const untouched=items.filter(x=>((x.r[8]||'').trim()==='未対応'||!(x.r[8]||'').trim())).length;
+  const F=(r,i)=>esc((r[i]!=null?String(r[i]):'').trim());
+  const body=!total?`<div class="empty"><div class="empty-icon">📮</div><div class="empty-title">お問い合わせはまだありません</div></div>`:items.map(x=>{
+    const r=x.r;const cur=(r[8]||'').trim()||'未対応';
+    return`<div class="card" style="margin-bottom:10px">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
+    <div style="min-width:0">
+      <div style="font-weight:800;font-size:15px">${F(r,1)||'(お名前なし)'}<span style="font-size:12px;font-weight:600;color:var(--t2)"> / ${F(r,2)||'店名なし'}</span></div>
+      <div style="font-size:11px;color:var(--t3);margin-top:2px">受信 ${F(r,0)||'-'}</div>
+    </div>
+    <select class="inq-sel" style="flex-shrink:0" onchange="inqSetStatus(${x.sheetRow},this.value,this)">${INQ_STATUSES.map(s=>`<option${s===cur?' selected':''}>${esc(s)}</option>`).join('')}</select>
+  </div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--t2);margin-top:8px">
+    <span>✉️ ${F(r,3)||'-'}</span><span>📞 ${F(r,4)||'-'}</span><span>🏷 ${F(r,5)||'-'}</span><span>種別 ${F(r,6)||'-'}</span>
+  </div>
+  <div style="font-size:13px;color:var(--t2);margin-top:8px;white-space:pre-wrap;line-height:1.75">${F(r,7)||'(相談内容なし)'}</div>
+</div>`;
+  }).join('');
+  return`${head}
+<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+  <span style="font-size:13px;font-weight:800;background:var(--card2);padding:4px 10px;border-radius:8px">総件数 ${total}</span>
+  <span style="font-size:13px;font-weight:800;color:var(--amber);background:var(--card2);padding:4px 10px;border-radius:8px">未対応 ${untouched}</span>
+  <button class="btn btn-g btn-sm" onclick="inqReload()">🔄 再読み込み</button>
+</div>
+${body}`;
+}
+async function inqSetStatus(sheetRow,status,el){
+  if(el)el.disabled=true;
+  const key=await _poittoKey();
+  if(!key){if(el)el.disabled=false;toast('設定未完了: poittoKeyがありません','warn');return;}
+  try{
+    const res=await fetch(`${POITTO_EXEC}?key=${encodeURIComponent(key)}&action=status&row=${encodeURIComponent(sheetRow)}&status=${encodeURIComponent(status)}`);
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||!data.success)throw new Error('更新に失敗しました');
+    // メモリキャッシュも更新(rows配列のインデックス=sheetRow-1)
+    if(Array.isArray(window.__poittoRows)&&window.__poittoRows[sheetRow-1]){window.__poittoRows[sheetRow-1][8]=status;}
+    toast('対応状況を更新しました 📮');
+  }catch(e){toast('更新に失敗しました','err');}
+  if(el)el.disabled=false;
+}
 // ===チームKGI/KPI（全アカウント共有・個人目標とは別）===
 function _pct(cur,tgt){tgt=+tgt||0;if(!tgt)return 0;return Math.max(0,Math.min(100,Math.round((+cur||0)/tgt*100)));}
 // 事業部フィルタ。項目のbuフィールド=事業部名(unitは既存の「単位」フィールドのため別名)。未設定は「全社」扱い。
@@ -11168,7 +11253,7 @@ initReminders();
 checkClientDraftTasks();
 slMigrateRegions();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260710-09';
+const APP_VERSION='20260710-10';
 
 render();
 function forceAppUpdate(){
