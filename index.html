@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="EditFlow">
-<meta name="theme-color" content="#7c3aed">
-<link rel="manifest" href="/editflow-app/manifest.json">
-<title>EditFlow Team — クリエイター専用管理アプリ</title>
+<meta name="apple-mobile-web-app-title" content="社内連絡">
+<meta name="theme-color" content="#000000">
+<link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
+<title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -750,7 +750,7 @@ a{color:inherit;text-decoration:none}
 <body>
 
 <nav id="sidebar">
-  <div class="logo">EditFlow <small>クリエイター専用管理</small></div>
+  <div class="logo">mono.create <small>社内連絡アプリ</small></div>
   <div id="nav-items"></div>
   <div class="nav-sep"></div>
   <div class="nav-item" data-view="customize"><span class="nav-icon">🛠</span>カスタマイズ</div>
@@ -778,7 +778,7 @@ a{color:inherit;text-decoration:none}
 <div id="mob-overlay" onclick="closeDrawer()"></div>
 <div id="mob-drawer">
   <div style="display:flex;align-items:center;justify-content:space-between;padding:0 14px 16px">
-    <div class="logo" style="margin:0;padding:0">EditFlow <small>クリエイター専用管理</small></div>
+    <div class="logo" style="margin:0;padding:0">mono.create <small>社内連絡アプリ</small></div>
     <button onclick="closeDrawer()" style="background:none;border:none;font-size:20px;color:var(--t2);cursor:pointer;line-height:1;padding:4px 6px">✕</button>
   </div>
   <div id="mob-drawer-nav"></div>
@@ -9508,7 +9508,7 @@ function togglePomo(){
         save();updSessionCount();
         _pomoMode='break';_pomoSec=(S.settings.breakMin||5)*60;
         toast('🍅 ポモドーロ完了！休憩しましょう');
-        if(typeof Notification!=='undefined'&&Notification.permission==='granted')new Notification('EditFlow',{body:'🍅 集中セッション完了！休憩してください'});
+        if(typeof Notification!=='undefined'&&Notification.permission==='granted')new Notification('mono.create 社内連絡',{body:'🍅 集中セッション完了！休憩してください'});
       }else{
         _pomoMode='work';_pomoSec=(S.settings.workMin||25)*60;
         const tn=document.getElementById('pomo-task-name');if(tn){tn.style.display='none';tn.textContent='';}
@@ -10338,7 +10338,7 @@ function checkDeadlineReminders(){
   if(!items.length)return;
   if(typeof Notification==='undefined'||Notification.permission!=='granted')return;
   items.forEach(it=>{
-    new Notification(`📅 EditFlow 納期リマインダー`,{body:`${it.type}「${it.title}」の期限: ${it.date===td?'今日':'明日'}(${it.date})`});
+    new Notification(`📅 mono.create 納期リマインダー`,{body:`${it.type}「${it.title}」の期限: ${it.date===td?'今日':'明日'}(${it.date})`});
   });
 }
 function initReminders(){
@@ -11027,7 +11027,7 @@ function forceAppUpdate(){
 
 // ===SERVICE WORKER===
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('/editflow-app/sw.js').then(reg=>{
+  navigator.serviceWorker.register('sw.js').then(reg=>{
     reg.update();
     navigator.serviceWorker.addEventListener('controllerchange',()=>{
       if(sessionStorage.getItem('sw_init')){
