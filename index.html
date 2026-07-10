@@ -885,7 +885,7 @@ function _applyCloudData(json){
   S=migrate(Object.assign(def,cloud));
   TEAM_KEYS.forEach(k=>{if(keepTeam[k]!==undefined)S[k]=keepTeam[k];});
   if(keepBiz!==undefined)S.bizBoard=keepBiz;
-  ['tasks','habits','jobs','logs','journals','goals','clients','workers','checkIns','customPages','customEx','navConfig','meals','workouts','pipeline','teamKgis','teamKpis','teamPosts','teamDocs','bizUnits','teamMeetings','salesLeads','hpFees','salesSites','templates'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=def[k]||[];});
+  ['tasks','habits','jobs','logs','journals','goals','clients','workers','checkIns','customPages','customEx','navConfig','meals','workouts','pipeline','teamKgis','teamKpis','teamPosts','teamDocs','teamPages','bizUnits','teamMeetings','salesLeads','hpFees','salesSites','templates'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=def[k]||[];});
   if(FB_USER)S._uid=FB_USER.uid;
   localStorage.setItem(DB,JSON.stringify(S));
 }
@@ -947,7 +947,7 @@ function fbSetupRealtimeSync(){
 // チームデータのみ shared/team に相乗りさせ、全員で同じ案件を見られるようにする。
 // Firestoreルールが共有アクセスを許可していれば自動で有効化。許可されない場合は
 // permission-denied を検知して自動で個人モードへフォールバック（現状維持・無害）。
-const TEAM_KEYS=['jobs','clients','workers','pipeline','teamKgis','teamKpis','teamPosts','teamDocs','bizUnits','teamMeetings','salesLeads','hpFees','salesSites','templates'];
+const TEAM_KEYS=['jobs','clients','workers','pipeline','teamKgis','teamKpis','teamPosts','teamDocs','teamPages','bizUnits','teamMeetings','salesLeads','hpFees','salesSites','templates'];
 let TEAM_SHARE_OK=null;      // null=未判定 / true=共有有効 / false=個人モード
 let _teamUnsub=null;
 window._teamSnap=window._teamSnap||{};
@@ -1723,7 +1723,7 @@ let JOB_SORT='deadline'; // job sort order
 
 function defState(){return{
   tasks:[], clients:[], jobs:[], habits:[], goals:[], journals:[], logs:[], rewards:[],
-  checkIns:[], workouts:[], workers:[], memos:[], meals:[], pipeline:[], teamKgis:[], teamKpis:[], teamPosts:[], teamDocs:[], salesLeads:[], hpFees:[], salesSites:[], templates:[],
+  checkIns:[], workouts:[], workers:[], memos:[], meals:[], pipeline:[], teamKgis:[], teamKpis:[], teamPosts:[], teamDocs:[], teamPages:[], salesLeads:[], hpFees:[], salesSites:[], templates:[],
   fs:JSON.parse(JSON.stringify(DEFAULT_FS)),
   dailySchedules:{},
   goalReviews:{},
@@ -2451,7 +2451,11 @@ function render(){
     if(V==='kpi'){V='goals';} // KPI管理は目標・KPI統合ページにリダイレクト
     const views={dashboard:rDash,tasks:rTasks,projects:rProjects,pipeline:rPipeline,teamgoals:rTeamGoals,posts:rPosts,docs:rDocs,workers:rWorkers,habits:rHabits,goals:rGoals,journal:rJournal,revenue:rRevenue,memo:rMemo,settings:rSettings,customize:rCustomize,aichat:rAIChat,fitness:rFitness,kpi:rKpi,bizboard:rBizBoard,bizunits:rBizUnits,minutes:rMinutes,salesleads:rSalesLeads,hpfee:rHpFee,salessites:rSalesSites,templates:rTemplates};
     let html;
-    if(V.startsWith('cp_')){
+    if(V.startsWith('tp_')){
+      // チーム共有ページ(teamPages)を既存ブロックエディタで表示。BUILTIN_VIEWSガードを迂回する。
+      const page=(S.teamPages||[]).find(p=>`tp_${p.id}`===V);
+      html=page?rCustomPage(page):`<div class="empty"><div class="empty-icon">😕</div><div>ページが見つかりません</div></div>`;
+    }else if(V.startsWith('cp_')){
       const page=(S.customPages||[]).find(p=>`cp_${p.id}`===V);
       html=page?rCustomPage(page):`<div class="empty"><div class="empty-icon">😕</div><div>ページが見つかりません</div></div>`;
     }else{html=((BUILTIN_VIEWS.some(v=>v.id===V)&&views[V])?views[V]:rProjects)();}
@@ -5923,16 +5927,101 @@ function tpSavePost(){
 function tpDelPost(id){const p=(S.teamPosts||[]).find(x=>x.id===id);if(!p)return;p.deleted=true;p.updatedAt=Date.now();save();closeModal();render();toast('投稿を削除しました');}
 // ===ドキュメント管理（チーム共有）===
 function _teamDocs(){return (S.teamDocs||[]).filter(d=>!d.deleted);}
+function _teamPages(){return (S.teamPages||[]).filter(p=>!p.deleted);}
+// チーム共有ページ(teamPages): 既存ブロックエディタで編集。tp_プレフィックスで開く。
+function rTeamPagesSection(){
+  const pages=_teamPages();
+  return`${secTitle('📄 ページ')}
+<div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+  <button class="btn btn-p btn-sm" onclick="tpNewPage()">＋ 新しいページ</button>
+  <span style="font-size:13px;color:var(--t2);align-self:center">${pages.length}件</span>
+</div>
+<div style="font-size:11px;color:var(--t3);margin-bottom:12px">見出し・箇条書き・チェックリスト・カウンターなどのブロックで、チーム共有のページを自由に作れます。</div>
+${!pages.length?`<div class="empty"><div class="empty-icon">📄</div><div class="empty-title">まだページがありません</div></div>`:pages.map(p=>`
+<div class="card" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer" onclick="tpOpenPage('${p.id}')">
+  <div style="display:flex;align-items:center;gap:10px;min-width:0">
+    <span style="font-size:24px;flex-shrink:0">${esc(p.icon||'📄')}</span>
+    <div style="min-width:0">
+      <div style="font-weight:700;font-size:14px">${esc(p.title||'無題')}</div>
+      <div style="font-size:11px;color:var(--t3);margin-top:2px">${(p.blocks||[]).length}ブロック ・ 更新 ${p.updatedAt?tpFmtDate(p.updatedAt):'-'}</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:4px;flex-shrink:0">
+    <button class="btn btn-g btn-xs" onclick="tpRenamePage('${p.id}');event.stopPropagation()">名前変更</button>
+    <button class="btn btn-red btn-xs" onclick="tpDelPage('${p.id}');event.stopPropagation()">削除</button>
+  </div>
+</div>`).join('')}`;
+}
+function tpFmtDate(ts){
+  try{const d=new Date(ts);const p=n=>String(n).padStart(2,'0');return`${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;}catch(_){return'-';}
+}
+function tpOpenPage(id){CP_EDIT_MODE=false;V=`tp_${id}`;render();}
+function tpNewPage(){
+  openModal(`<div class="mhdr"><div class="mtitle">新しいページを作成</div><button class="mclose" onclick="closeModal()">✕</button></div>
+<div class="fg"><div class="fl">ページタイトル *</div><input id="tp-ttl" placeholder="例：編集フロー・議事録テンプレ"></div>
+<div class="fg"><div class="fl">アイコン</div>
+  <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">
+    ${CP_ICONS.map((ic,i)=>`<span class="icon-pick${i===0?' sel':''}" onclick="tpPickIcon('${ic}',this)">${ic}</span>`).join('')}
+  </div>
+  <input type="hidden" id="tp-icon-val" value="📄">
+</div>
+<div class="mfooter"><button class="btn btn-g" onclick="closeModal()">キャンセル</button><button class="btn btn-p" onclick="tpCreatePage()">作成</button></div>`);
+  document.getElementById('tp-ttl')?.focus();
+}
+function tpPickIcon(ic,el){
+  document.querySelectorAll('.icon-pick').forEach(s=>s.classList.remove('sel'));
+  el.classList.add('sel');document.getElementById('tp-icon-val').value=ic;
+}
+function tpCreatePage(){
+  const title=document.getElementById('tp-ttl')?.value.trim();
+  if(!title){toast('タイトルを入力してください','err');return;}
+  const icon=document.getElementById('tp-icon-val')?.value||'📄';
+  const now=Date.now();
+  const page={id:uid(),title,icon,blocks:[],createdAt:now,updatedAt:now};
+  if(!S.teamPages)S.teamPages=[];
+  S.teamPages.push(page);
+  save();closeModal();
+  CP_EDIT_MODE=false;V=`tp_${page.id}`;render();
+}
+function tpRenamePage(id){
+  const p=(S.teamPages||[]).find(x=>x.id===id);if(!p)return;
+  openModal(`<div class="mhdr"><div class="mtitle">ページ名を変更</div><button class="mclose" onclick="closeModal()">✕</button></div>
+<div class="fg"><div class="fl">ページタイトル *</div><input id="tp-rn-ttl" value="${esc(p.title||'')}"></div>
+<div class="fg"><div class="fl">アイコン</div>
+  <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">
+    ${CP_ICONS.map(ic=>`<span class="icon-pick${ic===(p.icon||'📄')?' sel':''}" onclick="tpPickIcon('${ic}',this)">${ic}</span>`).join('')}
+  </div>
+  <input type="hidden" id="tp-icon-val" value="${esc(p.icon||'📄')}">
+</div>
+<div class="mfooter"><button class="btn btn-g" onclick="closeModal()">キャンセル</button><button class="btn btn-p" onclick="tpSaveRename('${id}')">保存</button></div>`);
+  document.getElementById('tp-rn-ttl')?.focus();
+}
+function tpSaveRename(id){
+  const p=(S.teamPages||[]).find(x=>x.id===id);if(!p)return;
+  const t=document.getElementById('tp-rn-ttl')?.value.trim();
+  if(!t){toast('タイトルを入力してください','err');return;}
+  p.title=t;p.icon=document.getElementById('tp-icon-val')?.value||p.icon;p.updatedAt=Date.now();
+  save();closeModal();render();toast('ページ名を変更しました');
+}
+function tpDelPage(id){
+  if(!confirm('このページを削除しますか？'))return;
+  const p=(S.teamPages||[]).find(x=>x.id===id);if(!p)return;
+  p.deleted=true;p.updatedAt=Date.now();
+  if(V===`tp_${id}`)V='docs';
+  save();render();toast('ページを削除しました');
+}
 function rDocs(){
   const docs=_teamDocs();
   const cats={};docs.forEach(d=>{const c=d.category||'未分類';(cats[c]=cats[c]||[]).push(d);});
-  return`${secTitle('📁 ドキュメント')}
+  return`${rTeamPagesSection()}
+<div style="height:8px"></div>
+${secTitle('📁 リンク集')}
 <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
   <button class="btn btn-p btn-sm" onclick="tdOpenDoc()">＋ ドキュメントを追加</button>
   <span style="font-size:13px;color:var(--t2);align-self:center">${docs.length}件</span>
 </div>
 <div style="font-size:11px;color:var(--t3);margin-bottom:12px">マニュアル・議事録・スプレッドシート等のリンクをチームで共有します。</div>
-${!docs.length?`<div class="empty"><div class="empty-icon">📁</div><div class="empty-title">まだドキュメントがありません</div></div>`:Object.entries(cats).map(([c,ds])=>`
+${!docs.length?`<div class="empty"><div class="empty-icon">📁</div><div class="empty-title">まだリンクがありません</div></div>`:Object.entries(cats).map(([c,ds])=>`
 <div style="font-weight:800;font-size:14px;color:var(--purple);margin:8px 0 6px">📂 ${esc(c)}</div>
 ${ds.map(d=>`<div class="card" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px">
   <div style="min-width:0">
@@ -9545,7 +9634,7 @@ function getNavCfg(){
   // 削除済みページをnavConfigから除去（kpi→goalsに統合、revenue→削除）
   S.navConfig=S.navConfig.filter(c=>c.id!=='kpi'&&c.id!=='revenue').filter(c=>BUILTIN_VIEWS.some(v=>v.id===c.id));
   BUILTIN_VIEWS.forEach(v=>{if(!S.navConfig.find(c=>c.id===v.id))S.navConfig.push({id:v.id,hidden:false});});
-  (S.customPages||[]).forEach(p=>{if(!S.navConfig.find(c=>c.id===`cp_${p.id}`))S.navConfig.push({id:`cp_${p.id}`,hidden:false});});
+  // 社内アプリでは個人カスタムページ(cp_)をサイドバーに注入しない（情報漏洩防止）
   return S.navConfig;
 }
 function navMeta(id){
@@ -9641,7 +9730,8 @@ function sideNavDrop(e,toIdx){
 
 // Customize view
 function rCustomize(){
-  const cfg=getNavCfg(),cps=S.customPages||[];
+  // 社内アプリでは個人カスタムページ(customPages)は画面に出さない（チーム共有ページはドキュメントタブへ移設）
+  const cfg=getNavCfg(),cps=[];
   return`<div class="ph">
   <div class="ph-title">🛠 カスタマイズ</div>
   <button class="btn btn-p" onclick="openNewPageModal()">＋ 新しいページ</button>
@@ -9766,7 +9856,7 @@ function editCustomPage(id){
 </div>`);
 }
 function updPageMeta(id){
-  const page=(S.customPages||[]).find(p=>p.id===id);if(!page)return;
+  const page=_findPageById(id);if(!page)return;
   const t=document.getElementById('cpe-ttl')?.value.trim();const ic=document.getElementById('cpe-icon')?.value.trim();
   if(t)page.title=t;if(ic)page.icon=ic;save();
 }
@@ -9838,10 +9928,15 @@ function rBlockEd(b,i,pid,total){
   </div>${inner}</div>`;
 }
 
+// ブロックエディタは個人ページ(customPages)とチーム共有ページ(teamPages)の両方を扱う。
+// idはuidで一意なので、両配列を横断して該当ページを引く。編集操作はどちらの配列でもそのまま動く。
+function _findPageById(pid){
+  return (S.customPages||[]).find(p=>p.id===pid)||(S.teamPages||[]).find(p=>p.id===pid)||null;
+}
 // Block field updaters (live-save)
-function updBF(pid,idx,field,val){const page=(S.customPages||[]).find(p=>p.id===pid);if(page?.blocks[idx])page.blocks[idx][field]=val;save();}
+function updBF(pid,idx,field,val){const page=_findPageById(pid);if(page?.blocks[idx])page.blocks[idx][field]=val;save();}
 function addBlock(pid,type,afterIdx){
-  const page=(S.customPages||[]).find(p=>p.id===pid);if(!page)return;
+  const page=_findPageById(pid);if(!page)return;
   // Special defaults for types not covered by makeBlockDefaults
   let nb;
   if(type==='heading')nb={id:uid(),type:'heading',text:'見出し'};
@@ -9860,23 +9955,26 @@ function addBlock(pid,type,afterIdx){
     if(el){el.focus();if(el.tagName==='TEXTAREA'){el.selectionStart=el.selectionEnd=0;}}
   },30);
 }
-function deleteBlock(pid,idx){const page=(S.customPages||[]).find(p=>p.id===pid);if(!page)return;page.blocks.splice(idx,1);save();render();}
+function deleteBlock(pid,idx){const page=_findPageById(pid);if(!page)return;page.blocks.splice(idx,1);save();render();}
 function moveBlock(pid,idx,dir){
-  const page=(S.customPages||[]).find(p=>p.id===pid);if(!page)return;
+  const page=_findPageById(pid);if(!page)return;
   const ni=idx+dir;if(ni<0||ni>=page.blocks.length)return;
   [page.blocks[idx],page.blocks[ni]]=[page.blocks[ni],page.blocks[idx]];save();render();
 }
-function addCI(pid,bi){const p=(S.customPages||[]).find(p=>p.id===pid);if(!p)return;if(!p.blocks[bi].items)p.blocks[bi].items=[];p.blocks[bi].items.push({id:uid(),text:'',done:false});save();render();}
-function delCI(pid,bi,ii){const p=(S.customPages||[]).find(p=>p.id===pid);if(!p)return;p.blocks[bi].items.splice(ii,1);save();render();}
-function updCI(pid,bi,ii,val){const p=(S.customPages||[]).find(p=>p.id===pid);if(p?.blocks[bi]?.items[ii])p.blocks[bi].items[ii].text=val;save();}
-function addLI(pid,bi){const p=(S.customPages||[]).find(p=>p.id===pid);if(!p)return;if(!p.blocks[bi].items)p.blocks[bi].items=[];p.blocks[bi].items.push({id:uid(),label:'',url:''});save();render();}
-function delLI(pid,bi,ii){const p=(S.customPages||[]).find(p=>p.id===pid);if(!p)return;p.blocks[bi].items.splice(ii,1);save();render();}
-function updLI(pid,bi,ii,field,val){const p=(S.customPages||[]).find(p=>p.id===pid);if(p?.blocks[bi]?.items[ii])p.blocks[bi].items[ii][field]=val;save();}
+function addCI(pid,bi){const p=_findPageById(pid);if(!p)return;if(!p.blocks[bi].items)p.blocks[bi].items=[];p.blocks[bi].items.push({id:uid(),text:'',done:false});save();render();}
+function delCI(pid,bi,ii){const p=_findPageById(pid);if(!p)return;p.blocks[bi].items.splice(ii,1);save();render();}
+function updCI(pid,bi,ii,val){const p=_findPageById(pid);if(p?.blocks[bi]?.items[ii])p.blocks[bi].items[ii].text=val;save();}
+function addLI(pid,bi){const p=_findPageById(pid);if(!p)return;if(!p.blocks[bi].items)p.blocks[bi].items=[];p.blocks[bi].items.push({id:uid(),label:'',url:''});save();render();}
+function delLI(pid,bi,ii){const p=_findPageById(pid);if(!p)return;p.blocks[bi].items.splice(ii,1);save();render();}
+function updLI(pid,bi,ii,field,val){const p=_findPageById(pid);if(p?.blocks[bi]?.items[ii])p.blocks[bi].items[ii][field]=val;save();}
 
 // Custom page renderer
 function rCustomPage(page){
   const blocks=page.blocks||[];
   const pid=page.id;
+  // チーム共有ページ(tp_)はドキュメント一覧から開くため、戻るボタンを出す
+  const isTeamPage=(typeof V==='string')&&V.startsWith('tp_');
+  const backBtn=isTeamPage?`<button class="btn btn-g btn-sm" onclick="CP_EDIT_MODE=false;V='docs';render()">← 戻る</button>`:'';
   const addBtns=(atEnd=true)=>{
     const mainTypes=[
       {t:'h1',l:'H1'},{t:'h2',l:'H2'},{t:'h3',l:'H3'},
@@ -9891,6 +9989,7 @@ function rCustomPage(page){
   };
   if(CP_EDIT_MODE){
     return`<div class="ph" style="flex-wrap:wrap;gap:8px;align-items:center">
+  ${backBtn}
   <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:180px">
     <input id="cpe-icon" value="${esc(page.icon||'📄')}" style="width:38px;text-align:center;font-size:18px;padding:4px;flex-shrink:0" oninput="updPageMeta('${pid}')">
     <input id="cpe-ttl" value="${esc(page.title)}" style="font-size:17px;font-weight:700;flex:1;padding:4px 8px" oninput="updPageMeta('${pid}')">
@@ -9901,7 +10000,10 @@ ${blocks.map((b,i)=>rBlockEd(b,i,pid,blocks.length)).join('')}
 ${addBtns()}`;
   }
   return`<div class="ph">
-  <div class="ph-title">${esc(page.icon||'📄')} ${esc(page.title)}</div>
+  <div style="display:flex;align-items:center;gap:8px;min-width:0">
+    ${backBtn}
+    <div class="ph-title" style="min-width:0">${esc(page.icon||'📄')} ${esc(page.title)}</div>
+  </div>
   <div style="display:flex;gap:6px">
     <span style="font-size:11px;color:var(--t3);align-self:center">テキストで / を入力してブロック追加</span>
     <button class="btn btn-g btn-sm" onclick="CP_EDIT_MODE=true;render()">✏️ 編集</button>
@@ -9995,31 +10097,31 @@ function rBlock(b,pid,idx){
   </div>`;
 }
 function adjCtr(pid,idx,dir){
-  const page=(S.customPages||[]).find(p=>p.id===pid);if(!page)return;
+  const page=_findPageById(pid);if(!page)return;
   const b=page.blocks[idx];if(!b)return;
   b.value=dir===0?0:(b.value||0)+dir*(b.step||1);
   save();
   const el=document.getElementById(`ctr-${pid}-${idx}`);if(el)el.textContent=b.value;
 }
 function toggleCI(pid,idx,iidx){
-  const page=(S.customPages||[]).find(p=>p.id===pid);if(!page)return;
+  const page=_findPageById(pid);if(!page)return;
   const it=page.blocks[idx]?.items?.[iidx];if(!it)return;
   it.done=!it.done;save();render();
 }
 
 // Bullet/Numbered list item helpers
 function updBulletItem(pid,bi,ii,val){
-  const p=(S.customPages||[]).find(p=>p.id===pid);if(!p)return;
+  const p=_findPageById(pid);if(!p)return;
   if(!p.blocks[bi].items)p.blocks[bi].items=[''];
   p.blocks[bi].items[ii]=val;save();
 }
 function addBulletItem(pid,bi){
-  const p=(S.customPages||[]).find(p=>p.id===pid);if(!p)return;
+  const p=_findPageById(pid);if(!p)return;
   if(!p.blocks[bi].items)p.blocks[bi].items=[];
   p.blocks[bi].items.push('');save();render();
 }
 function delBulletItem(pid,bi,ii){
-  const p=(S.customPages||[]).find(p=>p.id===pid);if(!p)return;
+  const p=_findPageById(pid);if(!p)return;
   p.blocks[bi].items.splice(ii,1);
   if(!p.blocks[bi].items.length)p.blocks[bi].items=[''];
   save();render();
@@ -10027,7 +10129,7 @@ function delBulletItem(pid,bi,ii){
 
 // Toggle block open/close
 function toggleBlock(pid,idx){
-  const page=(S.customPages||[]).find(p=>p.id===pid);if(!page)return;
+  const page=_findPageById(pid);if(!page)return;
   const b=page.blocks[idx];if(!b)return;
   b.open=!b.open;save();render();
 }
@@ -10055,7 +10157,7 @@ function blockDrop(e,toIdx,pid){
   e.preventDefault();
   document.querySelectorAll('.notion-block-wrap').forEach(el=>el.classList.remove('drag-over-block'));
   if(_dragBlockPid!==pid||_dragBlockIdx===null||_dragBlockIdx===toIdx)return;
-  const page=(S.customPages||[]).find(p=>p.id===pid);if(!page)return;
+  const page=_findPageById(pid);if(!page)return;
   const from=_dragBlockIdx,to=toIdx;
   const [moved]=page.blocks.splice(from,1);
   page.blocks.splice(to,0,moved);
@@ -10070,7 +10172,7 @@ function blockKeyDown(e,el){
   const pid=el.dataset.pid||el.closest('[data-pid]')?.dataset.pid;
   const idx=+(el.dataset.idx||el.closest('[data-block-idx]')?.dataset.blockIdx);
   if(pid==null||isNaN(idx))return;
-  const page=(S.customPages||[]).find(p=>p.id===pid);if(!page)return;
+  const page=_findPageById(pid);if(!page)return;
   const b=page.blocks[idx];if(!b)return;
   const isHeading=['h1','h2','h3','heading'].includes(b.type);
   const isText=['text','note','quote'].includes(b.type);
@@ -10113,7 +10215,7 @@ function blockKeyDown(e,el){
 
 // ─── LIST ITEM KEYBOARD ───
 function listItemKeyDown(e,el,pid,blockIdx,itemIdx){
-  const page=(S.customPages||[]).find(p=>p.id===pid);if(!page)return;
+  const page=_findPageById(pid);if(!page)return;
   const b=page.blocks[blockIdx];if(!b)return;
   if(e.key==='Enter'&&!e.shiftKey){
     e.preventDefault();
@@ -10268,7 +10370,7 @@ function confirmSlashCmd(cmd){
   if(!_slashState)return;
   const {pid,idx,el}=_slashState;
   hideSlashPopup();
-  const page=(S.customPages||[]).find(p=>p.id===pid);if(!page)return;
+  const page=_findPageById(pid);if(!page)return;
   // Remove slash + query from textarea value
   const pos=el.selectionStart;
   const val=el.value||'';
@@ -10989,7 +11091,7 @@ initReminders();
 checkClientDraftTasks();
 slMigrateRegions();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260710-04';
+const APP_VERSION='20260710-05';
 
 render();
 function forceAppUpdate(){
