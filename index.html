@@ -9709,6 +9709,8 @@ function getNavCfg(){
   // 削除済みページをnavConfigから除去（kpi→goalsに統合、revenue→削除）
   S.navConfig=S.navConfig.filter(c=>c.id!=='kpi'&&c.id!=='revenue').filter(c=>BUILTIN_VIEWS.some(v=>v.id===c.id));
   BUILTIN_VIEWS.forEach(v=>{if(!S.navConfig.find(c=>c.id===v.id))S.navConfig.push({id:v.id,hidden:false});});
+  // EditFlow(個人用)と個人docを共有しているため、hidden指定は無視して常に全チームタブを表示する(2026-07-10 全タブ消失障害の恒久対策)
+  S.navConfig.forEach(c=>{c.hidden=false;});
   // 社内アプリでは個人カスタムページ(cp_)をサイドバーに注入しない（情報漏洩防止）
   return S.navConfig;
 }
@@ -11166,7 +11168,7 @@ initReminders();
 checkClientDraftTasks();
 slMigrateRegions();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260710-08';
+const APP_VERSION='20260710-09';
 
 render();
 function forceAppUpdate(){
