@@ -745,6 +745,40 @@ a{color:inherit;text-decoration:none}
 .ai-ctx-bar{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:var(--t2);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .ai-ctx-tag{background:var(--pdim);border:1px solid var(--purple);color:var(--pl);border-radius:99px;padding:2px 10px;font-size:11px;font-weight:600}
 
+/* ===Googleドキュメント風エディタ(ドキュメントタブ)=== */
+.gdoc-top{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.gdoc-title{flex:1;min-width:150px;font-size:18px;font-weight:600;border:1px solid transparent;background:transparent;padding:4px 8px;border-radius:4px;color:var(--text)}
+.gdoc-title:hover{border-color:var(--border)}
+.gdoc-title:focus{border-color:var(--purple);outline:none}
+.gdoc-savestat{font-size:11px;color:var(--t3);flex-shrink:0;min-width:64px;text-align:right}
+.gdoc-toolbar{position:sticky;top:0;z-index:25;display:flex;align-items:center;gap:1px;flex-wrap:wrap;background:#edf2fa;border:1px solid #dadce0;border-radius:14px;padding:4px 10px}
+.gdoc-btn{min-width:28px;height:28px;padding:0 7px;border:none;border-radius:4px;font-size:13px;color:#444746;background:transparent;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-weight:600}
+.gdoc-btn:hover{background:rgba(68,71,70,.1)}
+.gdoc-sep{width:1px;height:18px;background:#c7cbd1;margin:0 5px;flex-shrink:0}
+.gdoc-style{border:none;background:transparent;font-size:12.5px;color:#444746;padding:2px 2px;cursor:pointer;border-radius:4px;max-width:110px}
+.gdoc-style:hover{background:rgba(68,71,70,.1)}
+.gdoc-fsval{font-size:12.5px;color:#444746;min-width:20px;text-align:center}
+.gdoc-canvas{background:#f8f9fa;padding:22px 8px 90px;margin-top:10px;border-radius:8px;min-height:72vh}
+.gdoc-page{background:#fff;border:1px solid #dadce0;width:min(816px,calc(100% - 16px));margin:0 auto;min-height:1056px;padding:76px 68px;color:#202124;font-size:11pt;line-height:1.7;outline:none;font-family:'Helvetica Neue',Arial,'Hiragino Kaku Gothic ProN','Hiragino Sans',Meiryo,sans-serif;overflow-wrap:break-word;box-sizing:border-box}
+.gdoc-page h1{font-size:24pt;font-weight:400;margin:14px 0 8px;line-height:1.35}
+.gdoc-page h2{font-size:16pt;font-weight:600;margin:18px 0 6px}
+.gdoc-page h3{font-size:13pt;font-weight:600;margin:14px 0 4px}
+.gdoc-page h4{font-size:11pt;font-weight:700;margin:12px 0 4px}
+.gdoc-page p{margin:0 0 3px}
+.gdoc-page ul,.gdoc-page ol{margin:4px 0;padding-left:28px}
+.gdoc-page li{margin-bottom:2px}
+.gdoc-page a{color:#1a73e8}
+.gdoc-page blockquote{border-left:3px solid #dadce0;margin:8px 0;padding:2px 0 2px 14px;color:#5f6368}
+.gdoc-page hr{border:none;border-top:1px solid #dadce0;margin:16px 0}
+.gdoc-page pre{background:#f1f3f4;border:1px solid #e0e3e7;border-radius:6px;padding:12px 14px;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:10pt;line-height:1.6;white-space:pre-wrap;overflow-wrap:break-word;margin:8px 0}
+.gdoc-page table{border-collapse:collapse;margin:10px 0;width:100%;font-size:10.5pt}
+.gdoc-page th,.gdoc-page td{border:1px solid #dadce0;padding:6px 10px;text-align:left;vertical-align:top}
+.gdoc-page th{background:#f1f3f4;font-weight:700}
+.gdoc-colwrap{position:relative;display:inline-flex}
+.gdoc-pop{position:absolute;top:32px;left:0;z-index:40;display:none;gap:5px;background:#fff;border:1px solid #dadce0;border-radius:8px;padding:8px;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+.gdoc-swatch{width:20px;height:20px;border-radius:50%;border:1px solid #dadce0;cursor:pointer;padding:0;flex-shrink:0}
+@media(max-width:600px){.gdoc-page{padding:34px 18px;min-height:60vh}.gdoc-canvas{padding:14px 4px 60px}}
+
 </style>
 </head>
 <body>
@@ -2454,7 +2488,11 @@ function render(){
     if(V==='kpi'){V='goals';} // KPI管理は目標・KPI統合ページにリダイレクト
     const views={dashboard:rDash,tasks:rTasks,projects:rProjects,pipeline:rPipeline,teamgoals:rTeamGoals,posts:rPosts,docs:rDocs,workers:rWorkers,habits:rHabits,goals:rGoals,journal:rJournal,revenue:rRevenue,memo:rMemo,settings:rSettings,customize:rCustomize,aichat:rAIChat,fitness:rFitness,kpi:rKpi,bizboard:rBizBoard,bizunits:rBizUnits,bizinfo:rBizInfo,minutes:rMinutes,salesleads:rSalesLeads,hpfee:rHpFee,salessites:rSalesSites,inquiries:rInquiries,templates:rTemplates,crm:rCrm};
     let html;
-    if(V.startsWith('tp_')){
+    if(V.startsWith('doc_')){
+      // Googleドキュメント風エディタ(teamPages.htmlを編集)。BUILTIN_VIEWSガードを迂回する。
+      const page=(S.teamPages||[]).find(p=>`doc_${p.id}`===V&&!p.deleted);
+      html=page?rDocEditor(page):`<div class="empty"><div class="empty-icon">😕</div><div>ドキュメントが見つかりません</div><button class="btn btn-g btn-sm" style="margin-top:10px" onclick="V='docs';render()">← 一覧へ</button></div>`;
+    }else if(V.startsWith('tp_')){
       // チーム共有ページ(teamPages)を既存ブロックエディタで表示。BUILTIN_VIEWSガードを迂回する。
       const page=(S.teamPages||[]).find(p=>`tp_${p.id}`===V);
       html=page?rCustomPage(page):`<div class="empty"><div class="empty-icon">😕</div><div>ページが見つかりません</div></div>`;
@@ -6030,9 +6068,29 @@ function tpDelPage(id){
   save();render();toast('ページを削除しました');
 }
 function rDocs(){
+  docsMigrateToHtml();
+  docsSeedManuals();
+  const pages=_teamPages().slice().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
   const docs=_teamDocs();
   const cats={};docs.forEach(d=>{const c=d.category||'未分類';(cats[c]=cats[c]||[]).push(d);});
-  return`${rTeamPagesSection()}
+  const docList=`${secTitle('📄 ドキュメント')}
+<div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+  <button class="btn btn-p btn-sm" onclick="gdocNew()">＋ 新規作成</button>
+  <span style="font-size:13px;color:var(--t2);align-self:center">${pages.length}件</span>
+</div>
+<div style="font-size:11px;color:var(--t3);margin-bottom:12px">Googleドキュメントと同じ書き心地のチーム共有ドキュメント。開いてそのまま入力すると1秒後に自動保存されます。</div>
+${!pages.length?`<div class="empty"><div class="empty-icon">📄</div><div class="empty-title">まだドキュメントがありません</div></div>`:pages.map(p=>`
+<div class="card" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer" onclick="gdocOpen('${p.id}')">
+  <div style="display:flex;align-items:center;gap:10px;min-width:0">
+    <span style="font-size:22px;flex-shrink:0">📄</span>
+    <div style="min-width:0">
+      <div style="font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.title||'無題のドキュメント')}</div>
+      <div style="font-size:11px;color:var(--t3);margin-top:2px">更新 ${p.updatedAt?tpFmtDate(p.updatedAt):'-'}${p.updatedBy?` ・ ${esc(p.updatedBy)}`:''}</div>
+    </div>
+  </div>
+  <button class="btn btn-red btn-xs" style="flex-shrink:0" onclick="gdocDel('${p.id}');event.stopPropagation()">削除</button>
+</div>`).join('')}`;
+  return`${docList}
 <div style="height:8px"></div>
 ${secTitle('📁 リンク集')}
 <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
@@ -6072,6 +6130,176 @@ function tdSaveDoc(){
   save();closeModal();render();toast('ドキュメントを保存しました 📁');
 }
 function tdDelDoc(id){const d=(S.teamDocs||[]).find(x=>x.id===id);if(!d)return;d.deleted=true;d.updatedAt=Date.now();save();closeModal();render();toast('ドキュメントを削除しました');}
+
+// ===初期ドキュメント(営業マニュアル2本・2026-07-10会長指示で登録。固定IDで冪等/全端末同一)===
+const DOC_SEEDS=[{"id": "gdocseed_teleapo", "title": "テレアポマニュアル（ぽいっとHP）", "html": "<h1>ぽいっとHP テレアポマニュアル（完成版・2026-07-10）</h1><p>対象：佐々木さん、および今後入る新メンバー。旭川のお店に電話する担当者は本書だけ読めば動ける状態にする。</p><p>単一ソース：<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">営業/ぽいっとHP/営業マニュアル.md</span>。本書はそのテレアポ部分を実行レベルまで具体化したもの。矛盾があれば営業マニュアル.mdが優先。</p><hr><h2>1. 目的とKGI</h2><p>このテレアポの目的は契約を取ることではない。<b>「作ったHPのサンプルを30秒見てもらう約束」を取ること</b>。見てもらえれば成約率は跳ね上がる。売り込みではなく、もう出来上がっている現物を見せに行く電話だと思って架電する。</p><ul><li>対応エリアは<b>旭川のみ</b>。旭川以外の店には電話しない。</li><li>今月KGI：<b>成約10件</b>（旭川の店舗のみでの実績）</li><li>週次目安：コール130件／返信・アポ計10件／商談5件／成約2〜3件</li><li>日次目安：平日10件、日曜100件</li></ul><hr><h2>2. 1日の流れ</h2><h3>平日（18:00〜20:00・1日10件）</h3><p>非飲食（美容・整体・小売・教室）を優先する。飲食は仕込み帯や落ち着いた店のみ。この時間外の架電は禁止。</p><table><tr><th>時間</th><th>やること</th></tr><tr><td>18:00〜19:30</td><td>架電。美容・整体・小売中心に10件</td></tr><tr><td>19:30〜19:45</td><td>結果を社内アプリに記録（後回し禁止）</td></tr><tr><td>19:45〜20:00</td><td>翌日の架電先を確認</td></tr></table><h3>日曜（13:00〜18:00・1日100件）</h3><p>飲食が本命。14〜17時のアイドルタイム（ランチ後・ディナー前）を狙う。</p><table><tr><th>時間</th><th>やること</th></tr><tr><td>13:00〜14:00</td><td>非飲食を先に架電</td></tr><tr><td>14:00〜17:00</td><td>飲食店の本命枠。アイドルタイムに集中架電</td></tr><tr><td>17:00〜18:00</td><td>残り件数の消化＋記録</td></tr></table><p>1コール2分以内。断られたら粘らない。次の電話に進む。</p><hr><h2>3. トークスクリプト全文</h2><h3>3-1. 挨拶（開口15秒）</h3><pre>お忙しいところすみません、旭川でお店のホームページを作っている\nmono.createの佐々木です。\n実は◯◯さんのホームページのたたき台を、もう作ってしまっていて。</pre><p>用件を最初の15秒で言い切る。「実は〜」で引っ張らない。</p><h3>3-2. 観察（相手の店を見ていることを一言で示す）</h3><p>業種別の観察例（DM版と共通の型。電話でも同じ観察を1文入れる）：</p><ul><li>美容室：「Instagramのスタイル写真、すごく良かったです。ただ検索したらホットペッパーしか出てこなくて」</li><li>整体：「Googleの口コミで星4.8でしたよね。これだけ信頼されているのにホームページが出てこないのが意外で」</li><li>飲食：「看板メニューの写真を見て伺いたくなりました。営業時間を調べたら食べログの古い情報しか出てこなくて」</li></ul><h3>3-3. 提案（現物を見せる）</h3><pre>LINEかショートメールで、30秒で見られるURLを送るだけなので、\n見るだけ見てもらえませんか？\n気に入らなければ0円です。そのまま消してもらって大丈夫です。\n気に入った場合だけ、お支払いいただく形にしています。</pre><p>「気に入らなければ0円」の伝え方はここが定型。<b>必ずこの順番</b>（先に0円の安心、後から支払い条件）で言う。逆の順番（先に価格）にすると警戒される。</p><h3>3-4. 切り返し（よくある3つ）</h3><table><tr><th>相手の反応</th><th>返し</th></tr><tr><td>「高いんでしょ」</td><td>「制作4万9800円と年間1万円だけです。月額はありません。見るだけならタダです」</td></tr><tr><td>「今ので間に合ってる」</td><td>「ですよね。実は今のページを見た上で、もっと集客できる形で作ってみたんです。比べるだけでも面白いと思います」</td></tr><tr><td>「忙しい」</td><td>「30秒で見られるURLだけ送ります。お邪魔しました」</td></tr></table><p>粘らない。3つとも「引く」設計になっている。旭川は狭い。悪評が最大の損失になる。</p><h3>3-5. クロージング</h3><p>商談日程を取るパターンと、資料案内で終えるパターンの2つを使い分ける。</p><p><b>A. 見る意思がある場合 → 商談日程</b></p><pre>ありがとうございます。\n明日か明後日、お店の空いている時間に10分だけお電話でご説明させてください。\n◯日と◯日でしたら、どちらがよろしいですか？</pre><p>候補日は必ず2択。「いつでも」は決まらない。取れたら社内アプリで「アポ」に更新。</p><p><b>B. その場で決めきれない・資料が欲しいと言われた場合 → 資料案内</b></p><pre>でしたら、お手元でゆっくりご覧いただける資料もご用意しています。\nこのページの「資料がほしい」を選んでいただくと、資料がメールに自動で届きます。\nhttps://mono-create-group.github.io/lp/sample-hp/showcase/contact.html</pre><p>このページで「資料がほしい」を選ぶと資料PDFが自動でメール添付されて届く。電話口で資料を求められたら<b>必ずこのURLを案内する</b>。LINEには誘導しない（公式LINEは休眠中）。</p><hr><h2>4. NG集</h2><ul><li><b>値引き交渉に応じない</b>。「4万9800円と年間1万円、これしかありません」と言い切る。価格が一律であることが信頼の根拠。特別条件をその場で確約しない。</li><li><b>LINEに誘導しない</b>。公式LINEは休眠中。案内する導線はフォーム（上記URL）・メール・電話のみ。</li><li><b>長話をしない</b>。1コール2分以内。用件（HPを見てもらう約束）が取れたら、それ以上話を広げずに切る。</li><li>20時以降の新規架電はしない（既存アポの折り返しは可）。</li><li>誇大表現（「絶対に売上が上がります」等）は言わない。</li><li>「電話しないで」と言われたら、社内アプリで「失注／連絡不可」にして二度と架電しない。</li><li>現物HPは当該店舗の公開素材のみ使用し、成約しなければ削除する前提で扱う。</li></ul><hr><h2>5. シフトさんヒアリングの1問（全接点で必ず1回聞く）</h2><p>HPの話が一段落した後、または断られた直後の「ついでの一言」で聞く。売り込みが終わった空気のほうが本音が出る。</p><pre>あ、あと1つだけ。スタッフさんのシフト表って、毎月どなたが作ってます？\n……ですよね、あれ地味に何時間も取られますよね。\nいま、LINEで希望を集めるだけでシフト表が自動でできる仕組みを\n旭川のお店向けに準備していて、無料モニターを数店だけ探してるんです。\n完成したら一番安い条件で使えるので、枠だけ押さえておきましょうか？</pre><p>シフト管理ツールは開発中のため<b>この電話で受注はしない</b>。モニター登録の意思があれば社内アプリのメモに「シフト希望」と記録するだけでよい。</p><hr><h2>6. 記録手順（社内アプリ）</h2><p>架電したら<b>その場で</b>記録する。記憶で営業しない。</p><ol><li>mono.create 社内連絡アプリの「営業リスト」タブを開く</li><li>該当店舗のステータスを更新：<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">未接触 → 電話済 → アポ → 商談 → 成約</span>（断られたら<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">失注</span>＋理由をメモ）</li><li>メモ欄に一言残す（例：「不在／19時再架電」「資料URL案内済」「シフト希望」）</li><li>次アクション日を入れる（空欄にしない。追客が漏れる原因になる）</li><li><b>成約したら「クライアント化」ボタンを押してクライアント管理へ移す</b></li></ol><p>その日の架電が終わったら、記録が全件埋まっているか自分で確認してから終了する。</p><hr><h2>7. セルフチェック（架電前に1回確認）</h2><ul><li>対応エリアは旭川のみと言っているか（「全国対応」と言わない）</li><li>価格は「制作4万9800円＋年間1万円のみ」で言い切っているか（値引きを匂わせていないか）</li><li>「気に入らなければ0円／気に入った場合のみお支払い」の順番で話しているか</li><li>LINEへ誘導していないか（フォーム・メール・電話のみ）</li><li>資料を求められたら上記contact.htmlのURLを案内しているか</li><li>記録を後回しにせず、その場で社内アプリに入れているか</li></ul>"}, {"id": "gdocseed_dm", "title": "DM営業マニュアル（ぽいっとHP）", "html": "<h1>ぽいっとHP DM営業マニュアル（完成版・2026-07-10）</h1><p>対象：会長、および今後入る新メンバー。IG DM・メールで営業する担当者は本書だけ読めば動ける状態にする。</p><p>単一ソース：<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">営業/ぽいっとHP/営業マニュアル.md</span>。本書はそのDM/メール部分を実行レベルまで具体化したもの。矛盾があれば営業マニュアル.mdが優先。</p><hr><h2>1. 運用ルール</h2><ul><li>対応エリアは<b>旭川のみ</b>。全国の店舗には送らない。</li><li>対象リストは<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">営業/ぽいっとHP/ターゲット60_旭川.csv</span>（口コミ数×評価で採点済みの上位60店）。</li><li><b>1日20通まで</b>（IG DM）。これはInstagramの凍結回避の安全上限。これ以上は増やさない。</li><li>メールアドレスが収集できている先には、DMとは別枠で営業メールを送ってよい（収集数に応じて拡大）。</li><li><b>追撃（フォロー）は1回だけ</b>。3日後に1通送って、それでも返信がなければ次の店に進む。しつこく送らない。</li><li><b>5分調べて1分で書く</b>。相手のInstagramを5分見て観察1文を作り、DM本文自体は定型（後述A〜D）に観察1文と店名・URLを差し込むだけで1分以内に仕上げる。ゼロから書き直さない。</li></ul><hr><h2>2. 送信フロー（テキストで表現）</h2><pre>リストから店舗を1件選ぶ\n        │\n        ▼\n現物HP（たたき台）が既にあるか？\n   ├─ ある  → 【A. IG DM 現物あり型】 or 【C. メール 現物あり型】\n   └─ ない  → 【B. IG DM 現物なし型】\n        │\n        ▼\n送信後、社内アプリに「送信日」を記録\n        │\n        ▼\n3日たっても返信なし → 【D. フォロー】を1回だけ送信\n        │\n        ▼\n返信が来た\n   ├─ 温度が高い（見た/興味ある） → 深掘り1つ質問 → 商談化（§4）\n   └─ 温度が低い（今はいい等）    → 無理に押さない。関係だけ残して終了\n        │\n        ▼\nそれでも反応なし → その店は今月は追わない（次の候補へ）</pre><p>使い分けの判断基準は「現物HPを既に作ってあるかどうか」の1点だけ。現物があるなら必ずA/Cを優先する（返信率が現物なし型より高い）。</p><hr><h2>3. 営業文（この最終版を一字一句そのまま使う）</h2><p>本文中の<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">{店固有の観察1文}</span>と<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">{店名}</span>・<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">{URL}</span>だけを個社ごとに差し替える。文面自体は変えない。</p><h3>【A. IG DM 現物あり型】</h3><pre>はじめまして。旭川でお店のホームページを作っている中村と申します。\n{店固有の観察1文}\n勝手ながら、{店名}さんのホームページのサンプルを1枚作ってしまいました。\nスマホで30秒あれば見られます。\n{URL}\n気に入らなければ0円。そのまま削除します。\n気に入った場合のみお支払い（4万9800円）で、写真や文章を本物に差し替えて公開まで仕上げます。\n不要でしたら、その一言だけもらえたら助かります。</pre><h3>【B. IG DM 現物なし型】</h3><pre>はじめまして。旭川で地元のお店のホームページだけを作っている中村と申します。\n{店固有の観察1文}\n1つだけ伺いたいのですが、いま新しいお客さんは、Instagramと口コミ以外だと何経由が多いですか？\n実は旭川で30店舗以上と話して、ホームページを後回しにしている理由はほぼ同じでした。「めんどくさそう」です。\nうちは文章も写真も更新も全部こちらでやって、お店側は完成品を見るだけ。4万9800円の一律です。\nよければ、実際に動くサンプル集だけ置いておきます。\n{実績URL}</pre><h3>【C. メール 現物あり型】</h3><pre>件名: {店名}様のホームページを試しに作りました（旭川・中村）\n\n{店名} ご担当者様\n\nはじめまして。旭川でお店のホームページを作っている中村と申します。\n{店固有の観察1文}\n\n勝手ながら、{店名}様のホームページのサンプルを1枚作ってしまいました。\nスマホで30秒あれば見られます。\n{URL}\n\n気に入らなければ0円で、このまま削除します。\n気に入った場合のみお支払いいただく形です。制作4万9800円と年間維持1万円、これ以外の請求はありません。\n\n不要でしたら、その一言だけご返信いただければ助かります。\n\nmono.create（モノクリエイト）\n中村</pre><h3>【D. フォロー】</h3><p>3日後未返信（1回だけ）：</p><pre>先日サンプルをお送りした中村です。お忙しい時期でしたらすみません。\nサンプルは今月末まで残しておきます。それ以降は削除しますので、見るだけでも間に合えば幸いです。</pre><p>返信が来たら（深掘り1つ）：</p><pre>ありがとうございます。ちなみにホームページで一番載せたいものは何ですか？メニューでも、雰囲気でも、求人でも。そこを軸に直します。</pre><hr><h2>4. 観察1文の作り方</h2><p>観察1文は「ちゃんとこの店を見た」ことを1文で伝える部分。ここが定型文だと見抜かれ、返信率が落ちる。5分でInstagramの直近投稿・プロフィール・Googleの口コミを見て、具体的な数字か固有名詞を1つ拾う。</p><h3>業種別の型と例</h3><ul><li><b>美容室</b>：投稿の中で一番良かったスタイル写真を具体的に指す。<br>例：「Instagramのスタイル写真、◯◯の投稿がすごく良かったです。ただ検索したらホットペッパーしか出てこなくて、もったいないと感じました」</li><li><b>整体</b>：Googleの口コミ件数と評価点を具体的な数字で出す。<br>例：「Googleの口コミ◯件で★4.8、地元でこれだけ信頼されているのにホームページが出てこないのが意外でした」</li><li><b>飲食</b>：看板メニューを固有名詞で言う。情報の古さ（食べログ等）を指摘する。<br>例：「◯◯（看板メニュー）の写真を見て伺いたくなりました。営業時間を調べたら食べログの古い情報しか出てこなくて」</li></ul><h3>作り方の手順</h3><ol><li>対象店のInstagramを開き、直近の投稿からいちばん反応が良さそうな1件を選ぶ（いいね数が多い・コメントが付いている等）</li><li>その投稿の中身（商品名・スタイル名・メニュー名）を具体的に拾う</li><li>Google検索で店名を調べ、公式HPが出てこないこと・出てくるのが古い情報やポータルサイトだけであることを確認する</li><li>上記業種別の型に当てはめて1文にする。抽象的な褒め言葉（「素敵ですね」等）だけで終わらせない</li></ol><hr><h2>5. 返信後の商談化手順</h2><ol><li>返信が来たら<b>その日のうちに</b>返す（鮮度が命）。</li><li>温度が高い（「見ました」「気になります」等）→ 上記の深掘り質問（§3のD返信後の文）を1つだけ送る。</li><li>深掘りへの返答が来たら、その内容を軸に「電話かLINE通話で10分だけ」の日程調整に進める。候補日は必ず2択で出す。<br>- <b>LINEへは誘導しない</b>（公式LINE休眠中）。「通話」を希望する場合は電話番号のやり取りに留める。</li><li>資料を先に見たいと言われたら、お問い合わせページを案内する。</li></ol><pre>   でしたら、お手元でゆっくりご覧いただける資料もございます。\n   このページで「資料がほしい」を選んでいただくと、資料が自動でメールに届きます。\n   https://mono-create-group.github.io/lp/sample-hp/showcase/contact.html</pre><ol><li>商談が成立したら価格を言い切る：「制作4万9800円と年間維持1万円のみです。値引きは行っておりません」。</li><li>気に入らなければ0円・気に入った場合のみ公開前にお支払い、という説明で統一する。</li></ol><hr><h2>6. 記録手順（社内アプリ）</h2><p>送信・返信のたびに記録する。後回しにしない。</p><ol><li>mono.create 社内連絡アプリの「営業リスト」タブを開く（<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">ターゲット60_旭川.csv</span>の該当行にも反映）</li><li>送信日／使った型（A〜D）／返信の有無を記録</li><li>ステータスを更新：<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">未接触 → DM送信済 → 返信あり → 商談 → 成約</span>（反応なしは<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">追わない</span>に変更し、次候補へ）</li><li>温度が低い返信だった場合は次アクション日を14日後に設定してメモに残す（2周目リストとして再利用）</li><li><b>成約したら「クライアント化」ボタンを押してクライアント管理へ移す</b></li></ol><hr><h2>7. セルフチェック（送信前に1回確認）</h2><ul><li>対応エリアは旭川のみになっているか（「全国対応」の文言が紛れていないか）</li><li>観察1文は具体的か（抽象的な褒め言葉だけになっていないか）</li><li>「気に入らなければ0円／気に入った場合のみお支払い」の表現で統一されているか</li><li>LINEへ誘導していないか（フォーム・メール・電話のみ）</li><li>1日20通の上限を超えていないか</li><li>追撃は1回だけに留めているか</li><li>送信後、社内アプリに記録したか</li></ul>"}];
+function docsSeedManuals(){
+  if(!Array.isArray(S.teamPages))S.teamPages=[];
+  let added=0;
+  DOC_SEEDS.forEach(sd=>{
+    if(S.teamPages.some(p=>p&&p.id===sd.id))return; // 冪等(削除済みでも復活させない)
+    const now=Date.now();
+    S.teamPages.push({id:sd.id,title:sd.title,html:sd.html,blocks:[],createdAt:now,updatedAt:now,updatedBy:'AI登録'});
+    added++;
+  });
+  if(added)save();
+}
+// ===Googleドキュメント風エディタ(teamPages.html) — 2026-07-10 会長指示で刷新===
+// 保存形式: teamPages[{id,title,html,updatedAt,updatedBy,...}]。旧ブロック形式(blocks)はhtmlへ移行し、
+// 移行前の生データは S.docsLegacyBackup に退避(blocksフィールド自体も残置=二重の保護)。
+function _gdWho(){try{return (typeof FB_USER!=='undefined'&&FB_USER)?(FB_USER.displayName||FB_USER.email||''):'';}catch(_){return'';}}
+function _gdMlToP(t){return String(t||'').split('\n').map(l=>l.trim()?`<p>${esc(l)}</p>`:'<p><br></p>').join('');}
+function _gdBlocksToHtml(blocks){
+  return (blocks||[]).map(b=>{
+    if(!b||!b.type)return'';
+    if(b.type==='h1')return`<h2>${esc(b.text||'')}</h2>`;
+    if(b.type==='h2')return`<h3>${esc(b.text||'')}</h3>`;
+    if(b.type==='h3'||b.type==='heading')return`<h4>${esc(b.text||'')}</h4>`;
+    if(b.type==='text')return _gdMlToP(b.content);
+    if(b.type==='note')return`<div style="background:#fef3c7;border-radius:6px;padding:10px 14px;margin:8px 0">${_gdMlToP(b.content)}</div>`;
+    if(b.type==='bullet')return`<ul>${(b.items||[]).map(i=>`<li>${esc(i||'')}</li>`).join('')}</ul>`;
+    if(b.type==='numbered')return`<ol>${(b.items||[]).map(i=>`<li>${esc(i||'')}</li>`).join('')}</ol>`;
+    if(b.type==='quote')return`<blockquote>${_gdMlToP(b.content)}</blockquote>`;
+    if(b.type==='divider')return'<hr>';
+    if(b.type==='toggle')return`<h4>${esc(b.title||'')}</h4>${_gdMlToP(b.content)}`;
+    if(b.type==='code')return`<pre>${esc(b.content||'')}</pre>`;
+    if(b.type==='counter')return`<p>${esc(b.label||'カウンター')}: ${+b.value||0}</p>`;
+    if(b.type==='checklist')return`<ul style="list-style:none;padding-left:4px">${(b.items||[]).map(it=>`<li>${it.done?'☑':'☐'} ${esc(it.text||'')}</li>`).join('')}</ul>`;
+    if(b.type==='links')return (b.items||[]).map(it=>`<p><a href="${esc(it.url||'')}" target="_blank" rel="noopener">${esc(it.label||it.url||'')}</a></p>`).join('');
+    return _gdMlToP(b.content||b.text||'');
+  }).join('');
+}
+function docsMigrateToHtml(){
+  if(!Array.isArray(S.teamPages))S.teamPages=[];
+  const need=S.teamPages.some(p=>p&&!p.deleted&&p.html===undefined);
+  if(!need)return;
+  // 移行前の生データを丸ごと退避(初回のみ)
+  if(!S.docsLegacyBackup){try{S.docsLegacyBackup=JSON.parse(JSON.stringify(S.teamPages));}catch(_){}}
+  S.teamPages.forEach(p=>{
+    if(!p||p.deleted||p.html!==undefined)return;
+    p.html=_gdBlocksToHtml(p.blocks||[]);
+    // updatedAtは変えない(全端末が同一変換を各自実行するため同期の競合を作らない)
+  });
+  save();
+}
+let _gdocTimer=null;
+function gdocOpen(id){V=`doc_${id}`;render();}
+function gdocNew(){
+  if(!S.teamPages)S.teamPages=[];
+  const now=Date.now();
+  const p={id:uid(),title:'',html:'',blocks:[],createdAt:now,updatedAt:now,updatedBy:_gdWho()};
+  S.teamPages.push(p);save();
+  V=`doc_${p.id}`;render();
+  setTimeout(()=>{document.getElementById('gdoc-title')?.focus();},60);
+}
+function gdocDel(id){
+  const p=(S.teamPages||[]).find(x=>x.id===id);if(!p)return;
+  if(!confirm(`「${p.title||'無題のドキュメント'}」を削除しますか？`))return;
+  p.deleted=true;p.updatedAt=Date.now();
+  if(V===`doc_${id}`)V='docs';
+  save();render();toast('ドキュメントを削除しました');
+}
+function gdocBack(id){
+  clearTimeout(_gdocTimer);gdocPersist(id);
+  V='docs';render();
+}
+function gdocInput(id){
+  const st=document.getElementById('gdoc-savestat');if(st)st.textContent='保存中…';
+  clearTimeout(_gdocTimer);
+  _gdocTimer=setTimeout(()=>gdocPersist(id),1000);
+}
+function gdocPersist(id){
+  const p=(S.teamPages||[]).find(x=>x.id===id);if(!p)return;
+  const ed=document.getElementById('gdoc-editor');if(!ed)return;
+  const ti=document.getElementById('gdoc-title');
+  p.html=ed.innerHTML;
+  p.title=(ti?ti.value:p.title||'').trim();
+  p.updatedAt=Date.now();
+  p.updatedBy=_gdWho();
+  save();
+  const st=document.getElementById('gdoc-savestat');if(st)st.textContent='保存しました';
+}
+function gdocCmd(cmd,val){
+  const ed=document.getElementById('gdoc-editor');if(!ed)return;
+  ed.focus();
+  try{document.execCommand('styleWithCSS',false,cmd==='foreColor'||cmd==='hiliteColor'||cmd==='backColor');}catch(_){}
+  let ok=false;
+  try{ok=document.execCommand(cmd,false,val===undefined?null:val);}catch(_){}
+  if(!ok&&cmd==='hiliteColor'){try{document.execCommand('backColor',false,val);}catch(_){}}
+  if(window._gdocCurId)gdocInput(window._gdocCurId);
+}
+const GDOC_FS=[8,10,11,14,18,24,30];
+let _gdocFsIdx=2;
+function gdocFs(d){
+  _gdocFsIdx=Math.max(0,Math.min(GDOC_FS.length-1,_gdocFsIdx+d));
+  const el=document.getElementById('gdoc-fs');if(el)el.textContent=GDOC_FS[_gdocFsIdx];
+  gdocCmd('fontSize',String(_gdocFsIdx+1));
+}
+function gdocLink(){
+  const u=prompt('リンクURL (https://…)');
+  if(u&&u.trim())gdocCmd('createLink',u.trim());
+}
+function gdocClear(){gdocCmd('removeFormat');gdocCmd('unlink');gdocCmd('formatBlock','P');}
+function gdocPop(which){
+  const el=document.getElementById('gdoc-pop-'+which);if(!el)return;
+  const show=el.style.display==='none'||!el.style.display;
+  document.querySelectorAll('.gdoc-pop').forEach(p=>p.style.display='none');
+  el.style.display=show?'flex':'none';
+}
+function gdocColor(cmd,c){
+  document.querySelectorAll('.gdoc-pop').forEach(p=>p.style.display='none');
+  gdocCmd(cmd,c);
+}
+const GDOC_FORE=['#000000','#5f6368','#d93025','#e8710a','#f9ab00','#188038','#1a73e8','#9334e6'];
+const GDOC_HILITE=['#ffffff','#fff475','#ccff90','#a7ffeb','#cbf0f8','#d7aefb','#fdcfe8','#fbbc04'];
+function rDocEditor(p){
+  window._gdocCurId=p.id;
+  const pd='onmousedown="event.preventDefault()"';
+  const btn=(label,cmd,title,val)=>`<button class="gdoc-btn" ${pd} onclick="gdocCmd('${cmd}'${val?`,'${val}'`:''})" title="${title}">${label}</button>`;
+  const swatches=(cmd,colors)=>colors.map(c=>`<button class="gdoc-swatch" style="background:${c}" ${pd} onclick="gdocColor('${cmd}','${c}')" title="${c}"></button>`).join('');
+  return`<div class="gdoc-top">
+  <button class="btn btn-g btn-sm" style="flex-shrink:0" onclick="gdocBack('${p.id}')">← 一覧へ</button>
+  <input id="gdoc-title" class="gdoc-title" placeholder="無題のドキュメント" value="${esc(p.title||'')}" oninput="gdocInput('${p.id}')">
+  <span id="gdoc-savestat" class="gdoc-savestat">保存しました</span>
+</div>
+<div class="gdoc-toolbar">
+  ${btn('↶','undo','元に戻す (Cmd/Ctrl+Z)')}
+  ${btn('↷','redo','やり直し (Cmd/Ctrl+Y)')}
+  <span class="gdoc-sep"></span>
+  <select class="gdoc-style" onchange="gdocCmd('formatBlock',this.value);this.blur()" title="段落スタイル">
+    <option value="P">標準テキスト</option><option value="H1">タイトル</option><option value="H2">見出し1</option><option value="H3">見出し2</option><option value="H4">見出し3</option>
+  </select>
+  <span class="gdoc-sep"></span>
+  <button class="gdoc-btn" ${pd} onclick="gdocFs(-1)" title="フォントサイズを小さく">−</button>
+  <span class="gdoc-fsval" id="gdoc-fs">${GDOC_FS[_gdocFsIdx]}</span>
+  <button class="gdoc-btn" ${pd} onclick="gdocFs(1)" title="フォントサイズを大きく">＋</button>
+  <span class="gdoc-sep"></span>
+  ${btn('<b>B</b>','bold','太字 (Cmd/Ctrl+B)')}
+  ${btn('<i>I</i>','italic','斜体 (Cmd/Ctrl+I)')}
+  ${btn('<u>U</u>','underline','下線 (Cmd/Ctrl+U)')}
+  ${btn('<s>S</s>','strikeThrough','取り消し線')}
+  <span class="gdoc-sep"></span>
+  <span class="gdoc-colwrap"><button class="gdoc-btn" ${pd} onclick="gdocPop('fore')" title="文字色" style="border-bottom:3px solid #d93025;height:25px;margin-top:3px">A</button>
+    <span class="gdoc-pop" id="gdoc-pop-fore">${swatches('foreColor',GDOC_FORE)}</span></span>
+  <span class="gdoc-colwrap"><button class="gdoc-btn" ${pd} onclick="gdocPop('hilite')" title="ハイライト色" style="background:linear-gradient(transparent 60%,#fff475 60%)">ペン</button>
+    <span class="gdoc-pop" id="gdoc-pop-hilite">${swatches('hiliteColor',GDOC_HILITE)}</span></span>
+  <span class="gdoc-sep"></span>
+  ${btn('•≡','insertUnorderedList','箇条書き')}
+  ${btn('1≡','insertOrderedList','番号付きリスト')}
+  ${btn('⇤','outdent','インデント減')}
+  ${btn('⇥','indent','インデント増')}
+  <span class="gdoc-sep"></span>
+  ${btn('⯇','justifyLeft','左揃え')}
+  ${btn('≡','justifyCenter','中央揃え')}
+  ${btn('⯈','justifyRight','右揃え')}
+  <span class="gdoc-sep"></span>
+  <button class="gdoc-btn" ${pd} onclick="gdocLink()" title="リンクを挿入">🔗</button>
+  <button class="gdoc-btn" ${pd} onclick="gdocClear()" title="書式をクリア"><s>T</s>x</button>
+</div>
+<div class="gdoc-canvas" onclick="if(event.target===this)document.getElementById('gdoc-editor').focus()">
+  <div class="gdoc-page" id="gdoc-editor" contenteditable="true" oninput="gdocInput('${p.id}')">${p.html||''}</div>
+</div>`;
+}
 // ===事業情報（事業部ごとのサービス情報・チーム共有）===
 let BI_BU='すべて';
 const BIZINFO_BUS=['HP制作&公式LINE構築・運用','Instagram運用代行','シフトさん','AI顧問','社内アプリ開発'];
@@ -11441,7 +11669,7 @@ initReminders();
 checkClientDraftTasks();
 slMigrateRegions();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260710-13';
+const APP_VERSION='20260710-14';
 
 render();
 function forceAppUpdate(){
