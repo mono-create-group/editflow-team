@@ -6120,13 +6120,24 @@ function biSaveCard(){
 }
 function biDelCard(id){if(!confirm('このカードを削除しますか？'))return;const c=(S.bizInfo||[]).find(x=>x.id===id);if(!c)return;c.deleted=true;c.updatedAt=Date.now();save();closeModal();render();toast('情報カードを削除しました');}
 // ===お問い合わせ(ぽいっとHPのお問い合わせをGAS経由で一覧・対応状況管理)===
-// GAS側が唯一の真実。Firestoreには何も保存しない(TEAM_KEYS非追加)。ADMIN_KEYはshared/configのpoittoKeyから実行時取得(コードに書かない)。
+// GAS側が唯一の真実。Firestoreには何も保存しない(TEAM_KEYS非追加)。ADMIN_KEYはコードに書かない。
+// 鍵の取得優先順位: ①localStorage('poitto_admin_key') ②shared/configのpoittoKey(残置互換) ③無ければタブ内の入力フォームで保存
 const POITTO_EXEC='https://script.google.com/macros/s/AKfycbzftG_O0GsR_8_TYwUwSGfSFPMCjXscWfw0jmTIB54H8NrH0SnjgH445IDDOKoHnNt8XA/exec';
 const INQ_STATUSES=['未対応','連絡済み','商談中','成約','見送り'];
 let INQ_STATE='idle'; // idle | loading | ready | error | noconfig
 let INQ_ERR='';
 async function _poittoKey(){
+  const ls=(localStorage.getItem('poitto_admin_key')||'').trim();
+  if(ls)return ls;
   try{const doc=await fbDb.collection('shared').doc('config').get();const k=doc.exists?(doc.data()||{}).poittoKey:'';return (k||'').trim();}catch(e){return '';}
+}
+function inqSaveKey(){
+  const el=document.getElementById('inq-key');
+  const v=(el?el.value:'').trim();
+  if(!v){toast('管理キーを入力してください','warn');return;}
+  localStorage.setItem('poitto_admin_key',v);
+  toast('管理キーを保存しました 📮');
+  inqReload();
 }
 async function inqLoad(force){
   if(INQ_STATE==='loading')return;
@@ -6149,7 +6160,12 @@ function rInquiries(){
   const head=`${secTitle('📮 お問い合わせ')}
 <div style="font-size:11px;color:var(--t3);margin-bottom:12px">ぽいっとHP(HP制作事業)のお問い合わせ一覧。データはGAS(スプレッドシート)が正で、この画面から対応状況を更新できます。</div>`;
   if(INQ_STATE==='noconfig'){
-    return`${head}<div class="card" style="border-left:3px solid var(--amber)"><div style="font-weight:800;margin-bottom:6px">設定未完了</div><div style="font-size:13px;color:var(--t2);line-height:1.7">shared/config の poittoKey を設定してください。</div></div>`;
+    return`${head}<div class="card" style="border-left:3px solid var(--amber)">
+  <div style="font-weight:800;margin-bottom:6px">管理キーを入力</div>
+  <div style="font-size:12px;color:var(--t2);line-height:1.7;margin-bottom:10px">お問い合わせ一覧の取得には管理キーが必要です。キーはこの端末(localStorage)にのみ保存されます。</div>
+  <div class="fg"><div class="fl">管理キー *</div><input type="password" id="inq-key" placeholder="管理キーを入力" autocomplete="off"></div>
+  <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px"><button class="btn btn-p btn-sm" onclick="inqSaveKey()">保存して読み込む</button></div>
+</div>`;
   }
   if(INQ_STATE==='loading'||INQ_STATE==='idle'){
     return`${head}<div class="card"><div style="color:var(--t2);font-size:13px">読み込み中…</div></div>`;
@@ -11253,7 +11269,7 @@ initReminders();
 checkClientDraftTasks();
 slMigrateRegions();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260710-10';
+const APP_VERSION='20260710-11';
 
 render();
 function forceAppUpdate(){
