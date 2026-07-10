@@ -861,7 +861,7 @@ function fbSave(){
 }
 
 // 個人ドキュメント(users/{uid})も肥大時はLZ圧縮する(Firestore 1MiB制限対策)
-// チームデータ(TEAM_KEYS + bizBoard)は shared/team が唯一の真実。個人docには保存しない
+// チームデータ(TEAM_KEYS + bizBoard)は shared/mcapp が唯一の真実(EditFlowのshared/teamとは完全分離)。個人docには保存しない
 // (二重管理で、アカウント切替時に個人docの古い/空のチームデータが共有取り込み分を上書きする事故を防ぐ)
 function _packState(){
   const EXCL={bizBoard:1};TEAM_KEYS.forEach(k=>EXCL[k]=1);
@@ -880,7 +880,7 @@ function _applyCloudData(json){
   }
   const cloud=JSON.parse(json);
   const def=defState();
-  // チームデータは shared/team が唯一の真実。個人docで上書きせず現在のメモリ内容を保持する。
+  // チームデータは shared/mcapp が唯一の真実。個人docで上書きせず現在のメモリ内容を保持する。
   const keepTeam={};TEAM_KEYS.forEach(k=>keepTeam[k]=S[k]);const keepBiz=S.bizBoard;
   S=migrate(Object.assign(def,cloud));
   TEAM_KEYS.forEach(k=>{if(keepTeam[k]!==undefined)S[k]=keepTeam[k];});
@@ -944,7 +944,7 @@ function fbSetupRealtimeSync(){
 
 // ===チーム共有（案件・クライアント・編集者を全アカウントで共有）===
 // 個人データ(タスク/習慣/目標/ジャーナル等)は users/{uid} のまま非公開。
-// チームデータのみ shared/team に相乗りさせ、全員で同じ案件を見られるようにする。
+// チームデータは社内アプリ専用の shared/mcapp に保存(EditFlow の shared/team とは別物)。
 // Firestoreルールが共有アクセスを許可していれば自動で有効化。許可されない場合は
 // permission-denied を検知して自動で個人モードへフォールバック（現状維持・無害）。
 const TEAM_KEYS=['jobs','clients','workers','pipeline','teamKgis','teamKpis','teamPosts','teamDocs','teamPages','bizUnits','teamMeetings','salesLeads','hpFees','salesSites','templates'];
@@ -996,14 +996,14 @@ function _teamSave(){
   // (プレフィックス "LZ:" で圧縮済みを判別。読み手は圧縮/非圧縮どちらも解釈する)
   TEAM_KEYS.forEach(k=>{payload[k]=_teamEncode(k,S[k]||[]);});
   payload.bizBoard=_teamEncode('bizBoard',S.bizBoard||{});
-  fbDb.collection('shared').doc('team').set(payload,{merge:true})
+  fbDb.collection('shared').doc('mcapp').set(payload,{merge:true})
     .then(()=>{if(TEAM_SHARE_OK!==true){TEAM_SHARE_OK=true;renderAuthUI();}})
     .catch(e=>{const c=e&&e.code;if(c==='permission-denied'&&TEAM_SHARE_OK!==false){TEAM_SHARE_OK=false;renderAuthUI();}console.warn('team share save:',c||e);});
 }
 function fbSetupTeamSync(){
   if(!FB_USER)return;
   if(_teamUnsub){_teamUnsub();_teamUnsub=null;}
-  _teamUnsub=fbDb.collection('shared').doc('team').onSnapshot(doc=>{
+  _teamUnsub=fbDb.collection('shared').doc('mcapp').onSnapshot(doc=>{
     if(TEAM_SHARE_OK!==true){TEAM_SHARE_OK=true;renderAuthUI();}
     if(!doc.exists){_teamSave();return;}
     const d=doc.data()||{};
@@ -11112,7 +11112,7 @@ initReminders();
 checkClientDraftTasks();
 slMigrateRegions();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260710-06';
+const APP_VERSION='20260710-07';
 
 render();
 function forceAppUpdate(){
