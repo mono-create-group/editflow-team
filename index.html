@@ -2461,7 +2461,12 @@ function render(){
     }else if(V.startsWith('cp_')){
       const page=(S.customPages||[]).find(p=>`cp_${p.id}`===V);
       html=page?rCustomPage(page):`<div class="empty"><div class="empty-icon">😕</div><div>ページが見つかりません</div></div>`;
-    }else{html=((BUILTIN_VIEWS.some(v=>v.id===V)&&views[V])?views[V]:rProjects)();}
+    }else{
+      // 描画ガード: navConfig(BUILTIN_VIEWS)のタブに加え、サイドバー固定の設定/カスタマイズと
+      // 下タブバーのホーム/タスク/AI/習慣も許可する(1f677e1のガードが巻き込んでrProjectsに落ちていた不具合の修正)
+      const CHROME_VIEWS=['settings','customize','dashboard','tasks','aichat','habits'];
+      html=(((BUILTIN_VIEWS.some(v=>v.id===V)||CHROME_VIEWS.includes(V))&&views[V])?views[V]:rProjects)();
+    }
     document.getElementById('view').innerHTML=rHpFeeReminder()+rGcalReminder()+rDraftReminder()+html;
     renderNav();
     document.querySelectorAll('.nav-item,.mnav-item').forEach(el=>el.classList.toggle('active',el.dataset.view===V));
@@ -11436,7 +11441,7 @@ initReminders();
 checkClientDraftTasks();
 slMigrateRegions();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260710-12';
+const APP_VERSION='20260710-13';
 
 render();
 function forceAppUpdate(){
