@@ -810,6 +810,7 @@ const DB='ef_team_v5';
 const BUILTIN_VIEWS=[
   {id:'projects',label:'案件管理',icon:'🎬'},
   {id:'pipeline',label:'商談管理',icon:'🤝'},
+  {id:'crm',label:'クライアント',icon:'🤝'},
   {id:'inquiries',label:'お問い合わせ',icon:'📮'},
   {id:'teamgoals',label:'チームKGI/KPI',icon:'📈'},
   {id:'bizinfo',label:'事業情報',icon:'📚'},
@@ -887,7 +888,7 @@ function _applyCloudData(json){
   S=migrate(Object.assign(def,cloud));
   TEAM_KEYS.forEach(k=>{if(keepTeam[k]!==undefined)S[k]=keepTeam[k];});
   if(keepBiz!==undefined)S.bizBoard=keepBiz;
-  ['tasks','habits','jobs','logs','journals','goals','clients','workers','checkIns','customPages','customEx','navConfig','meals','workouts','pipeline','teamKgis','teamKpis','teamPosts','teamDocs','teamPages','bizUnits','teamMeetings','salesLeads','hpFees','salesSites','templates','bizInfo'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=def[k]||[];});
+  ['tasks','habits','jobs','logs','journals','goals','clients','workers','checkIns','customPages','customEx','navConfig','meals','workouts','pipeline','teamKgis','teamKpis','teamPosts','teamDocs','teamPages','bizUnits','teamMeetings','salesLeads','hpFees','salesSites','templates','bizInfo','crmClients'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=def[k]||[];});
   if(FB_USER)S._uid=FB_USER.uid;
   localStorage.setItem(DB,JSON.stringify(S));
 }
@@ -949,7 +950,7 @@ function fbSetupRealtimeSync(){
 // チームデータは社内アプリ専用の shared/mcapp に保存(EditFlow の shared/team とは別物)。
 // Firestoreルールが共有アクセスを許可していれば自動で有効化。許可されない場合は
 // permission-denied を検知して自動で個人モードへフォールバック（現状維持・無害）。
-const TEAM_KEYS=['jobs','clients','workers','pipeline','teamKgis','teamKpis','teamPosts','teamDocs','teamPages','bizUnits','teamMeetings','salesLeads','hpFees','salesSites','templates','bizInfo'];
+const TEAM_KEYS=['jobs','clients','workers','pipeline','teamKgis','teamKpis','teamPosts','teamDocs','teamPages','bizUnits','teamMeetings','salesLeads','hpFees','salesSites','templates','bizInfo','crmClients'];
 let TEAM_SHARE_OK=null;      // null=未判定 / true=共有有効 / false=個人モード
 let _teamUnsub=null;
 window._teamSnap=window._teamSnap||{};
@@ -1725,7 +1726,7 @@ let JOB_SORT='deadline'; // job sort order
 
 function defState(){return{
   tasks:[], clients:[], jobs:[], habits:[], goals:[], journals:[], logs:[], rewards:[],
-  checkIns:[], workouts:[], workers:[], memos:[], meals:[], pipeline:[], teamKgis:[], teamKpis:[], teamPosts:[], teamDocs:[], teamPages:[], salesLeads:[], hpFees:[], salesSites:[], templates:[], bizInfo:[],
+  checkIns:[], workouts:[], workers:[], memos:[], meals:[], pipeline:[], teamKgis:[], teamKpis:[], teamPosts:[], teamDocs:[], teamPages:[], salesLeads:[], hpFees:[], salesSites:[], templates:[], bizInfo:[], crmClients:[],
   fs:JSON.parse(JSON.stringify(DEFAULT_FS)),
   dailySchedules:{},
   goalReviews:{},
@@ -2451,7 +2452,7 @@ function render(){
     }
     sessionStorage.setItem('ef_team_view',V);
     if(V==='kpi'){V='goals';} // KPI管理は目標・KPI統合ページにリダイレクト
-    const views={dashboard:rDash,tasks:rTasks,projects:rProjects,pipeline:rPipeline,teamgoals:rTeamGoals,posts:rPosts,docs:rDocs,workers:rWorkers,habits:rHabits,goals:rGoals,journal:rJournal,revenue:rRevenue,memo:rMemo,settings:rSettings,customize:rCustomize,aichat:rAIChat,fitness:rFitness,kpi:rKpi,bizboard:rBizBoard,bizunits:rBizUnits,bizinfo:rBizInfo,minutes:rMinutes,salesleads:rSalesLeads,hpfee:rHpFee,salessites:rSalesSites,inquiries:rInquiries,templates:rTemplates};
+    const views={dashboard:rDash,tasks:rTasks,projects:rProjects,pipeline:rPipeline,teamgoals:rTeamGoals,posts:rPosts,docs:rDocs,workers:rWorkers,habits:rHabits,goals:rGoals,journal:rJournal,revenue:rRevenue,memo:rMemo,settings:rSettings,customize:rCustomize,aichat:rAIChat,fitness:rFitness,kpi:rKpi,bizboard:rBizBoard,bizunits:rBizUnits,bizinfo:rBizInfo,minutes:rMinutes,salesleads:rSalesLeads,hpfee:rHpFee,salessites:rSalesSites,inquiries:rInquiries,templates:rTemplates,crm:rCrm};
     let html;
     if(V.startsWith('tp_')){
       // チーム共有ページ(teamPages)を既存ブロックエディタで表示。BUILTIN_VIEWSガードを迂回する。
@@ -6119,6 +6120,170 @@ function biSaveCard(){
   save();closeModal();render();toast('情報カードを保存しました 📚');
 }
 function biDelCard(id){if(!confirm('このカードを削除しますか？'))return;const c=(S.bizInfo||[]).find(x=>x.id===id);if(!c)return;c.deleted=true;c.updatedAt=Date.now();save();closeModal();render();toast('情報カードを削除しました');}
+
+// ===クライアント管理(CRM・チーム共有 crmClients)===
+// 既存の S.clients(派遣クライアント・案件紐付け)とは別物。全事業部横断の顧客台帳。
+// 事業部フィルタは事業情報タブ(BIZINFO_BUS)と同じロジックを共有。
+let CRM_BU='すべて';
+let CRM_SEARCH='';
+let CRM_FILTER_STATUS='all';
+const CRM_STATUSES=['見込み','商談中','成約','制作/導入中','運用中','解約'];
+// ステータス→バッジ配色(既存 .b* クラス)
+const CRM_STATUS_BADGE={'見込み':'bk','商談中':'ba','成約':'bb','制作/導入中':'bp','運用中':'bg','解約':'br'};
+const CRM_SOURCES=['手動','営業リスト由来','お問い合わせ由来'];
+function _crmClients(){return (S.crmClients||[]).filter(c=>!c.deleted);}
+// 事業部リスト(事業情報タブと同じ: 5固定+事業部ボード+既存カードのbuを拾う)
+function _crmBuList(){const extra=[...new Set([...(S.bizUnits||[]).map(u=>u.name),..._crmClients().map(c=>c.bu)].filter(Boolean))].filter(n=>!BIZINFO_BUS.includes(n));return['すべて',...BIZINFO_BUS,...extra];}
+function crmSetBu(i){const l=_crmBuList();CRM_BU=l[i]||'すべて';render();}
+function crmSetFilterStatus(s){CRM_FILTER_STATUS=s;render();}
+function crmSearch(v){CRM_SEARCH=v;const list=document.getElementById('crm-list');if(list)list.innerHTML=_crmRows();}
+function _crmMatch(c){
+  const q=(CRM_SEARCH||'').trim().toLowerCase();
+  if(!q)return true;
+  return [c.name,c.contact,c.phone].some(f=>(f||'').toLowerCase().includes(q));
+}
+function _crmRows(){
+  let cards=_crmClients().filter(c=>CRM_BU==='すべて'||c.bu===CRM_BU)
+    .filter(c=>CRM_FILTER_STATUS==='all'||(c.status||'見込み')===CRM_FILTER_STATUS)
+    .filter(_crmMatch)
+    .sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  if(!cards.length)return`<div class="empty"><div class="empty-icon">🤝</div><div class="empty-title">クライアントがいません</div><div style="font-size:12px;color:var(--t3);margin-top:4px">「＋ クライアントを追加」から登録できます</div></div>`;
+  return cards.map(c=>{
+    const st=c.status||'見込み';const badge=CRM_STATUS_BADGE[st]||'bk';
+    return`<div class="sl-row">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span class="sl-name" style="margin:0">${esc(c.name||'無名')}</span>
+          <span class="badge ${badge}">${esc(st)}</span>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:var(--pl);margin-top:3px">${esc(c.bu||'未分類')}</div>
+        <div class="sl-meta" style="margin-top:5px">
+          ${c.contact?`<span>👤 ${esc(c.contact)}</span>`:''}
+          ${c.phone?`<a href="tel:${esc(c.phone)}" style="color:var(--blue);font-size:11px">📞 ${esc(c.phone)}</a>`:''}
+          ${c.email?`<a href="mailto:${esc(c.email)}" style="color:var(--green);font-size:11px">✉️ ${esc(c.email)}</a>`:''}
+          ${c.instagram&&c.instagram.trim()?`<a href="${esc(slIgUrl(c.instagram))}" target="_blank" rel="noopener" style="color:#c13584;font-size:11px">📷 Instagram</a>`:''}
+        </div>
+        ${(c.amount||c.contractDate||c.nextRenew)?`<div class="sl-meta" style="margin-top:4px">
+          ${c.amount?`<span style="font-size:11px;color:var(--t2)">💰 ${esc(c.amount)}</span>`:''}
+          ${c.contractDate?`<span style="font-size:11px;color:var(--t2)">契約日 ${esc(c.contractDate)}</span>`:''}
+          ${c.nextRenew?`<span style="font-size:11px;color:var(--amber)">次回更新 ${esc(c.nextRenew)}</span>`:''}
+        </div>`:''}
+        ${c.contractNote?`<div style="font-size:12px;color:var(--t2);margin-top:6px;white-space:pre-wrap;line-height:1.6">${esc(c.contractNote)}</div>`:''}
+        <div style="font-size:10px;color:var(--t3);margin-top:6px">出典: ${esc(c.source||'手動')}${c.note?' / '+esc(c.note):''}</div>
+      </div>
+      <div style="flex-shrink:0"><button class="btn btn-g btn-xs" onclick="crmOpenCard('${c.id}')">✏️</button></div>
+    </div>`;
+  }).join('');
+}
+function rCrm(){
+  if(!Array.isArray(S.crmClients))S.crmClients=[];
+  const bus=_crmBuList();
+  if(!bus.includes(CRM_BU))CRM_BU='すべて';
+  const all=_crmClients();
+  const won=all.filter(c=>['成約','制作/導入中','運用中'].includes(c.status)).length;
+  const active=all.filter(c=>c.status==='運用中').length;
+  return`<div class="ph"><div class="ph-title">🤝 クライアント管理<small>営業リスト・お問い合わせと紐付く全社の顧客台帳</small></div>
+    <button class="btn btn-p btn-sm" onclick="crmOpenCard()">＋ クライアントを追加</button>
+  </div>
+  <div style="margin-bottom:14px;display:flex;flex-wrap:wrap;gap:8px">
+    <span class="sl-summary-chip" style="background:var(--card2);border-color:var(--border)">総数 <strong style="color:var(--text)">${all.length}</strong></span>
+    <span class="sl-summary-chip" style="border:1.5px solid rgba(37,99,235,.25);color:var(--blue)">成約以降 <strong>${won}</strong></span>
+    <span class="sl-summary-chip" style="border:1.5px solid rgba(5,150,105,.25);color:var(--green)">運用中 <strong>${active}</strong></span>
+  </div>
+  <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+    ${bus.map((b,i)=>`<button class="btn ${b===CRM_BU?'btn-p':'btn-g'} btn-xs" onclick="crmSetBu(${i})">${esc(b)}</button>`).join('')}
+  </div>
+  <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+    <button class="btn ${CRM_FILTER_STATUS==='all'?'btn-p':'btn-g'} btn-xs" onclick="crmSetFilterStatus('all')">全状態</button>
+    ${CRM_STATUSES.map(s=>`<button class="btn ${CRM_FILTER_STATUS===s?'btn-p':'btn-g'} btn-xs" onclick="crmSetFilterStatus('${s}')">${esc(s)}</button>`).join('')}
+  </div>
+  <div style="margin-bottom:12px">
+    <input type="text" class="sl-inline-input" placeholder="🔍 店名・担当者・電話で検索" value="${esc(CRM_SEARCH)}" oninput="crmSearch(this.value)" style="width:100%;max-width:340px">
+  </div>
+  <div id="crm-list">${_crmRows()}</div>`;
+}
+function crmOpenCard(id,prefill){
+  const c=id?(S.crmClients||[]).find(x=>x.id===id):null;
+  const data=c||prefill||{};
+  const bus=_crmBuList().filter(b=>b!=='すべて');
+  const buOf=data.bu||'HP制作&公式LINE構築・運用';
+  openModalLg(`<div class="mhdr"><div class="mtitle">${c?'クライアントを編集':'クライアントを追加'}</div><button class="mclose" onclick="closeModal()">✕</button></div>
+<input type="hidden" id="crm-id" value="${c?c.id:''}">
+<div class="fg"><div class="fl">店名/会社名 *</div><input id="crm-name" value="${esc(data.name||'')}" placeholder="例: めしや なまら"></div>
+<div class="fg"><div class="fl">事業部 *</div><select id="crm-bu">${bus.map(b=>`<option${buOf===b?' selected':''}>${esc(b)}</option>`).join('')}</select></div>
+<div class="fg"><div class="fl">ステータス</div><select id="crm-status">${CRM_STATUSES.map(s=>`<option${(data.status||'見込み')===s?' selected':''}>${esc(s)}</option>`).join('')}</select></div>
+<div class="fg"><div class="fl">担当者名</div><input id="crm-contact" value="${esc(data.contact||'')}" placeholder="先方の担当者"></div>
+<div class="fg"><div class="fl">電話</div><input id="crm-phone" value="${esc(data.phone||'')}"></div>
+<div class="fg"><div class="fl">メール</div><input id="crm-email" value="${esc(data.email||'')}"></div>
+<div class="fg"><div class="fl">Instagram</div><input id="crm-instagram" value="${esc(data.instagram||'')}" placeholder="@id または URL"></div>
+<div class="fg"><div class="fl">金額</div><input id="crm-amount" value="${esc(data.amount||'')}" placeholder="例: HP制作¥49,800＋維持費年¥10,000"></div>
+<div class="fg"><div class="fl">契約日</div><input type="date" id="crm-contractDate" value="${esc(data.contractDate||'')}"></div>
+<div class="fg"><div class="fl">次回更新日(維持費請求の目安)</div><input type="date" id="crm-nextRenew" value="${esc(data.nextRenew||'')}"></div>
+<div class="fg"><div class="fl">契約内容メモ</div><textarea id="crm-contractNote" rows="4">${esc(data.contractNote||'')}</textarea></div>
+<div class="fg"><div class="fl">出典</div><select id="crm-source">${CRM_SOURCES.map(s=>`<option${(data.source||'手動')===s?' selected':''}>${esc(s)}</option>`).join('')}</select></div>
+<div class="fg"><div class="fl">メモ</div><input id="crm-note" value="${esc(data.note||'')}"></div>
+<div class="mfooter"><button class="btn btn-g" onclick="closeModal()">キャンセル</button>${c?`<button class="btn btn-red" onclick="crmDelCard('${c.id}')">削除</button>`:''}<button class="btn btn-p" onclick="crmSaveCard()">保存</button></div>`);
+}
+function crmSaveCard(){
+  const name=document.getElementById('crm-name').value.trim();
+  if(!name){toast('店名/会社名を入力してください','warn');return;}
+  const g=id=>{const el=document.getElementById(id);return el?el.value.trim():'';};
+  const id=document.getElementById('crm-id').value;
+  const data={
+    name,bu:g('crm-bu'),status:g('crm-status'),contact:g('crm-contact'),phone:g('crm-phone'),
+    email:g('crm-email'),instagram:g('crm-instagram'),amount:g('crm-amount'),
+    contractDate:g('crm-contractDate'),nextRenew:g('crm-nextRenew'),contractNote:g('crm-contractNote'),
+    source:g('crm-source'),note:g('crm-note')
+  };
+  if(!Array.isArray(S.crmClients))S.crmClients=[];
+  if(id){const c=S.crmClients.find(x=>x.id===id);if(c)Object.assign(c,data,{updatedAt:Date.now()});}
+  else{S.crmClients.push(Object.assign({id:uid(),createdAt:today(),updatedAt:Date.now()},data));}
+  save();closeModal();render();toast('クライアントを保存しました 🤝');
+}
+function crmDelCard(id){
+  if(!confirm('このクライアントを削除しますか？'))return;
+  const c=(S.crmClients||[]).find(x=>x.id===id);if(!c)return;
+  c.deleted=true;c.updatedAt=Date.now();save();closeModal();render();toast('クライアントを削除しました');
+}
+// 営業リストの行から呼ぶ。店名・電話・IG・業種を引き継いでモーダルを開く(事業部=HP制作)
+function crmFromLead(leadId){
+  const l=(S.salesLeads||[]).find(x=>x.id===leadId);
+  if(!l){toast('見込み客が見つかりません','warn');return;}
+  crmOpenCard(null,{
+    name:l.name||'',phone:l.phone||'',instagram:l.instagram||'',email:l.email||'',
+    bu:'HP制作&公式LINE構築・運用',source:'営業リスト由来',
+    note:l.genre?('業種: '+l.genre):'',status:l.status==='成約'?'成約':'商談中',
+    _leadId:leadId
+  });
+  window.__crmPendingLead=leadId;
+}
+// お問い合わせ(成約)の行から呼ぶ。名前・店名・メール・電話を引き継ぐ(事業部=HP制作)
+function crmFromInquiry(name,shop,email,phone){
+  crmOpenCard(null,{
+    name:(shop||name||'').trim(),contact:(name||'').trim(),email:(email||'').trim(),phone:(phone||'').trim(),
+    bu:'HP制作&公式LINE構築・運用',source:'お問い合わせ由来',status:'成約'
+  });
+}
+// crmSaveCard後、営業リスト由来なら該当行にクライアント化済みを記録(既存load/save経由=LZ圧縮維持)
+(function(){
+  const _origSave=crmSaveCard;
+  window.crmSaveCard=function(){
+    const pend=window.__crmPendingLead;
+    const before=document.getElementById('crm-id')?document.getElementById('crm-id').value:'';
+    _origSave();
+    if(pend&&!before){
+      const l=(S.salesLeads||[]).find(x=>x.id===pend);
+      if(l){
+        const mark='クライアント化済み';
+        if(!(l.memo||'').includes(mark))l.memo=(l.memo?l.memo+' / ':'')+mark;
+        if(!(l.approach||'').includes(mark))l.approach=mark;
+        save();
+      }
+    }
+    window.__crmPendingLead=null;
+  };
+})();
+
 // ===お問い合わせ(ぽいっとHPのお問い合わせをGAS経由で一覧・対応状況管理)===
 // GAS側が唯一の真実。Firestoreには何も保存しない(TEAM_KEYS非追加)。ADMIN_KEYはコードに書かない。
 // 鍵の取得優先順位: ①localStorage('poitto_admin_key') ②shared/configのpoittoKey(残置互換) ③無ければタブ内の入力フォームで保存
@@ -6195,6 +6360,7 @@ function rInquiries(){
     <span>✉️ ${F(r,3)||'-'}</span><span>📞 ${F(r,4)||'-'}</span><span>🏷 ${F(r,5)||'-'}</span><span>種別 ${F(r,6)||'-'}</span>
   </div>
   <div style="font-size:13px;color:var(--t2);margin-top:8px;white-space:pre-wrap;line-height:1.75">${F(r,7)||'(相談内容なし)'}</div>
+  ${cur==='成約'?`<div style="margin-top:8px"><button class="btn btn-g btn-xs" onclick="crmFromInquiry(${JSON.stringify(String(r[1]||'')).replace(/"/g,'&quot;')},${JSON.stringify(String(r[2]||'')).replace(/"/g,'&quot;')},${JSON.stringify(String(r[3]||'')).replace(/"/g,'&quot;')},${JSON.stringify(String(r[4]||'')).replace(/"/g,'&quot;')})" title="このお問い合わせをクライアント台帳に登録">🤝 クライアント登録</button></div>`:''}
 </div>`;
   }).join('');
   return`${head}
@@ -11070,6 +11236,7 @@ function rSalesLeads(){
         <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
           ${slChip(l.status)}
           ${l.rating?`<span style="font-size:11px;color:var(--amber)">★${esc(String(l.rating))}</span>`:''}
+          <button class="btn btn-g btn-xs" onclick="crmFromLead('${sid}')" title="このリードをクライアント台帳に登録">🤝 クライアント化</button>
           <button class="tact del" onclick="slDelete('${sid}')" title="削除">🗑</button>
         </div>
       </div>`;
@@ -11269,7 +11436,7 @@ initReminders();
 checkClientDraftTasks();
 slMigrateRegions();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260710-11';
+const APP_VERSION='20260710-12';
 
 render();
 function forceAppUpdate(){
