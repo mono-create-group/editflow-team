@@ -475,6 +475,9 @@ a{color:inherit;text-decoration:none}
 /* ─── SALES LEADS ─── */
 .sl-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:100px;font-size:12px;font-weight:700;border:1.5px solid;cursor:default}
 .sl-未接触{background:var(--card2);border-color:var(--border);color:var(--t2)}
+.sl-架電予定{background:var(--blue);border-color:var(--blue);color:#fff}
+.sl-メール済み{background:#ecfccb;border-color:rgba(77,124,15,0.35);color:#4d7c0f}
+.sl-DM済み{background:var(--pkdim);border-color:rgba(219,39,119,0.3);color:var(--pink)}
 .sl-HP作成済{background:var(--bdim);border-color:rgba(29,78,216,0.25);color:var(--blue)}
 .sl-電話済{background:var(--cdim);border-color:rgba(14,116,144,0.25);color:var(--cyan)}
 .sl-アポ{background:var(--adim);border-color:rgba(180,83,9,0.25);color:var(--amber)}
@@ -745,6 +748,12 @@ a{color:inherit;text-decoration:none}
 .ai-ctx-bar{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:var(--t2);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .ai-ctx-tag{background:var(--pdim);border:1px solid var(--purple);color:var(--pl);border-radius:99px;padding:2px 10px;font-size:11px;font-weight:600}
 
+/* ===ナビのカテゴリー分け=== */
+.nav-cat{margin-bottom:2px}
+.nav-cat-hd{display:flex;align-items:center;gap:6px;padding:8px 14px 4px;font-size:10.5px;font-weight:800;color:var(--t3);cursor:pointer;user-select:none;letter-spacing:.06em}
+.nav-cat-hd:hover{color:var(--text)}
+.nav-cat-arrow{width:11px;font-size:9px;flex-shrink:0}
+
 /* ===Googleドキュメント風エディタ(ドキュメントタブ)=== */
 .gdoc-top{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
 .gdoc-title{flex:1;min-width:150px;font-size:18px;font-weight:600;border:1px solid transparent;background:transparent;padding:4px 8px;border-radius:4px;color:var(--text)}
@@ -972,7 +981,7 @@ function fbSetupRealtimeSync(){
       // リアルタイム更新 — クラウドが明らかに新しい場合のみ適用
       if(cloudTs>localTs+2000){
         _applyCloudData(doc.data().json);
-        render();
+        renderSyncSafe(); // ドキュメント編集中はDOMを置き換えない(入力消失防止)
         toast('📱 他のデバイスから同期しました');
       }
     }
@@ -1054,7 +1063,7 @@ function fbSetupTeamSync(){
     });
     // 経営ボード(bizBoard): オブジェクト全体を「新しい方優先」で取り込む
     if(typeof d.bizBoard==='string'){const rb=_teamDecode(d.bizBoard);if(rb&&(rb.updatedAt||0)>((S.bizBoard&&S.bizBoard.updatedAt)||0)){S.bizBoard=rb;changed=true;}}
-    if(changed){_teamSnapRebase();localStorage.setItem(DB,JSON.stringify(S));render();}
+    if(changed){_teamSnapRebase();localStorage.setItem(DB,JSON.stringify(S));renderSyncSafe();}
   },e=>{const c=e&&e.code;if(c==='permission-denied'&&TEAM_SHARE_OK!==false){TEAM_SHARE_OK=false;renderAuthUI();}console.warn('team share sync:',c||e);});
 }
 function signInWithGoogle(){
@@ -2491,7 +2500,11 @@ function render(){
     if(V.startsWith('doc_')){
       // Googleドキュメント風エディタ(teamPages.htmlを編集)。BUILTIN_VIEWSガードを迂回する。
       const page=(S.teamPages||[]).find(p=>`doc_${p.id}`===V&&!p.deleted);
-      html=page?rDocEditor(page):`<div class="empty"><div class="empty-icon">😕</div><div>ドキュメントが見つかりません</div><button class="btn btn-g btn-sm" style="margin-top:10px" onclick="V='docs';render()">← 一覧へ</button></div>`;
+      html=page?rDocEditor(page,'tp'):`<div class="empty"><div class="empty-icon">😕</div><div>ドキュメントが見つかりません</div><button class="btn btn-g btn-sm" style="margin-top:10px" onclick="V='docs';render()">← 一覧へ</button></div>`;
+    }else if(V.startsWith('bidoc_')){
+      // 事業情報も同じエディタ部品で編集(bizInfo.html)
+      const page=(S.bizInfo||[]).find(p=>`bidoc_${p.id}`===V&&!p.deleted);
+      html=page?rDocEditor(page,'bi'):`<div class="empty"><div class="empty-icon">😕</div><div>ドキュメントが見つかりません</div><button class="btn btn-g btn-sm" style="margin-top:10px" onclick="V='bizinfo';render()">← 一覧へ</button></div>`;
     }else if(V.startsWith('tp_')){
       // チーム共有ページ(teamPages)を既存ブロックエディタで表示。BUILTIN_VIEWSガードを迂回する。
       const page=(S.teamPages||[]).find(p=>`tp_${p.id}`===V);
@@ -6133,7 +6146,7 @@ function tdDelDoc(id){const d=(S.teamDocs||[]).find(x=>x.id===id);if(!d)return;d
 
 // ===初期ドキュメント(営業マニュアル2本・2026-07-10会長指示で登録。固定IDで冪等/全端末同一)===
 // ver:2 = 2026-07-10 md改訂反映(受注エリア全国化・出張撮影は旭川のみ・切り返し追加)。seedVerで一度きり上書き。
-const DOC_SEEDS=[{"id": "gdocseed_teleapo", "title": "テレアポマニュアル（ぽいっとHP）", "html": "<h1>ぽいっとHP テレアポマニュアル（完成版・2026-07-10）</h1><p>対象：佐々木さん、および今後入る新メンバー。旭川のお店に電話する担当者は本書だけ読めば動ける状態にする。</p><p>単一ソース：<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">営業/ぽいっとHP/営業マニュアル.md</span>。本書はそのテレアポ部分を実行レベルまで具体化したもの。矛盾があれば営業マニュアル.mdが優先。</p><hr><h2>1. 目的とKGI</h2><p>このテレアポの目的は契約を取ることではない。<b>「作ったHPのサンプルを30秒見てもらう約束」を取ること</b>。見てもらえれば成約率は跳ね上がる。売り込みではなく、もう出来上がっている現物を見せに行く電話だと思って架電する。</p><ul><li>受注対応エリアは<b>全国OK（オンライン完結）</b>。出張撮影のみ旭川近郊限定。ただし架電の主戦場は当面<b>旭川の店舗のみ</b>（旭川以外の店には電話しない）。</li><li>1日200接触（DM＋メール営業合算）は<b>新規のみでカウント</b>。3日後フォロー再送はカウントに含めない。</li><li>今月KGI：<b>成約10件</b>（旭川の店舗のみでの実績）</li><li>週次目安：コール130件／返信・アポ計10件／商談5件／成約2〜3件</li><li>日次目安：平日10件、日曜100件</li></ul><hr><h2>2. 1日の流れ</h2><h3>平日（18:00〜20:00・1日10件）</h3><p>非飲食（美容・整体・小売・教室）を優先する。飲食は仕込み帯や落ち着いた店のみ。この時間外の架電は禁止。</p><table><tr><th>時間</th><th>やること</th></tr><tr><td>18:00〜19:30</td><td>架電。美容・整体・小売中心に10件</td></tr><tr><td>19:30〜19:45</td><td>結果を社内アプリに記録（後回し禁止）</td></tr><tr><td>19:45〜20:00</td><td>翌日の架電先を確認</td></tr></table><h3>日曜（13:00〜18:00・1日100件）</h3><p>飲食が本命。14〜17時のアイドルタイム（ランチ後・ディナー前）を狙う。</p><table><tr><th>時間</th><th>やること</th></tr><tr><td>13:00〜14:00</td><td>非飲食を先に架電</td></tr><tr><td>14:00〜17:00</td><td>飲食店の本命枠。アイドルタイムに集中架電</td></tr><tr><td>17:00〜18:00</td><td>残り件数の消化＋記録</td></tr></table><p>1コール2分以内。断られたら粘らない。次の電話に進む。</p><hr><h2>3. トークスクリプト全文</h2><h3>3-1. 挨拶（開口15秒）</h3><pre>お忙しいところすみません、旭川でお店のホームページを作っている\nmono.createの佐々木です。\n実は◯◯さんのホームページのたたき台を、もう作ってしまっていて。</pre><p>用件を最初の15秒で言い切る。「実は〜」で引っ張らない。</p><h3>3-2. 観察（相手の店を見ていることを一言で示す）</h3><p>業種別の観察例（DM版と共通の型。電話でも同じ観察を1文入れる）：</p><ul><li>美容室：「Instagramのスタイル写真、すごく良かったです。ただ検索したらホットペッパーしか出てこなくて」</li><li>整体：「Googleの口コミで星4.8でしたよね。これだけ信頼されているのにホームページが出てこないのが意外で」</li><li>飲食：「看板メニューの写真を見て伺いたくなりました。営業時間を調べたら食べログの古い情報しか出てこなくて」</li></ul><h3>3-3. 提案（現物を見せる）</h3><pre>LINEかショートメールで、30秒で見られるURLを送るだけなので、\n見るだけ見てもらえませんか？\n気に入らなければ0円です。そのまま消してもらって大丈夫です。\n気に入った場合だけ、お支払いいただく形にしています。</pre><p>「気に入らなければ0円」の伝え方はここが定型。<b>必ずこの順番</b>（先に0円の安心、後から支払い条件）で言う。逆の順番（先に価格）にすると警戒される。</p><h3>3-4. 切り返し（よくある3つ）</h3><table><tr><th>相手の反応</th><th>返し</th></tr><tr><td>「高いんでしょ」</td><td>「制作4万9800円と年間1万円だけです。月額はありません。見るだけならタダです」</td></tr><tr><td>「今ので間に合ってる」</td><td>「ですよね。実は今のページを見た上で、もっと集客できる形で作ってみたんです。比べるだけでも面白いと思います」</td></tr><tr><td>「忙しい」</td><td>「30秒で見られるURLだけ送ります。お邪魔しました」</td></tr><tr><td>「対応エリアは？」</td><td>「対応は全国OKです。お店の写真撮影に伺えるのは旭川だけですが、お手持ちのスマホ写真で十分作れます」</td></tr></table><p>粘らない。3つとも「引く」設計になっている。旭川は狭い。悪評が最大の損失になる。</p><h3>3-5. クロージング</h3><p>商談日程を取るパターンと、資料案内で終えるパターンの2つを使い分ける。</p><p><b>A. 見る意思がある場合 → 商談日程</b></p><pre>ありがとうございます。\n明日か明後日、お店の空いている時間に10分だけお電話でご説明させてください。\n◯日と◯日でしたら、どちらがよろしいですか？</pre><p>候補日は必ず2択。「いつでも」は決まらない。取れたら社内アプリで「アポ」に更新。</p><p><b>B. その場で決めきれない・資料が欲しいと言われた場合 → 資料案内</b></p><pre>でしたら、お手元でゆっくりご覧いただける資料もご用意しています。\nこのページの「資料がほしい」を選んでいただくと、資料がメールに自動で届きます。\nhttps://mono-create-group.github.io/lp/sample-hp/showcase/contact.html</pre><p>このページで「資料がほしい」を選ぶと資料PDFが自動でメール添付されて届く。電話口で資料を求められたら<b>必ずこのURLを案内する</b>。LINEには誘導しない（公式LINEは休眠中）。</p><hr><h2>4. NG集</h2><ul><li><b>値引き交渉に応じない</b>。「4万9800円と年間1万円、これしかありません」と言い切る。価格が一律であることが信頼の根拠。特別条件をその場で確約しない。</li><li><b>LINEに誘導しない</b>。公式LINEは休眠中。案内する導線はフォーム（上記URL）・メール・電話のみ。</li><li><b>長話をしない</b>。1コール2分以内。用件（HPを見てもらう約束）が取れたら、それ以上話を広げずに切る。</li><li>20時以降の新規架電はしない（既存アポの折り返しは可）。</li><li>誇大表現（「絶対に売上が上がります」等）は言わない。</li><li>「電話しないで」と言われたら、社内アプリで「失注／連絡不可」にして二度と架電しない。</li><li>現物HPは当該店舗の公開素材のみ使用し、成約しなければ削除する前提で扱う。</li></ul><hr><h2>5. シフトさんヒアリングの1問（全接点で必ず1回聞く）</h2><p>HPの話が一段落した後、または断られた直後の「ついでの一言」で聞く。売り込みが終わった空気のほうが本音が出る。</p><pre>あ、あと1つだけ。スタッフさんのシフト表って、毎月どなたが作ってます？\n……ですよね、あれ地味に何時間も取られますよね。\nいま、LINEで希望を集めるだけでシフト表が自動でできる仕組みを\n旭川のお店向けに準備していて、無料モニターを数店だけ探してるんです。\n完成したら一番安い条件で使えるので、枠だけ押さえておきましょうか？</pre><p>シフト管理ツールは開発中のため<b>この電話で受注はしない</b>。モニター登録の意思があれば社内アプリのメモに「シフト希望」と記録するだけでよい。</p><hr><h2>6. 記録手順（社内アプリ）</h2><p>架電したら<b>その場で</b>記録する。記憶で営業しない。</p><ol start=\"1\"><li>mono.create 社内連絡アプリの「営業リスト」タブを開く</li><li>該当店舗のステータスを更新：<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">未接触 → 電話済 → アポ → 商談 → 成約</span>（断られたら<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">失注</span>＋理由をメモ）</li><li>メモ欄に一言残す（例：「不在／19時再架電」「資料URL案内済」「シフト希望」）</li><li>次アクション日を入れる（空欄にしない。追客が漏れる原因になる）</li><li><b>成約したら「クライアント化」ボタンを押してクライアント管理へ移す</b></li></ol><p>その日の架電が終わったら、記録が全件埋まっているか自分で確認してから終了する。</p><hr><h2>7. セルフチェック（架電前に1回確認）</h2><ul><li>対応エリアを聞かれたら「受注は全国OK・出張撮影のみ旭川」と正しく答えているか（受注そのものを旭川限定と言わない）</li><li>価格は「制作4万9800円＋年間1万円のみ」で言い切っているか（値引きを匂わせていないか）</li><li>「気に入らなければ0円／気に入った場合のみお支払い」の順番で話しているか</li><li>LINEへ誘導していないか（フォーム・メール・電話のみ）</li><li>資料を求められたら上記contact.htmlのURLを案内しているか</li><li>記録を後回しにせず、その場で社内アプリに入れているか</li></ul>", "ver": 2}, {"id": "gdocseed_dm", "title": "DM営業マニュアル（ぽいっとHP）", "html": "<h1>ぽいっとHP DM営業マニュアル（完成版・2026-07-10）</h1><p>対象：会長、および今後入る新メンバー。IG DM・メールで営業する担当者は本書だけ読めば動ける状態にする。</p><p>単一ソース：<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">営業/ぽいっとHP/営業マニュアル.md</span>。本書はそのDM/メール部分を実行レベルまで具体化したもの。矛盾があれば営業マニュアル.mdが優先。</p><hr><h2>1. 運用ルール</h2><ul><li>受注対応エリアは<b>全国OK（オンライン完結）</b>。出張撮影のみ旭川近郊限定。ただしDM送信先は当面<b>旭川の店舗のみ</b>（全国の店舗には送らない）。</li><li>対象リストは<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">営業/ぽいっとHP/ターゲット60_旭川.csv</span>（口コミ数×評価で採点済みの上位60店）。</li><li><b>1日20通まで</b>（IG DM）。これはInstagramの凍結回避の安全上限。これ以上は増やさない。</li><li>メールアドレスが収集できている先には、DMとは別枠で営業メールを送ってよい（収集数に応じて拡大）。<b>在庫消化順序は旭川→送り尽くしたら札幌→全道→全国</b>（営業の主戦場・訪問・撮影は旭川のまま）。</li><li><b>1日200接触（DM＋メール営業合算）は新規のみでカウント</b>。3日後フォロー再送はカウントに含めない（フォローは別枠で実施）。</li><li><b>追撃（フォロー）は1回だけ</b>。3日後に1通送って、それでも返信がなければ次の店に進む。しつこく送らない。</li><li><b>5分調べて1分で書く</b>。相手のInstagramを5分見て観察1文を作り、DM本文自体は定型（後述A〜D）に観察1文と店名・URLを差し込むだけで1分以内に仕上げる。ゼロから書き直さない。</li></ul><hr><h2>2. 送信フロー（テキストで表現）</h2><pre>リストから店舗を1件選ぶ\n        │\n        ▼\n現物HP（たたき台）が既にあるか？\n   ├─ ある  → 【A. IG DM 現物あり型】 or 【C. メール 現物あり型】\n   └─ ない  → 【B. IG DM 現物なし型】\n        │\n        ▼\n送信後、社内アプリに「送信日」を記録\n        │\n        ▼\n3日たっても返信なし → 【D. フォロー】を1回だけ送信\n        │\n        ▼\n返信が来た\n   ├─ 温度が高い（見た/興味ある） → 深掘り1つ質問 → 商談化（§4）\n   └─ 温度が低い（今はいい等）    → 無理に押さない。関係だけ残して終了\n        │\n        ▼\nそれでも反応なし → その店は今月は追わない（次の候補へ）</pre><p>使い分けの判断基準は「現物HPを既に作ってあるかどうか」の1点だけ。現物があるなら必ずA/Cを優先する（返信率が現物なし型より高い）。</p><hr><h2>3. 営業文（この最終版を一字一句そのまま使う）</h2><p>本文中の<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">{店固有の観察1文}</span>と<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">{店名}</span>・<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">{URL}</span>だけを個社ごとに差し替える。文面自体は変えない。</p><h3>【A. IG DM 現物あり型】</h3><pre>はじめまして。旭川でお店のホームページを作っている中村と申します。\n{店固有の観察1文}\n勝手ながら、{店名}さんのホームページのサンプルを1枚作ってしまいました。\nスマホで30秒あれば見られます。\n{URL}\n気に入らなければ0円。そのまま削除します。\n気に入った場合のみお支払い（4万9800円）で、写真や文章を本物に差し替えて公開まで仕上げます。\n不要でしたら、その一言だけもらえたら助かります。</pre><h3>【B. IG DM 現物なし型】</h3><pre>はじめまして。旭川で地元のお店のホームページだけを作っている中村と申します。\n{店固有の観察1文}\n1つだけ伺いたいのですが、いま新しいお客さんは、Instagramと口コミ以外だと何経由が多いですか？\n実は旭川で30店舗以上と話して、ホームページを後回しにしている理由はほぼ同じでした。「めんどくさそう」です。\nうちは文章も写真も更新も全部こちらでやって、お店側は完成品を見るだけ。4万9800円の一律です。\nよければ、実際に動くサンプル集だけ置いておきます。\n{実績URL}</pre><h3>【C. メール 現物あり型】</h3><pre>件名: {店名}様のホームページを試しに作りました（旭川・中村）\n\n{店名} ご担当者様\n\nはじめまして。旭川でお店のホームページを作っている中村と申します。\n{店固有の観察1文}\n\n勝手ながら、{店名}様のホームページのサンプルを1枚作ってしまいました。\nスマホで30秒あれば見られます。\n{URL}\n\n気に入らなければ0円で、このまま削除します。\n気に入った場合のみお支払いいただく形です。制作4万9800円と年間維持1万円、これ以外の請求はありません。\n\n不要でしたら、その一言だけご返信いただければ助かります。\n\nmono.create（モノクリエイト）\n中村</pre><h3>【D. フォロー】</h3><p>3日後未返信（1回だけ）：</p><pre>先日サンプルをお送りした中村です。お忙しい時期でしたらすみません。\nサンプルは今月末まで残しておきます。それ以降は削除しますので、見るだけでも間に合えば幸いです。</pre><p>返信が来たら（深掘り1つ）：</p><pre>ありがとうございます。ちなみにホームページで一番載せたいものは何ですか？メニューでも、雰囲気でも、求人でも。そこを軸に直します。</pre><hr><h2>4. 観察1文の作り方</h2><p>観察1文は「ちゃんとこの店を見た」ことを1文で伝える部分。ここが定型文だと見抜かれ、返信率が落ちる。5分でInstagramの直近投稿・プロフィール・Googleの口コミを見て、具体的な数字か固有名詞を1つ拾う。</p><h3>業種別の型と例</h3><ul><li><b>美容室</b>：投稿の中で一番良かったスタイル写真を具体的に指す。<br>例：「Instagramのスタイル写真、◯◯の投稿がすごく良かったです。ただ検索したらホットペッパーしか出てこなくて、もったいないと感じました」</li><li><b>整体</b>：Googleの口コミ件数と評価点を具体的な数字で出す。<br>例：「Googleの口コミ◯件で★4.8、地元でこれだけ信頼されているのにホームページが出てこないのが意外でした」</li><li><b>飲食</b>：看板メニューを固有名詞で言う。情報の古さ（食べログ等）を指摘する。<br>例：「◯◯（看板メニュー）の写真を見て伺いたくなりました。営業時間を調べたら食べログの古い情報しか出てこなくて」</li></ul><h3>作り方の手順</h3><ol start=\"1\"><li>対象店のInstagramを開き、直近の投稿からいちばん反応が良さそうな1件を選ぶ（いいね数が多い・コメントが付いている等）</li><li>その投稿の中身（商品名・スタイル名・メニュー名）を具体的に拾う</li><li>Google検索で店名を調べ、公式HPが出てこないこと・出てくるのが古い情報やポータルサイトだけであることを確認する</li><li>上記業種別の型に当てはめて1文にする。抽象的な褒め言葉（「素敵ですね」等）だけで終わらせない</li></ol><hr><h2>5. 返信後の商談化手順</h2><ol start=\"1\"><li>返信が来たら<b>その日のうちに</b>返す（鮮度が命）。</li><li>温度が高い（「見ました」「気になります」等）→ 上記の深掘り質問（§3のD返信後の文）を1つだけ送る。</li><li>深掘りへの返答が来たら、その内容を軸に「電話かLINE通話で10分だけ」の日程調整に進める。候補日は必ず2択で出す。<br>- <b>LINEへは誘導しない</b>（公式LINE休眠中）。「通話」を希望する場合は電話番号のやり取りに留める。</li><li>資料を先に見たいと言われたら、お問い合わせページを案内する。</li></ol><pre>   でしたら、お手元でゆっくりご覧いただける資料もございます。\n   このページで「資料がほしい」を選んでいただくと、資料が自動でメールに届きます。\n   https://mono-create-group.github.io/lp/sample-hp/showcase/contact.html</pre><ol start=\"5\"><li>商談が成立したら価格を言い切る：「制作4万9800円と年間維持1万円のみです。値引きは行っておりません」。</li><li>気に入らなければ0円・気に入った場合のみ公開前にお支払い、という説明で統一する。</li><li>対応エリアを聞かれたら「対応は全国OKです。お店の写真撮影に伺えるのは旭川だけですが、お手持ちのスマホ写真で十分作れます」と返す。</li></ol><hr><h2>6. 記録手順（社内アプリ）</h2><p>送信・返信のたびに記録する。後回しにしない。</p><ol start=\"1\"><li>mono.create 社内連絡アプリの「営業リスト」タブを開く（<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">ターゲット60_旭川.csv</span>の該当行にも反映）</li><li>送信日／使った型（A〜D）／返信の有無を記録</li><li>ステータスを更新：<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">未接触 → DM送信済 → 返信あり → 商談 → 成約</span>（反応なしは<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">追わない</span>に変更し、次候補へ）</li><li>温度が低い返信だった場合は次アクション日を14日後に設定してメモに残す（2周目リストとして再利用）</li><li><b>成約したら「クライアント化」ボタンを押してクライアント管理へ移す</b></li></ol><hr><h2>7. セルフチェック（送信前に1回確認）</h2><ul><li>送信先は旭川の店舗のみになっているか（全国の店舗へは送っていないか）。対応エリアを聞かれた際は「受注は全国OK・出張撮影のみ旭川」と正しく答える準備ができているか</li><li>観察1文は具体的か（抽象的な褒め言葉だけになっていないか）</li><li>「気に入らなければ0円／気に入った場合のみお支払い」の表現で統一されているか</li><li>LINEへ誘導していないか（フォーム・メール・電話のみ）</li><li>1日20通の上限を超えていないか</li><li>追撃は1回だけに留めているか</li><li>送信後、社内アプリに記録したか</li></ul>", "ver": 2}];
+const DOC_SEEDS=[{"id": "gdocseed_teleapo", "title": "テレアポマニュアル（ぽいっとHP）", "html": "<h1>ぽいっとHP テレアポマニュアル（完成版・2026-07-10）</h1><p>対象：佐々木さん、および今後入る新メンバー。旭川のお店に電話する担当者は本書だけ読めば動ける状態にする。</p><p>単一ソース：<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">営業/ぽいっとHP/営業マニュアル.md</span>。本書はそのテレアポ部分を実行レベルまで具体化したもの。矛盾があれば営業マニュアル.mdが優先。</p><hr><h2>1. 目的とKGI</h2><p>このテレアポの目的は契約を取ることではない。<b>「作ったHPのサンプルを30秒見てもらう約束」を取ること</b>。見てもらえれば成約率は跳ね上がる。売り込みではなく、もう出来上がっている現物を見せに行く電話だと思って架電する。</p><ul><li>受注対応エリアは<b>全国OK（オンライン完結）</b>。出張撮影のみ旭川近郊限定。ただし架電の主戦場は当面<b>旭川の店舗のみ</b>（旭川以外の店には電話しない）。</li><li>1日200接触（DM＋メール営業合算）は<b>新規のみでカウント</b>。3日後フォロー再送はカウントに含めない。</li><li>今月KGI：<b>成約10件</b>（旭川の店舗のみでの実績）</li><li>週次目安：コール130件／返信・アポ計10件／商談5件／成約2〜3件</li><li>日次目安：平日10件、日曜100件</li></ul><hr><h2>2. 1日の流れ</h2><h3>平日（18:00〜20:00・1日10件）</h3><p>非飲食（美容・整体・小売・教室）を優先する。飲食は仕込み帯や落ち着いた店のみ。この時間外の架電は禁止。</p><table><tr><th>時間</th><th>やること</th></tr><tr><td>18:00〜19:30</td><td>架電。美容・整体・小売中心に10件</td></tr><tr><td>19:30〜19:45</td><td>結果を社内アプリに記録（後回し禁止）</td></tr><tr><td>19:45〜20:00</td><td>翌日の架電先を確認し、社内アプリでその店を「架電予定」ステータスに変更</td></tr></table><h3>日曜（13:00〜18:00・1日100件）</h3><p>飲食が本命。14〜17時のアイドルタイム（ランチ後・ディナー前）を狙う。</p><table><tr><th>時間</th><th>やること</th></tr><tr><td>13:00〜14:00</td><td>非飲食を先に架電</td></tr><tr><td>14:00〜17:00</td><td>飲食店の本命枠。アイドルタイムに集中架電</td></tr><tr><td>17:00〜18:00</td><td>残り件数の消化＋記録</td></tr></table><p>1コール2分以内。断られたら粘らない。次の電話に進む。</p><hr><h2>3. トークスクリプト全文</h2><h3>3-1. 挨拶（開口15秒）</h3><pre>お忙しいところすみません、旭川でお店のホームページを作っている\nmono.createの佐々木です。\n実は◯◯さんのホームページのたたき台を、もう作ってしまっていて。</pre><p>用件を最初の15秒で言い切る。「実は〜」で引っ張らない。</p><h3>3-2. 観察（相手の店を見ていることを一言で示す）</h3><p>業種別の観察例（DM版と共通の型。電話でも同じ観察を1文入れる）：</p><ul><li>美容室：「Instagramのスタイル写真、すごく良かったです。ただ検索したらホットペッパーしか出てこなくて」</li><li>整体：「Googleの口コミで星4.8でしたよね。これだけ信頼されているのにホームページが出てこないのが意外で」</li><li>飲食：「看板メニューの写真を見て伺いたくなりました。営業時間を調べたら食べログの古い情報しか出てこなくて」</li></ul><h3>3-3. 提案（現物を見せる）</h3><pre>LINEかショートメールで、30秒で見られるURLを送るだけなので、\n見るだけ見てもらえませんか？\n気に入らなければ0円です。そのまま消してもらって大丈夫です。\n気に入った場合だけ、お支払いいただく形にしています。</pre><p>「気に入らなければ0円」の伝え方はここが定型。<b>必ずこの順番</b>（先に0円の安心、後から支払い条件）で言う。逆の順番（先に価格）にすると警戒される。</p><h3>3-4. 切り返し（よくある3つ）</h3><table><tr><th>相手の反応</th><th>返し</th></tr><tr><td>「高いんでしょ」</td><td>「制作4万9800円と年間1万円だけです。月額はありません。見るだけならタダです」</td></tr><tr><td>「今ので間に合ってる」</td><td>「ですよね。実は今のページを見た上で、もっと集客できる形で作ってみたんです。比べるだけでも面白いと思います」</td></tr><tr><td>「忙しい」</td><td>「30秒で見られるURLだけ送ります。お邪魔しました」</td></tr><tr><td>「対応エリアは？」</td><td>「対応は全国OKです。お店の写真撮影に伺えるのは旭川だけですが、お手持ちのスマホ写真で十分作れます」</td></tr></table><p>粘らない。3つとも「引く」設計になっている。旭川は狭い。悪評が最大の損失になる。</p><h3>3-5. クロージング</h3><p>商談日程を取るパターンと、資料案内で終えるパターンの2つを使い分ける。</p><p><b>A. 見る意思がある場合 → 商談日程</b></p><pre>ありがとうございます。\n明日か明後日、お店の空いている時間に10分だけお電話でご説明させてください。\n◯日と◯日でしたら、どちらがよろしいですか？</pre><p>候補日は必ず2択。「いつでも」は決まらない。取れたら社内アプリで「アポ」に更新。</p><p><b>B. その場で決めきれない・資料が欲しいと言われた場合 → 資料案内</b></p><pre>でしたら、お手元でゆっくりご覧いただける資料もご用意しています。\nこのページの「資料がほしい」を選んでいただくと、資料がメールに自動で届きます。\nhttps://mono-create-group.github.io/lp/sample-hp/showcase/contact.html</pre><p>このページで「資料がほしい」を選ぶと資料PDFが自動でメール添付されて届く。電話口で資料を求められたら<b>必ずこのURLを案内する</b>。LINEには誘導しない（公式LINEは休眠中）。</p><hr><h2>4. NG集</h2><ul><li><b>値引き交渉に応じない</b>。「4万9800円と年間1万円、これしかありません」と言い切る。価格が一律であることが信頼の根拠。特別条件をその場で確約しない。</li><li><b>LINEに誘導しない</b>。公式LINEは休眠中。案内する導線はフォーム（上記URL）・メール・電話のみ。</li><li><b>長話をしない</b>。1コール2分以内。用件（HPを見てもらう約束）が取れたら、それ以上話を広げずに切る。</li><li>20時以降の新規架電はしない（既存アポの折り返しは可）。</li><li>誇大表現（「絶対に売上が上がります」等）は言わない。</li><li>「電話しないで」と言われたら、社内アプリで「失注／連絡不可」にして二度と架電しない。</li><li>現物HPは当該店舗の公開素材のみ使用し、成約しなければ削除する前提で扱う。</li></ul><hr><h2>5. シフトさんヒアリングの1問（全接点で必ず1回聞く）</h2><p>HPの話が一段落した後、または断られた直後の「ついでの一言」で聞く。売り込みが終わった空気のほうが本音が出る。</p><pre>あ、あと1つだけ。スタッフさんのシフト表って、毎月どなたが作ってます？\n……ですよね、あれ地味に何時間も取られますよね。\nいま、LINEで希望を集めるだけでシフト表が自動でできる仕組みを\n旭川のお店向けに準備していて、無料モニターを数店だけ探してるんです。\n完成したら一番安い条件で使えるので、枠だけ押さえておきましょうか？</pre><p>シフト管理ツールは開発中のため<b>この電話で受注はしない</b>。モニター登録の意思があれば社内アプリのメモに「シフト希望」と記録するだけでよい。</p><hr><h2>6. 記録手順（社内アプリ）</h2><p>架電したら<b>その場で</b>記録する。記憶で営業しない。</p><ol start=\"1\"><li>mono.create 社内連絡アプリの「営業リスト」タブを開く</li><li>該当店舗のステータスを更新：<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">未接触 → 架電予定 → 電話済 → アポ → 商談 → 成約</span>（断られたら<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">失注</span>＋理由をメモ）。「架電予定」は前日の19:45〜20:00に翌日分へ付けておく（翌日はこのステータスで絞り込んで上から架電するだけ）</li><li>メモ欄に一言残す（例：「不在／19時再架電」「資料URL案内済」「シフト希望」）</li><li>次アクション日を入れる（空欄にしない。追客が漏れる原因になる）</li><li><b>成約したら「クライアント化」ボタンを押してクライアント管理へ移す</b></li></ol><p>その日の架電が終わったら、記録が全件埋まっているか自分で確認してから終了する。</p><hr><h2>7. セルフチェック（架電前に1回確認）</h2><ul><li>対応エリアを聞かれたら「受注は全国OK・出張撮影のみ旭川」と正しく答えているか（受注そのものを旭川限定と言わない）</li><li>価格は「制作4万9800円＋年間1万円のみ」で言い切っているか（値引きを匂わせていないか）</li><li>「気に入らなければ0円／気に入った場合のみお支払い」の順番で話しているか</li><li>LINEへ誘導していないか（フォーム・メール・電話のみ）</li><li>資料を求められたら上記contact.htmlのURLを案内しているか</li><li>記録を後回しにせず、その場で社内アプリに入れているか</li></ul>", "ver": 3}, {"id": "gdocseed_dm", "title": "DM営業マニュアル（ぽいっとHP）", "html": "<h1>ぽいっとHP DM営業マニュアル（完成版・2026-07-10）</h1><p>対象：会長、および今後入る新メンバー。IG DM・メールで営業する担当者は本書だけ読めば動ける状態にする。</p><p>単一ソース：<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">営業/ぽいっとHP/営業マニュアル.md</span>。本書はそのDM/メール部分を実行レベルまで具体化したもの。矛盾があれば営業マニュアル.mdが優先。</p><hr><h2>1. 運用ルール</h2><ul><li>受注対応エリアは<b>全国OK（オンライン完結）</b>。出張撮影のみ旭川近郊限定。ただしDM送信先は当面<b>旭川の店舗のみ</b>（全国の店舗には送らない）。</li><li>対象リストは<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">営業/ぽいっとHP/ターゲット60_旭川.csv</span>（口コミ数×評価で採点済みの上位60店）。</li><li><b>1日20通まで</b>（IG DM）。これはInstagramの凍結回避の安全上限。これ以上は増やさない。</li><li>メールアドレスが収集できている先には、DMとは別枠で営業メールを送ってよい（収集数に応じて拡大）。<b>在庫消化順序は旭川→送り尽くしたら札幌→全道→全国</b>（営業の主戦場・訪問・撮影は旭川のまま）。</li><li><b>1日200接触（DM＋メール営業合算）は新規のみでカウント</b>。3日後フォロー再送はカウントに含めない（フォローは別枠で実施）。</li><li><b>追撃（フォロー）は1回だけ</b>。3日後に1通送って、それでも返信がなければ次の店に進む。しつこく送らない。</li><li><b>5分調べて1分で書く</b>。相手のInstagramを5分見て観察1文を作り、DM本文自体は定型（後述A〜D）に観察1文と店名・URLを差し込むだけで1分以内に仕上げる。ゼロから書き直さない。</li></ul><hr><h2>2. 送信フロー（テキストで表現）</h2><pre>リストから店舗を1件選ぶ\n        │\n        ▼\n現物HP（たたき台）が既にあるか？\n   ├─ ある  → 【A. IG DM 現物あり型】 or 【C. メール 現物あり型】\n   └─ ない  → 【B. IG DM 現物なし型】\n        │\n        ▼\n送信後、社内アプリに「送信日」を記録\n        │\n        ▼\n3日たっても返信なし → 【D. フォロー】を1回だけ送信\n        │\n        ▼\n返信が来た\n   ├─ 温度が高い（見た/興味ある） → 深掘り1つ質問 → 商談化（§4）\n   └─ 温度が低い（今はいい等）    → 無理に押さない。関係だけ残して終了\n        │\n        ▼\nそれでも反応なし → その店は今月は追わない（次の候補へ）</pre><p>使い分けの判断基準は「現物HPを既に作ってあるかどうか」の1点だけ。現物があるなら必ずA/Cを優先する（返信率が現物なし型より高い）。</p><hr><h2>3. 営業文（この最終版を一字一句そのまま使う）</h2><p>本文中の<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">{店固有の観察1文}</span>と<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">{店名}</span>・<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">{URL}</span>だけを個社ごとに差し替える。文面自体は変えない。</p><h3>【A. IG DM 現物あり型】</h3><pre>はじめまして。旭川でお店のホームページを作っている中村と申します。\n{店固有の観察1文}\n勝手ながら、{店名}さんのホームページのサンプルを1枚作ってしまいました。\nスマホで30秒あれば見られます。\n{URL}\n気に入らなければ0円。そのまま削除します。\n気に入った場合のみお支払い（4万9800円）で、写真や文章を本物に差し替えて公開まで仕上げます。\n不要でしたら、その一言だけもらえたら助かります。</pre><h3>【B. IG DM 現物なし型】</h3><pre>はじめまして。旭川で地元のお店のホームページだけを作っている中村と申します。\n{店固有の観察1文}\n1つだけ伺いたいのですが、いま新しいお客さんは、Instagramと口コミ以外だと何経由が多いですか？\n実は旭川で30店舗以上と話して、ホームページを後回しにしている理由はほぼ同じでした。「めんどくさそう」です。\nうちは文章も写真も更新も全部こちらでやって、お店側は完成品を見るだけ。4万9800円の一律です。\nよければ、実際に動くサンプル集だけ置いておきます。\n{実績URL}</pre><h3>【C. メール 現物あり型】</h3><pre>件名: {店名}様のホームページを試しに作りました（旭川・中村）\n\n{店名} ご担当者様\n\nはじめまして。旭川でお店のホームページを作っている中村と申します。\n{店固有の観察1文}\n\n勝手ながら、{店名}様のホームページのサンプルを1枚作ってしまいました。\nスマホで30秒あれば見られます。\n{URL}\n\n気に入らなければ0円で、このまま削除します。\n気に入った場合のみお支払いいただく形です。制作4万9800円と年間維持1万円、これ以外の請求はありません。\n\n不要でしたら、その一言だけご返信いただければ助かります。\n\nmono.create（モノクリエイト）\n中村</pre><h3>【D. フォロー】</h3><p>3日後未返信（1回だけ）：</p><pre>先日サンプルをお送りした中村です。お忙しい時期でしたらすみません。\nサンプルは今月末まで残しておきます。それ以降は削除しますので、見るだけでも間に合えば幸いです。</pre><p>返信が来たら（深掘り1つ）：</p><pre>ありがとうございます。ちなみにホームページで一番載せたいものは何ですか？メニューでも、雰囲気でも、求人でも。そこを軸に直します。</pre><hr><h2>4. 観察1文の作り方</h2><p>観察1文は「ちゃんとこの店を見た」ことを1文で伝える部分。ここが定型文だと見抜かれ、返信率が落ちる。5分でInstagramの直近投稿・プロフィール・Googleの口コミを見て、具体的な数字か固有名詞を1つ拾う。</p><h3>業種別の型と例</h3><ul><li><b>美容室</b>：投稿の中で一番良かったスタイル写真を具体的に指す。<br>例：「Instagramのスタイル写真、◯◯の投稿がすごく良かったです。ただ検索したらホットペッパーしか出てこなくて、もったいないと感じました」</li><li><b>整体</b>：Googleの口コミ件数と評価点を具体的な数字で出す。<br>例：「Googleの口コミ◯件で★4.8、地元でこれだけ信頼されているのにホームページが出てこないのが意外でした」</li><li><b>飲食</b>：看板メニューを固有名詞で言う。情報の古さ（食べログ等）を指摘する。<br>例：「◯◯（看板メニュー）の写真を見て伺いたくなりました。営業時間を調べたら食べログの古い情報しか出てこなくて」</li></ul><h3>作り方の手順</h3><ol start=\"1\"><li>対象店のInstagramを開き、直近の投稿からいちばん反応が良さそうな1件を選ぶ（いいね数が多い・コメントが付いている等）</li><li>その投稿の中身（商品名・スタイル名・メニュー名）を具体的に拾う</li><li>Google検索で店名を調べ、公式HPが出てこないこと・出てくるのが古い情報やポータルサイトだけであることを確認する</li><li>上記業種別の型に当てはめて1文にする。抽象的な褒め言葉（「素敵ですね」等）だけで終わらせない</li></ol><hr><h2>5. 返信後の商談化手順</h2><ol start=\"1\"><li>返信が来たら<b>その日のうちに</b>返す（鮮度が命）。</li><li>温度が高い（「見ました」「気になります」等）→ 上記の深掘り質問（§3のD返信後の文）を1つだけ送る。</li><li>深掘りへの返答が来たら、その内容を軸に「電話かLINE通話で10分だけ」の日程調整に進める。候補日は必ず2択で出す。<br>- <b>LINEへは誘導しない</b>（公式LINE休眠中）。「通話」を希望する場合は電話番号のやり取りに留める。</li><li>資料を先に見たいと言われたら、お問い合わせページを案内する。</li></ol><pre>   でしたら、お手元でゆっくりご覧いただける資料もございます。\n   このページで「資料がほしい」を選んでいただくと、資料が自動でメールに届きます。\n   https://mono-create-group.github.io/lp/sample-hp/showcase/contact.html</pre><ol start=\"5\"><li>商談が成立したら価格を言い切る：「制作4万9800円と年間維持1万円のみです。値引きは行っておりません」。</li><li>気に入らなければ0円・気に入った場合のみ公開前にお支払い、という説明で統一する。</li><li>対応エリアを聞かれたら「対応は全国OKです。お店の写真撮影に伺えるのは旭川だけですが、お手持ちのスマホ写真で十分作れます」と返す。</li></ol><hr><h2>6. 記録手順（社内アプリ）</h2><p>送信・返信のたびに記録する。後回しにしない。</p><ol start=\"1\"><li>mono.create 社内連絡アプリの「営業リスト」タブを開く（<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">ターゲット60_旭川.csv</span>の該当行にも反映）</li><li>送信日／使った型（A〜D）／返信の有無を記録</li><li>ステータスを更新：<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">未接触 → DM送信済 → 返信あり → 商談 → 成約</span>（反応なしは<span style=\"background:#f1f3f4;border-radius:3px;padding:0 4px;font-family:Menlo,Consolas,monospace;font-size:10pt\">追わない</span>に変更し、次候補へ）</li><li>温度が低い返信だった場合は次アクション日を14日後に設定してメモに残す（2周目リストとして再利用）</li><li><b>成約したら「クライアント化」ボタンを押してクライアント管理へ移す</b></li></ol><hr><h2>7. セルフチェック（送信前に1回確認）</h2><ul><li>送信先は旭川の店舗のみになっているか（全国の店舗へは送っていないか）。対応エリアを聞かれた際は「受注は全国OK・出張撮影のみ旭川」と正しく答える準備ができているか</li><li>観察1文は具体的か（抽象的な褒め言葉だけになっていないか）</li><li>「気に入らなければ0円／気に入った場合のみお支払い」の表現で統一されているか</li><li>LINEへ誘導していないか（フォーム・メール・電話のみ）</li><li>1日20通の上限を超えていないか</li><li>追撃は1回だけに留めているか</li><li>送信後、社内アプリに記録したか</li></ul>", "ver": 2}];
 function docsSeedManuals(){
   if(!Array.isArray(S.teamPages))S.teamPages=[];
   let changed=0;
@@ -6191,41 +6204,76 @@ function docsMigrateToHtml(){
   save();
 }
 let _gdocTimer=null;
-function gdocOpen(id){V=`doc_${id}`;render();}
-function gdocNew(){
-  if(!S.teamPages)S.teamPages=[];
+// エディタは2つのコレクションを扱う: src='tp'(ドキュメント/teamPages) / src='bi'(事業情報/bizInfo)。部品は完全共通。
+function _gdocColl(src){
+  if(src==='bi'){if(!Array.isArray(S.bizInfo))S.bizInfo=[];return S.bizInfo;}
+  if(!Array.isArray(S.teamPages))S.teamPages=[];return S.teamPages;
+}
+function _gdocPrefix(src){return src==='bi'?'bidoc_':'doc_';}
+function _gdocBackView(src){return src==='bi'?'bizinfo':'docs';}
+function gdocOpen(id,src){src=src||'tp';window._gdocCurSrc=src;V=_gdocPrefix(src)+id;render();}
+function gdocNew(src,bu){
+  src=src||'tp';
+  const coll=_gdocColl(src);
   const now=Date.now();
-  const p={id:uid(),title:'',html:'',blocks:[],createdAt:now,updatedAt:now,updatedBy:_gdWho()};
-  S.teamPages.push(p);save();
-  V=`doc_${p.id}`;render();
+  const p={id:uid(),title:'',html:'',createdAt:now,updatedAt:now,updatedBy:_gdWho()};
+  if(src==='tp')p.blocks=[];
+  if(src==='bi')p.bu=bu||BIZINFO_BUS[0];
+  coll.push(p);save();
+  gdocOpen(p.id,src);
   setTimeout(()=>{document.getElementById('gdoc-title')?.focus();},60);
 }
-function gdocDel(id){
-  const p=(S.teamPages||[]).find(x=>x.id===id);if(!p)return;
+function gdocDel(id,src){
+  src=src||'tp';
+  const p=_gdocColl(src).find(x=>x.id===id);if(!p)return;
   if(!confirm(`「${p.title||'無題のドキュメント'}」を削除しますか？`))return;
   p.deleted=true;p.updatedAt=Date.now();
-  if(V===`doc_${id}`)V='docs';
+  if(V===_gdocPrefix(src)+id)V=_gdocBackView(src);
   save();render();toast('ドキュメントを削除しました');
 }
+function gdocSetBu(id,bu){
+  const p=_gdocColl('bi').find(x=>x.id===id);if(!p)return;
+  p.bu=bu;p.updatedAt=Date.now();p.updatedBy=_gdWho();save();
+  const st=document.getElementById('gdoc-savestat');if(st)st.textContent='保存しました';
+}
 function gdocBack(id){
-  clearTimeout(_gdocTimer);gdocPersist(id);
-  V='docs';render();
+  clearTimeout(_gdocTimer);
+  if(window._gdocDirty)gdocPersist(id); // 未編集ならDOMを書き戻さない(リモート更新を巻き戻さないため)
+  V=_gdocBackView(window._gdocCurSrc||'tp');render();
 }
 function gdocInput(id){
+  window._gdocDirty=true;
   const st=document.getElementById('gdoc-savestat');if(st)st.textContent='保存中…';
   clearTimeout(_gdocTimer);
   _gdocTimer=setTimeout(()=>gdocPersist(id),1000);
 }
 function gdocPersist(id){
-  const p=(S.teamPages||[]).find(x=>x.id===id);if(!p)return;
+  const p=_gdocColl(window._gdocCurSrc||'tp').find(x=>x.id===id);if(!p)return;
   const ed=document.getElementById('gdoc-editor');if(!ed)return;
   const ti=document.getElementById('gdoc-title');
   p.html=ed.innerHTML;
   p.title=(ti?ti.value:p.title||'').trim();
   p.updatedAt=Date.now();
   p.updatedBy=_gdWho();
+  window._gdocDirty=false;
+  window._gdocRenderPending=false; // 編集セッション中はローカル優先(last-writer-wins)
   save();
   const st=document.getElementById('gdoc-savestat');if(st)st.textContent='保存しました';
+}
+// 編集中(フォーカス中 or 未保存の変更あり)かどうか。同期によるDOM再描画の保留判定に使う。
+function _gdocEditingActive(){
+  if(typeof V!=='string'||!(V.startsWith('doc_')||V.startsWith('bidoc_')))return false;
+  const ed=document.getElementById('gdoc-editor');
+  if(!ed)return false;
+  if(window._gdocDirty)return true;
+  const ae=document.activeElement;
+  return !!(ae&&(ae===ed||ed.contains(ae)||ae.id==='gdoc-title'));
+}
+// リモート同期用のrender。ドキュメント編集中はフォーカス中のcontenteditableを黙って置き換えない。
+// (データのマージ自体は先に済んでいる。次の保存でローカルが優先=last-writer-wins。他タブは次の描画で反映)
+function renderSyncSafe(){
+  if(_gdocEditingActive()){window._gdocRenderPending=true;return;}
+  render();
 }
 function gdocCmd(cmd,val){
   const ed=document.getElementById('gdoc-editor');if(!ed)return;
@@ -6260,14 +6308,17 @@ function gdocColor(cmd,c){
 }
 const GDOC_FORE=['#000000','#5f6368','#d93025','#e8710a','#f9ab00','#188038','#1a73e8','#9334e6'];
 const GDOC_HILITE=['#ffffff','#fff475','#ccff90','#a7ffeb','#cbf0f8','#d7aefb','#fdcfe8','#fbbc04'];
-function rDocEditor(p){
-  window._gdocCurId=p.id;
+function rDocEditor(p,src){
+  src=src||'tp';
+  window._gdocCurId=p.id;window._gdocCurSrc=src;
   const pd='onmousedown="event.preventDefault()"';
   const btn=(label,cmd,title,val)=>`<button class="gdoc-btn" ${pd} onclick="gdocCmd('${cmd}'${val?`,'${val}'`:''})" title="${title}">${label}</button>`;
   const swatches=(cmd,colors)=>colors.map(c=>`<button class="gdoc-swatch" style="background:${c}" ${pd} onclick="gdocColor('${cmd}','${c}')" title="${c}"></button>`).join('');
+  const buSel=src==='bi'?`<select style="flex-shrink:0;max-width:170px;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:4px 6px;background:var(--card);color:var(--text)" onchange="gdocSetBu('${p.id}',this.value)" title="事業部">${_biBuList().filter(b=>b!=='すべて').map(b=>`<option${(p.bu||'')===b?' selected':''}>${esc(b)}</option>`).join('')}</select>`:'';
   return`<div class="gdoc-top">
   <button class="btn btn-g btn-sm" style="flex-shrink:0" onclick="gdocBack('${p.id}')">← 一覧へ</button>
   <input id="gdoc-title" class="gdoc-title" placeholder="無題のドキュメント" value="${esc(p.title||'')}" oninput="gdocInput('${p.id}')">
+  ${buSel}
   <span id="gdoc-savestat" class="gdoc-savestat">保存しました</span>
 </div>
 <div class="gdoc-toolbar">
@@ -6314,7 +6365,21 @@ const BIZINFO_BUS=['HP制作&公式LINE構築・運用','Instagram運用代行',
 function _bizInfo(){return (S.bizInfo||[]).filter(c=>!c.deleted);}
 function _biBuList(){const extra=[...new Set([...(S.bizUnits||[]).map(u=>u.name),..._bizInfo().map(c=>c.bu)].filter(Boolean))].filter(n=>!BIZINFO_BUS.includes(n));return['すべて',...BIZINFO_BUS,...extra];}
 function biSetBu(i){const l=_biBuList();BI_BU=l[i]||'すべて';render();}
+// 旧カード形式(title/body)→ドキュメント形式(html)への移行。移行前の生データはbizInfoLegacyBackupへ退避。
+function bizInfoMigrateToHtml(){
+  if(!Array.isArray(S.bizInfo))S.bizInfo=[];
+  const need=S.bizInfo.some(c=>c&&!c.deleted&&c.html===undefined);
+  if(!need)return;
+  if(!S.bizInfoLegacyBackup){try{S.bizInfoLegacyBackup=JSON.parse(JSON.stringify(S.bizInfo));}catch(_){}}
+  S.bizInfo.forEach(c=>{
+    if(!c||c.deleted||c.html!==undefined)return;
+    c.html=_gdMlToP(c.body||'');
+    // updatedAtは変えない(全端末が同一変換を各自実行するため同期の競合を作らない)
+  });
+  save();
+}
 function rBizInfo(){
+  bizInfoMigrateToHtml();
   const bus=_biBuList();
   if(!bus.includes(BI_BU))BI_BU='すべて';
   const cards=_bizInfo().filter(c=>BI_BU==='すべて'||c.bu===BI_BU).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
@@ -6323,21 +6388,21 @@ function rBizInfo(){
   ${bus.map((b,i)=>`<button class="btn ${b===BI_BU?'btn-p':'btn-g'} btn-xs" onclick="biSetBu(${i})">${esc(b)}</button>`).join('')}
 </div>
 <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-  <button class="btn btn-p btn-sm" onclick="biOpenCard()">＋ 情報カードを追加</button>
+  <button class="btn btn-p btn-sm" onclick="gdocNew('bi',${BI_BU==='すべて'?'null':`'${BI_BU.replace(/'/g,"\\'")}'`})">＋ 新規作成</button>
   <span style="font-size:13px;color:var(--t2);align-self:center">${cards.length}件</span>
 </div>
-<div style="font-size:11px;color:var(--t3);margin-bottom:12px">プラン・価格・営業トークなど、事業部ごとのサービス情報をチームで共有します。</div>
-${!cards.length?`<div class="empty"><div class="empty-icon">📚</div><div class="empty-title">まだ情報カードがありません</div></div>`:cards.map(c=>`
-<div class="card" style="margin-bottom:10px">
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+<div style="font-size:11px;color:var(--t3);margin-bottom:12px">プラン・価格・営業トークなどをドキュメント形式で共有します。開いてそのまま入力すると自動保存されます。</div>
+${!cards.length?`<div class="empty"><div class="empty-icon">📚</div><div class="empty-title">まだドキュメントがありません</div></div>`:cards.map(c=>`
+<div class="card" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer" onclick="gdocOpen('${c.id}','bi')">
+  <div style="display:flex;align-items:center;gap:10px;min-width:0">
+    <span style="font-size:22px;flex-shrink:0">📚</span>
     <div style="min-width:0">
-      <div style="font-size:11px;font-weight:800;color:var(--pl);margin-bottom:2px">${esc(c.bu||'未分類')}</div>
-      <div style="font-weight:800;font-size:15px">${esc(c.title||'無題')}</div>
+      <div style="font-size:11px;font-weight:800;color:var(--pl)">${esc(c.bu||'未分類')}</div>
+      <div style="font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.title||'無題のドキュメント')}</div>
+      <div style="font-size:11px;color:var(--t3);margin-top:2px">更新 ${c.updatedAt?tpFmtDate(c.updatedAt):'-'}${c.updatedBy?` ・ ${esc(c.updatedBy)}`:''}</div>
     </div>
-    <button class="btn btn-g btn-xs" style="flex-shrink:0" onclick="biOpenCard('${c.id}')">✏️</button>
   </div>
-  <div style="font-size:13px;color:var(--t2);margin-top:8px;white-space:pre-wrap;line-height:1.75">${esc(c.body||'')}</div>
-  <div style="font-size:10px;color:var(--t3);margin-top:8px">更新 ${c.updatedAt?tpFmtDate(c.updatedAt):'-'}</div>
+  <button class="btn btn-red btn-xs" style="flex-shrink:0" onclick="gdocDel('${c.id}','bi');event.stopPropagation()">削除</button>
 </div>`).join('')}`;
 }
 function biOpenCard(id){
@@ -10212,25 +10277,58 @@ function updSessionCount(){
 // ===NO-CODE CUSTOMIZE===
 const CP_ICONS=['📄','📊','💡','📌','🔖','📝','🗒','🧩','⭐','🎨','🔑','📂','📋','🗓','🎯','💼','🔔','🌟','🛠','🔥','✅','🎬','💰','🧠','📔'];
 
+// navConfig(表示/非表示・並び順)は社内アプリ専用の localStorage 'mc_navconfig' に分離(2026-07-10 恒久修正)。
+// EditFlowと共有する個人doc(S.navConfig)から独立させ、aa05f91の「常時全表示」応急処置を撤去。
+// 端末ごとの個人設定(会長と佐々木で別々の表示にできる)。初期値は全表示。旧S.navConfigのhidden値は移行時に無視。
+const NAVCFG_LS='mc_navconfig';
 function getNavCfg(){
-  if(!S.navConfig)S.navConfig=BUILTIN_VIEWS.map(v=>({id:v.id,hidden:false}));
-  // 削除済みページをnavConfigから除去（kpi→goalsに統合、revenue→削除）
-  S.navConfig=S.navConfig.filter(c=>c.id!=='kpi'&&c.id!=='revenue').filter(c=>BUILTIN_VIEWS.some(v=>v.id===c.id));
-  BUILTIN_VIEWS.forEach(v=>{if(!S.navConfig.find(c=>c.id===v.id))S.navConfig.push({id:v.id,hidden:false});});
-  // EditFlow(個人用)と個人docを共有しているため、hidden指定は無視して常に全チームタブを表示する(2026-07-10 全タブ消失障害の恒久対策)
-  S.navConfig.forEach(c=>{c.hidden=false;});
+  let cfg=null;
+  try{cfg=JSON.parse(localStorage.getItem(NAVCFG_LS)||'null');}catch(_){cfg=null;}
+  if(!Array.isArray(cfg)){
+    // 初回移行: 並び順のみ旧S.navConfigから引き継ぎ、hiddenは全て解除(EditFlow由来の壊れた値を無視)
+    cfg=[];
+    (Array.isArray(S.navConfig)?S.navConfig:[]).forEach(c=>{
+      if(c&&c.id&&BUILTIN_VIEWS.some(v=>v.id===c.id)&&!cfg.some(x=>x.id===c.id))cfg.push({id:c.id,hidden:false});
+    });
+  }
+  cfg=cfg.filter(c=>c&&BUILTIN_VIEWS.some(v=>v.id===c.id));
+  BUILTIN_VIEWS.forEach(v=>{if(!cfg.some(c=>c.id===v.id))cfg.push({id:v.id,hidden:false});});
+  cfg.forEach(c=>{c.hidden=!!c.hidden;});
   // 社内アプリでは個人カスタムページ(cp_)をサイドバーに注入しない（情報漏洩防止）
-  return S.navConfig;
+  return cfg;
+}
+function setNavCfg(cfg){try{localStorage.setItem(NAVCFG_LS,JSON.stringify(cfg));}catch(_){}}
+function navResetAll(){
+  const cfg=getNavCfg();cfg.forEach(c=>{c.hidden=false;});
+  setNavCfg(cfg);render();toast('すべてのタブを表示に戻しました');
 }
 function navMeta(id){
   const bv=BUILTIN_VIEWS.find(v=>v.id===id);if(bv)return{label:bv.label,icon:bv.icon};
   if(id.startsWith('cp_')){const p=(S.customPages||[]).find(p=>`cp_${p.id}`===id);if(p)return{label:p.title,icon:p.icon||'📄'};}
   return{label:id,icon:'📄'};
 }
+// ナビのカテゴリー分け(2026-07-10 会長指示)。開閉状態は端末localStorage記憶。設定/カスタマイズは従来どおり下部固定。
+const NAV_CATS=[
+  {id:'sales',label:'営業',views:['salesleads','pipeline','inquiries','crm','salessites']},
+  {id:'prod',label:'制作・派遣',views:['projects','workers','hpfee']},
+  {id:'mgmt',label:'経営',views:['teamgoals','bizboard','bizunits']},
+  {id:'info',label:'情報',views:['bizinfo','docs','minutes','posts']},
+];
+const NAVCATS_LS='mc_navcats';
+function getNavCatState(){try{const o=JSON.parse(localStorage.getItem(NAVCATS_LS)||'{}');return (o&&typeof o==='object')?o:{};}catch(_){return{};}}
+function toggleNavCat(cid){
+  const st=getNavCatState();
+  st[cid]=st[cid]===false; // false(閉)→true(開) / それ以外(開)→false(閉)
+  try{localStorage.setItem(NAVCATS_LS,JSON.stringify(st));}catch(_){}
+  renderNav();
+}
+// viewId→カテゴリー(未分類は「その他」)
+function _navCatOf(id){return NAV_CATS.find(cat=>cat.views.includes(id))||null;}
 function renderNav(){
   const cfg=getNavCfg();
   const el=document.getElementById('nav-items');if(!el)return;
   const visible=cfg.filter(c=>!c.hidden);
+  const catState=getNavCatState();
   const navItemHTML=(c,draggable=false)=>{
     const{label,icon}=navMeta(c.id);
     const idx=cfg.indexOf(c);
@@ -10246,10 +10344,26 @@ function renderNav(){
     }
     return`<div class="nav-item${V===c.id?' active':''}" data-view="${c.id}"><span class="nav-icon">${icon}</span>${label}</div>`;
   };
-  el.innerHTML=visible.map(c=>navItemHTML(c,true)).join('');
+  const grouped=(draggable)=>{
+    let html='';
+    const used=new Set();
+    const cats=[...NAV_CATS,{id:'other',label:'その他',views:null}];
+    cats.forEach(cat=>{
+      const items=cat.views?visible.filter(c=>cat.views.includes(c.id)):visible.filter(c=>!used.has(c.id)&&!_navCatOf(c.id));
+      items.forEach(c=>used.add(c.id));
+      if(!items.length)return;
+      const open=catState[cat.id]!==false;
+      html+=`<div class="nav-cat">
+  <div class="nav-cat-hd" onclick="toggleNavCat('${cat.id}')"><span class="nav-cat-arrow">${open?'▾':'▸'}</span>${cat.label}<span style="flex:1"></span><span style="font-size:9px;opacity:.6">${items.length}</span></div>
+  ${open?items.map(c=>navItemHTML(c,draggable)).join(''):''}
+</div>`;
+    });
+    return html;
+  };
+  el.innerHTML=grouped(true);
   // モバイルドロワー
   const dr=document.getElementById('mob-drawer-nav');if(!dr)return;
-  dr.innerHTML=visible.map(c=>navItemHTML(c,false)).join('')+`<div class="nav-sep"></div>
+  dr.innerHTML=grouped(false)+`<div class="nav-sep"></div>
   <div class="nav-item${V==='customize'?' active':''}" data-view="customize"><span class="nav-icon">🛠</span>カスタマイズ</div>
   <div class="nav-item${V==='settings'?' active':''}" data-view="settings"><span class="nav-icon">⚙️</span>設定</div>`;
   // 下タブバー同期
@@ -10276,8 +10390,8 @@ function toggleNavItem(id,e){
   const cfg=getNavCfg(),c=cfg.find(c=>c.id===id);if(!c)return;
   if(!c.hidden&&cfg.filter(c=>!c.hidden).length<=1){toast('最低1つ表示が必要です','err');return;}
   c.hidden=!c.hidden;
-  if(c.hidden&&V===id){V='projects';}
-  save();render();
+  if(c.hidden&&V===id){V=(cfg.find(x=>!x.hidden)||{id:'projects'}).id;}
+  setNavCfg(cfg);render();
 }
 
 // Nav D&D in customize
@@ -10289,8 +10403,8 @@ function navDragLeave(e){e.currentTarget.style.borderTop='';}
 function navDrop(e,toIdx){
   e.preventDefault();e.currentTarget.style.borderTop='';
   if(_navDragIdx===null||_navDragIdx===toIdx)return;
-  const cfg=S.navConfig,[item]=cfg.splice(_navDragIdx,1);cfg.splice(toIdx,0,item);
-  _navDragIdx=null;save();render();
+  const cfg=getNavCfg(),[item]=cfg.splice(_navDragIdx,1);cfg.splice(toIdx,0,item);
+  _navDragIdx=null;setNavCfg(cfg);render();
 }
 // Sidebar direct D&D
 let _sideNavDragIdx=null;
@@ -10310,7 +10424,7 @@ function sideNavDrop(e,toIdx){
   e.preventDefault();e.currentTarget.style.borderTop='';
   if(_sideNavDragIdx===null||_sideNavDragIdx===toIdx){_sideNavDragIdx=null;return;}
   const cfg=getNavCfg(),[item]=cfg.splice(_sideNavDragIdx,1);cfg.splice(toIdx,0,item);
-  S.navConfig=cfg;_sideNavDragIdx=null;save();renderNav();
+  _sideNavDragIdx=null;setNavCfg(cfg);renderNav();
 }
 
 // Customize view
@@ -10322,11 +10436,18 @@ function rCustomize(){
   <button class="btn btn-p" onclick="openNewPageModal()">＋ 新しいページ</button>
 </div>
 ${secTitle('📋 ナビゲーション管理')}
-<div style="font-size:12px;color:var(--t2);margin-bottom:10px">⠿ でドラッグして順番変更 ／ スイッチで表示・非表示</div>
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+  <div style="font-size:12px;color:var(--t2)">⠿ でドラッグして順番変更 ／ スイッチで表示・非表示（この端末だけの設定）</div>
+  <button class="btn btn-g btn-xs" onclick="navResetAll()">すべて表示に戻す</button>
+</div>
 <div id="nav-cfg-list">
-${cfg.map((c,i)=>{
-  const{label,icon}=navMeta(c.id);const isCP=c.id.startsWith('cp_');
-  return`<div class="cust-nav-row${c.hidden?' hidden-row':''}" draggable="true"
+${[...NAV_CATS,{id:'other',label:'その他',views:null}].map(cat=>{
+  const items=cat.views?cfg.filter(c=>cat.views.includes(c.id)):cfg.filter(c=>!_navCatOf(c.id));
+  if(!items.length)return'';
+  return`<div style="font-size:11px;font-weight:800;color:var(--t3);margin:12px 0 6px;letter-spacing:.06em">${cat.label}</div>`+items.map(c=>{
+    const i=cfg.indexOf(c);
+    const{label,icon}=navMeta(c.id);const isCP=c.id.startsWith('cp_');
+    return`<div class="cust-nav-row${c.hidden?' hidden-row':''}" draggable="true"
     ondragstart="navDragStart(event,${i})" ondragend="navDragEnd(event)"
     ondragover="navDragOver(event)" ondragleave="navDragLeave(event)" ondrop="navDrop(event,${i})">
     <span class="drag-handle">⠿</span>
@@ -10336,6 +10457,7 @@ ${cfg.map((c,i)=>{
     <button class="btn btn-red btn-xs" onclick="delCustomPage('${c.id.slice(3)}');event.stopPropagation()">削除</button>`:''}
     <div class="toggle-sw${c.hidden?'':' on'}" onclick="toggleNavItem('${c.id}',event)" title="${c.hidden?'表示する':'非表示にする'}"></div>
   </div>`;
+  }).join('');
 }).join('')}
 </div>
 ${secTitle('📄 カスタムページ')}
@@ -11036,7 +11158,7 @@ function initReminders(){
   }
 }
 // ===営業リスト===
-const SL_STATUSES=['未接触','HP作成済','電話済','アポ','商談','成約','失注'];
+const SL_STATUSES=['未接触','架電予定','HP作成済','電話済','メール済み','DM済み','アポ','商談','成約','失注'];
 const SL_APPROACHES=['電話','メール','InstagramDM','LINE','訪問'];  // 営業方法(記録用)
 const SL_ASSIGNEES=['会長','佐々木','アオイ'];  // 営業担当者(誰が営業をかけたか)
 function slIgUrl(v){
@@ -11045,7 +11167,7 @@ function slIgUrl(v){
   if(/^https?:\/\//i.test(v))return v;
   return 'https://instagram.com/'+v.replace(/^@/,'');
 }
-const SL_STATUS_NEXT={'未接触':'電話済','電話済':'アポ','アポ':'商談','商談':'成約','HP作成済':'電話済','成約':'成約','失注':'失注'};
+const SL_STATUS_NEXT={'未接触':'電話済','架電予定':'電話済','電話済':'アポ','メール済み':'アポ','DM済み':'アポ','アポ':'商談','商談':'成約','HP作成済':'電話済','成約':'成約','失注':'失注'};
 const SL_REGIONS=['旭川','札幌','その他'];
 let _slPage=0;
 let _slFilterStatus='all';
@@ -11365,6 +11487,7 @@ function rSalesLeads(){
     <div style="margin-bottom:16px;display:flex;flex-wrap:wrap;gap:0">
       <span class="sl-summary-chip" style="background:var(--card2);border-color:var(--border);color:var(--t2)">総数 <strong style="color:var(--text)">${total}</strong></span>
       <span class="sl-summary-chip sl-未接触" style="border:1.5px solid var(--border)">未接触 <strong>${counts['未接触']||0}</strong></span>
+      <span class="sl-summary-chip sl-架電予定" style="border:1.5px solid var(--blue)">架電予定 <strong>${counts['架電予定']||0}</strong></span>
       <span class="sl-summary-chip sl-アポ" style="border:1.5px solid rgba(180,83,9,0.25)">アポ <strong>${counts['アポ']||0}</strong></span>
       <span class="sl-summary-chip sl-商談" style="border:1.5px solid rgba(109,40,217,0.25)">商談 <strong>${counts['商談']||0}</strong></span>
       <span class="sl-summary-chip sl-成約" style="border:1.5px solid rgba(5,150,105,0.25)">成約 <strong>${wonThisMonth}</strong>/<span style="font-weight:400">${SL_GOAL_MONTH}件目標</span>
@@ -11396,7 +11519,7 @@ function rSalesLeads(){
 
   // ─── フィルタバー ───
   const statusFilterHtml=`<div class="filter-bar" style="margin-bottom:8px">
-    ${['all',...SL_STATUSES].map(s=>`<button class="fbtn${_slFilterStatus===s?' act':''}" onclick="_slFilterStatus='${s}';_slPage=0;render()">${s==='all'?'すべて':s}</button>`).join('')}
+    ${['all',...SL_STATUSES].map(s=>`<button class="fbtn${_slFilterStatus===s?' act':''}" onclick="_slFilterStatus='${s}';_slPage=0;render()">${s==='all'?'すべて':s} <span style="opacity:.65;font-size:10px">${s==='all'?total:(counts[s]||0)}</span></button>`).join('')}
   </div>`;
 
   const genreFilterHtml=genres.length?`<div class="filter-bar" style="margin-bottom:8px">
@@ -11677,7 +11800,7 @@ initReminders();
 checkClientDraftTasks();
 slMigrateRegions();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260710-15';
+const APP_VERSION='20260710-16';
 
 render();
 function forceAppUpdate(){
