@@ -503,6 +503,41 @@ a{color:inherit;text-decoration:none}
 .sl-biz-count{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:18px;padding:0 5px;border-radius:100px;font-size:11px;font-weight:700;background:rgba(0,0,0,.12);color:inherit}
 .sl-biz-tab.act .sl-biz-count{background:rgba(255,255,255,.25)}
 .sl-pager{display:flex;align-items:center;gap:8px;margin-top:14px;justify-content:center}
+/* ── 投稿管理 表示切替タブ ── */
+.pview-tabs{display:inline-flex;gap:4px;margin-bottom:12px;padding:4px;background:var(--card2);border:1.5px solid var(--border);border-radius:10px}
+.pview-tab{padding:6px 14px;border-radius:7px;font-size:13px;font-weight:700;border:1.5px solid transparent;background:transparent;color:var(--t2);cursor:pointer;transition:all .15s}
+.pview-tab:hover{color:var(--text);background:var(--card)}
+.pview-tab.act{background:var(--purple);border-color:var(--purple);color:#fff}
+/* ── 月カレンダー ── */
+.pcal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px}
+.pcal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.pcal-wdrow{margin-bottom:6px}
+.pcal-wd{text-align:center;font-size:12px;font-weight:700;padding:4px 0}
+.pcal-cell{min-height:96px;background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:5px 6px;cursor:pointer;overflow:hidden;transition:border-color .15s}
+.pcal-cell:hover{border-color:var(--purple)}
+.pcal-out{background:var(--card2);opacity:.5}
+.pcal-today{border-color:var(--purple);box-shadow:0 0 0 1px var(--purple) inset}
+.pcal-daynum{font-size:12px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:4px}
+.pcal-dot{display:none;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;border-radius:100px;font-size:10px;font-weight:700;background:var(--purple);color:#fff}
+.pcal-chips{display:flex;flex-direction:column}
+/* ── 週タイムライン ── */
+.ptl-wrap{display:flex;border:1.5px solid var(--border);border-radius:10px;overflow-x:auto;background:var(--card)}
+.ptl-timecol{flex-shrink:0;width:52px;border-right:1.5px solid var(--border);background:var(--card2)}
+.ptl-hour{font-size:10px;color:var(--t3);text-align:right;padding:0 6px;border-bottom:1px dashed var(--border);box-sizing:border-box;display:flex;align-items:flex-start;justify-content:flex-end}
+.ptl-cols{display:grid;grid-template-columns:repeat(7,minmax(90px,1fr));flex:1}
+.ptl-col{border-right:1px solid var(--border)}
+.ptl-col:last-child{border-right:none}
+.ptl-colhead{text-align:center;font-size:12px;font-weight:700;height:24px;line-height:24px;border-bottom:1.5px solid var(--border);background:var(--card2)}
+.ptl-today{background:var(--pdim)}
+.ptl-daybody{position:relative}
+/* ── スマホ縮退(<=430px) ── */
+@media(max-width:430px){
+  .pcal-cell{min-height:52px;padding:3px}
+  .pcal-chips{display:none}
+  .pcal-dot{display:inline-flex}
+  .pview-tab{padding:6px 9px;font-size:12px}
+  .ptl-cols{grid-template-columns:repeat(7,minmax(56px,1fr))}
+}
 .sl-pager button{padding:5px 13px;border-radius:8px;font-size:12px;font-weight:600;border:1.5px solid var(--border);background:var(--card);color:var(--t2);cursor:pointer;transition:all .15s}
 .sl-pager button:hover:not(:disabled){border-color:var(--purple);color:var(--purple)}
 .sl-pager button:disabled{opacity:.4;cursor:default}
@@ -5936,8 +5971,129 @@ const POST_ICON={'X':'𝕏','Threads':'@','Instagram':'📷','YouTube':'▶️',
 function _teamPosts(){return (S.teamPosts||[]).filter(p=>!p.deleted);}
 // アカウント別フィルタ(例: mono.create_X / ぽいっとHP_IG)。account未設定の既存投稿は「すべて」タブでのみ表示。
 let POSTS_ACC='すべて';
+// 表示切替(既定=月カレンダー)。データ構造は変更せず表示層のみ。
+let _postsView='month';   // 'month' | 'week' | 'list'
+let _postsAnchor=(new Date()).toISOString().slice(0,10);  // 月・週の基準日
+const POST_CHIP_BG={'下書き':'var(--card2)','予約済':'var(--bdim)','投稿済':'var(--gdim)'};
+const POST_CHIP_BD={'下書き':'var(--border)','予約済':'rgba(29,78,216,.35)','投稿済':'rgba(5,150,105,.35)'};
+const POST_CHIP_FG={'下書き':'var(--t2)','予約済':'var(--blue)','投稿済':'var(--green)'};
+const POST_INITIAL={'X':'X','Threads':'@','Instagram':'IG','YouTube':'YT','TikTok':'TT','その他':'･'};
+function _postsFiltered(){return _teamPosts().filter(p=>POSTS_ACC==='すべて'||p.account===POSTS_ACC);}
+function _pd(iso){const d=new Date(iso+'T00:00:00');return isNaN(d)?new Date():d;}
+function _isoOf(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function _addDays(iso,n){const d=_pd(iso);d.setDate(d.getDate()+n);return _isoOf(d);}
+function _addMonths(iso,n){const d=_pd(iso);d.setDate(1);d.setMonth(d.getMonth()+n);return _isoOf(d);}
+function _weekStart(iso){const d=_pd(iso);d.setDate(d.getDate()-d.getDay());return _isoOf(d);}  // 日曜始まり
+function pSetView(v){_postsView=v;render();}
+function pShift(dir){
+  if(_postsView==='month')_postsAnchor=_addMonths(_postsAnchor,dir);
+  else if(_postsView==='week')_postsAnchor=_addDays(_postsAnchor,dir*7);
+  render();
+}
+function pToday(){_postsAnchor=(new Date()).toISOString().slice(0,10);render();}
+// 投稿チップ(月カレンダー用): 時刻＋プラットフォーム頭文字＋内容冒頭
+function _postChip(p,compact){
+  const st=p.status||'下書き';
+  const t=(p.scheduledTime||'').slice(0,5);
+  const ini=POST_INITIAL[p.platform]||'･';
+  const head=esc((p.content||'').replace(/\n/g,' ').slice(0,compact?6:14));
+  return `<div onclick="event.stopPropagation();tpOpenPost('${p.id}')" title="${esc((p.content||'').slice(0,60))}"
+    style="cursor:pointer;font-size:10px;line-height:1.35;padding:2px 5px;margin-bottom:3px;border-radius:5px;
+    background:${POST_CHIP_BG[st]};border:1px solid ${POST_CHIP_BD[st]};color:${POST_CHIP_FG[st]};
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600">${t?t+' ':''}<b>${ini}</b> ${head}</div>`;
+}
 function _postsAccList(){return['すべて',...[...new Set(_teamPosts().map(p=>p.account).filter(Boolean))].sort()];}
 function tpSetAcc(i){const l=_postsAccList();POSTS_ACC=l[i]||'すべて';render();}
+
+// ─── 月カレンダー(既定) ───
+function rPostsMonth(){
+  const anchor=_pd(_postsAnchor);
+  const y=anchor.getFullYear(),m=anchor.getMonth();
+  const first=new Date(y,m,1);
+  const gridStart=new Date(y,m,1-first.getDay());  // 日曜始まり
+  const todayIso=(new Date()).toISOString().slice(0,10);
+  // 日付→投稿[]
+  const byDate={};
+  _postsFiltered().forEach(p=>{const d=p.scheduledDate||'';if(!d)return;(byDate[d]=byDate[d]||[]).push(p);});
+  Object.values(byDate).forEach(a=>a.sort((x,y)=>((x.scheduledTime||'')>(y.scheduledTime||'')?1:-1)));
+  const wd=['日','月','火','水','木','金','土'];
+  let cells='';
+  for(let i=0;i<42;i++){
+    const d=new Date(gridStart);d.setDate(gridStart.getDate()+i);
+    const iso=_isoOf(d);
+    const inMonth=d.getMonth()===m;
+    const isToday=iso===todayIso;
+    const dow=d.getDay();
+    const posts=byDate[iso]||[];
+    const chips=posts.slice(0,3).map(p=>_postChip(p,false)).join('');
+    const more=posts.length>3?`<div style="font-size:10px;color:var(--t3)">＋${posts.length-3}件</div>`:'';
+    // モバイル縮退: 件数ドット(CSSで <=430px の時だけ表示)
+    const dot=posts.length?`<span class="pcal-dot">${posts.length}</span>`:'';
+    cells+=`<div class="pcal-cell${inMonth?'':' pcal-out'}${isToday?' pcal-today':''}" onclick="tpOpenPost()" title="この日に投稿を追加">
+      <div class="pcal-daynum" style="color:${dow===0?'var(--red)':dow===6?'var(--blue)':'inherit'}">${d.getDate()}${dot}</div>
+      <div class="pcal-chips">${chips}${more}</div>
+    </div>`;
+  }
+  return`<div class="pcal-head">
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="btn btn-g btn-xs" onclick="pShift(-1)">←</button>
+        <div style="font-weight:800;font-size:16px;min-width:120px;text-align:center">${y}年${m+1}月</div>
+        <button class="btn btn-g btn-xs" onclick="pShift(1)">→</button>
+        <button class="btn btn-g btn-xs" onclick="pToday()">今日</button>
+      </div>
+    </div>
+    <div class="pcal-grid pcal-wdrow">${wd.map((w,i)=>`<div class="pcal-wd" style="color:${i===0?'var(--red)':i===6?'var(--blue)':'var(--t2)'}">${w}</div>`).join('')}</div>
+    <div class="pcal-grid">${cells}</div>`;
+}
+
+// ─── 週タイムライン(縦=時間 6:00〜24:00 / 横=7日) ───
+function rPostsWeek(){
+  const ws=_weekStart(_postsAnchor);
+  const todayIso=(new Date()).toISOString().slice(0,10);
+  const wd=['日','月','火','水','木','金','土'];
+  const days=[];for(let i=0;i<7;i++)days.push(_addDays(ws,i));
+  const H0=6,H1=24,ROWH=38;                 // 6:00〜24:00
+  const byDate={};
+  _postsFiltered().forEach(p=>{const d=p.scheduledDate||'';if(!d)return;(byDate[d]=byDate[d]||[]).push(p);});
+  // 時間軸ラベル
+  let hourLabels='';
+  for(let h=H0;h<=H1;h++)hourLabels+=`<div class="ptl-hour" style="height:${ROWH}px">${String(h).padStart(2,'0')}:00</div>`;
+  // 各日カラム
+  const dayCols=days.map((iso,di)=>{
+    const posts=(byDate[iso]||[]).slice();
+    const cards=posts.map(p=>{
+      const t=(p.scheduledTime||'');
+      let top;
+      if(t){const[hh,mm]=t.split(':').map(Number);top=((hh+ (mm||0)/60)-H0)*ROWH;}
+      else top=-1;  // 時刻なしは上部にまとめる
+      const st=p.status||'下書き';
+      const pos = top>=0 ? `position:absolute;top:${Math.max(0,top)}px;left:2px;right:2px;` : 'position:relative;margin:2px;';
+      return `<div onclick="event.stopPropagation();tpOpenPost('${p.id}')" title="${esc((p.content||'').slice(0,60))}"
+        style="${pos}cursor:pointer;font-size:10px;line-height:1.3;padding:3px 5px;border-radius:6px;
+        background:${POST_CHIP_BG[st]};border:1px solid ${POST_CHIP_BD[st]};color:${POST_CHIP_FG[st]};
+        overflow:hidden;z-index:2">${t?`<b>${t.slice(0,5)}</b> `:''}${POST_INITIAL[p.platform]||'･'} ${esc((p.content||'').replace(/\n/g,' ').slice(0,10))}</div>`;
+    }).join('');
+    const isToday=iso===todayIso;
+    const dnum=_pd(iso).getDate();
+    return `<div class="ptl-col">
+      <div class="ptl-colhead${isToday?' ptl-today':''}" style="color:${di===0?'var(--red)':di===6?'var(--blue)':'inherit'}">${wd[di]} ${dnum}</div>
+      <div class="ptl-daybody" style="height:${(H1-H0)*ROWH}px">${cards||''}</div>
+    </div>`;
+  }).join('');
+  return`<div class="pcal-head">
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="btn btn-g btn-xs" onclick="pShift(-1)">←</button>
+        <div style="font-weight:800;font-size:15px;min-width:150px;text-align:center">${ws} 〜 ${_addDays(ws,6)}</div>
+        <button class="btn btn-g btn-xs" onclick="pShift(1)">→</button>
+        <button class="btn btn-g btn-xs" onclick="pToday()">今日</button>
+      </div>
+    </div>
+    <div class="ptl-wrap">
+      <div class="ptl-timecol"><div class="ptl-hour" style="height:24px"></div>${hourLabels}</div>
+      <div class="ptl-cols">${dayCols}</div>
+    </div>`;
+}
+
 function rPosts(){
   const accs=_postsAccList();
   if(!accs.includes(POSTS_ACC))POSTS_ACC='すべて';
@@ -5958,16 +6114,25 @@ function rPosts(){
       ${p.url?`<a class="btn btn-g btn-xs" href="${esc(p.url)}" target="_blank" rel="noopener">🔗 開く</a>`:''}
     </div>
   </div>`;
+  // 表示切替(月/週/リスト)
+  const viewTabs=`<div class="pview-tabs">
+    <button class="pview-tab${_postsView==='month'?' act':''}" onclick="pSetView('month')">月カレンダー</button>
+    <button class="pview-tab${_postsView==='week'?' act':''}" onclick="pSetView('week')">週タイムライン</button>
+    <button class="pview-tab${_postsView==='list'?' act':''}" onclick="pSetView('list')">リスト</button>
+  </div>`;
+  const body = _postsView==='month' ? rPostsMonth()
+    : _postsView==='week' ? rPostsWeek()
+    : (!posts.length?`<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">まだ投稿がありません</div></div>`:`
+${upcoming.length?`<div style="font-weight:800;font-size:14px;color:var(--purple);margin-bottom:6px">🗓 予定・下書き</div>${upcoming.map(card).join('')}`:''}
+${done.length?`<div style="font-weight:800;font-size:14px;color:var(--t2);margin:14px 0 6px">✅ 投稿済み</div>${done.map(card).join('')}`:''}`);
   return`${secTitle('📅 投稿管理')}
 <div class="sub-tabs" id="posts-acc-tabs">${accs.map((a,i)=>`<div class="stab${POSTS_ACC===a?' act':''}" onclick="tpSetAcc(${i})">${esc(a)}</div>`).join('')}</div>
+${viewTabs}
 <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
   <button class="btn btn-p btn-sm" onclick="tpOpenPost()">＋ 投稿を追加</button>
   <span style="font-size:13px;color:var(--t2);align-self:center">予定 ${upcoming.length}件・投稿済 ${done.length}件</span>
 </div>
-<div style="font-size:11px;color:var(--t3);margin-bottom:12px">チームの投稿予定を管理します（全アカウントで共有）。</div>
-${!posts.length?`<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">まだ投稿がありません</div></div>`:`
-${upcoming.length?`<div style="font-weight:800;font-size:14px;color:var(--purple);margin-bottom:6px">🗓 予定・下書き</div>${upcoming.map(card).join('')}`:''}
-${done.length?`<div style="font-weight:800;font-size:14px;color:var(--t2);margin:14px 0 6px">✅ 投稿済み</div>${done.map(card).join('')}`:''}`}`;
+${body}`;
 }
 function tpMarkPosted(id){const p=(S.teamPosts||[]).find(x=>x.id===id);if(!p)return;p.status='投稿済';p.updatedAt=Date.now();save();render();toast('投稿済みにしました ✅');}
 function tpOpenPost(id){
@@ -11972,7 +12137,7 @@ checkClientDraftTasks();
 slMigrateRegions();
 slMigrateBiz();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260711-01';
+const APP_VERSION='20260711-02';
 
 render();
 function forceAppUpdate(){
