@@ -496,6 +496,12 @@ a{color:inherit;text-decoration:none}
 .sl-appr-btn:hover{border-color:var(--purple)}
 .sl-appr-btn.act{background:var(--purple);border-color:var(--purple);color:#fff}
 .sl-summary-chip{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:100px;font-size:13px;font-weight:700;border:1.5px solid;margin-right:6px;margin-bottom:6px}
+.sl-biz-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;padding:4px;background:var(--card2);border:1.5px solid var(--border);border-radius:12px}
+.sl-biz-tab{flex:1;min-width:120px;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 14px;border-radius:9px;font-size:13px;font-weight:700;border:1.5px solid transparent;background:transparent;color:var(--t2);cursor:pointer;transition:all .15s}
+.sl-biz-tab:hover{color:var(--text);background:var(--card)}
+.sl-biz-tab.act{background:var(--purple);border-color:var(--purple);color:#fff}
+.sl-biz-count{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:18px;padding:0 5px;border-radius:100px;font-size:11px;font-weight:700;background:rgba(0,0,0,.12);color:inherit}
+.sl-biz-tab.act .sl-biz-count{background:rgba(255,255,255,.25)}
 .sl-pager{display:flex;align-items:center;gap:8px;margin-top:14px;justify-content:center}
 .sl-pager button{padding:5px 13px;border-radius:8px;font-size:12px;font-weight:600;border:1.5px solid var(--border);background:var(--card);color:var(--t2);cursor:pointer;transition:all .15s}
 .sl-pager button:hover:not(:disabled){border-color:var(--purple);color:var(--purple)}
@@ -6467,7 +6473,7 @@ function _crmRows(){
           ${c.contact?`<span>👤 ${esc(c.contact)}</span>`:''}
           ${c.phone?`<a href="tel:${esc(c.phone)}" style="color:var(--blue);font-size:11px">📞 ${esc(c.phone)}</a>`:''}
           ${c.email?`<a href="mailto:${esc(c.email)}" style="color:var(--green);font-size:11px">✉️ ${esc(c.email)}</a>`:''}
-          ${c.instagram&&c.instagram.trim()?`<a href="${esc(slIgUrl(c.instagram))}" target="_blank" rel="noopener" style="color:#c13584;font-size:11px">📷 Instagram</a>`:''}
+          ${c.instagram&&c.instagram.trim()?slIgLink(c.instagram):''}
         </div>
         ${(c.amount||c.contractDate||c.nextRenew)?`<div class="sl-meta" style="margin-top:4px">
           ${c.amount?`<span style="font-size:11px;color:var(--t2)">💰 ${esc(c.amount)}</span>`:''}
@@ -11161,11 +11167,88 @@ function initReminders(){
 const SL_STATUSES=['未接触','架電予定','HP作成済','電話済','メール済み','DM済み','アポ','商談','成約','失注'];
 const SL_APPROACHES=['電話','メール','InstagramDM','LINE','訪問'];  // 営業方法(記録用)
 const SL_ASSIGNEES=['会長','佐々木','アオイ'];  // 営業担当者(誰が営業をかけたか)
-function slIgUrl(v){
+
+// ─── 事業切替(4事業。店舗は分割せず1レコードに事業別の営業状態を持たせる) ───
+// キーは Firestore 1MiB制約に配慮し短縮(hp/consult/app/ig)。状態は biz[キー]={s,n,m} で保持。
+const SL_BIZ=[
+  {k:'hp',label:'HP制作',short:'HP'},
+  {k:'consult',label:'AIコンサル',short:'コンサル'},
+  {k:'app',label:'AIアプリ',short:'アプリ'},
+  {k:'ig',label:'IG運用',short:'IG'},
+];
+const SL_BIZ_KEYS=SL_BIZ.map(b=>b.k);
+function slBizLabel(k){const b=SL_BIZ.find(x=>x.k===k);return b?b.label:k;}
+let _slBiz='hp';  // 既定=HP制作
+// 接触系ステータス(この状態へ変わると contacts へ履歴を自動追記し、被り防止の対象になる)
+// 「架電予定」は予定であり接触ではないため含めない。
+const SL_CONTACT_STATUSES=['電話済','メール済み','DM済み','アポ','商談','成約','失注'];
+const SL_OVERLAP_DAYS=30;  // 被り防止の判定日数(定数で変更可)
+
+// 各リードの事業別データ入れ物を取得(なければ生成)。b={s:状態,n:次アクション,m:メモ}
+function slBizObj(l,biz){
+  if(!l.biz)l.biz={};
+  if(!l.biz[biz])l.biz[biz]={s:'未接触',n:'',m:''};
+  return l.biz[biz];
+}
+// 現在ビューの状態/次アクション/メモを読むアクセサ(表示・集計・フィルタは全てこれ経由)
+function slStatusOf(l,biz){biz=biz||_slBiz;return (l.biz&&l.biz[biz]&&l.biz[biz].s)||'未接触';}
+function slNextOf(l,biz){biz=biz||_slBiz;return (l.biz&&l.biz[biz]&&l.biz[biz].n)||'';}
+function slMemoOf(l,biz){biz=biz||_slBiz;return (l.biz&&l.biz[biz]&&l.biz[biz].m)||'';}
+
+// ── 被り防止: 直近SL_OVERLAP_DAYS日に他事業で接触履歴がある店を検出 ──
+// 戻り値: 最も新しい他事業接触(なければnull)。{b:事業,c:チャネル,d:日付}
+function slRecentOtherContact(l,biz){
+  biz=biz||_slBiz;
+  if(!Array.isArray(l.contacts)||!l.contacts.length)return null;
+  const cutoff=new Date();cutoff.setDate(cutoff.getDate()-SL_OVERLAP_DAYS);
+  let best=null;
+  l.contacts.forEach(c=>{
+    if(!c||c.b===biz)return;             // 自事業は被りではない
+    const d=c.d?new Date(c.d):null;
+    if(!d||isNaN(d)||d<cutoff)return;    // 期間外
+    if(!best||(c.d||'')>(best.d||''))best={b:c.b,c:c.c||'',d:c.d};
+  });
+  return best;
+}
+// 接触履歴を1件追記(接触系ステータスへ変化した時に呼ぶ・同日同事業の重複は付けない)
+function slPushContact(l,biz,channel){
+  if(!Array.isArray(l.contacts))l.contacts=[];
+  const today=new Date().toISOString().slice(0,10);
+  if(l.contacts.some(c=>c&&c.d===today&&c.b===biz))return;
+  l.contacts.push({d:today,b:biz,c:channel||''});
+}
+function slIgHandle(v){
+  // Instagram値からハンドルを抽出。フルURL/@付き/素ハンドルいずれにも対応。
+  // 抽出できなければnullを返す(呼び出し側でプレーン表示にフォールバック)。
   v=(v||'').trim();
-  if(!v)return '#';
-  if(/^https?:\/\//i.test(v))return v;
-  return 'https://instagram.com/'+v.replace(/^@/,'');
+  if(!v)return null;
+  let h=v;
+  if(/^https?:\/\//i.test(v)){
+    try{
+      const u=new URL(v);
+      if(!/(^|\.)instagram\.com$/i.test(u.hostname))return null;
+      h=u.pathname.replace(/^\/+/,'').split('/')[0]||'';
+    }catch(e){return null;}
+  }
+  h=h.replace(/^@/,'').split('?')[0].split('/')[0].trim();
+  if(!h||!/^[A-Za-z0-9._]{1,30}$/.test(h))return null;
+  return h;
+}
+function slIgUrl(v){
+  const h=slIgHandle(v);
+  return h?('https://www.instagram.com/'+h+'/'):'#';
+}
+function slIgLink(v){
+  // 一覧/カード共通: リンク化できれば📷 @handleのタップ可能リンク、できなければ元値のプレーン表示。
+  const h=slIgHandle(v);
+  if(h)return `<a href="https://www.instagram.com/${h}/" target="_blank" rel="noopener" style="color:#c13584;font-size:11px">📷 @${esc(h)}</a>`;
+  return `<span style="color:var(--t3);font-size:11px">📷 ${esc((v||'').trim())}</span>`;
+}
+function slIgOpenBtn(v){
+  // input欄の隣に置く「開く」ボタン。リンク化できる値の時だけ表示。
+  const h=slIgHandle(v);
+  if(!h)return '';
+  return `<a href="https://www.instagram.com/${h}/" target="_blank" rel="noopener" class="tact" style="text-decoration:none;font-size:11px;color:#c13584" title="Instagramプロフィールを開く">📷 開く</a>`;
 }
 const SL_STATUS_NEXT={'未接触':'電話済','架電予定':'電話済','電話済':'アポ','メール済み':'アポ','DM済み':'アポ','アポ':'商談','商談':'成約','HP作成済':'電話済','成約':'成約','失注':'失注'};
 const SL_REGIONS=['旭川','札幌','その他'];
@@ -11175,6 +11258,7 @@ let _slFilterGenre='all';
 let _slFilterRegion='all';
 let _slFilterContact='all';  // all / ig / email / both
 let _slFilterAssignee='all';  // all / 会長 / 佐々木 / アオイ / 未割当
+let _slFilterOverlap=false;   // true=他事業で直近接触ありの店を除外(被りなしのみ表示)
 let _slSearch='';
 const SL_PAGE_SIZE=100;
 const SL_GOAL_MONTH=10; // 今月の成約目標件数
@@ -11193,7 +11277,7 @@ function slFilteredLeads(){
   const q=_slSearch.toLowerCase();
   return (S.salesLeads||[]).filter(l=>{
     if(l.deleted)return false;
-    if(_slFilterStatus!=='all'&&l.status!==_slFilterStatus)return false;
+    if(_slFilterStatus!=='all'&&slStatusOf(l)!==_slFilterStatus)return false;
     if(_slFilterGenre!=='all'&&l.genre!==_slFilterGenre)return false;
     if(_slFilterRegion!=='all'&&(l.region||slRegion(l.address||''))!==_slFilterRegion)return false;
     const hasIG=!!(l.instagram&&l.instagram.trim());
@@ -11205,6 +11289,7 @@ function slFilteredLeads(){
       if(_slFilterAssignee==='未割当'){if(l.assignee)return false;}
       else if(l.assignee!==_slFilterAssignee)return false;
     }
+    if(_slFilterOverlap&&slRecentOtherContact(l))return false;  // 被りなしのみ
     if(q&&!(l.name||'').toLowerCase().includes(q)&&!(l.address||'').toLowerCase().includes(q))return false;
     return true;
   });
@@ -11453,9 +11538,18 @@ function rSalesLeads(){
   const all=S.salesLeads.filter(l=>!l.deleted);
   const total=all.length;
   const counts={};
-  SL_STATUSES.forEach(s=>{counts[s]=all.filter(l=>l.status===s).length;});
+  SL_STATUSES.forEach(s=>{counts[s]=all.filter(l=>slStatusOf(l)===s).length;});
   const thisMonth=new Date().toISOString().slice(0,7);
-  const wonThisMonth=all.filter(l=>l.status==='成約'&&(l.wonAt||'').startsWith(thisMonth)).length;
+  const wonThisMonth=all.filter(l=>slStatusOf(l)==='成約'&&(l.wonAt||'').startsWith(thisMonth)).length;
+  const overlapCount=all.filter(l=>slRecentOtherContact(l)).length;
+
+  // ─── 事業切替タブ(HP／AIコンサル／AIアプリ／IG運用) ───
+  const bizTabHtml=`<div class="sl-biz-tabs">
+    ${SL_BIZ.map(b=>{
+      const c=all.filter(l=>slStatusOf(l,b.k)!=='未接触').length;  // 何らか動いた店数
+      return`<button class="sl-biz-tab${_slBiz===b.k?' act':''}" onclick="slSetBiz('${b.k}')">${b.label}<span class="sl-biz-count">${c}</span></button>`;
+    }).join('')}
+  </div>`;
 
   // genres for filter
   const genres=[...new Set(all.map(l=>l.genre||'').filter(Boolean))].sort();
@@ -11471,9 +11565,9 @@ function rSalesLeads(){
     const rLeads=all.filter(l=>(l.region||slRegion(l.address||''))===r);
     regionCounts[r]={
       total:rLeads.length,
-      未接触:rLeads.filter(l=>l.status==='未接触').length,
-      アポ:rLeads.filter(l=>l.status==='アポ').length,
-      成約:rLeads.filter(l=>l.status==='成約').length,
+      未接触:rLeads.filter(l=>slStatusOf(l)==='未接触').length,
+      アポ:rLeads.filter(l=>slStatusOf(l)==='アポ').length,
+      成約:rLeads.filter(l=>slStatusOf(l)==='成約').length,
     };
   });
 
@@ -11482,8 +11576,9 @@ function rSalesLeads(){
   if(_slPage>=totalPages)_slPage=totalPages-1;
   const pageLeads=filtered.slice(_slPage*SL_PAGE_SIZE,(_slPage+1)*SL_PAGE_SIZE);
 
-  // ─── 全体集計チップ ───
+  // ─── 全体集計チップ(現在の事業ビューの状態で集計) ───
   const summaryHtml=`
+    <div style="font-size:12px;color:var(--t2);margin-bottom:8px">集計中の事業: <strong style="color:var(--purple)">${slBizLabel(_slBiz)}</strong></div>
     <div style="margin-bottom:16px;display:flex;flex-wrap:wrap;gap:0">
       <span class="sl-summary-chip" style="background:var(--card2);border-color:var(--border);color:var(--t2)">総数 <strong style="color:var(--text)">${total}</strong></span>
       <span class="sl-summary-chip sl-未接触" style="border:1.5px solid var(--border)">未接触 <strong>${counts['未接触']||0}</strong></span>
@@ -11550,6 +11645,12 @@ function rSalesLeads(){
     <button class="fbtn${_slFilterAssignee==='未割当'?' act':''}" onclick="_slFilterAssignee='未割当';_slPage=0;render()">未割当 ${unassignedCount}</button>
   </div>`;
 
+  // ─── 被り防止フィルタ(他事業で直近接触ありの店を除外) ───
+  const overlapFilterHtml=`<div class="filter-bar" style="margin-bottom:8px">
+    <button class="fbtn${!_slFilterOverlap?' act':''}" onclick="_slFilterOverlap=false;_slPage=0;render()">全て表示</button>
+    <button class="fbtn${_slFilterOverlap?' act':''}" onclick="_slFilterOverlap=true;_slPage=0;render()">⚠ 被りなしのみ (他事業接触 ${overlapCount}件を除外)</button>
+  </div>`;
+
   const searchHtml=`<div style="margin-bottom:14px;display:flex;gap:8px;align-items:center">
     <input type="search" placeholder="店名・住所で検索…" value="${esc(_slSearch)}" oninput="_slSearch=this.value;_slPage=0;render()" style="max-width:280px">
     <span style="font-size:12px;color:var(--t2)">${filtered.length}件</span>
@@ -11559,8 +11660,9 @@ function rSalesLeads(){
   const rowsHtml=pageLeads.length===0?`<div class="empty"><div class="empty-icon">📭</div><div class="empty-title">該当なし</div></div>`
     :pageLeads.map(l=>{
       const sid=l.id;
+      const curStatus=slStatusOf(l);
       const statusBtns=SL_STATUSES.map(s=>
-        `<button class="sl-status-btn ${slStatusClass(s)}" onclick="slSetStatus('${sid}','${s}')" style="opacity:${l.status===s?1:.45}">${s}</button>`
+        `<button class="sl-status-btn ${slStatusClass(s)}" onclick="slSetStatus('${sid}','${s}')" style="opacity:${curStatus===s?1:.45}">${s}</button>`
       ).join('');
       const apprBtns=SL_APPROACHES.map(a=>
         `<button class="sl-appr-btn${l.approach===a?' act':''}" onclick="slSetApproach('${sid}','${a}')">${a}</button>`
@@ -11568,17 +11670,21 @@ function rSalesLeads(){
       const assigneeBtns=SL_ASSIGNEES.map(a=>
         `<button class="sl-appr-btn${l.assignee===a?' act':''}" onclick="slSetAssignee('${sid}','${a}')">${a}</button>`
       ).join('');
-      return`<div class="sl-row">
+      // 被り防止バッジ: 他事業で直近30日に接触あり
+      const oc=slRecentOtherContact(l);
+      const overlapBadge=oc?`<div style="margin-top:4px"><span style="display:inline-block;font-size:11px;font-weight:700;color:var(--amber);background:var(--adim);border:1px solid rgba(180,83,9,.4);border-radius:6px;padding:2px 8px">⚠ 他事業接触あり: ${slBizLabel(oc.b)}${oc.c?'で'+esc(oc.c):''} ${esc(oc.d.slice(5))}</span></div>`:'';
+      return`<div class="sl-row"${oc?' style="border-color:rgba(180,83,9,.35)"':''}>
         <div style="flex:1;min-width:0">
           <div class="sl-name">${esc(l.name||'')}</div>
           <div class="sl-meta">
             ${l.genre?`<span class="badge bk">${esc(l.genre)}</span>`:''}
             ${l.phone?`<a href="tel:${esc(l.phone)}" style="color:var(--blue);font-size:11px">📞 ${esc(l.phone)}</a>`:''}
-            ${l.instagram&&l.instagram.trim()?`<a href="${esc(slIgUrl(l.instagram))}" target="_blank" rel="noopener" style="color:#c13584;font-size:11px">📷 Instagram</a>`:''}
+            ${l.instagram&&l.instagram.trim()?slIgLink(l.instagram):''}
             ${l.email&&l.email.trim()?`<a href="mailto:${esc(l.email)}" style="color:var(--green);font-size:11px">✉️ ${esc(l.email)}</a>`:''}
             <span style="font-size:11px;color:var(--t3)">HP: ${esc(l.hp||'未確認')}</span>
           </div>
           ${l.address?`<div style="font-size:11px;color:var(--t3);margin-top:2px">${esc(l.address)}</div>`:''}
+          ${overlapBadge}
           <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;align-items:center">
             <span style="font-size:11px;color:var(--t2)">営業方法:</span>${apprBtns}
           </div>
@@ -11588,17 +11694,18 @@ function rSalesLeads(){
           </div>
           <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;align-items:center">
             <input type="text" class="sl-inline-input" placeholder="📷 Instagram URL/@id" value="${esc(l.instagram||'')}" onchange="slUpdate('${sid}','instagram',this.value)" style="width:180px">
+            ${slIgOpenBtn(l.instagram)}
             <input type="email" class="sl-inline-input" placeholder="✉️ メールアドレス" value="${esc(l.email||'')}" onchange="slUpdate('${sid}','email',this.value)" style="width:180px">
           </div>
           <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;align-items:center">
-            <span style="font-size:11px;color:var(--t2)">次アクション:</span>
-            <input type="date" class="sl-inline-input" value="${esc(l.nextAction||'')}" onchange="slUpdate('${sid}','nextAction',this.value)" style="width:130px">
-            <input type="text" class="sl-inline-input" placeholder="メモ…" value="${esc(l.memo||'')}" onchange="slUpdate('${sid}','memo',this.value)" style="flex:1;min-width:120px;max-width:300px">
+            <span style="font-size:11px;color:var(--t2)">次アクション<span style="color:var(--purple)">(${slBizLabel(_slBiz)})</span>:</span>
+            <input type="date" class="sl-inline-input" value="${esc(slNextOf(l))}" onchange="slSetBizField('${sid}','n',this.value)" style="width:130px">
+            <input type="text" class="sl-inline-input" placeholder="メモ…" value="${esc(slMemoOf(l))}" onchange="slSetBizField('${sid}','m',this.value)" style="flex:1;min-width:120px;max-width:300px">
           </div>
           <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">${statusBtns}</div>
         </div>
         <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-          ${slChip(l.status)}
+          ${slChip(curStatus)}
           ${l.rating?`<span style="font-size:11px;color:var(--amber)">★${esc(String(l.rating))}</span>`:''}
           <button class="btn btn-g btn-xs" onclick="crmFromLead('${sid}')" title="このリードをクライアント台帳に登録">🤝 クライアント化</button>
           <button class="tact del" onclick="slDelete('${sid}')" title="削除">🗑</button>
@@ -11634,6 +11741,7 @@ function rSalesLeads(){
   return`<div class="ph"><div class="ph-title">📞 営業リスト</div>
     <button class="btn btn-g btn-sm" onclick="slAddManual()">＋ 手動追加</button>
   </div>
+  ${bizTabHtml}
   ${summaryHtml}
   ${regionSummaryHtml}
   ${importHtml}
@@ -11642,6 +11750,7 @@ function rSalesLeads(){
   ${regionFilterHtml}
   ${contactFilterHtml}
   ${assigneeFilterHtml}
+  ${overlapFilterHtml}
   ${searchHtml}
   ${rowsHtml}
   ${filtered.length>SL_PAGE_SIZE?pagerHtml:''}`;
@@ -11654,10 +11763,34 @@ function slUpdate(id,key,val){
   save();
 }
 
+function slSetBiz(biz){
+  if(!SL_BIZ_KEYS.includes(biz))return;
+  _slBiz=biz;_slPage=0;
+  render();
+}
+
+function slSetBizField(id,field,val){
+  const l=(S.salesLeads||[]).find(x=>x.id===id);
+  if(!l)return;
+  slBizObj(l,_slBiz)[field]=val;  // field: 'n'(次アクション) or 'm'(メモ)
+  save();
+}
+
 function slSetStatus(id,status){
   const l=(S.salesLeads||[]).find(x=>x.id===id);
   if(!l)return;
-  l.status=status;
+  const biz=_slBiz;
+  // 被り防止: 接触系へ変えようとした時、他事業で直近接触があれば確認
+  if(SL_CONTACT_STATUSES.includes(status)){
+    const oc=slRecentOtherContact(l,biz);
+    if(oc&&!confirm(`「${l.name}」は${slBizLabel(oc.b)}で${oc.d}に接触済みです(直近${SL_OVERLAP_DAYS}日)。\n別事業「${slBizLabel(biz)}」で接触記録を付けますか？`))return;
+  }
+  const b=slBizObj(l,biz);
+  b.s=status;
+  // 接触系ステータスなら接触履歴を自動追記(被り防止の元データ)
+  if(SL_CONTACT_STATUSES.includes(status))slPushContact(l,biz,l.approach||'');
+  // HP事業の成約は従来どおり lead.status/wonAt にも反映(既存の集計・クライアント化と互換)
+  if(biz==='hp')l.status=status;
   if(status==='成約'&&!l.wonAt)l.wonAt=new Date().toISOString().slice(0,10);
   save();
   render();
@@ -11691,7 +11824,7 @@ function slAddManual(){
   if(!S.salesLeads)S.salesLeads=[];
   const name=prompt('店名を入力:');
   if(!name)return;
-  S.salesLeads.push({id:uid(),name:name.trim(),status:'未接触',createdAt:new Date().toISOString()});
+  S.salesLeads.push({id:uid(),name:name.trim(),status:'未接触',biz:{hp:{s:'未接触',n:'',m:''}},contacts:[],createdAt:new Date().toISOString()});
   save();render();
 }
 
@@ -11722,6 +11855,7 @@ function _slParseCSV(text){
     cols.push(cur);
     const[name,genre,phone,address,rating,reviewCount,hp,instagram,approach,status,nextAction,memo,email]=cols.map(s=>s.trim());
     if(!name)continue;
+    const st=SL_STATUSES.includes(status)?status:'未接触';
     results.push({
       id:uid(),
       name,genre:genre||'',phone:phone||'',address:address||'',
@@ -11730,8 +11864,10 @@ function _slParseCSV(text){
       reviewCount:reviewCount?parseInt(reviewCount):null,
       hp:hp||'',instagram:instagram||'',approach:approach||'',
       email:email||'',
-      status:SL_STATUSES.includes(status)?status:'未接触',
+      status:st,
       nextAction:nextAction||'',memo:memo||'',
+      biz:{hp:{s:st,n:nextAction||'',m:memo||''}},  // CSVの状態列はHP事業に入れる
+      contacts:[],
       createdAt:new Date().toISOString()
     });
   }
@@ -11740,9 +11876,24 @@ function _slParseCSV(text){
 
 async function _slSaveChunked(leads){
   if(!S.salesLeads)S.salesLeads=[];
-  // 既存とマージ(名前+電話で重複除外)
-  const existKey=new Set((S.salesLeads||[]).filter(l=>!l.deleted).map(l=>(l.name||'')+(l.phone||'')));
-  const newLeads=leads.filter(l=>!existKey.has((l.name||'')+(l.phone||'')));
+  // 既存レコードを店名+電話でインデックス化(重複は新規追加せず既存へマージ)
+  const existBy={};
+  (S.salesLeads||[]).filter(l=>!l.deleted).forEach(l=>{existBy[(l.name||'')+(l.phone||'')]=l;});
+  const newLeads=[];
+  let merged=0;
+  leads.forEach(x=>{
+    const ex=existBy[(x.name||'')+(x.phone||'')];
+    if(ex){
+      // 既存へマージ: 空欄だけ埋める(既存の営業状態・接触履歴は壊さない)
+      ['genre','address','rating','reviewCount','hp','instagram','email','region'].forEach(k=>{
+        if((ex[k]==null||ex[k]==='')&&x[k]!=null&&x[k]!=='')ex[k]=x[k];
+      });
+      merged++;
+    }else{
+      newLeads.push(x);
+      existBy[(x.name||'')+(x.phone||'')]=x;  // 同一バッチ内重複も1件に
+    }
+  });
   const prog=document.getElementById('sl-import-progress');
   const CHUNK=200;
   let added=0;
@@ -11753,9 +11904,9 @@ async function _slSaveChunked(leads){
     await new Promise(r=>setTimeout(r,0)); // UIブロック防止
   }
   save();
-  if(prog)prog.textContent=`完了: ${newLeads.length}件追加 (重複スキップ: ${leads.length-newLeads.length}件)`;
+  if(prog)prog.textContent=`完了: 新規${newLeads.length}件 / 既存マージ${merged}件`;
   render();
-  toast(`📥 ${newLeads.length}件インポートしました`);
+  toast(`📥 新規${newLeads.length}件・既存マージ${merged}件`);
 }
 
 function slImportCSV(){
@@ -11793,14 +11944,35 @@ function slMigrateRegions(){
   if(migrated>0){save();console.log(`[slMigrateRegions] ${migrated}件に地域を付与しました`);}
 }
 
+// ===MIGRATION: 既存の単一「状態/次アクション/メモ」をHP事業(biz.hp)へ移行(後方互換・冪等)===
+function slMigrateBiz(){
+  if(!S.salesLeads)return;
+  let migrated=0;
+  S.salesLeads.forEach(l=>{
+    if(!l.biz||typeof l.biz!=='object'){
+      l.biz={};
+      l.biz.hp={s:l.status||'未接触',n:l.nextAction||'',m:l.memo||''};
+      // 既存の接触系ステータスは接触履歴として1件起点を残す(被り防止の初期値)
+      if(l.status&&SL_CONTACT_STATUSES.includes(l.status)){
+        const d=(l.wonAt||l.nextAction||l.createdAt||'').slice(0,10)||new Date().toISOString().slice(0,10);
+        l.contacts=[{d,b:'hp',c:l.approach||''}];
+      }
+      migrated++;
+    }
+    if(!Array.isArray(l.contacts))l.contacts=[];
+  });
+  if(migrated>0){save();console.log(`[slMigrateBiz] ${migrated}件を事業別データへ移行(HP事業へ)`);}
+}
+
 // ===INIT===
 updSessionCount();
 initPomo();
 initReminders();
 checkClientDraftTasks();
 slMigrateRegions();
+slMigrateBiz();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260710-16';
+const APP_VERSION='20260711-01';
 
 render();
 function forceAppUpdate(){
