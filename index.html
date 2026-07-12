@@ -11426,6 +11426,19 @@ let _slFilterContact='all';  // all / ig / email / both
 let _slFilterAssignee='all';  // all / 会長 / 佐々木 / アオイ / 未割当
 let _slFilterOverlap=false;   // true=他事業で直近接触ありの店を除外(被りなしのみ表示)
 let _slSearch='';
+// 検索は1文字ごとに全再描画すると入力欄が作り直されてIME入力が壊れるため、
+// 変換中は待ち、確定後350msデバウンスで描画し、フォーカスとカーソルを復元する
+let _slSearchTimer=null,_slComposing=false;
+function slSearchInput(el){
+  _slSearch=el.value;_slPage=0;
+  if(_slComposing)return;
+  clearTimeout(_slSearchTimer);
+  _slSearchTimer=setTimeout(()=>{
+    render();
+    const inp=document.getElementById('sl-search');
+    if(inp){inp.focus();const L=inp.value.length;try{inp.setSelectionRange(L,L)}catch(e){}}
+  },350);
+}
 const SL_PAGE_SIZE=100;
 const SL_GOAL_MONTH=10; // 今月の成約目標件数
 
@@ -11818,7 +11831,7 @@ function rSalesLeads(){
   </div>`;
 
   const searchHtml=`<div style="margin-bottom:14px;display:flex;gap:8px;align-items:center">
-    <input type="search" placeholder="店名・住所で検索…" value="${esc(_slSearch)}" oninput="_slSearch=this.value;_slPage=0;render()" style="max-width:280px">
+    <input type="search" id="sl-search" placeholder="店名・住所で検索…" value="${esc(_slSearch)}" oninput="slSearchInput(this)" oncompositionstart="_slComposing=true" oncompositionend="_slComposing=false;slSearchInput(this)" style="max-width:280px">
     <span style="font-size:12px;color:var(--t2)">${filtered.length}件</span>
   </div>`;
 
@@ -12138,7 +12151,7 @@ checkClientDraftTasks();
 slMigrateRegions();
 slMigrateBiz();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260711-03';
+const APP_VERSION='20260712-01';
 
 render();
 function forceAppUpdate(){
