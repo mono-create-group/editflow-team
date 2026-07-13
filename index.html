@@ -940,9 +940,9 @@ function fbSave(){
   clearTimeout(_fbSaveTimer);
   _fbSaveTimer=setTimeout(()=>{
     fbDb.collection('users').doc(FB_USER.uid).set({
-      json:_packState(),
-      ts:firebase.firestore.FieldValue.serverTimestamp()
-    }).catch(e=>console.error('Firestore save error:',e));
+      json_mcapp:_packState(),
+      ts_mcapp:firebase.firestore.FieldValue.serverTimestamp()
+    },{merge:true}).catch(e=>console.error('Firestore save error:',e));
     _teamSave();
   },2000);
 }
@@ -1001,11 +1001,11 @@ function fbSetupRealtimeSync(){
   S=migrate(S);
   let _firstLoad=true;
   _fbUnsubscribe=fbDb.collection('users').doc(FB_USER.uid).onSnapshot(doc=>{
-    if(!doc.exists||!doc.data()?.json){
+    if(!doc.exists||!doc.data()?.json_mcapp){
       if(_firstLoad){fbSave();_firstLoad=false;}
       return;
     }
-    const cloudTs=doc.data().ts?.toMillis?.()??0;
+    const cloudTs=doc.data().ts_mcapp?.toMillis?.()??0;
     const localTs=S._savedAt||0;
     if(_firstLoad){
       _firstLoad=false;
@@ -1014,14 +1014,14 @@ function fbSetupRealtimeSync(){
         toast('☁️ ローカルデータをクラウドに同期中…');
         return;
       }
-      _applyCloudData(doc.data().json);
+      _applyCloudData(doc.data().json_mcapp);
       fbSave();
       render();
       toast('☁️ クラウドから同期しました');
     } else {
       // リアルタイム更新 — クラウドが明らかに新しい場合のみ適用
       if(cloudTs>localTs+2000){
-        _applyCloudData(doc.data().json);
+        _applyCloudData(doc.data().json_mcapp);
         renderSyncSafe(); // ドキュメント編集中はDOMを置き換えない(入力消失防止)
         toast('📱 他のデバイスから同期しました');
       }
@@ -12282,7 +12282,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260713-08';
+const APP_VERSION='20260713-09';
 
 render();
 function forceAppUpdate(){
