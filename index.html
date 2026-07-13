@@ -11429,7 +11429,7 @@ function slIgOpenBtn(v){
   return `<a href="https://www.instagram.com/${h}/" target="_blank" rel="noopener" class="tact" style="text-decoration:none;font-size:11px;color:#c13584" title="Instagramプロフィールを開く">📷 開く</a>`;
 }
 const SL_STATUS_NEXT={'未接触':'電話済','架電予定':'電話済','電話済':'アポ','メール済み':'アポ','DM済み':'アポ','アポ':'商談','商談':'成約','HP作成済':'電話済','成約':'成約','失注':'失注'};
-const SL_REGIONS=['旭川','札幌','その他'];
+const SL_REGIONS=['旭川','札幌','全道','全国'];
 let _slPage=0;
 let _slFilterStatus='all';
 let _slFilterGenre='all';
@@ -11455,10 +11455,17 @@ const SL_PAGE_SIZE=100;
 const SL_GOAL_MONTH=10; // 今月の成約目標件数
 
 function slRegion(address){
-  if(!address)return 'その他';
+  if(!address)return '全国';
   if(address.includes('旭川市'))return '旭川';
   if(address.includes('札幌市'))return '札幌';
-  return 'その他';
+  if(address.includes('北海道'))return '全道';  // 旭川・札幌以外の道内
+  return '全国';                                 // 道外
+}
+// 地域を返す。格納済みregionが現行4区分なら優先、旧値(その他等)は住所から再判定
+function slRegionOf(l){
+  const r=l.region;
+  if(r==='旭川'||r==='札幌'||r==='全道'||r==='全国')return r;
+  return slRegion(l.address||'');
 }
 
 function slStatusClass(s){return 'sl-'+(s||'未接触');}
@@ -11471,7 +11478,7 @@ function slFilteredLeads(){
     if(!slInPool(l,_slBiz))return false;  // 事業プール(シフトさん=飲食のみ/他=非飲食)
     if(_slFilterStatus!=='all'&&slStatusOf(l)!==_slFilterStatus)return false;
     if(_slFilterGenre!=='all'&&l.genre!==_slFilterGenre)return false;
-    if(_slFilterRegion!=='all'&&(l.region||slRegion(l.address||''))!==_slFilterRegion)return false;
+    if(_slFilterRegion!=='all'&&slRegionOf(l)!==_slFilterRegion)return false;
     const hasIG=!!(l.instagram&&l.instagram.trim());
     const hasEmail=!!(l.email&&l.email.trim());
     if(_slFilterContact==='ig'&&!hasIG)return false;
@@ -11755,7 +11762,7 @@ function rSalesLeads(){
   // 地域別集計
   const regionCounts={};
   SL_REGIONS.forEach(r=>{
-    const rLeads=all.filter(l=>(l.region||slRegion(l.address||''))===r);
+    const rLeads=all.filter(l=>slRegionOf(l)===r);
     regionCounts[r]={
       total:rLeads.length,
       未接触:rLeads.filter(l=>slStatusOf(l)==='未接触').length,
@@ -12165,7 +12172,7 @@ checkClientDraftTasks();
 slMigrateRegions();
 slMigrateBiz();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260713-01';
+const APP_VERSION='20260713-02';
 
 render();
 function forceAppUpdate(){
