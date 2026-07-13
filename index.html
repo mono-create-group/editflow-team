@@ -1182,10 +1182,38 @@ function showAuthError(e){
 }
 function fbSignOut(){fbAuth.signOut();}
 
+// アプリ内ブラウザ/ホーム画面PWAの検出。GoogleはこれらからのOAuthを disallowed_useragent で拒否するため、
+// 検出時はGoogleボタンの代わりに「Safariで開く」案内を出す(2026-07-13)。
+function _isEmbeddedWebview(){
+  const ua=navigator.userAgent||'';
+  if(/(Line\/|FBAN|FBAV|FB_IAB|Instagram|MicroMessenger|KAKAOTALK|NAVER)/i.test(ua))return true;  // 代表的アプリ内ブラウザ
+  const iOS=/iPad|iPhone|iPod/.test(ua);
+  if(iOS&&window.navigator.standalone===true)return true;  // iOSホーム画面に追加したPWA
+  if(iOS&&!/Safari/.test(ua))return true;                  // iOS WKWebView(Safariトークン無し)
+  if(/Android/.test(ua)&&/;\s*wv\)/.test(ua))return true;  // Android WebView
+  return false;
+}
+function _copyAppUrl(){
+  const u=location.origin+location.pathname;
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(u).then(()=>{try{toast('リンクをコピーしました。Safariのアドレス欄に貼り付けて開いてください','ok');}catch(_){alert('コピーしました。Safariで開いてください:\n'+u);}}).catch(()=>prompt('このURLをコピーしてSafariで開いてください',u));
+  }else{prompt('このURLをコピーしてSafariで開いてください',u);}
+}
+
 function renderAuthUI(){
+  const signedOut=_isEmbeddedWebview()
+    ?`<div style="font-size:11px;line-height:1.7;background:#fff4e5;border:1px solid #f0c98a;border-radius:8px;padding:10px 12px;color:#8a5a00">
+        <div style="font-weight:700;margin-bottom:4px">このままではGoogleログインできません</div>
+        アプリ内ブラウザ／ホーム画面版では、Googleがログインをブロックします。<b>Safariで開いて</b>からログインしてください。
+        <div style="margin-top:8px;display:flex;gap:6px">
+          <button onclick="_copyAppUrl()" style="flex:1;background:#111;color:#fff;border:none;border-radius:6px;padding:8px;font-size:11px;font-weight:700">リンクをコピー</button>
+          <button onclick="signInWithGoogle()" style="background:#fff;border:1px solid #d0b280;border-radius:6px;padding:8px 10px;font-size:11px;color:#8a5a00">それでも試す</button>
+        </div>
+      </div>`
+    :`<button onclick="signInWithGoogle()" style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12px;color:var(--text);display:flex;align-items:center;gap:7px;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>Googleでサインイン</button>`;
   const html=FB_USER
     ?`<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2)"><img src="${esc(FB_USER.photoURL||'')}" style="width:24px;height:24px;border-radius:50%;flex-shrink:0" onerror="this.style.display='none'"><div style="min-width:0"><div style="color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(FB_USER.displayName||FB_USER.email||'')}</div><button onclick="fbSignOut()" style="color:var(--t3);font-size:11px;padding:0">サインアウト</button>${TEAM_SHARE_OK===true?'<div style="font-size:10px;color:var(--green)">👥 チーム共有 ON</div>':TEAM_SHARE_OK===false?'<div style="font-size:10px;color:var(--t3)">👤 個人モード</div>':''}</div></div>`
-    :`<button onclick="signInWithGoogle()" style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12px;color:var(--text);display:flex;align-items:center;gap:7px;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>Googleでサインイン</button>`;
+    :signedOut;
   const el=document.getElementById('auth-ui');if(el)el.innerHTML=html;
   const mob=document.getElementById('mob-auth-ui');if(mob)mob.innerHTML=html;
 }
@@ -12254,7 +12282,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260713-07';
+const APP_VERSION='20260713-08';
 
 render();
 function forceAppUpdate(){
