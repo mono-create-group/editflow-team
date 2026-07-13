@@ -11380,7 +11380,7 @@ function initReminders(){
 // ===営業リスト===
 const SL_STATUSES=['未接触','架電予定','HP作成済','電話済','メール済み','DM済み','アポ','商談','成約','失注'];
 const SL_APPROACHES=['電話','メール','InstagramDM','LINE','訪問'];  // 営業方法(記録用)
-const SL_ASSIGNEES=['会長','佐々木','アオイ'];  // 営業担当者(誰が営業をかけたか)
+const SL_ASSIGNEES=['中村航汰','佐々木','アオイ'];  // 営業担当者(誰が営業をかけたか)。旧「会長」は2026-07-13に改名(slMigrateAssigneeで移行)
 
 // ─── 事業切替(店舗は分割せず1レコードに事業別の営業状態を持たせる) ───
 // キーは Firestore 1MiB制約に配慮し短縮(hp/consult/app/shift)。状態は biz[キー]={s,n,m} で保持。
@@ -12235,6 +12235,14 @@ function slMigrateFoodToShift(){
   if(moved>0){save();console.log(`[slMigrateFoodToShift] ${moved}件の飲食をHP→シフトさんへ移行`);}
 }
 
+// ===MIGRATION: 営業担当「会長」を「中村航汰」へ改名(2026-07-13会長指示・冪等)===
+function slMigrateAssignee(){
+  if(!S.salesLeads)return;
+  let n=0;
+  S.salesLeads.forEach(l=>{if(l&&l.assignee==='会長'){l.assignee='中村航汰';n++;}});
+  if(n>0){save();console.log(`[slMigrateAssignee] 担当${n}件を会長→中村航汰へ改名`);}
+}
+
 // ===INIT===
 updSessionCount();
 initPomo();
@@ -12243,8 +12251,9 @@ checkClientDraftTasks();
 slMigrateRegions();
 slMigrateBiz();
 slMigrateFoodToShift();
+slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260713-04';
+const APP_VERSION='20260713-05';
 
 render();
 function forceAppUpdate(){
