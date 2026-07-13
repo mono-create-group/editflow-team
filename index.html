@@ -12164,6 +12164,28 @@ function slMigrateBiz(){
   if(migrated>0){save();console.log(`[slMigrateBiz] ${migrated}件を事業別データへ移行(HP事業へ)`);}
 }
 
+// ===MIGRATION: 飲食店のHP側営業状態をシフトさん事業へ移す(2026-07-13会長指示・冪等)===
+// 飲食はHP営業対象外にした。過去にHPで動かした飲食リードの状態/次アクション/メモを
+// biz.hp → biz.shift へ移し、biz.hp は未接触に戻す。HP側が未接触の飲食は対象外。
+function slMigrateFoodToShift(){
+  if(!S.salesLeads)return;
+  let moved=0;
+  S.salesLeads.forEach(l=>{
+    if(!SL_FOOD_GENRES.has(l.genre||''))return;
+    if(!l.biz||typeof l.biz!=='object')l.biz={};
+    const hp=l.biz.hp;
+    const hpHas=hp&&((hp.s&&hp.s!=='未接触')||hp.n||hp.m);
+    if(!hpHas)return;
+    const cur=l.biz.shift;
+    const shiftEmpty=!cur||((!cur.s||cur.s==='未接触')&&!cur.n&&!cur.m);
+    if(shiftEmpty)l.biz.shift={s:hp.s||'未接触',n:hp.n||'',m:hp.m||''};
+    else l.biz.shift.m=(cur.m?cur.m+' / ':'')+'旧HP状態: '+(hp.s||'')+(hp.m?('・'+hp.m):'');  // 衝突時は情報を残す
+    l.biz.hp={s:'未接触',n:'',m:''};  // 飲食はHP対象外に戻す
+    moved++;
+  });
+  if(moved>0){save();console.log(`[slMigrateFoodToShift] ${moved}件の飲食をHP→シフトさんへ移行`);}
+}
+
 // ===INIT===
 updSessionCount();
 initPomo();
@@ -12171,8 +12193,9 @@ initReminders();
 checkClientDraftTasks();
 slMigrateRegions();
 slMigrateBiz();
+slMigrateFoodToShift();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260713-02';
+const APP_VERSION='20260713-03';
 
 render();
 function forceAppUpdate(){
