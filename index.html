@@ -818,6 +818,13 @@ a{color:inherit;text-decoration:none}
 .gdoc-page ul,.gdoc-page ol{margin:4px 0;padding-left:28px}
 .gdoc-page li{margin-bottom:2px}
 .gdoc-page a{color:#1a73e8}
+/* チェックリスト(2026-07-13) */
+.gdoc-page ul.gdoc-check{list-style:none;padding-left:6px}
+.gdoc-page ul.gdoc-check li{position:relative;list-style:none;padding-left:30px;margin-bottom:3px}
+.gdoc-page ul.gdoc-check li::before{content:"";position:absolute;left:2px;top:.2em;width:17px;height:17px;border:2px solid #9aa0a6;border-radius:4px;box-sizing:border-box;cursor:pointer}
+.gdoc-page ul.gdoc-check li.done::before{background:#6d28d9;border-color:#6d28d9}
+.gdoc-page ul.gdoc-check li.done::after{content:"";position:absolute;left:7px;top:.3em;width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg);pointer-events:none}
+.gdoc-page ul.gdoc-check li.done{color:#9aa0a6;text-decoration:line-through}
 .gdoc-page blockquote{border-left:3px solid #dadce0;margin:8px 0;padding:2px 0 2px 14px;color:#5f6368}
 .gdoc-page hr{border:none;border-top:1px solid #dadce0;margin:16px 0}
 .gdoc-page pre{background:#f1f3f4;border:1px solid #e0e3e7;border-radius:6px;padding:12px 14px;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:10pt;line-height:1.6;white-space:pre-wrap;overflow-wrap:break-word;margin:8px 0}
@@ -6547,6 +6554,30 @@ function gdocLink(){
   if(u&&u.trim())gdocCmd('createLink',u.trim());
 }
 function gdocClear(){gdocCmd('removeFormat');gdocCmd('unlink');gdocCmd('formatBlock','P');}
+// チェックリスト: 選択行をチェックボックス付きリストに(再押下で解除)。状態はhtmlに保存され永続化
+function gdocChecklist(){
+  const ed=document.getElementById('gdoc-editor');if(!ed)return;
+  ed.focus();
+  const findUl=()=>{const n=window.getSelection().anchorNode;const e=n&&(n.nodeType===1?n:n.parentElement);return e&&e.closest?e.closest('ul'):null;};
+  let ul=findUl();
+  if(!ul){document.execCommand('insertUnorderedList');ul=findUl();}
+  if(ul){
+    if(ul.classList.contains('gdoc-check')){ul.classList.remove('gdoc-check');ul.querySelectorAll('li.done').forEach(li=>li.classList.remove('done'));}
+    else ul.classList.add('gdoc-check');
+  }
+  if(window._gdocCurId)gdocInput(window._gdocCurId);
+}
+// チェックボックス欄クリックで完了トグル(キャレット移動を防ぐためmousedownで処理)
+function gdocEditorMouseDown(e){
+  const t=e.target;if(!t||!t.closest)return;
+  const li=t.closest('li');if(!li)return;
+  const ul=li.parentElement;if(!ul||!ul.classList||!ul.classList.contains('gdoc-check'))return;
+  const rect=li.getBoundingClientRect();
+  if(e.clientX-rect.left>28||e.clientY-rect.top>26)return; // 左上のチェックボックス欄のみ反応
+  e.preventDefault();
+  li.classList.toggle('done');
+  if(window._gdocCurId)gdocInput(window._gdocCurId);
+}
 function gdocPop(which){
   const el=document.getElementById('gdoc-pop-'+which);if(!el)return;
   const show=el.style.display==='none'||!el.style.display;
@@ -6594,6 +6625,7 @@ function rDocEditor(p,src){
   <span class="gdoc-colwrap"><button class="gdoc-btn" ${pd} onclick="gdocPop('hilite')" title="ハイライト色" style="background:linear-gradient(transparent 60%,#fff475 60%)">ペン</button>
     <span class="gdoc-pop" id="gdoc-pop-hilite">${swatches('hiliteColor',GDOC_HILITE)}</span></span>
   <span class="gdoc-sep"></span>
+  <button class="gdoc-btn" ${pd} onclick="gdocChecklist()" title="チェックリスト">☑</button>
   ${btn('•≡','insertUnorderedList','箇条書き')}
   ${btn('1≡','insertOrderedList','番号付きリスト')}
   ${btn('⇤','outdent','インデント減')}
@@ -6607,7 +6639,7 @@ function rDocEditor(p,src){
   <button class="gdoc-btn" ${pd} onclick="gdocClear()" title="書式をクリア"><s>T</s>x</button>
 </div>
 <div class="gdoc-canvas" onclick="if(event.target===this)document.getElementById('gdoc-editor').focus()">
-  <div class="gdoc-page" id="gdoc-editor" contenteditable="true" oninput="gdocInput('${p.id}')">${p.html||''}</div>
+  <div class="gdoc-page" id="gdoc-editor" contenteditable="true" onmousedown="gdocEditorMouseDown(event)" oninput="gdocInput('${p.id}')">${p.html||''}</div>
 </div>`;
 }
 // ===事業情報（事業部ごとのサービス情報・チーム共有）===
@@ -12285,7 +12317,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260713-10';
+const APP_VERSION='20260713-11';
 
 render();
 function forceAppUpdate(){
