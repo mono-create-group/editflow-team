@@ -1977,11 +1977,14 @@ function migrate(d){
   if(!d.settings._fsIdealSeedV1){
     const sig=a=>JSON.stringify((a||[]).map(f=>[f.s,f.e,f.t]));
     let _email='';try{_email=((typeof FB_USER!=='undefined'&&FB_USER&&FB_USER.email)||'').toLowerCase();}catch(_){}
-    const isChairman=_email==='mono.create.group@gmail.com';
-    if(isChairman||!d.fs||d.fs.length===0||sig(d.fs)===sig(LEGACY_FS)){
+    const isChairman=_email==='mono.create.group@gmail.com'; // 参照のみ残置(強制上書きは廃止)
+    // 2026-07-13修正: 会長アカウントを毎回DEFAULT_FSで強制上書きしていたため、再読込のたびに
+    // カスタム予定が消える不具合があった。isChairman強制上書きを廃止。
+    // カスタム済み(空でなく旧デフォルトでもない)の予定は誰であっても絶対に上書きしない。
+    if(!d.fs||d.fs.length===0||sig(d.fs)===sig(LEGACY_FS)){
       d.fs=JSON.parse(JSON.stringify(DEFAULT_FS));
-      d.settings._fsIdealSeedV1=true; // 適用できた時だけフラグを立てる（会長が未サインインで先にloadされても、次のサインイン時に再評価される）
     }
+    d.settings._fsIdealSeedV1=true; // 評価済みフラグ(次回以降このブロックに入らない=カスタム維持)
   }
   return d;
 }
@@ -12282,7 +12285,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260713-09';
+const APP_VERSION='20260713-10';
 
 render();
 function forceAppUpdate(){
