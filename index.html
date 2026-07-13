@@ -11400,7 +11400,7 @@ function slBizLabel(k){const b=SL_BIZ.find(x=>x.k===k);return b?b.label:k;}
 let _slBiz='hp';  // 既定=HP制作
 
 // 飲食業種(シフトさん営業の対象。HP等の営業リストからは除外)
-const SL_FOOD_GENRES=new Set(['ラーメン','居酒屋','焼肉','寿司','カフェ','スナック','バー','焼き鳥','食堂','そば','うどん','洋食','中華','イタリアン','ジンギスカン','海鮮','弁当・惣菜']);
+const SL_FOOD_GENRES=new Set(['飲食','ラーメン','居酒屋','焼肉','寿司','カフェ','スナック','バー','焼き鳥','食堂','そば','うどん','洋食','中華','イタリアン','ジンギスカン','海鮮','弁当・惣菜','喫茶','定食','ダイニング','ビストロ','バル','焼き鳥・串','鉄板焼き']);
 // この店がこの事業タブのプールに属するか。シフトさん=飲食のみ／他事業=非飲食のみ
 function slInPool(l,bizKey){
   const isFood=SL_FOOD_GENRES.has(l.genre||'');
@@ -12253,7 +12253,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260713-05';
+const APP_VERSION='20260713-06';
 
 render();
 function forceAppUpdate(){
