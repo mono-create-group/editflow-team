@@ -1824,6 +1824,126 @@ function sheetsDoImport(allJobs){
   toast(`📊 ${n}件の案件を取り込みました`);
 }
 
+
+// ===派遣管理シート → 案件 取込（追加/更新のみ・削除しない・既存同期に非干渉）===
+const HAKEN_SHEET_ID = "1neGp2QYhiYqQoGqNIacc-SDndq_okhmZ4ZNMpWcJLh4";
+const HAKEN_TAB = "案件管理";
+function _hkDate(s){ s=String(s==null?'':s).trim().replace(/\s/g,''); if(!s)return'';
+  var m=s.match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})$/); if(m)return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');
+  var m2=s.match(/^(\d{1,2})[\/\-.](\d{1,2})$/); if(m2){var y=new Date().getFullYear();return y+'-'+m2[1].padStart(2,'0')+'-'+m2[2].padStart(2,'0');}
+  var m3=s.match(/^(\d{1,2})月(\d{1,2})日?$/); if(m3){var y=new Date().getFullYear();return y+'-'+m3[1].padStart(2,'0')+'-'+m3[2].padStart(2,'0');}
+  return''; }
+function _hkNum(s){ if(s==null)return 0; var n=parseInt(String(s).replace(/[¥,￥\s円]/g,'')); return isNaN(n)?0:n; }
+function _hkFindByName(list,name){ name=String(name||'').trim(); if(!name)return null;
+  var arr=list||[]; return arr.find(function(x){return x.name===name;}) ||
+    arr.find(function(x){return x.name&&(x.name.indexOf(name)>=0||name.indexOf(x.name)>=0);}) || null; }
+function hakenRowToJob(row, existing){
+  var g=function(i){return (row[i]==null?'':String(row[i])).trim();};
+  var hakenId=g(0);
+  var client=_hkFindByName(S.clients, g(2));
+  var worker=_hkFindByName(S.workers, g(3));
+  var unitPrice=_hkNum(g(7)), workerPay=_hkNum(g(9));
+  var seibetsu=g(5), noukiDate=_hkDate(g(10)), seikyu=g(11), payin=_hkDate(g(12)), shiharai=g(13);
+  var scope = seibetsu==='ショート'?'ショート動画' : (seibetsu==='長尺'?'長尺動画':'');
+  var status = (seikyu==='入金済') ? '完了' : (noukiDate ? '初稿完成' : (g(3) ? '進行中' : '受注済み'));
+  var noteParts=[];
+  if(g(1))noteParts.push('受注:'+g(1));
+  if(g(6))noteParts.push('尺:'+g(6));
+  if(seikyu)noteParts.push('請求:'+seikyu);
+  if(shiharai)noteParts.push('支払:'+shiharai);
+  if(g(15))noteParts.push(g(15));
+  var mapped={
+    title: g(4)||g(0)||'(無題)',
+    jobType: (existing&&existing.jobType)||'edit',
+    clientId: client?client.id:((existing&&existing.clientId)||null),
+    workerId: worker?worker.id:((existing&&existing.workerId)||null),
+    workerIds: worker?[worker.id]:((existing&&existing.workerIds)||[]),
+    scope: scope||((existing&&existing.scope)||null),
+    status: status,
+    unitPrice: unitPrice, profit: unitPrice, workerPay: workerPay,
+    deliveryDate: noukiDate||null,
+    paymentDate: payin||null,
+    payoutDate: (shiharai==='支払済') ? (_hkDate(g(14))||payin||today()) : ((existing&&existing.payoutDate)||null),
+    invoiceDate: (seikyu==='請求済'||seikyu==='入金済') ? ((existing&&existing.invoiceDate)||noukiDate||null) : ((existing&&existing.invoiceDate)||null),
+    notes: noteParts.join(' / '),
+    hakenId: hakenId
+  };
+  if(existing){
+    for(var k in mapped){ existing[k]=mapped[k]; }
+    return existing;
+  }
+  mapped.id=uid(); mapped.subtasks=[]; mapped.createdAt=new Date().toISOString();
+  return mapped;
+}
+async function hakenImportModal(){
+  if(typeof _gcalToken==='undefined'||!_gcalToken){
+    toast('先に設定でGoogle連携してください（Sheets読み取りに必要）','warn');return;
+  }
+  toast('派遣管理シートを読み込み中…');
+  var rows=null;
+  try{
+    var range=encodeURIComponent("'"+HAKEN_TAB+"'!A2:P");
+    var res=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+HAKEN_SHEET_ID+'/values/'+range,{headers:{'Authorization':'Bearer '+_gcalToken}});
+    if(!res.ok){var e=await res.json().catch(function(){return{};});toast('シート読み込み失敗: '+((e.error&&e.error.message)||res.status),'err');return;}
+    var d=await res.json(); rows=d.values||[];
+  }catch(err){toast('シート読み込みエラー','err');console.error(err);return;}
+  var data=rows.filter(function(r){return r&&(String(r[0]||'').trim()||String(r[4]||'').trim())&&!/記入例/.test(String(r[15]||''));});
+  if(!data.length){toast('取り込める案件がありません（記入例のみ、または未入力）','warn');return;}
+  var byId={}; (S.jobs||[]).forEach(function(j){ if(j.hakenId&&!j.deleted)byId[j.hakenId]=j; });
+  var items=data.map(function(r){
+    var hid=String(r[0]||'').trim();
+    var ex=hid?byId[hid]:null;
+    return {row:r, hid:hid, isUpdate:!!ex};
+  });
+  var nNew=items.filter(function(x){return !x.isUpdate;}).length;
+  var nUpd=items.filter(function(x){return x.isUpdate;}).length;
+  window._hakenItems=items;
+  var html='<div class="modal-overlay" id="haken-modal" onclick="if(event.target.id===\'haken-modal\')closeModal()">'
+   +'<div class="modal" style="max-width:560px;max-height:80vh;overflow-y:auto">'
+   +'<div class="modal-hdr"><div class="modal-title">📥 派遣管理シートから取り込む</div><button class="modal-close" onclick="closeModal()">✕</button></div>'
+   +'<div style="padding:16px">'
+   +'<div style="font-size:12px;color:var(--t2);margin-bottom:6px">新規 '+nNew+' 件 ／ 更新 '+nUpd+' 件（案件IDで照合。既存アプリ案件は削除しません）</div>'
+   +'<div style="display:flex;gap:8px;margin-bottom:12px">'
+   +'<button class="btn btn-g btn-sm" onclick="document.querySelectorAll(\'.hk-chk\').forEach(function(c){c.checked=true;})">全選択</button>'
+   +'<button class="btn btn-g btn-sm" onclick="document.querySelectorAll(\'.hk-chk\').forEach(function(c){c.checked=false;})">全解除</button></div>'
+   +'<div style="display:flex;flex-direction:column;gap:8px">'
+   + items.map(function(it,i){
+       var r=it.row; var title=esc(String(r[4]||r[0]||'').trim());
+       var cli=esc(String(r[2]||'').trim()); var wk=esc(String(r[3]||'').trim());
+       var price=_hkNum(r[7]);
+       return '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:8px;border:1px solid '+(it.isUpdate?'var(--amber)':'var(--border)')+';background:var(--card);cursor:pointer">'
+        +'<input type="checkbox" class="hk-chk" data-idx="'+i+'" checked style="margin-top:3px;flex-shrink:0">'
+        +'<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+title+'</div>'
+        +'<div style="display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--t2);margin-top:3px">'
+        +(price?'<span>¥'+price.toLocaleString()+'</span>':'')
+        +(cli?'<span>👤 '+cli+'</span>':'')
+        +(wk?'<span>🛠 '+wk+'</span>':'')
+        +(it.hid?'<span>🆔 '+esc(it.hid)+'</span>':'')
+        +(it.isUpdate?'<span style="color:var(--amber)">↻ 更新</span>':'<span style="color:var(--green)">＋ 新規</span>')
+        +'</div></div></label>';
+     }).join('')
+   +'</div>'
+   +'<div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">'
+   +'<button class="btn btn-g btn-sm" onclick="closeModal()">キャンセル</button>'
+   +'<button class="btn btn-p btn-sm" onclick="hakenDoImport()">✅ 取り込む</button></div>'
+   +'</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+function hakenDoImport(){
+  var checked=[].slice.call(document.querySelectorAll('.hk-chk')).filter(function(c){return c.checked;}).map(function(c){return parseInt(c.dataset.idx);});
+  if(!checked.length){toast('取り込む案件を選択してください','warn');return;}
+  var items=window._hakenItems||[]; var nN=0,nU=0;
+  var byId={}; (S.jobs||[]).forEach(function(j){ if(j.hakenId&&!j.deleted)byId[j.hakenId]=j; });
+  checked.forEach(function(i){
+    var it=items[i]; if(!it)return;
+    var ex=it.hid?byId[it.hid]:null;
+    if(ex){ hakenRowToJob(it.row, ex); nU++; }
+    else{ var nj=hakenRowToJob(it.row, null); S.jobs.push(nj); if(nj.hakenId)byId[nj.hakenId]=nj; nN++; }
+  });
+  save(); if(typeof render==='function')render(); closeModal();
+  toast('📥 取込完了：新規 '+nN+' 件 ／ 更新 '+nU+' 件');
+}
+
 const LOG_TYPE_LBL={revenue:'💰 収益',sales:'📞 営業',hire:'👤 採用'};
 const GOAL_CATS=[{v:'revenue',l:'💰 収益'},{v:'skill',l:'📚 スキル'},{v:'habit',l:'🔥 習慣'},{v:'project',l:'🎬 案件'},{v:'sales',l:'📞 営業'},{v:'hire',l:'👤 採用'}];
 const GOAL_HORIZONS=[{v:'this_month',l:'今月の目標',icon:'📅'},{v:'next_month',l:'来月の目標',icon:'🗓'},{v:'monthly',l:'月毎の目標',icon:'📆'},{v:'year1',l:'1年間の目標',icon:'🌱'},{v:'year5',l:'5年後の目標',icon:'🚀'},{v:'year10',l:'10年後の目標',icon:'🌟'},{v:'tree',l:'ツリー表示',icon:'🌳'}];
@@ -4727,6 +4847,7 @@ function rProjects(){
     <button class="btn btn-p btn-sm" onclick="openClientModal()">＋ クライアント追加</button>
     <button class="btn btn-g btn-sm" onclick="openJobModal()">＋ 案件追加</button>
     <button class="btn btn-g btn-sm" onclick="syncToSheet(true)" title="案件をスプレッドシートに送信">📊 シート同期</button>
+    <button class="btn btn-g btn-sm" style="border:1px solid var(--green);color:var(--green)" onclick="hakenImportModal()" title="派遣管理シートから案件を取り込む（追加/更新のみ）">📥 派遣シート取込</button>
     <select style="font-size:12px;padding:4px 8px;border-radius:6px" onchange="JOB_SORT=this.value;render()">
       <option value="deadline" ${JOB_SORT==='deadline'?'selected':''}>納期順（優先度）</option>
       <option value="default" ${JOB_SORT==='default'?'selected':''}>デフォルト</option>
@@ -12317,7 +12438,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260713-11';
+const APP_VERSION='20260714-1';
 
 render();
 function forceAppUpdate(){
