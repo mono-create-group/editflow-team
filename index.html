@@ -4580,8 +4580,17 @@ function fsTlColClick(e,date){
 }
 // 指定日に予定されている習慣を返す
 function habitsForDate(date){
-  const dow=new Date(date+'T00:00:00').getDay(); // 0=日, 1=月...
-  return S.habits.filter(h=>!h.deleted&&(!h.daysOfWeek?.length||h.daysOfWeek.includes(dow)));
+  const dt=new Date(date+'T00:00:00');
+  const dow=dt.getDay();               // 0=日, 1=月...
+  const domN=dt.getDate();             // 1..31
+  const lastDom=new Date(dt.getFullYear(),dt.getMonth()+1,0).getDate(); // 月末日
+  return S.habits.filter(h=>{
+    if(h.deleted)return false;
+    // 月1回など「毎月◯日」: 指定日に表示。指定日が月末を超える月は月末日に表示(例: 31日→30日/2月末)
+    if(h.freq==='monthly'){const d=Math.min(Math.max(+h.dom||1,1),31);return d===domN||(d>lastDom&&domN===lastDom);}
+    // 毎日(daysOfWeek空) / 毎週(daysOfWeekに曜日指定=週1回も含む) / 旧データ
+    return !h.daysOfWeek?.length||h.daysOfWeek.includes(dow);
+  });
 }
 // 習慣をタスクビュー内で表示するアイテム（interactive=trueで今日チェック可）
 function rHabitInTaskView(h,date,interactive){
@@ -6240,7 +6249,7 @@ ${habits.map(h=>{
   const doneToday=comp.includes(td);
   const failToday=failDates.includes(td);
   const risk=isStreakRisk(h);
-  const daysLabel=(h.daysOfWeek&&h.daysOfWeek.length)?h.daysOfWeek.map(d=>DAYS[d]).join('・'):'毎日';
+  const daysLabel=(h.freq==='monthly')?`毎月${Math.min(Math.max(+h.dom||1,1),31)}日`:(h.daysOfWeek&&h.daysOfWeek.length)?('毎週 '+h.daysOfWeek.map(d=>DAYS[d]).join('・')):'毎日';
   return`<div class="habit-item" style="${risk?'border-color:var(--amber)':''}">
   <div class="habit-hdr">
     <div>
@@ -6337,7 +6346,7 @@ function rHabitsSchedule(){
   const habitsHtml=habits.length?habits.map(h=>{
     const done=(h.completedDates||[]).includes(td);
     const fail=(h.failedDates||[]).includes(td);
-    const daysLabel=(h.daysOfWeek&&h.daysOfWeek.length)?h.daysOfWeek.map(d=>DAYS[d]).join('・'):'毎日';
+    const daysLabel=(h.freq==='monthly')?`毎月${Math.min(Math.max(+h.dom||1,1),31)}日`:(h.daysOfWeek&&h.daysOfWeek.length)?('毎週 '+h.daysOfWeek.map(d=>DAYS[d]).join('・')):'毎日';
     return`<div class="habit-sched-item" style="${done||fail?'opacity:.6':'border-color:var(--border)'}">
     ${h.time?`<div class="habit-time-badge">${h.time}</div>`:`<div class="habit-time-badge" style="color:var(--t3)">未設定</div>`}
     <div style="flex:1">
@@ -10535,6 +10544,8 @@ function openHabitModal(id){
   EID=id||null;
   const h=id?S.habits.find(h=>h.id===id):null;
   const selDays=h?.daysOfWeek||[];
+  const curFreq=h?(h.freq||((h.daysOfWeek&&h.daysOfWeek.length)?'weekly':'daily')):'daily';
+  const curDom=Math.min(Math.max(+((h&&h.dom)||new Date().getDate()),1),31);
   openModal(`<div class="mhdr"><div class="mtitle">${h?'習慣編集':'習慣追加'}</div><button class="mclose" onclick="closeModal()">✕</button></div>
 <div class="fg"><div class="fl">習慣名 *</div>
   <input id="h-name" value="${esc(h?.title||'')}" placeholder="例: 毎日30分編集">
@@ -10547,15 +10558,28 @@ function openHabitModal(id){
   <div class="fg"><div class="fl">実施時間</div>
     <input type="time" id="h-time" value="${h?.time||''}">
   </div>
-  <div class="fg"><div class="fl">実施する曜日</div>
-    <div class="day-check-row" id="day-row">
-      ${DAYS.map((d,i)=>`<label class="day-cb ${selDays.includes(i)?'sel':''}">
-        <input type="checkbox" value="${i}" ${selDays.includes(i)?'checked':''} onchange="this.closest('.day-cb').classList.toggle('sel',this.checked)">
-        ${d}
-      </label>`).join('')}
-    </div>
-    <div class="fhint">何も選択しない場合は毎日</div>
+  <div class="fg"><div class="fl">頻度</div>
+    <select id="h-freq" onchange="habitFreqChange()">
+      <option value="daily" ${curFreq==='daily'?'selected':''}>毎日</option>
+      <option value="weekly" ${curFreq==='weekly'?'selected':''}>毎週（曜日を選ぶ・週1回もここ）</option>
+      <option value="monthly" ${curFreq==='monthly'?'selected':''}>毎月（日にちを選ぶ・月1回）</option>
+    </select>
   </div>
+</div>
+<div class="fg" id="h-weekly-row" style="display:${curFreq==='weekly'?'':'none'}"><div class="fl">実施する曜日（週1回なら1つだけ選ぶ）</div>
+  <div class="day-check-row" id="day-row">
+    ${DAYS.map((d,i)=>`<label class="day-cb ${selDays.includes(i)?'sel':''}">
+      <input type="checkbox" value="${i}" ${selDays.includes(i)?'checked':''} onchange="this.closest('.day-cb').classList.toggle('sel',this.checked)">
+      ${d}
+    </label>`).join('')}
+  </div>
+  <div class="fhint">選んだ曜日ごとに毎週くり返します</div>
+</div>
+<div class="fg" id="h-monthly-row" style="display:${curFreq==='monthly'?'':'none'}"><div class="fl">毎月の実施日</div>
+  <select id="h-dom">
+    ${[...Array(31)].map((_,i)=>`<option value="${i+1}" ${curDom===i+1?'selected':''}>${i+1}日</option>`).join('')}
+  </select>
+  <div class="fhint">31日など無い月は月末に自動でずれます</div>
 </div>
 <div class="fg"><div class="fl">📍 実行意図（いつ・どこで）</div>
   <input id="h-intent" value="${esc(h?.intention||'')}" placeholder="例：7:15に自分の部屋でジャーナリングをする">
@@ -10568,11 +10592,24 @@ function openHabitModal(id){
 </div>`);
   document.getElementById('h-name')?.focus();
 }
+function habitFreqChange(){
+  const f=document.getElementById('h-freq')?.value;
+  const wk=document.getElementById('h-weekly-row'),mo=document.getElementById('h-monthly-row');
+  if(wk)wk.style.display=(f==='weekly')?'':'none';
+  if(mo)mo.style.display=(f==='monthly')?'':'none';
+}
 function saveHabit(){
   const name=document.getElementById('h-name')?.value.trim();
   if(!name){toast('習慣名を入力してください','err');return;}
-  const days=[...document.querySelectorAll('#day-row input:checked')].map(i=>+i.value);
-  const data={title:name,description:document.getElementById('h-desc').value.trim(),time:document.getElementById('h-time').value||null,daysOfWeek:days,intention:document.getElementById('h-intent').value.trim()};
+  const freq=document.getElementById('h-freq')?.value||'daily';
+  let days=[],dom=null;
+  if(freq==='weekly'){
+    days=[...document.querySelectorAll('#day-row input:checked')].map(i=>+i.value);
+    if(!days.length){toast('毎週の曜日を1つ以上選んでください（週1回なら1つ）','err');return;}
+  }else if(freq==='monthly'){
+    dom=Math.min(Math.max(+(document.getElementById('h-dom')?.value||1),1),31);
+  }
+  const data={title:name,description:document.getElementById('h-desc').value.trim(),time:document.getElementById('h-time').value||null,freq,daysOfWeek:days,dom,intention:document.getElementById('h-intent').value.trim()};
   if(EID){const h=S.habits.find(h=>h.id===EID);if(h)Object.assign(h,data);}
   else S.habits.push({id:uid(),...data,completedDates:[],createdAt:new Date().toISOString()});
   save();closeModal();render();toast('習慣を保存しました 🔥');
@@ -12721,7 +12758,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260715-16';
+const APP_VERSION='20260715-17';
 
 render();
 function forceAppUpdate(){
