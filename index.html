@@ -12707,6 +12707,11 @@ function slMigrateAssignee(){
 }
 
 // ===INIT===
+// 【データ消失対策 2026-07-15】読み込み直後にチーム変更スナップショットを実データで初期化する。
+// これをしないと、初回save()時に_stampTeamChangesが全エンティティ・bizBoardを「変更あり」と誤判定し
+// updatedAtを現在時刻へ再スタンプ→古いローカルが「新しい方優先」で他端末の新しい編集を上書きする事故になる。
+// (「変更を加えるたびに経営ボード等が勝手に元へ戻る」の根本原因。rebaseで実データの本来の更新時刻を保持する)
+try{_teamSnapRebase();}catch(e){console.warn('teamSnap init rebase failed',e);}
 updSessionCount();
 initPomo();
 initReminders();
@@ -12716,7 +12721,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260715-15';
+const APP_VERSION='20260715-16';
 
 render();
 function forceAppUpdate(){
