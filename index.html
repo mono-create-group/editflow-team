@@ -235,7 +235,8 @@ a{color:inherit;text-decoration:none}
 .fs-dash-panel.drag-over{border-color:var(--purple);background:var(--pdim);box-shadow:0 0 0 2px rgba(109,40,217,0.25)}
 .fs-panel-task{border:1px solid var(--border);background:var(--card2);border-radius:7px!important}
 .fs-panel-task:hover{border-color:var(--purple);background:var(--pdim)}
-@media(max-width:700px){.fs-dash-panel{width:100%}}
+/* モバイルは縦積みなので sticky を解除(固定スケジュールに重なる不具合を防ぐ)。max-heightも解除して自然に流す */
+@media(max-width:700px){.fs-dash-panel{width:100%;position:static;top:auto;max-height:none;overflow-y:visible}}
 .sched-side-hdr{font-size:12px;font-weight:700;color:var(--t2);padding:8px 10px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--card);z-index:2;display:flex;align-items:center;justify-content:space-between}
 /* タスクアイテム */
 .sched-side-task{margin:6px 6px 2px;padding:8px 9px 8px 7px;border-radius:8px;background:var(--card2);border:1px solid var(--border);cursor:grab;font-size:12px;font-weight:600;color:var(--text);transition:background .15s,border-color .15s,box-shadow .15s;user-select:none;display:flex;align-items:flex-start;gap:6px}
@@ -12758,7 +12759,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260715-17';
+const APP_VERSION='20260715-18';
 
 render();
 function forceAppUpdate(){
