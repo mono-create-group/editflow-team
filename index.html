@@ -1949,7 +1949,7 @@ function hakenDoImport(){
 const HAKEN_TEMPLATE = "編集者テンプレ";
 function _hakenSanitize(n){ return String(n||'').replace(/[:\\\/?*\[\]]/g,' ').replace(/\s+/g,' ').trim().slice(0,90); }
 async function _hakenSheetsMeta(){
-  var res=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+HAKEN_SHEET_ID+'?fields=sheets.properties(sheetId,title)',{headers:{'Authorization':'Bearer '+_gcalToken}});
+  var res=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+HAKEN_SHEET_ID+'?fields=sheets.properties(sheetId,title,index)',{headers:{'Authorization':'Bearer '+_gcalToken}});
   if(!res.ok)throw new Error('meta '+res.status);
   var d=await res.json();
   return (d.sheets||[]).map(function(s){return s.properties;});
@@ -1966,7 +1966,7 @@ async function hakenEnsureWorkerTab(rawName, meta){
   if(meta.some(function(p){return _hakenSanitize(p.title)===name;}))return {exists:true};
   var tpl=meta.find(function(p){return p.title===HAKEN_TEMPLATE;});
   if(!tpl)throw new Error('編集者テンプレが見つかりません');
-  var r1=await _hakenBatch([{duplicateSheet:{sourceSheetId:tpl.sheetId,newSheetName:name}}]);
+  var _d=meta.find(function(p){return p.title==='編集者台帳';}); var _ins=_d?_d.index:meta.length; var r1=await _hakenBatch([{duplicateSheet:{sourceSheetId:tpl.sheetId,newSheetName:name,insertSheetIndex:_ins}}]);
   var newId=r1.replies[0].duplicateSheet.properties.sheetId;
   try{ await _hakenBatch([{addProtectedRange:{protectedRange:{range:{sheetId:newId,startColumnIndex:5,endColumnIndex:7},description:'自動計算(編集不可)',warningOnly:false}}}]); }catch(e){}
   return {created:true};
@@ -12500,7 +12500,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260715-5';
+const APP_VERSION='20260715-6';
 
 render();
 function forceAppUpdate(){

@@ -1,5 +1,5 @@
 // mono.create 社内連絡アプリ SW
-const CACHE='mcshanai-20260715-5';
+const CACHE='mcshanai-20260715-6';
 const URLS=['./','./index.html','./manifest.json','./icon-192.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(URLS)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('mcshanai-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
