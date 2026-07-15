@@ -2892,6 +2892,7 @@ function biz2(){
     if(!b.data||typeof b.data!=='object')b.data={};
     b.units.forEach(u=>{if(!b.data[u.id])b.data[u.id]={goals:[],roadmap:[],issues:[]};});
     if(!Array.isArray(b.cadence))b.cadence=[];
+    if(!b.org||!Array.isArray(b.org.roles))b.org={roles:bizOrgSeed()};
     if(!b.active||!b.units.some(u=>u.id===b.active))b.active=b.units[0].id;
     return b;
   }
@@ -2927,6 +2928,7 @@ function biz2(){
     north:(typeof legacy.north==='string'&&legacy.north)||BIZ_BOARD.north,
     units:[{id:'all',name:'全社'},{id:'u_hp',name:'HP構築'},{id:'u_dispatch',name:'編集者派遣'},{id:'u_shift',name:'シフトさん'}],
     active:'all',
+    org:{roles:bizOrgSeed()},
     data:{all:{goals:allGoals,roadmap:allRoad,issues:allIssues},u_hp:mkUnit('bu_hp'),u_dispatch:mkUnit('bu_dispatch'),u_shift:mkUnit('bu_shift')},
     cadence:(Array.isArray(legacy.cadence)&&legacy.cadence.length&&typeof legacy.cadence[0]==='object')?legacy.cadence:BIZ_BOARD.cadence.map(c=>({id:uid(),text:c})),
     updatedAt:Date.now(),
@@ -2975,6 +2977,80 @@ function bizToggleTask(iid,tid){const i=bizD().issues.find(x=>x.id===iid);if(!i)
 function bizAddCadence(){const t=(prompt('定例サイクル項目')||'').trim();if(!t)return;biz2().cadence.push({id:uid(),text:t});bizTouch();}
 function bizEditCadence(cid){const c=biz2().cadence.find(x=>x.id===cid);if(!c)return;const t=prompt('項目',c.text);if(t===null)return;c.text=t.trim()||c.text;bizTouch();}
 function bizDelCadence(cid){if(!confirm('この項目を削除しますか?'))return;const b=biz2();b.cadence=b.cadence.filter(x=>x.id!==cid);bizTouch();}
+// --- 組織図(全社共通・人間が追加/編集/配置換え/削除で管理) ---
+function bizOrgSeed(){
+  const R=(name,title,kind,parentId)=>({id:uid(),name,title,kind,parentId,note:''});
+  const rep=R('中村 航汰','代表','human',null);
+  const sasaki=R('佐々木','HP営業・テレアポ','human',rep.id);
+  const fuuga=R('ふうが','編集者派遣 運営','human',rep.id);
+  const sora=R('ソラ','SNS戦略・事業設計 部長','ai',rep.id);
+  const aoi=R('アオイ','営業部長','ai',rep.id);
+  const kent=R('ケント','開発部長','ai',rep.id);
+  const haru=R('ハル','納品・CS 部長','ai',rep.id);
+  const tsubasa=R('ツバサ','AIアプリ事業部長','ai',rep.id);
+  const riku=R('リク','公式LINE構築','ai',rep.id);
+  const mio=R('ミオ','データアナリスト','ai',sora.id);
+  const gaku=R('ガク','グロース広告','ai',sora.id);
+  const jin=R('ジン','アカウントマネージャー','ai',sora.id);
+  const rei=R('レイ','法務・コンプラ','ai',sora.id);
+  return [rep,sasaki,fuuga,sora,aoi,kent,haru,tsubasa,riku,mio,gaku,jin,rei];
+}
+function bizOrg(){const b=biz2();if(!b.org||!Array.isArray(b.org.roles))b.org={roles:bizOrgSeed()};return b.org;}
+function orgAdd(parentId){
+  const name=(prompt('名前(例: 新メンバー)')||'').trim();if(!name)return;
+  const title=(prompt('役割・肩書き(省略可)')||'').trim();
+  const kind=(prompt('区分: 人間なら「人」、AIなら「AI」','人')||'').trim();
+  bizOrg().roles.push({id:uid(),name,title,kind:(kind.toUpperCase()==='AI')?'ai':'human',parentId:parentId||null,note:''});
+  bizTouch();
+}
+function orgEdit(id){
+  const r=bizOrg().roles.find(x=>x.id===id);if(!r)return;
+  const name=prompt('名前',r.name);if(name===null)return;
+  const title=prompt('役割・肩書き(省略可)',r.title);if(title===null)return;
+  const kind=prompt('区分(人 / AI)',r.kind==='ai'?'AI':'人');if(kind===null)return;
+  r.name=name.trim()||r.name;r.title=(title||'').trim();r.kind=(kind.trim().toUpperCase()==='AI')?'ai':'human';
+  bizTouch();
+}
+function orgDel(id){
+  const o=bizOrg();const r=o.roles.find(x=>x.id===id);if(!r)return;
+  const kids=o.roles.filter(x=>x.parentId===id);
+  const msg=kids.length?('「'+r.name+'」を削除しますか?(配下'+kids.length+'名は上位へ繰り上げます)'):('「'+r.name+'」を削除しますか?');
+  if(!confirm(msg))return;
+  kids.forEach(k=>k.parentId=r.parentId);
+  o.roles=o.roles.filter(x=>x.id!==id);
+  bizTouch();
+}
+function orgMove(id){
+  const o=bizOrg();const r=o.roles.find(x=>x.id===id);if(!r)return;
+  const desc=new Set([id]);let added=true;
+  while(added){added=false;o.roles.forEach(x=>{if(x.parentId&&desc.has(x.parentId)&&!desc.has(x.id)){desc.add(x.id);added=true;}});}
+  const cands=o.roles.filter(x=>!desc.has(x.id));
+  const list=cands.map((x,i)=>(i+1)+'. '+x.name+(x.title?'('+x.title+')':'')).join('\n');
+  const ans=prompt('「'+r.name+'」の上司を番号で選択:\n0. (トップに配置)\n'+list);
+  if(ans===null)return;
+  const n=parseInt(ans,10);if(isNaN(n))return;
+  if(n===0)r.parentId=null;
+  else if(n>=1&&n<=cands.length)r.parentId=cands[n-1].id;
+  bizTouch();
+}
+function bizOrgNodes(parentId,depth){
+  const roles=bizOrg().roles.filter(r=>(r.parentId||null)===(parentId||null));
+  return roles.map(r=>{
+    const badge=r.kind==='ai'
+      ?'<span style="font-size:9.5px;font-weight:800;color:#fff;background:var(--purple);border-radius:4px;padding:1px 5px">AI</span>'
+      :'<span style="font-size:9.5px;font-weight:800;color:#fff;background:var(--green);border-radius:4px;padding:1px 5px">人</span>';
+    return`<div style="${depth?'margin-left:16px;border-left:2px solid var(--card2);padding-left:10px;':''}margin-top:6px">
+      <div style="display:flex;gap:6px;align-items:center;background:var(--card2);border-radius:8px;padding:8px 10px">
+        <div style="min-width:0;flex:1"><div style="font-weight:700;font-size:13px">${esc(r.name)} ${badge}</div>${r.title?`<div style="font-size:10.5px;color:var(--t3)">${esc(r.title)}</div>`:''}</div>
+        <button class="btn btn-g btn-xs" title="配下を追加" onclick="orgAdd('${r.id}')">＋</button>
+        <button class="btn btn-g btn-xs" title="編集" onclick="orgEdit('${r.id}')">✎</button>
+        <button class="btn btn-g btn-xs" title="上司を変更" onclick="orgMove('${r.id}')">⇄</button>
+        <button class="btn btn-g btn-xs" title="削除" onclick="orgDel('${r.id}')">✕</button>
+      </div>
+      ${bizOrgNodes(r.id,depth+1)}
+    </div>`;
+  }).join('');
+}
 
 const BIZ_RMAP={todo:['予定','var(--t3)'],doing:['進行中','var(--amber)'],ready:['実行待ち','var(--amber)'],wait:['審査待ち','var(--t3)'],done:['完了','var(--green)']};
 function rBizBoard(){
@@ -3040,6 +3116,11 @@ function rBizBoard(){
   <div class="card">
     ${b.cadence.length?b.cadence.map(c=>`<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-top:1px solid var(--card2)"><div style="flex:1;font-size:12.5px;color:var(--t2)">・${esc(c.text)}</div><button class="btn btn-g btn-xs" onclick="bizEditCadence('${c.id}')">✎</button><button class="btn btn-g btn-xs" onclick="bizDelCadence('${c.id}')">✕</button></div>`).join(''):`<div style="color:var(--t3);font-size:12px">項目はまだありません。</div>`}
     <div style="font-size:10.5px;color:var(--t3);margin-top:8px">※上のタブで事業部を切替。目標・ロードマップ・イシューは事業部ごと、定例サイクルは全社共通です。すべて＋で追加・✎で編集・✕で削除でき、Googleサインインでクラウド共有されます。</div>
+  </div>
+  <div style="font-weight:800;font-size:15px;color:var(--purple);margin:18px 0 8px">🏛 組織図(全社共通) <button class="btn btn-g btn-xs" onclick="orgAdd(null)">＋ トップに追加</button></div>
+  <div class="card">
+    ${bizOrgNodes(null,0)||`<div style="color:var(--t3);font-size:12px">メンバーがいません。「＋ トップに追加」で登録できます。</div>`}
+    <div style="font-size:10.5px;color:var(--t3);margin-top:10px">※各メンバーの ＋配下追加 / ✎編集(名前・役割・人/AI区分) / ⇄上司変更 / ✕削除。組織図は全事業部共通で表示されます。</div>
   </div>`;
 }
 // ===事業部ボード(佐々木さんと共有: 事業部ごとの目標・営業/採用記録)===
@@ -12450,7 +12531,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260715-8';
+const APP_VERSION='20260715-9';
 
 render();
 function forceAppUpdate(){
