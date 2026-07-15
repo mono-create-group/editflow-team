@@ -1944,6 +1944,50 @@ function hakenDoImport(){
   toast('📥 取込完了：新規 '+nN+' 件 ／ 更新 '+nU+' 件');
 }
 
+
+// ===ワーカー管理 → 派遣シートに氏名タブを自動生成（編集者テンプレを複製＋F/G保護。既存はスキップ）===
+const HAKEN_TEMPLATE = "編集者テンプレ";
+function _hakenSanitize(n){ return String(n||'').replace(/[:\\\/?*\[\]]/g,' ').replace(/\s+/g,' ').trim().slice(0,90); }
+async function _hakenSheetsMeta(){
+  var res=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+HAKEN_SHEET_ID+'?fields=sheets.properties(sheetId,title)',{headers:{'Authorization':'Bearer '+_gcalToken}});
+  if(!res.ok)throw new Error('meta '+res.status);
+  var d=await res.json();
+  return (d.sheets||[]).map(function(s){return s.properties;});
+}
+async function _hakenBatch(requests){
+  var res=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+HAKEN_SHEET_ID+':batchUpdate',{method:'POST',headers:{'Authorization':'Bearer '+_gcalToken,'Content-Type':'application/json'},body:JSON.stringify({requests:requests})});
+  if(!res.ok){var t=await res.text();throw new Error('batch '+res.status+' '+t.slice(0,160));}
+  return res.json();
+}
+async function hakenEnsureWorkerTab(rawName, meta){
+  if(typeof _gcalToken==='undefined'||!_gcalToken)return {noauth:true};
+  var name=_hakenSanitize(rawName); if(!name)return {skip:true};
+  if(!meta)meta=await _hakenSheetsMeta();
+  if(meta.some(function(p){return _hakenSanitize(p.title)===name;}))return {exists:true};
+  var tpl=meta.find(function(p){return p.title===HAKEN_TEMPLATE;});
+  if(!tpl)throw new Error('編集者テンプレが見つかりません');
+  var r1=await _hakenBatch([{duplicateSheet:{sourceSheetId:tpl.sheetId,newSheetName:name}}]);
+  var newId=r1.replies[0].duplicateSheet.properties.sheetId;
+  try{ await _hakenBatch([{addProtectedRange:{protectedRange:{range:{sheetId:newId,startColumnIndex:5,endColumnIndex:7},description:'自動計算(編集不可)',warningOnly:false}}}]); }catch(e){}
+  return {created:true};
+}
+// 追加時のfire&forget（未連携なら黙ってスキップ／作成時のみトースト）
+function _hakenAutoTab(n){ try{ hakenEnsureWorkerTab(n).then(function(r){ if(r&&r.created)toast('派遣シートにタブ作成: '+_hakenSanitize(n)); }).catch(function(){}); }catch(e){} }
+// 既存ワーカーぶんを一括生成
+async function hakenEnsureAllWorkerTabs(){
+  if(typeof _gcalToken==='undefined'||!_gcalToken){toast('先に設定でGoogle連携してください（シート書き込みに必要）','warn');return;}
+  toast('派遣シートにワーカータブを作成中…');
+  var meta; try{ meta=await _hakenSheetsMeta(); }catch(e){ toast('シート読込失敗: '+e.message,'err'); return; }
+  var seen={},names=[];
+  (S.workers||[]).forEach(function(w){ var nm=_hakenSanitize(w&&w.name); if(nm&&!seen[nm]){seen[nm]=1;names.push(nm);} });
+  var created=0,exists=0,fail=0;
+  for(var i=0;i<names.length;i++){
+    try{ var r=await hakenEnsureWorkerTab(names[i],meta); if(r.created){created++;meta.push({title:names[i],sheetId:0});} else if(r.exists){exists++;} }
+    catch(e){ fail++; console.error(names[i],e); }
+  }
+  toast('ワーカータブ: 新規'+created+' / 既存'+exists+(fail?' / 失敗'+fail:''));
+}
+
 const LOG_TYPE_LBL={revenue:'💰 収益',sales:'📞 営業',hire:'👤 採用'};
 const GOAL_CATS=[{v:'revenue',l:'💰 収益'},{v:'skill',l:'📚 スキル'},{v:'habit',l:'🔥 習慣'},{v:'project',l:'🎬 案件'},{v:'sales',l:'📞 営業'},{v:'hire',l:'👤 採用'}];
 const GOAL_HORIZONS=[{v:'this_month',l:'今月の目標',icon:'📅'},{v:'next_month',l:'来月の目標',icon:'🗓'},{v:'monthly',l:'月毎の目標',icon:'📆'},{v:'year1',l:'1年間の目標',icon:'🌱'},{v:'year5',l:'5年後の目標',icon:'🚀'},{v:'year10',l:'10年後の目標',icon:'🌟'},{v:'tree',l:'ツリー表示',icon:'🌳'}];
@@ -9162,6 +9206,7 @@ ${secTitle('👤 担当者管理')}
     <input id="new-worker-name" placeholder="担当者名を入力" style="flex:1">
     <button class="btn btn-p btn-sm" onclick="addWorker()">追加</button>
   </div>
+  <button class="btn btn-g btn-sm" style="margin-top:8px;width:100%;border:1px solid var(--green);color:var(--green)" onclick="hakenEnsureAllWorkerTabs()" title="社内アプリのワーカー全員ぶんの記入タブを派遣シートに作成（既存はスキップ）">派遣シートにワーカータブを一括生成</button>
 </div>
 
 ${secTitle('💪 カスタム筋トレメニュー')}
@@ -9452,7 +9497,7 @@ function addWorker(){
   if(!S.workers)S.workers=[];
   const wid=uid();
   // 設定の簡易追加はデフォルトでトライアル扱い（採用目標には記帳しない）
-  S.workers.push({id:wid,name:n,employStatus:'trial',createdAt:new Date().toISOString()});
+  S.workers.push({id:wid,name:n,employStatus:'trial',createdAt:new Date().toISOString()});_hakenAutoTab(n);
   save();render();toast(`${n} をトライアルで追加しました（本採用時にワーカー管理から変更してください）`);
 }
 
@@ -10181,7 +10226,7 @@ function addWorkerInline(){
   if(!name){toast('担当者名を入力してください','err');return;}
   if(!S.workers)S.workers=[];
   const w={id:uid(),name,createdAt:new Date().toISOString()};
-  S.workers.push(w);save();
+  S.workers.push(w);save();_hakenAutoTab(name);
   // メインモーダルのチェックボックスリストに追加（チェック済み）
   const list=document.getElementById('j-worker-list');
   if(list){
@@ -10206,7 +10251,7 @@ function addSubWorker(btn){
   if(!name){toast('担当者名を入力してください','err');return;}
   if(!S.workers)S.workers=[];
   const w={id:uid(),name,createdAt:new Date().toISOString()};
-  S.workers.push(w);save();
+  S.workers.push(w);save();_hakenAutoTab(name);
   _appendWorkerOpt(w);
   const thisSel=row.querySelector('.j-sub-worker');
   if(thisSel)thisSel.value=w.id;
@@ -12455,7 +12500,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260715-3';
+const APP_VERSION='20260715-4';
 
 render();
 function forceAppUpdate(){
