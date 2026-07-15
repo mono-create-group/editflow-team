@@ -3018,16 +3018,16 @@ function bizAddGoal(){const label=(prompt('項目名(例: 商談数・8月売上
 function bizEditGoal(gid){const g=bizD().goals.find(x=>x.id===gid);if(!g)return;const label=prompt('項目名',g.label);if(label===null)return;const kind=prompt('種別(KGI / KPI / 目標)',g.kind||'目標');if(kind===null)return;const target=prompt('目標値(省略可)',g.target);if(target===null)return;const current=prompt('現在値(数値・省略可)',g.current||'');if(current===null)return;const detail=prompt('詳細(省略可)',g.detail);if(detail===null)return;g.label=label.trim()||g.label;g.kind=bizNormKind(kind);g.target=target.trim();g.current=current.trim();g.detail=(detail||'').trim();bizTouch();}
 function bizDelGoal(gid){if(!confirm('この目標を削除しますか?'))return;const d=bizD();d.goals=d.goals.filter(x=>x.id!==gid);bizTouch();}
 // --- ロードマップ ---
-function bizAddRoad(){const t=(prompt('ロードマップ項目')||'').trim();if(!t)return;bizD().roadmap.push({id:uid(),title:t,note:'',st:'todo'});bizTouch();}
-function bizEditRoad(rid){const r=bizD().roadmap.find(x=>x.id===rid);if(!r)return;const title=prompt('項目名',r.title);if(title===null)return;const note=prompt('メモ(省略可)',r.note);if(note===null)return;r.title=title.trim()||r.title;r.note=(note||'').trim();bizTouch();}
+function bizAddRoad(){const t=(prompt('ロードマップ項目')||'').trim();if(!t)return;const due=(prompt('期限 例:2026-08-31(省略可)')||'').trim();bizD().roadmap.push({id:uid(),title:t,note:'',st:'todo',due});bizTouch();}
+function bizEditRoad(rid){const r=bizD().roadmap.find(x=>x.id===rid);if(!r)return;const title=prompt('項目名',r.title);if(title===null)return;const note=prompt('メモ(省略可)',r.note);if(note===null)return;const due=prompt('期限 例:2026-08-31(省略可)',r.due||'');if(due===null)return;r.title=title.trim()||r.title;r.note=(note||'').trim();r.due=(due||'').trim();bizTouch();}
 function bizCycleRoad(rid){const r=bizD().roadmap.find(x=>x.id===rid);if(!r)return;const o=['todo','doing','ready','wait','done'];r.st=o[(o.indexOf(r.st)+1+o.length)%o.length];bizTouch();}
 function bizDelRoad(rid){if(!confirm('この項目を削除しますか?'))return;const d=bizD();d.roadmap=d.roadmap.filter(x=>x.id!==rid);bizTouch();}
 // --- ロードマップ 並べ替え + サブタスク ---
 function _arrMove(arr,idx,dir){const j=idx+dir;if(j<0||j>=arr.length)return false;const t=arr[idx];arr[idx]=arr[j];arr[j]=t;return true;}
 function bizMoveRoad(rid,dir){const d=bizD();const i=d.roadmap.findIndex(x=>x.id===rid);if(i<0)return;if(_arrMove(d.roadmap,i,dir))bizTouch();}
 function _roadFind(rid){const r=bizD().roadmap.find(x=>x.id===rid);if(r&&!Array.isArray(r.subs))r.subs=[];return r;}
-function bizAddSub(rid){const r=_roadFind(rid);if(!r)return;const t=(prompt('サブタスク')||'').trim();if(!t)return;r.subs.push({id:uid(),title:t,st:'todo'});bizTouch();}
-function bizEditSub(rid,sid){const r=_roadFind(rid);if(!r)return;const s=r.subs.find(x=>x.id===sid);if(!s)return;const title=prompt('サブタスク名',s.title);if(title===null)return;s.title=title.trim()||s.title;bizTouch();}
+function bizAddSub(rid){const r=_roadFind(rid);if(!r)return;const t=(prompt('サブタスク')||'').trim();if(!t)return;const due=(prompt('期限 例:2026-08-31(省略可)')||'').trim();r.subs.push({id:uid(),title:t,st:'todo',due});bizTouch();}
+function bizEditSub(rid,sid){const r=_roadFind(rid);if(!r)return;const s=r.subs.find(x=>x.id===sid);if(!s)return;const title=prompt('サブタスク名',s.title);if(title===null)return;const due=prompt('期限 例:2026-08-31(省略可)',s.due||'');if(due===null)return;s.title=title.trim()||s.title;s.due=(due||'').trim();bizTouch();}
 function bizCycleSub(rid,sid){const r=_roadFind(rid);if(!r)return;const s=r.subs.find(x=>x.id===sid);if(!s)return;const o=['todo','doing','ready','wait','done'];s.st=o[(o.indexOf(s.st)+1+o.length)%o.length];bizTouch();}
 function bizDelSub(rid,sid){const r=_roadFind(rid);if(!r)return;r.subs=r.subs.filter(x=>x.id!==sid);bizTouch();}
 function bizMoveSub(rid,sid,dir){const r=_roadFind(rid);if(!r)return;const i=r.subs.findIndex(x=>x.id===sid);if(i<0)return;if(_arrMove(r.subs,i,dir))bizTouch();}
@@ -3235,7 +3235,7 @@ function rBizBoard(){
   const subRow=(rid,s)=>{const[label,color]=BIZ_RMAP[s.st]||BIZ_RMAP.todo;return`
     <div style="display:flex;gap:4px;align-items:center;padding:5px 0 5px 18px;border-top:1px solid var(--card2)">
       <span style="color:var(--t3);font-size:12px;flex-shrink:0">└</span>
-      <div style="min-width:0;flex:1"><div style="font-size:12.5px;line-height:1.5;${s.st==='done'?'color:var(--t3);text-decoration:line-through':''}">${esc(s.title)}</div></div>
+      <div style="min-width:0;flex:1"><div style="font-size:12.5px;line-height:1.5;${s.st==='done'?'color:var(--t3);text-decoration:line-through':''}">${esc(s.title)}</div>${s.due?`<div style="font-size:10px;color:var(--t3);margin-top:1px">📅 ${esc(s.due)}</div>`:''}</div>
       <button class="btn btn-g btn-xs" onclick="bizMoveSub('${rid}','${s.id}',-1)" title="上へ">▲</button>
       <button class="btn btn-g btn-xs" onclick="bizMoveSub('${rid}','${s.id}',1)" title="下へ">▼</button>
       <button class="btn btn-g btn-xs" style="color:${color};font-weight:700;white-space:nowrap" onclick="bizCycleSub('${rid}','${s.id}')" title="タップで状態切替">${label}</button>
@@ -3245,7 +3245,7 @@ function rBizBoard(){
   const roadRow=(r)=>{const[label,color]=BIZ_RMAP[r.st]||BIZ_RMAP.todo;const subs=Array.isArray(r.subs)?r.subs:[];const sdone=subs.filter(s=>s.st==='done').length;return`
     <div style="padding:7px 0;border-top:1px solid var(--card2)">
       <div style="display:flex;gap:4px;align-items:center">
-        <div style="min-width:0;flex:1"><div style="font-size:13px;font-weight:600;line-height:1.5;${r.st==='done'?'color:var(--t3);text-decoration:line-through':''}">${esc(r.title)}${subs.length?` <span style="font-size:10.5px;color:var(--t3);font-weight:700">${sdone}/${subs.length}</span>`:''}</div>${r.note?`<div style="font-size:10.5px;color:var(--t3)">${esc(r.note)}</div>`:''}</div>
+        <div style="min-width:0;flex:1"><div style="font-size:13px;font-weight:600;line-height:1.5;${r.st==='done'?'color:var(--t3);text-decoration:line-through':''}">${esc(r.title)}${subs.length?` <span style="font-size:10.5px;color:var(--t3);font-weight:700">${sdone}/${subs.length}</span>`:''}</div>${r.due?`<div style="font-size:10.5px;color:var(--t3);margin-top:1px">📅 ${esc(r.due)}</div>`:''}${r.note?`<div style="font-size:10.5px;color:var(--t3)">${esc(r.note)}</div>`:''}</div>
         <button class="btn btn-g btn-xs" onclick="bizMoveRoad('${r.id}',-1)" title="上へ">▲</button>
         <button class="btn btn-g btn-xs" onclick="bizMoveRoad('${r.id}',1)" title="下へ">▼</button>
         <button class="btn btn-g btn-xs" style="color:${color};font-weight:700;white-space:nowrap" onclick="bizCycleRoad('${r.id}')" title="タップで状態切替">${label}</button>
@@ -12715,7 +12715,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260715-13';
+const APP_VERSION='20260715-14';
 
 render();
 function forceAppUpdate(){
