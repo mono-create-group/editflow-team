@@ -3014,8 +3014,8 @@ function bizDelUnit(id){
 function bizEditNorth(){const b=biz2();const v=prompt('North Star(会社の目的)',b.north);if(v===null)return;b.north=v.trim()||b.north;bizTouch();}
 // --- 目標 ---
 function bizNormKind(s){const v=(s||'').trim().toUpperCase();if(v==='KGI')return'KGI';if(v==='KPI')return'KPI';return'目標';}
-function bizAddGoal(){const label=(prompt('項目名(例: 商談数・8月売上)')||'').trim();if(!label)return;const kind=bizNormKind(prompt('種別: KGI / KPI / 目標','目標'));const target=(prompt('目標値(例: 30件・¥50万・省略可)')||'').trim();const current=(prompt('現在値(数値・省略可。目標値と両方数値なら進捗バー表示)')||'').trim();const detail=(prompt('詳細(省略可)')||'').trim();bizD().goals.push({id:uid(),kind,label,target,current,detail});bizTouch();}
-function bizEditGoal(gid){const g=bizD().goals.find(x=>x.id===gid);if(!g)return;const label=prompt('項目名',g.label);if(label===null)return;const kind=prompt('種別(KGI / KPI / 目標)',g.kind||'目標');if(kind===null)return;const target=prompt('目標値(省略可)',g.target);if(target===null)return;const current=prompt('現在値(数値・省略可)',g.current||'');if(current===null)return;const detail=prompt('詳細(省略可)',g.detail);if(detail===null)return;g.label=label.trim()||g.label;g.kind=bizNormKind(kind);g.target=target.trim();g.current=current.trim();g.detail=(detail||'').trim();bizTouch();}
+function bizAddGoal(){const label=(prompt('項目名(例: 商談数・8月売上)')||'').trim();if(!label)return;const kind=bizNormKind(prompt('種別: KGI / KPI / 目標','目標'));const target=(prompt('目標値(例: 30件・¥50万・省略可)')||'').trim();const current=(prompt('現在値(数値・省略可。目標値と両方数値なら進捗バー表示)')||'').trim();const due=(prompt('期限 例:2026-08-31(省略可)')||'').trim();const detail=(prompt('詳細(省略可)')||'').trim();bizD().goals.push({id:uid(),kind,label,target,current,due,detail});bizTouch();}
+function bizEditGoal(gid){const g=bizD().goals.find(x=>x.id===gid);if(!g)return;const label=prompt('項目名',g.label);if(label===null)return;const kind=prompt('種別(KGI / KPI / 目標)',g.kind||'目標');if(kind===null)return;const target=prompt('目標値(省略可)',g.target);if(target===null)return;const current=prompt('現在値(数値・省略可)',g.current||'');if(current===null)return;const due=prompt('期限 例:2026-08-31(省略可)',g.due||'');if(due===null)return;const detail=prompt('詳細(省略可)',g.detail);if(detail===null)return;g.label=label.trim()||g.label;g.kind=bizNormKind(kind);g.target=target.trim();g.current=current.trim();g.due=(due||'').trim();g.detail=(detail||'').trim();bizTouch();}
 function bizDelGoal(gid){if(!confirm('この目標を削除しますか?'))return;const d=bizD();d.goals=d.goals.filter(x=>x.id!==gid);bizTouch();}
 // --- ロードマップ ---
 function bizAddRoad(){const t=(prompt('ロードマップ項目')||'').trim();if(!t)return;const due=(prompt('期限 例:2026-08-31(省略可)')||'').trim();bizD().roadmap.push({id:uid(),title:t,note:'',st:'todo',due});bizTouch();}
@@ -3230,6 +3230,7 @@ function rBizBoard(){
     <div style="display:flex;align-items:center;gap:6px;padding-right:52px"><span style="font-size:9.5px;font-weight:800;color:#fff;background:${gk[1]};border-radius:4px;padding:1px 5px">${gk[0]}</span><span style="font-size:11px;color:var(--t3);font-weight:700">${esc(g.label)}</span></div>
     <div style="font-weight:800;font-size:15px;color:var(--green);margin:2px 0">${esc(g.target||'')}</div>
     ${prog?`<div style="background:var(--card2);border-radius:5px;height:6px;margin:4px 0;overflow:hidden"><div style="height:100%;width:${pct}%;background:${gk[1]}"></div></div><div style="font-size:10.5px;color:var(--t3)">現在 ${esc(g.current)} / 目標 ${esc(g.target)}(${pct}%)</div>`:''}
+    ${g.due?`<div style="font-size:10.5px;color:var(--t3);margin-top:2px">📅 ${esc(g.due)}</div>`:''}
     ${g.detail?`<div style="font-size:11px;color:var(--t2);line-height:1.5;margin-top:2px">${esc(g.detail)}</div>`:''}
   </div>`;};
   const subRow=(rid,s)=>{const[label,color]=BIZ_RMAP[s.st]||BIZ_RMAP.todo;return`
@@ -12715,7 +12716,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260715-14';
+const APP_VERSION='20260715-15';
 
 render();
 function forceAppUpdate(){
