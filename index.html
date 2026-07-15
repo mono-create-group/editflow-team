@@ -1103,7 +1103,8 @@ function _stampTeamChanges(){
     if(window._teamSnap[e.id]!==sig){e.updatedAt=Date.now();window._teamSnap[e.id]=sig;}
   });});
   // 経営ボード(bizBoard)はオブジェクト型。全体で更新時刻を管理し「新しい方優先」で共有する。
-  if(S.bizBoard){const{updatedAt,...rest}=S.bizBoard;const sig=JSON.stringify(rest);if(window._teamSnap['__bizBoard']!==sig){S.bizBoard.updatedAt=Date.now();window._teamSnap['__bizBoard']=sig;}}
+  // _seed(種データ)は共有対象にしない。実データ(人が入力/編集した内容)だけタイムスタンプを進める。
+  if(S.bizBoard && !S.bizBoard._seed){const{updatedAt,_seed,...rest}=S.bizBoard;const sig=JSON.stringify(rest);if(window._teamSnap['__bizBoard']!==sig){S.bizBoard.updatedAt=Date.now();window._teamSnap['__bizBoard']=sig;}}
 }
 function _teamSnapRebase(){
   TEAM_KEYS.forEach(k=>{(S[k]||[]).forEach(e=>{if(e&&e.id)window._teamSnap[e.id]=_entSig(e);});});
@@ -1121,7 +1122,8 @@ function _teamSave(){
   // salesLeadsは分割格納(shared/mcapp_leads_0..3)へ移行済み。本体にはマーカーのみ置く
   // (旧クライアントはマーカーをJSON解釈できず無害スキップ。他キーは従来どおり)
   TEAM_KEYS.forEach(k=>{payload[k]=(k==='salesLeads')?'SHARDED':_teamEncode(k,S[k]||[]);});
-  payload.bizBoard=_teamEncode('bizBoard',S.bizBoard||{});
+  // _seed(種データ)はクラウドへ書かない。merge:true なので既存の実データを消さずに保持する。
+  if(S.bizBoard && !S.bizBoard._seed) payload.bizBoard=_teamEncode('bizBoard',S.bizBoard);
   fbDb.collection('shared').doc('mcapp').set(payload,{merge:true})
     .then(()=>{if(TEAM_SHARE_OK!==true){TEAM_SHARE_OK=true;renderAuthUI();}})
     .catch(e=>{const c=e&&e.code;if(c==='permission-denied'&&TEAM_SHARE_OK!==false){TEAM_SHARE_OK=false;renderAuthUI();}console.warn('team share save:',c||e);});
@@ -1142,8 +1144,10 @@ function fbSetupTeamSync(){
       const merged=mergeTeamArr(S[k]||[],remote);
       if(JSON.stringify(merged)!==JSON.stringify(S[k]||[])){S[k]=merged;changed=true;}
     });
-    // 経営ボード(bizBoard): オブジェクト全体を「新しい方優先」で取り込む
-    if(typeof d.bizBoard==='string'){const rb=_teamDecode(d.bizBoard);if(rb&&(rb.updatedAt||0)>((S.bizBoard&&S.bizBoard.updatedAt)||0)){S.bizBoard=rb;changed=true;}}
+    // 経営ボード(bizBoard): オブジェクト全体を「新しい方優先」で取り込む。
+    // 種データ(_seed)は updatedAt=0 なので、実データ(updatedAt>0)が常に勝ち、種で上書きされない。
+    // 取り込みで内容が入れ替わる直前に、現在の実データを必ずローカルへバックアップ(誤消失の復元用)。
+    if(typeof d.bizBoard==='string'){const rb=_teamDecode(d.bizBoard);if(rb&&(rb.updatedAt||0)>((S.bizBoard&&S.bizBoard.updatedAt)||0)){bizBackup('cloud-adopt');S.bizBoard=rb;changed=true;}}
     if(changed){_teamSnapRebase();localStorage.setItem(DB,JSON.stringify(S));renderSyncSafe();}
   },e=>{const c=e&&e.code;if(c==='permission-denied'&&TEAM_SHARE_OK!==false){TEAM_SHARE_OK=false;renderAuthUI();}console.warn('team share sync:',c||e);});
   // salesLeads分割doc(mcapp_leads_0..3)の購読。各shardは部分集合なのでid+updatedAtでマージ(削除しない)
@@ -2921,6 +2925,12 @@ function biz2(){
     roadmap:s.roadmap.map(r=>({id:uid(),title:r.t,note:'',st:r.st||'todo'})),
     issues:s.issues.map(i=>({id:uid(),title:i.t,why:i.why||'',tasks:i.tasks.map(t=>({id:uid(),text:t.x,owner:t.o||'',due:'',done:false}))}))
   };};
+  // この端末に「人が入力した実データ」が有ったか判定。無ければ純粋な種データ扱いにする。
+  // 種データは updatedAt=0 かつ _seed:true とし、クラウドへは絶対に push しない(実データを上書きしない)。
+  const hadReal=!!legacy.updatedAt || userGoals.length||userRoadmap.length||userIssues.length||extra.length
+    ||Object.keys(done).length||Object.keys(roadOv).length||Object.keys(goalOv).length
+    ||hiddenIssues.length||hiddenTasks.length||(typeof legacy.north==='string'&&!!legacy.north)
+    ||(Array.isArray(legacy.cadence)&&legacy.cadence.length&&typeof legacy.cadence[0]==='object');
   const nb={
     v:2,
     north:(typeof legacy.north==='string'&&legacy.north)||BIZ_BOARD.north,
@@ -2929,14 +2939,62 @@ function biz2(){
     org:{roles:bizOrgSeed()},
     data:{all:{goals:allGoals,roadmap:allRoad,issues:allIssues,kgimap:{nodes:bizKgiSeed()}},u_hp:mkUnit('bu_hp'),u_dispatch:mkUnit('bu_dispatch'),u_shift:mkUnit('bu_shift')},
     cadence:(Array.isArray(legacy.cadence)&&legacy.cadence.length&&typeof legacy.cadence[0]==='object')?legacy.cadence:BIZ_BOARD.cadence.map(c=>({id:uid(),text:c})),
-    updatedAt:Date.now(),
+    updatedAt: hadReal ? (legacy.updatedAt||Date.now()) : 0,
   };
+  if(!hadReal) nb._seed=true;
+  if(hadReal) bizBackup('migrate-v1-v2');
   S.bizBoard=nb; save();
   return nb;
 }
-function bizTouch(){const b=S.bizBoard;if(b)b.updatedAt=Date.now();save();render();}
+// 実データの編集。ここで初めて _seed を外し「クラウドへ共有してよい実データ」に昇格させる。
+function bizTouch(){const b=S.bizBoard;if(b){delete b._seed;b.updatedAt=Date.now();}save();render();}
 function bizD(){const b=biz2();return b.data[b.active]||{goals:[],roadmap:[],issues:[]};}
-function bizSetActive(id){biz2().active=id;bizTouch();}
+// タブ切替は「表示の切替」だけ。種データを実データに昇格させない(=クラウドへ push しない)。
+function bizSetActive(id){const b=biz2();b.active=id;if(!b._seed)b.updatedAt=Date.now();save();render();}
+// --- 経営ボードのローカルバックアップ(誤消失の復元用) ---
+const BIZ_BAK_KEY='mcapp_biz_bak';
+function _bizContentCount(b){try{let n=0;const dd=b&&b.data||{};Object.keys(dd).forEach(k=>{const u=dd[k]||{};n+=(u.goals||[]).length+(u.roadmap||[]).length;(u.issues||[]).forEach(i=>{n+=1+((i.tasks||[]).length);});n+=((u.kgimap&&u.kgimap.nodes)||[]).length;});n+=((b&&b.org&&b.org.roles)||[]).length;return n;}catch(e){return 0;}}
+function bizBackup(reason){
+  try{
+    const b=S.bizBoard; if(!b||b._seed) return;                 // 種データは保存しない
+    if(_bizContentCount(b)<=0) return;                          // 空は保存しない
+    const arr=JSON.parse(localStorage.getItem(BIZ_BAK_KEY)||'[]');
+    const sig=JSON.stringify((({updatedAt,_seed,...r})=>r)(b));
+    if(arr.length&&arr[arr.length-1].sig===sig) return;         // 直前と同一なら重複保存しない
+    arr.push({ts:Date.now(),reason:reason||'',sig,count:_bizContentCount(b),board:b});
+    while(arr.length>12) arr.shift();
+    localStorage.setItem(BIZ_BAK_KEY,JSON.stringify(arr));
+  }catch(e){console.warn('bizBackup failed',e);}
+}
+// 復元候補を集める(専用バックアップ + 旧・アカウント切替バックアップ ef_team_v5_backup_*)
+function bizRestoreCandidates(){
+  const out=[];
+  try{JSON.parse(localStorage.getItem(BIZ_BAK_KEY)||'[]').forEach(x=>{if(x&&x.board)out.push({ts:x.ts,src:'自動バックアップ',reason:x.reason||'',count:x.count||_bizContentCount(x.board),board:x.board});});}catch(e){}
+  try{Object.keys(localStorage).filter(k=>k.startsWith('ef_team_v5_backup_')).forEach(k=>{
+    try{const s=JSON.parse(localStorage.getItem(k));const bb=s&&s.bizBoard;const c=_bizContentCount(bb);if(bb&&c>0){const ts=parseInt(k.split('_').pop(),10)||0;out.push({ts,src:'旧バックアップ',reason:'account-switch',count:c,board:bb});}}catch(_){}}); }catch(e){}
+  return out.sort((a,b)=>b.ts-a.ts);
+}
+function bizRestore(ts){
+  const c=bizRestoreCandidates().find(x=>String(x.ts)===String(ts));
+  if(!c){toast('復元候補が見つかりません','warn');return;}
+  if(!confirm('このバックアップ('+new Date(c.ts).toLocaleString()+' / '+c.count+'項目)で現在の経営ボードを上書きします。よろしいですか?'))return;
+  bizBackup('before-restore');
+  const nb=JSON.parse(JSON.stringify(c.board));nb.v=2;delete nb._seed;nb.updatedAt=Date.now();
+  S.bizBoard=nb;biz2();closeModal();bizTouch();toast('経営ボードを復元しました','ok');
+}
+function bizRestoreUI(){
+  const list=bizRestoreCandidates();
+  const cur=_bizContentCount(S.bizBoard);
+  const rows=list.length?list.map(c=>`<div style="display:flex;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--card2)">
+      <div style="min-width:0;flex:1"><div style="font-weight:700;font-size:13px">${new Date(c.ts).toLocaleString()}</div>
+      <div style="font-size:11px;color:var(--t3)">${esc(c.src)}・${c.count}項目${c.reason?'・'+esc(c.reason):''}</div></div>
+      <button class="btn btn-p btn-xs" onclick="bizRestore('${c.ts}')">この内容に復元</button>
+    </div>`).join(''):`<div style="padding:16px 0;color:var(--t3);font-size:13px;line-height:1.7">この端末に復元できるバックアップは見つかりませんでした。<br>別の端末（スマホ/PC）で以前の内容がまだ表示されている場合は、その画面を<b>更新せず</b>にお知らせください。</div>`;
+  openModal(`<div style="font-weight:800;font-size:16px;margin-bottom:4px">経営ボードの履歴から復元</div>
+    <div style="font-size:11.5px;color:var(--t3);margin-bottom:8px">現在の内容: ${cur}項目。復元すると現在の内容は上書きされます（実行前に自動で退避します）。</div>
+    ${rows}
+    <div style="margin-top:14px;text-align:right"><button class="btn btn-g btn-sm" onclick="closeModal()">閉じる</button></div>`);
+}
 // --- 事業部(タブ) ---
 function bizAddUnit(){
   const name=(prompt('事業部名(例: 公式LINE構築)')||'').trim();if(!name)return;
@@ -3195,6 +3253,7 @@ function rBizBoard(){
     ${tabs}
     <button class="btn btn-g btn-xs" onclick="bizAddUnit()">＋ 事業部</button>
     ${active!=='all'?`<button class="btn btn-g btn-xs" onclick="bizRenameUnit('${active}')">✎ 名称</button><button class="btn btn-g btn-xs" onclick="bizDelUnit('${active}')">✕ この事業部を削除</button>`:''}
+    <button class="btn btn-g btn-xs" style="margin-left:auto" onclick="bizRestoreUI()" title="経営ボードの履歴から復元">履歴/復元</button>
   </div>
   <div class="card" style="margin-bottom:12px;border-left:3px solid var(--purple);position:relative">
     <button class="btn btn-g btn-xs" style="position:absolute;top:8px;right:8px" onclick="bizEditNorth()">✎</button>
@@ -12631,7 +12690,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260715-11';
+const APP_VERSION='20260715-12';
 
 render();
 function forceAppUpdate(){
