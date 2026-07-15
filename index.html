@@ -11992,8 +11992,12 @@ function rSalesLeads(){
   const igCount=all.filter(l=>l.instagram&&l.instagram.trim()).length;
   const emailCount=all.filter(l=>l.email&&l.email.trim()).length;
   const bothCount=all.filter(l=>l.instagram&&l.instagram.trim()&&l.email&&l.email.trim()).length;
-  // IGあり×自社HPなし(本命ターゲット): hp='あり'以外=自社HP未確認。ターゲットリスト構築と同じ基準
-  const igNoHpCount=all.filter(l=>l.instagram&&l.instagram.trim()&&(l.hp||'')!=='あり').length;
+  // IGあり×自社HPなし(本命ターゲット): hp=なし(本命)/ポータルのみ(本命)のみ。'あり'・'不明'・未設定は除外
+  const igNoHpCount=all.filter(l=>{
+    if(!(l.instagram&&l.instagram.trim()))return false;
+    const h=(l.hp||'').trim();
+    return h!==''&&h!=='あり'&&h!=='不明';
+  }).length;
 
   // 地域別集計
   const regionCounts={};
@@ -12441,7 +12445,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260715-1';
+const APP_VERSION='20260715-2';
 
 render();
 function forceAppUpdate(){
