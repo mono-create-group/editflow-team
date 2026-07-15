@@ -2881,7 +2881,7 @@ const BIZ_BOARD={
     '四半期: ソラ(戦略AI)による戦略レビュー',
   ],
 };
-function bizState(){if(!S.bizBoard)S.bizBoard={done:{},extra:[]};if(!S.bizBoard.done)S.bizBoard.done={};if(!S.bizBoard.extra)S.bizBoard.extra=[];if(!S.bizBoard.userRoadmap)S.bizBoard.userRoadmap=[];if(!S.bizBoard.userIssues)S.bizBoard.userIssues=[];if(!S.bizBoard.goalOv)S.bizBoard.goalOv={};if(!S.bizBoard.roadOv)S.bizBoard.roadOv={};if(!S.bizBoard.userGoals)S.bizBoard.userGoals=[];return S.bizBoard;}
+function bizState(){if(!S.bizBoard)S.bizBoard={done:{},extra:[]};if(!S.bizBoard.done)S.bizBoard.done={};if(!S.bizBoard.extra)S.bizBoard.extra=[];if(!S.bizBoard.userRoadmap)S.bizBoard.userRoadmap=[];if(!S.bizBoard.userIssues)S.bizBoard.userIssues=[];if(!S.bizBoard.goalOv)S.bizBoard.goalOv={};if(!S.bizBoard.roadOv)S.bizBoard.roadOv={};if(!S.bizBoard.userGoals)S.bizBoard.userGoals=[];if(!S.bizBoard.hiddenIssues)S.bizBoard.hiddenIssues=[];if(!S.bizBoard.hiddenTasks)S.bizBoard.hiddenTasks=[];return S.bizBoard;}
 // --- 目標の編集(固定カードは上書き保存 / 追加カードは自由編集) ---
 function bbEditGoalFixed(gi){
   const b=bizState();const base=BIZ_BOARD.goals[gi];const ov=b.goalOv[gi]||{};
@@ -2983,25 +2983,41 @@ function bizDelTask(id){
   if(!confirm('このタスクを削除しますか?'))return;
   const b=bizState();b.extra=b.extra.filter(t=>t.id!==id);delete b.done[id];save();render();
 }
+function bbDelSeedIssue(id){
+  if(!confirm('このイシューを削除しますか?(中のタスクも一緒に消えます)'))return;
+  const b=bizState();
+  if(!b.hiddenIssues.includes(id))b.hiddenIssues.push(id);
+  b.extra=b.extra.filter(x=>x.issueId!==id);
+  save();render();
+}
+function bbDelSeedTask(tid){
+  if(!confirm('このタスクを削除しますか?'))return;
+  const b=bizState();
+  if(!b.hiddenTasks.includes(tid))b.hiddenTasks.push(tid);
+  delete b.done[tid];
+  save();render();
+}
 function rBizBoard(){
   const b=bizState();
   const RSTYLE={done:['✅ 完了','var(--green)'],ready:['🔄 実行待ち','var(--amber)'],wait:['⏸ 審査待ち','var(--t3)'],doing:['🔄 進行中','var(--blue)']};
   const allTasks=[];
   BIZ_BOARD.issues.forEach(i=>{
-    i.tasks.forEach(t=>allTasks.push(t.id));
+    if(b.hiddenIssues.includes(i.id))return;
+    i.tasks.forEach(t=>{if(!b.hiddenTasks.includes(t.id))allTasks.push(t.id);});
     b.extra.filter(x=>x.issueId===i.id).forEach(x=>allTasks.push(x.id));
   });
   const doneCount=allTasks.filter(id=>b.done[id]).length;
   const totalPct=_pct(doneCount,allTasks.length);
   const taskRow=(t,extra)=>{
     const done=!!b.done[t.id];
+    const delFn=extra?`bizDelTask('${t.id}')`:`bbDelSeedTask('${t.id}')`;
     return`<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--card2);cursor:pointer" onclick="bizToggle('${t.id}')">
       <div style="width:18px;height:18px;border-radius:5px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:12px;${done?'background:var(--green);color:#fff':'border:1.5px solid var(--t3)'}">${done?'✓':''}</div>
       <div style="min-width:0;flex:1">
         <div style="font-size:13px;line-height:1.5;${done?'text-decoration:line-through;color:var(--t3)':''}">${esc(t.text)}</div>
         <div style="font-size:10.5px;color:var(--t3);margin-top:1px">👤 ${esc(t.owner||'未定')}${t.due?` ・📅 ${esc(t.due)}`:''}</div>
       </div>
-      ${extra?`<button class="btn btn-g btn-xs" onclick="event.stopPropagation();bizDelTask('${t.id}')">✕</button>`:''}
+      <button class="btn btn-g btn-xs" onclick="event.stopPropagation();${delFn}">✕</button>
     </div>`;
   };
   return`${secTitle('🏢 経営ボード — mono.create 3事業(HP/LINE・シフトさん・編集者派遣)')}
@@ -3049,19 +3065,21 @@ function rBizBoard(){
   <div style="margin-top:8px"><button class="btn btn-g btn-xs" onclick="bbAddRoadmap()">＋ 項目を追加</button></div>
 </div>
 <div style="font-weight:800;font-size:15px;color:var(--purple);margin:18px 0 8px">🔥 イシュー × タスク <button class="btn btn-g btn-xs" onclick="bbAddIssue()">＋ イシューを追加</button></div>
-${BIZ_BOARD.issues.map(i=>{
+${BIZ_BOARD.issues.filter(i=>!b.hiddenIssues.includes(i.id)).map(i=>{
+  const seedTasks=i.tasks.filter(t=>!b.hiddenTasks.includes(t.id));
   const extras=b.extra.filter(x=>x.issueId===i.id);
-  const ids=[...i.tasks.map(t=>t.id),...extras.map(x=>x.id)];
+  const ids=[...seedTasks.map(t=>t.id),...extras.map(x=>x.id)];
   const dn=ids.filter(id=>b.done[id]).length;
   const pct=_pct(dn,ids.length);
   return`<div class="card" style="margin-bottom:10px">
     <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
       <div style="min-width:0"><div style="font-weight:800">${esc(i.id)}. ${esc(i.title)}</div>
       <div style="font-size:11px;color:var(--t3);line-height:1.5;margin-top:2px">${esc(i.why)}</div></div>
-      <div style="font-weight:800;color:${pct===100?'var(--green)':'var(--amber)'};white-space:nowrap">${dn}/${ids.length}</div>
+      <div style="white-space:nowrap"><span style="font-weight:800;color:${pct===100?'var(--green)':'var(--amber)'}">${dn}/${ids.length}</span>
+      <button class="btn btn-g btn-xs" onclick="bbDelSeedIssue('${i.id}')">✕</button></div>
     </div>
     <div style="background:var(--card2);border-radius:6px;height:6px;margin:8px 0 4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${pct===100?'var(--green)':'var(--amber)'}"></div></div>
-    ${i.tasks.map(t=>taskRow(t,false)).join('')}
+    ${seedTasks.map(t=>taskRow(t,false)).join('')}
     ${extras.map(x=>taskRow(x,true)).join('')}
     <div style="margin-top:8px"><button class="btn btn-g btn-xs" onclick="bizAddTask('${i.id}')">＋ タスク追加</button></div>
   </div>`;
@@ -12500,7 +12518,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260715-6';
+const APP_VERSION='20260715-7';
 
 render();
 function forceAppUpdate(){
