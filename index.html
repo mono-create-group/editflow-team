@@ -903,13 +903,11 @@ const BUILTIN_VIEWS=[
   {id:'pipeline',label:'商談管理',icon:'🤝'},
   {id:'crm',label:'クライアント',icon:'🤝'},
   {id:'inquiries',label:'お問い合わせ',icon:'📮'},
-  {id:'teamgoals',label:'チームKGI/KPI',icon:'📈'},
   {id:'bizinfo',label:'事業情報',icon:'📚'},
   {id:'posts',label:'投稿管理',icon:'📅'},
   {id:'docs',label:'ドキュメント',icon:'📁'},
   {id:'workers',label:'ワーカー管理',icon:'👥'},
   {id:'bizboard',label:'経営ボード',icon:'🏢'},
-  {id:'bizunits',label:'事業部ボード',icon:'🏬'},
   {id:'minutes',label:'議事録',icon:'📝'},
   {id:'salesleads',label:'営業リスト',icon:'📞'},
   {id:'hpfee',label:'維持費',icon:'💴'},
@@ -2893,6 +2891,7 @@ function biz2(){
     b.units.forEach(u=>{if(!b.data[u.id])b.data[u.id]={goals:[],roadmap:[],issues:[]};});
     if(!Array.isArray(b.cadence))b.cadence=[];
     if(!b.org||!Array.isArray(b.org.roles))b.org={roles:bizOrgSeed()};
+    if(!b.kgimap||!Array.isArray(b.kgimap.nodes))b.kgimap={nodes:bizKgiSeed()};
     if(!b.active||!b.units.some(u=>u.id===b.active))b.active=b.units[0].id;
     return b;
   }
@@ -2929,6 +2928,7 @@ function biz2(){
     units:[{id:'all',name:'全社'},{id:'u_hp',name:'HP構築'},{id:'u_dispatch',name:'編集者派遣'},{id:'u_shift',name:'シフトさん'}],
     active:'all',
     org:{roles:bizOrgSeed()},
+    kgimap:{nodes:bizKgiSeed()},
     data:{all:{goals:allGoals,roadmap:allRoad,issues:allIssues},u_hp:mkUnit('bu_hp'),u_dispatch:mkUnit('bu_dispatch'),u_shift:mkUnit('bu_shift')},
     cadence:(Array.isArray(legacy.cadence)&&legacy.cadence.length&&typeof legacy.cadence[0]==='object')?legacy.cadence:BIZ_BOARD.cadence.map(c=>({id:uid(),text:c})),
     updatedAt:Date.now(),
@@ -2957,8 +2957,9 @@ function bizDelUnit(id){
 }
 function bizEditNorth(){const b=biz2();const v=prompt('North Star(会社の目的)',b.north);if(v===null)return;b.north=v.trim()||b.north;bizTouch();}
 // --- 目標 ---
-function bizAddGoal(){const label=(prompt('項目名(例: 8月 売上目標)')||'').trim();if(!label)return;const target=(prompt('目標値(例: ¥50万・省略可)')||'').trim();const detail=(prompt('詳細(省略可)')||'').trim();bizD().goals.push({id:uid(),label,target,detail});bizTouch();}
-function bizEditGoal(gid){const g=bizD().goals.find(x=>x.id===gid);if(!g)return;const label=prompt('項目名',g.label);if(label===null)return;const target=prompt('目標値(省略可)',g.target);if(target===null)return;const detail=prompt('詳細(省略可)',g.detail);if(detail===null)return;g.label=label.trim()||g.label;g.target=target.trim();g.detail=(detail||'').trim();bizTouch();}
+function bizNormKind(s){const v=(s||'').trim().toUpperCase();if(v==='KGI')return'KGI';if(v==='KPI')return'KPI';return'目標';}
+function bizAddGoal(){const label=(prompt('項目名(例: 商談数・8月売上)')||'').trim();if(!label)return;const kind=bizNormKind(prompt('種別: KGI / KPI / 目標','目標'));const target=(prompt('目標値(例: 30件・¥50万・省略可)')||'').trim();const current=(prompt('現在値(数値・省略可。目標値と両方数値なら進捗バー表示)')||'').trim();const detail=(prompt('詳細(省略可)')||'').trim();bizD().goals.push({id:uid(),kind,label,target,current,detail});bizTouch();}
+function bizEditGoal(gid){const g=bizD().goals.find(x=>x.id===gid);if(!g)return;const label=prompt('項目名',g.label);if(label===null)return;const kind=prompt('種別(KGI / KPI / 目標)',g.kind||'目標');if(kind===null)return;const target=prompt('目標値(省略可)',g.target);if(target===null)return;const current=prompt('現在値(数値・省略可)',g.current||'');if(current===null)return;const detail=prompt('詳細(省略可)',g.detail);if(detail===null)return;g.label=label.trim()||g.label;g.kind=bizNormKind(kind);g.target=target.trim();g.current=current.trim();g.detail=(detail||'').trim();bizTouch();}
 function bizDelGoal(gid){if(!confirm('この目標を削除しますか?'))return;const d=bizD();d.goals=d.goals.filter(x=>x.id!==gid);bizTouch();}
 // --- ロードマップ ---
 function bizAddRoad(){const t=(prompt('ロードマップ項目')||'').trim();if(!t)return;bizD().roadmap.push({id:uid(),title:t,note:'',st:'todo'});bizTouch();}
@@ -3052,6 +3053,61 @@ function bizOrgNodes(parentId,depth){
   }).join('');
 }
 
+// --- KGIマップ(XMind風マインドマップ・全社共通) ---
+function bizKgiSeed(){
+  const N=(text,parentId)=>({id:uid(),text,parentId});
+  const root=N('KGI｜7月 月商 ¥100万',null);
+  const k1=N('KPI｜商談 30件/月',root.id);
+  const k2=N('KPI｜成約率 10%',root.id);
+  const k3=N('KPI｜HP+LINE 20件',root.id);
+  const a1=N('DM・テレアポ 15件/日',k1.id);
+  const a2=N('初期事例 3件',k2.id);
+  const a3=N('シフトさん 10施設',k3.id);
+  return[root,k1,k2,k3,a1,a2,a3];
+}
+function bizKgi(){const b=biz2();if(!b.kgimap||!Array.isArray(b.kgimap.nodes))b.kgimap={nodes:bizKgiSeed()};return b.kgimap;}
+function kgiAdd(parentId){const t=(prompt('ノード内容(KGI/KPI/施策など)')||'').trim();if(!t)return;bizKgi().nodes.push({id:uid(),text:t,parentId:parentId||null});bizTouch();}
+function kgiEdit(id){const n=bizKgi().nodes.find(x=>x.id===id);if(!n)return;const t=prompt('ノード内容',n.text);if(t===null)return;n.text=t.trim()||n.text;bizTouch();}
+function kgiDel(id){
+  const k=bizKgi();const n=k.nodes.find(x=>x.id===id);if(!n)return;
+  const del=new Set([id]);let added=true;
+  while(added){added=false;k.nodes.forEach(x=>{if(x.parentId&&del.has(x.parentId)&&!del.has(x.id)){del.add(x.id);added=true;}});}
+  const cnt=del.size;
+  if(!confirm('「'+n.text+'」を削除しますか?'+(cnt>1?'(配下'+(cnt-1)+'件も一緒に削除)':'')))return;
+  k.nodes=k.nodes.filter(x=>!del.has(x.id));bizTouch();
+}
+function bizKgiMap(){
+  const nodes=bizKgi().nodes;
+  if(!nodes.length)return`<div style="color:var(--t3);font-size:12px">ノードがありません。「＋ ルートを追加」で作成できます。</div>`;
+  const NW=156,NH=52,HGAP=56,VGAP=16,OFF=10;
+  const childrenOf=pid=>nodes.filter(n=>(n.parentId||null)===(pid||null));
+  const cache={};
+  function stH(id){if(cache[id]!==undefined)return cache[id];const kids=childrenOf(id);let h=kids.length?kids.reduce((a,k)=>a+stH(k.id),0)+VGAP*(kids.length-1):NH;cache[id]=h;return h;}
+  const pos={};let maxDepth=0;
+  function place(id,depth,top){if(depth>maxDepth)maxDepth=depth;const h=stH(id);pos[id]={x:OFF+depth*(NW+HGAP),y:OFF+top+h/2-NH/2};let ct=top;childrenOf(id).forEach(k=>{place(k.id,depth+1,ct);ct+=stH(k.id)+VGAP;});}
+  let top=0;childrenOf(null).forEach(r=>{place(r.id,0,top);top+=stH(r.id)+VGAP;});
+  const contentH=Math.max(top-VGAP,NH);
+  const canvasW=OFF*2+(maxDepth+1)*NW+maxDepth*HGAP;
+  const canvasH=OFF*2+contentH;
+  let paths='';
+  nodes.forEach(n=>{if(!n.parentId||!pos[n.parentId]||!pos[n.id])return;const p=pos[n.parentId],c=pos[n.id];const x1=p.x+NW,y1=p.y+NH/2,x2=c.x,y2=c.y+NH/2,mx=(x1+x2)/2;paths+=`<path d="M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}" fill="none" stroke="var(--t3)" stroke-width="1.5" opacity="0.45"/>`;});
+  const nodeHtml=nodes.map(n=>{const p=pos[n.id];if(!p)return'';const isRoot=!n.parentId;const bg=isRoot?'var(--purple)':'var(--card)';const col=isRoot?'#fff':'var(--t1)';const bd=isRoot?'var(--purple)':'var(--card2)';
+    return`<div style="position:absolute;left:${p.x}px;top:${p.y}px;width:${NW}px;min-height:${NH}px;background:${bg};color:${col};border:1px solid ${bd};border-radius:9px;padding:6px 8px;box-shadow:0 1px 4px rgba(0,0,0,.12);box-sizing:border-box">
+      <div style="font-size:12px;font-weight:${isRoot?800:600};line-height:1.35;word-break:break-word">${esc(n.text)}</div>
+      <div style="display:flex;gap:3px;justify-content:flex-end;margin-top:4px">
+        <button class="btn btn-g btn-xs" style="padding:1px 5px" title="子を追加" onclick="kgiAdd('${n.id}')">＋</button>
+        <button class="btn btn-g btn-xs" style="padding:1px 5px" title="編集" onclick="kgiEdit('${n.id}')">✎</button>
+        <button class="btn btn-g btn-xs" style="padding:1px 5px" title="削除" onclick="kgiDel('${n.id}')">✕</button>
+      </div>
+    </div>`;}).join('');
+  return`<div style="overflow:auto;max-height:540px;border:1px solid var(--card2);border-radius:10px">
+    <div style="position:relative;width:${canvasW}px;height:${canvasH}px">
+      <svg width="${canvasW}" height="${canvasH}" style="position:absolute;left:0;top:0;pointer-events:none;overflow:visible">${paths}</svg>
+      ${nodeHtml}
+    </div>
+  </div>`;
+}
+function bizNumify(s){if(s===undefined||s===null||String(s).trim()==='')return NaN;return parseFloat(String(s).replace(/[^0-9.\-]/g,''));}
 const BIZ_RMAP={todo:['予定','var(--t3)'],doing:['進行中','var(--amber)'],ready:['実行待ち','var(--amber)'],wait:['審査待ち','var(--t3)'],done:['完了','var(--green)']};
 function rBizBoard(){
   const b=biz2();const d=bizD();const active=b.active;
@@ -3060,12 +3116,19 @@ function rBizBoard(){
   const totalPct=_pct(doneCount,allT.length);
   const activeName=(b.units.find(u=>u.id===active)||{}).name||'';
   const tabs=b.units.map(u=>{const on=u.id===active;return`<button class="btn btn-g btn-xs" style="${on?'background:var(--purple);color:#fff;border-color:var(--purple)':''};font-weight:700" onclick="bizSetActive('${u.id}')">${esc(u.name)}</button>`;}).join('');
-  const goalRow=(g)=>`<div class="card" style="margin-bottom:0;position:relative;border-left:3px solid var(--amber)">
+  const GKIND={KGI:['KGI','var(--purple)'],KPI:['KPI','var(--blue)'],'目標':['目標','var(--amber)']};
+  const goalRow=(g)=>{
+    const gk=GKIND[g.kind]||GKIND['目標'];
+    const cur=bizNumify(g.current), tgt=bizNumify(g.target);
+    const prog=(!isNaN(cur)&&!isNaN(tgt)&&tgt>0);
+    const pct=prog?Math.min(100,Math.round(cur/tgt*100)):0;
+    return`<div class="card" style="margin-bottom:0;position:relative;border-left:3px solid ${gk[1]}">
     <div style="position:absolute;top:6px;right:6px;display:flex;gap:4px"><button class="btn btn-g btn-xs" onclick="bizEditGoal('${g.id}')">✎</button><button class="btn btn-g btn-xs" onclick="bizDelGoal('${g.id}')">✕</button></div>
-    <div style="font-size:11px;color:var(--t3);font-weight:700;padding-right:52px">${esc(g.label)}</div>
+    <div style="display:flex;align-items:center;gap:6px;padding-right:52px"><span style="font-size:9.5px;font-weight:800;color:#fff;background:${gk[1]};border-radius:4px;padding:1px 5px">${gk[0]}</span><span style="font-size:11px;color:var(--t3);font-weight:700">${esc(g.label)}</span></div>
     <div style="font-weight:800;font-size:15px;color:var(--green);margin:2px 0">${esc(g.target||'')}</div>
-    <div style="font-size:11px;color:var(--t2);line-height:1.5">${esc(g.detail||'')}</div>
-  </div>`;
+    ${prog?`<div style="background:var(--card2);border-radius:5px;height:6px;margin:4px 0;overflow:hidden"><div style="height:100%;width:${pct}%;background:${gk[1]}"></div></div><div style="font-size:10.5px;color:var(--t3)">現在 ${esc(g.current)} / 目標 ${esc(g.target)}(${pct}%)</div>`:''}
+    ${g.detail?`<div style="font-size:11px;color:var(--t2);line-height:1.5;margin-top:2px">${esc(g.detail)}</div>`:''}
+  </div>`;};
   const roadRow=(r)=>{const[label,color]=BIZ_RMAP[r.st]||BIZ_RMAP.todo;return`
     <div style="display:flex;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--card2)">
       <div style="min-width:0;flex:1"><div style="font-size:13px;font-weight:600;line-height:1.5;${r.st==='done'?'color:var(--t3);text-decoration:line-through':''}">${esc(r.title)}</div>${r.note?`<div style="font-size:10.5px;color:var(--t3)">${esc(r.note)}</div>`:''}</div>
@@ -3104,7 +3167,7 @@ function rBizBoard(){
     <div style="background:var(--card2);border-radius:6px;height:8px;margin-top:12px;overflow:hidden"><div style="height:100%;width:${totalPct}%;background:var(--purple)"></div></div>
     <div style="font-size:11px;color:var(--t3);margin-top:4px">${esc(activeName)}のタスク進捗: ${doneCount}/${allT.length}(${totalPct}%)</div>
   </div>
-  <div style="font-weight:800;font-size:15px;color:var(--purple);margin:14px 0 8px">🎯 目標（${esc(activeName)}） <button class="btn btn-g btn-xs" onclick="bizAddGoal()">＋ 目標を追加</button></div>
+  <div style="font-weight:800;font-size:15px;color:var(--purple);margin:14px 0 8px">🎯 目標・KPI（${esc(activeName)}） <button class="btn btn-g btn-xs" onclick="bizAddGoal()">＋ 目標・KPIを追加</button></div>
   ${d.goals.length?`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px">${d.goals.map(goalRow).join('')}</div>`:`<div class="card" style="color:var(--t3);font-size:12px">目標はまだありません。「＋ 目標を追加」で登録できます。</div>`}
   <div style="font-weight:800;font-size:15px;color:var(--purple);margin:18px 0 8px">🗺 ロードマップ <button class="btn btn-g btn-xs" onclick="bizAddRoad()">＋ 項目を追加</button></div>
   <div class="card">
@@ -3112,6 +3175,9 @@ function rBizBoard(){
   </div>
   <div style="font-weight:800;font-size:15px;color:var(--purple);margin:18px 0 8px">🔥 イシュー × タスク <button class="btn btn-g btn-xs" onclick="bizAddIssue()">＋ イシューを追加</button></div>
   ${d.issues.length?d.issues.map(issueCard).join(''):`<div class="card" style="color:var(--t3);font-size:12px">イシューはまだありません。「＋ イシューを追加」で登録できます。</div>`}
+  <div style="font-weight:800;font-size:15px;color:var(--purple);margin:18px 0 8px">🧭 KGIマップ(全社共通) <button class="btn btn-g btn-xs" onclick="kgiAdd(null)">＋ ルートを追加</button></div>
+  ${bizKgiMap()}
+  <div style="font-size:10.5px;color:var(--t3);margin:6px 0 0">※KGIを頂点に、KPI・施策を右へ枝分かれ。各ノードの ＋子を追加 / ✎編集 / ✕削除(配下ごと)。横スクロールで全体を確認できます。</div>
   <div style="font-weight:800;font-size:15px;color:var(--purple);margin:18px 0 8px">🔁 定例サイクル(全社共通) <button class="btn btn-g btn-xs" onclick="bizAddCadence()">＋ 追加</button></div>
   <div class="card">
     ${b.cadence.length?b.cadence.map(c=>`<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-top:1px solid var(--card2)"><div style="flex:1;font-size:12.5px;color:var(--t2)">・${esc(c.text)}</div><button class="btn btn-g btn-xs" onclick="bizEditCadence('${c.id}')">✎</button><button class="btn btn-g btn-xs" onclick="bizDelCadence('${c.id}')">✕</button></div>`).join(''):`<div style="color:var(--t3);font-size:12px">項目はまだありません。</div>`}
@@ -3633,7 +3699,7 @@ function rDashTeamSummary(){
     </div>`;
   }
   if(kgis.length){
-    h+=`<div class="card card-sm" style="margin-bottom:8px;cursor:pointer" onclick="V='teamgoals';render()">
+    h+=`<div class="card card-sm" style="margin-bottom:8px;cursor:pointer" onclick="V='bizboard';render()">
       <div style="font-weight:700;font-size:13px;margin-bottom:6px">📈 チームKGI</div>
       ${kgis.map(k=>{const pct=_pct(k.current,k.target);return`<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:12px"><span>${esc(k.title)}</span><span style="color:var(--t2)">${pct}%</span></div><div style="background:var(--card2);border-radius:5px;height:6px;margin-top:3px;overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--green)"></div></div></div>`;}).join('')}
     </div>`;
@@ -10791,7 +10857,7 @@ function navMeta(id){
 const NAV_CATS=[
   {id:'sales',label:'営業',views:['salesleads','pipeline','inquiries','crm','salessites']},
   {id:'prod',label:'制作・派遣',views:['projects','workers','hpfee']},
-  {id:'mgmt',label:'経営',views:['teamgoals','bizboard','bizunits']},
+  {id:'mgmt',label:'経営',views:['bizboard']},
   {id:'info',label:'情報',views:['bizinfo','docs','minutes','posts']},
 ];
 const NAVCATS_LS='mc_navcats';
@@ -12531,7 +12597,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260715-9';
+const APP_VERSION='20260715-10';
 
 render();
 function forceAppUpdate(){
