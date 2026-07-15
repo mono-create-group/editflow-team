@@ -11588,8 +11588,18 @@ let _slBiz='hp';  // 既定=HP制作
 const SL_FOOD_GENRES=new Set(['飲食','ラーメン','居酒屋','焼肉','寿司','カフェ','スナック','バー','焼き鳥','食堂','そば','うどん','洋食','中華','イタリアン','ジンギスカン','海鮮','弁当・惣菜','喫茶','定食','ダイニング','ビストロ','バル','焼き鳥・串','鉄板焼き','パン','洋菓子','和菓子','鮮魚','精肉','青果','酒屋']);
 // この店がこの事業タブのプールに属するか。シフトさん=飲食のみ／他事業=非飲食のみ
 function slInPool(l,bizKey){
+  const bk=bizKey||_slBiz;
   const isFood=SL_FOOD_GENRES.has(l.genre||'');
-  return (bizKey||_slBiz)==='shift' ? isFood : !isFood;
+  if(bk==='shift')return isFood;
+  // HP事業(2026-07-15 会長厳命): 自社HPなしが確定した「本命」だけを営業対象にする。
+  // HP有無が"不明"・空・未確認、または"あり"の店は営業対象から除外。
+  // HPがあるのに"なし"扱いで営業して実店舗を怒らせた事故の再発防止。
+  if(bk==='hp'){
+    if(isFood)return false;
+    const h=(l.hp||'').trim();
+    return h!==''&&h!=='あり'&&h!=='不明';
+  }
+  return !isFood;
 }
 // 接触系ステータス(この状態へ変わると contacts へ履歴を自動追記し、被り防止の対象になる)
 // 「架電予定」は予定であり接触ではないため含めない。
@@ -12445,7 +12455,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260715-2';
+const APP_VERSION='20260715-3';
 
 render();
 function forceAppUpdate(){
