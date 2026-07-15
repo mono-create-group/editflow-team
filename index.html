@@ -2881,234 +2881,166 @@ const BIZ_BOARD={
     '四半期: ソラ(戦略AI)による戦略レビュー',
   ],
 };
-function bizState(){if(!S.bizBoard)S.bizBoard={done:{},extra:[]};if(!S.bizBoard.done)S.bizBoard.done={};if(!S.bizBoard.extra)S.bizBoard.extra=[];if(!S.bizBoard.userRoadmap)S.bizBoard.userRoadmap=[];if(!S.bizBoard.userIssues)S.bizBoard.userIssues=[];if(!S.bizBoard.goalOv)S.bizBoard.goalOv={};if(!S.bizBoard.roadOv)S.bizBoard.roadOv={};if(!S.bizBoard.userGoals)S.bizBoard.userGoals=[];if(!S.bizBoard.hiddenIssues)S.bizBoard.hiddenIssues=[];if(!S.bizBoard.hiddenTasks)S.bizBoard.hiddenTasks=[];return S.bizBoard;}
-// --- 目標の編集(固定カードは上書き保存 / 追加カードは自由編集) ---
-function bbEditGoalFixed(gi){
-  const b=bizState();const base=BIZ_BOARD.goals[gi];const ov=b.goalOv[gi]||{};
-  const label=prompt('項目名',ov.label||base.label);if(label===null)return;
-  const target=prompt('目標値',ov.target||base.target);if(target===null)return;
-  const detail=prompt('詳細(省略可)',ov.detail||base.detail);if(detail===null)return;
-  b.goalOv[gi]={label:label.trim()||base.label,target:target.trim()||base.target,detail:(detail||'').trim()};
-  save();render();
-}
-function bbAddGoal(){
-  const label=(prompt('項目名(例: 8月 売上目標)')||'').trim();if(!label)return;
-  const target=(prompt('目標値(例: ¥50万)')||'').trim();
-  const detail=(prompt('詳細(省略可)')||'').trim();
-  bizState().userGoals.push({id:'ug'+Date.now(),label,target,detail});
-  save();render();
-}
-function bbEditGoalUser(id){
-  const g=bizState().userGoals.find(x=>x.id===id);if(!g)return;
-  const label=prompt('項目名',g.label);if(label===null)return;
-  const target=prompt('目標値',g.target);if(target===null)return;
-  const detail=prompt('詳細(省略可)',g.detail);if(detail===null)return;
-  g.label=label.trim()||g.label;g.target=target.trim();g.detail=(detail||'').trim();
-  save();render();
-}
-function bbDelGoalUser(id){
-  if(!confirm('この目標を削除しますか?'))return;
-  const b=bizState();b.userGoals=b.userGoals.filter(x=>x.id!==id);
-  save();render();
-}
-// --- ロードマップ固定7項目の編集(上書き保存) ---
-function bbEditRoadmapFixed(no){
-  const b=bizState();const base=BIZ_BOARD.roadmap.find(r=>r.no===no);if(!base)return;
-  const ov=b.roadOv[no]||{};
-  const title=prompt('項目名',ov.title||base.title);if(title===null)return;
-  const note=prompt('メモ(省略可)',ov.note!==undefined?ov.note:base.note);if(note===null)return;
-  b.roadOv[no]=Object.assign({},b.roadOv[no]||{},{title:title.trim()||base.title,note:(note||'').trim()});
-  save();render();
-}
-function bbCycleRoadmapFixed(no){
-  const b=bizState();const base=BIZ_BOARD.roadmap.find(r=>r.no===no);if(!base)return;
-  const o=['doing','ready','wait','done'];
-  const cur=(b.roadOv[no]&&b.roadOv[no].st)||base.st;
-  b.roadOv[no]=Object.assign({},b.roadOv[no]||{},{st:o[(o.indexOf(cur)+1)%o.length]});
-  save();render();
-}
-function bbEditRoadmapUser(id){
-  const r=bizState().userRoadmap.find(x=>x.id===id);if(!r)return;
-  const title=prompt('項目名',r.title);if(title===null)return;
-  r.title=title.trim()||r.title;
-  save();render();
-}
-function bbAddRoadmap(){
-  const t=(prompt('ロードマップに追加する項目')||'').trim();if(!t)return;
-  bizState().userRoadmap.push({id:'ur'+Date.now(),title:t,st:'todo',note:''});
-  save();render();
-}
-function bbCycleRoadmap(id){
-  const r=bizState().userRoadmap.find(x=>x.id===id);if(!r)return;
-  const o=['todo','doing','done'];r.st=o[(o.indexOf(r.st)+1)%3];
-  save();render();
-}
-function bbDelRoadmap(id){
-  if(!confirm('削除しますか?'))return;
-  const b=bizState();b.userRoadmap=b.userRoadmap.filter(x=>x.id!==id);
-  save();render();
-}
-function bbAddIssue(){
-  const t=(prompt('イシュー(課題)のタイトル')||'').trim();if(!t)return;
-  const why=(prompt('なぜ重要か(省略可)')||'').trim();
-  bizState().userIssues.push({id:'ui'+Date.now(),title:t,why,tasks:[]});
-  save();render();
-}
-function bbDelIssue(id){
-  if(!confirm('このイシューを削除しますか?'))return;
-  const b=bizState();b.userIssues=b.userIssues.filter(x=>x.id!==id);
-  save();render();
-}
-function bbAddIssueTask(iid){
-  const i=bizState().userIssues.find(x=>x.id===iid);if(!i)return;
-  const t=(prompt('タスク内容')||'').trim();if(!t)return;
-  const o=(prompt('担当(省略可)')||'').trim();
-  i.tasks.push({id:'ut'+Date.now(),text:t,owner:o||'未定',due:''});
-  save();render();
-}
-function bbDelIssueTask(iid,tid){
-  const i=bizState().userIssues.find(x=>x.id===iid);if(!i)return;
-  i.tasks=i.tasks.filter(x=>x.id!==tid);
-  const b=bizState();delete b.done[tid];
-  save();render();
-}
-function bizToggle(id){const b=bizState();b.done[id]=!b.done[id];save();render();}
-function bizAddTask(issueId){
-  const text=(prompt('追加するタスク内容')||'').trim();if(!text)return;
-  const owner=(prompt('担当(例: 会長/アオイ/ケント/ハル。省略可)')||'').trim();
-  bizState().extra.push({id:'bx'+Date.now(),issueId,text,owner:owner||'未定'});
-  save();render();
-}
-function bizDelTask(id){
-  if(!confirm('このタスクを削除しますか?'))return;
-  const b=bizState();b.extra=b.extra.filter(t=>t.id!==id);delete b.done[id];save();render();
-}
-function bbDelSeedIssue(id){
-  if(!confirm('このイシューを削除しますか?(中のタスクも一緒に消えます)'))return;
-  const b=bizState();
-  if(!b.hiddenIssues.includes(id))b.hiddenIssues.push(id);
-  b.extra=b.extra.filter(x=>x.issueId!==id);
-  save();render();
-}
-function bbDelSeedTask(tid){
-  if(!confirm('このタスクを削除しますか?'))return;
-  const b=bizState();
-  if(!b.hiddenTasks.includes(tid))b.hiddenTasks.push(tid);
-  delete b.done[tid];
-  save();render();
-}
-function rBizBoard(){
-  const b=bizState();
-  const RSTYLE={done:['✅ 完了','var(--green)'],ready:['🔄 実行待ち','var(--amber)'],wait:['⏸ 審査待ち','var(--t3)'],doing:['🔄 進行中','var(--blue)']};
-  const allTasks=[];
-  BIZ_BOARD.issues.forEach(i=>{
-    if(b.hiddenIssues.includes(i.id))return;
-    i.tasks.forEach(t=>{if(!b.hiddenTasks.includes(t.id))allTasks.push(t.id);});
-    b.extra.filter(x=>x.issueId===i.id).forEach(x=>allTasks.push(x.id));
-  });
-  const doneCount=allTasks.filter(id=>b.done[id]).length;
-  const totalPct=_pct(doneCount,allTasks.length);
-  const taskRow=(t,extra)=>{
-    const done=!!b.done[t.id];
-    const delFn=extra?`bizDelTask('${t.id}')`:`bbDelSeedTask('${t.id}')`;
-    return`<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--card2);cursor:pointer" onclick="bizToggle('${t.id}')">
-      <div style="width:18px;height:18px;border-radius:5px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:12px;${done?'background:var(--green);color:#fff':'border:1.5px solid var(--t3)'}">${done?'✓':''}</div>
-      <div style="min-width:0;flex:1">
-        <div style="font-size:13px;line-height:1.5;${done?'text-decoration:line-through;color:var(--t3)':''}">${esc(t.text)}</div>
-        <div style="font-size:10.5px;color:var(--t3);margin-top:1px">👤 ${esc(t.owner||'未定')}${t.due?` ・📅 ${esc(t.due)}`:''}</div>
-      </div>
-      <button class="btn btn-g btn-xs" onclick="event.stopPropagation();${delFn}">✕</button>
-    </div>`;
+// ===経営ボード v2: 事業部タブ・全要素CRUD(人間が追加/削除で管理)===
+// 旧v1(コード管理シード+一部追加)からv2へ自動移行。既存の編集/チェックは保持する
+function biz2(){
+  let b=S.bizBoard;
+  if(!b||typeof b!=='object')b=S.bizBoard={};
+  if(b.v===2){
+    if(typeof b.north!=='string')b.north=BIZ_BOARD.north;
+    if(!Array.isArray(b.units)||!b.units.length)b.units=[{id:'all',name:'全社'}];
+    if(!b.data||typeof b.data!=='object')b.data={};
+    b.units.forEach(u=>{if(!b.data[u.id])b.data[u.id]={goals:[],roadmap:[],issues:[]};});
+    if(!Array.isArray(b.cadence))b.cadence=[];
+    if(!b.active||!b.units.some(u=>u.id===b.active))b.active=b.units[0].id;
+    return b;
+  }
+  const legacy=b||{};
+  const done=legacy.done||{}, roadOv=legacy.roadOv||{}, goalOv=legacy.goalOv||{};
+  const hiddenIssues=legacy.hiddenIssues||[], hiddenTasks=legacy.hiddenTasks||[];
+  const extra=legacy.extra||[], userGoals=legacy.userGoals||[], userRoadmap=legacy.userRoadmap||[], userIssues=legacy.userIssues||[];
+  const allGoals=[
+    ...BIZ_BOARD.goals.map((g,i)=>{const ov=goalOv[i]||{};return{id:uid(),label:ov.label||g.label,target:ov.target||g.target,detail:ov.detail!==undefined?ov.detail:g.detail};}),
+    ...userGoals.map(g=>({id:g.id||uid(),label:g.label,target:g.target,detail:g.detail}))
+  ];
+  const allRoad=[
+    ...BIZ_BOARD.roadmap.map(r=>{const ov=roadOv[r.no]||{};return{id:uid(),title:ov.title||r.title,note:ov.note!==undefined?ov.note:r.note,st:ov.st||r.st};}),
+    ...userRoadmap.map(r=>({id:r.id||uid(),title:r.title,note:'',st:r.st||'todo'}))
+  ];
+  const allIssues=[
+    ...BIZ_BOARD.issues.filter(i=>!hiddenIssues.includes(i.id)).map(i=>{
+      const tasks=[
+        ...i.tasks.filter(t=>!hiddenTasks.includes(t.id)).map(t=>({id:uid(),text:t.text,owner:t.owner||'',due:t.due||'',done:!!done[t.id]})),
+        ...extra.filter(x=>x.issueId===i.id).map(x=>({id:uid(),text:x.text,owner:x.owner||'',due:'',done:!!done[x.id]}))
+      ];
+      return{id:uid(),title:i.title,why:i.why||'',tasks};
+    }),
+    ...userIssues.map(i=>({id:i.id||uid(),title:i.title,why:i.why||'',tasks:(i.tasks||[]).map(t=>({id:t.id||uid(),text:t.text,owner:t.owner||'',due:t.due||'',done:!!done[t.id]}))}))
+  ];
+  const mkUnit=(sid)=>{const s=BU_PLAN_SEEDS[sid]||{roadmap:[],issues:[]};return{
+    goals:[],
+    roadmap:s.roadmap.map(r=>({id:uid(),title:r.t,note:'',st:r.st||'todo'})),
+    issues:s.issues.map(i=>({id:uid(),title:i.t,why:i.why||'',tasks:i.tasks.map(t=>({id:uid(),text:t.x,owner:t.o||'',due:'',done:false}))}))
+  };};
+  const nb={
+    v:2,
+    north:(typeof legacy.north==='string'&&legacy.north)||BIZ_BOARD.north,
+    units:[{id:'all',name:'全社'},{id:'u_hp',name:'HP構築'},{id:'u_dispatch',name:'編集者派遣'},{id:'u_shift',name:'シフトさん'}],
+    active:'all',
+    data:{all:{goals:allGoals,roadmap:allRoad,issues:allIssues},u_hp:mkUnit('bu_hp'),u_dispatch:mkUnit('bu_dispatch'),u_shift:mkUnit('bu_shift')},
+    cadence:(Array.isArray(legacy.cadence)&&legacy.cadence.length&&typeof legacy.cadence[0]==='object')?legacy.cadence:BIZ_BOARD.cadence.map(c=>({id:uid(),text:c})),
+    updatedAt:Date.now(),
   };
-  return`${secTitle('🏢 経営ボード — mono.create 3事業(HP/LINE・シフトさん・編集者派遣)')}
-<div class="card" style="margin-bottom:12px;border-left:3px solid var(--purple)">
-  <div style="font-size:11px;color:var(--t3);font-weight:700;letter-spacing:.05em;margin-bottom:4px">NORTH STAR</div>
-  <div style="font-weight:700;font-size:14px;line-height:1.6">${esc(BIZ_BOARD.north)}</div>
-  <div style="background:var(--card2);border-radius:6px;height:8px;margin-top:12px;overflow:hidden"><div style="height:100%;width:${totalPct}%;background:var(--purple)"></div></div>
-  <div style="font-size:11px;color:var(--t3);margin-top:4px">全タスク進捗: ${doneCount}/${allTasks.length}(${totalPct}%)</div>
-</div>
-<div style="font-weight:800;font-size:15px;color:var(--purple);margin:14px 0 8px">🎯 目標(2026下期) <button class="btn btn-g btn-xs" onclick="bbAddGoal()">＋ 目標を追加</button></div>
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px">
-  ${BIZ_BOARD.goals.map((g,gi)=>{const ov=b.goalOv[gi]||{};const label=ov.label||g.label,target=ov.target||g.target,detail=ov.detail!==undefined?ov.detail:g.detail;return`<div class="card" style="margin-bottom:0;position:relative">
-    <button class="btn btn-g btn-xs" style="position:absolute;top:6px;right:6px" onclick="bbEditGoalFixed(${gi})">✎</button>
-    <div style="font-size:11px;color:var(--t3);font-weight:700;padding-right:26px">${esc(label)}</div>
-    <div style="font-weight:800;font-size:15px;color:var(--green);margin:2px 0">${esc(target)}</div>
-    <div style="font-size:11px;color:var(--t2);line-height:1.5">${esc(detail)}</div>
-  </div>`;}).join('')}
-  ${b.userGoals.map(g=>`<div class="card" style="margin-bottom:0;position:relative;border-left:3px solid var(--amber)">
-    <div style="position:absolute;top:6px;right:6px;display:flex;gap:4px"><button class="btn btn-g btn-xs" onclick="bbEditGoalUser('${g.id}')">✎</button><button class="btn btn-g btn-xs" onclick="bbDelGoalUser('${g.id}')">✕</button></div>
+  S.bizBoard=nb; save();
+  return nb;
+}
+function bizTouch(){const b=S.bizBoard;if(b)b.updatedAt=Date.now();save();render();}
+function bizD(){const b=biz2();return b.data[b.active]||{goals:[],roadmap:[],issues:[]};}
+function bizSetActive(id){biz2().active=id;bizTouch();}
+// --- 事業部(タブ) ---
+function bizAddUnit(){
+  const name=(prompt('事業部名(例: 公式LINE構築)')||'').trim();if(!name)return;
+  const b=biz2();const id='u'+Date.now();
+  b.units.push({id,name});b.data[id]={goals:[],roadmap:[],issues:[]};b.active=id;bizTouch();
+}
+function bizRenameUnit(id){
+  const b=biz2();const u=b.units.find(x=>x.id===id);if(!u)return;
+  const name=prompt('事業部名',u.name);if(name===null)return;u.name=name.trim()||u.name;bizTouch();
+}
+function bizDelUnit(id){
+  if(id==='all'){toast('「全社」は削除できません','warn');return;}
+  const b=biz2();const u=b.units.find(x=>x.id===id);if(!u)return;
+  if(!confirm('事業部「'+u.name+'」を削除しますか?(中の目標・ロードマップ・イシューも全て消えます)'))return;
+  b.units=b.units.filter(x=>x.id!==id);delete b.data[id];b.active='all';bizTouch();
+}
+function bizEditNorth(){const b=biz2();const v=prompt('North Star(会社の目的)',b.north);if(v===null)return;b.north=v.trim()||b.north;bizTouch();}
+// --- 目標 ---
+function bizAddGoal(){const label=(prompt('項目名(例: 8月 売上目標)')||'').trim();if(!label)return;const target=(prompt('目標値(例: ¥50万・省略可)')||'').trim();const detail=(prompt('詳細(省略可)')||'').trim();bizD().goals.push({id:uid(),label,target,detail});bizTouch();}
+function bizEditGoal(gid){const g=bizD().goals.find(x=>x.id===gid);if(!g)return;const label=prompt('項目名',g.label);if(label===null)return;const target=prompt('目標値(省略可)',g.target);if(target===null)return;const detail=prompt('詳細(省略可)',g.detail);if(detail===null)return;g.label=label.trim()||g.label;g.target=target.trim();g.detail=(detail||'').trim();bizTouch();}
+function bizDelGoal(gid){if(!confirm('この目標を削除しますか?'))return;const d=bizD();d.goals=d.goals.filter(x=>x.id!==gid);bizTouch();}
+// --- ロードマップ ---
+function bizAddRoad(){const t=(prompt('ロードマップ項目')||'').trim();if(!t)return;bizD().roadmap.push({id:uid(),title:t,note:'',st:'todo'});bizTouch();}
+function bizEditRoad(rid){const r=bizD().roadmap.find(x=>x.id===rid);if(!r)return;const title=prompt('項目名',r.title);if(title===null)return;const note=prompt('メモ(省略可)',r.note);if(note===null)return;r.title=title.trim()||r.title;r.note=(note||'').trim();bizTouch();}
+function bizCycleRoad(rid){const r=bizD().roadmap.find(x=>x.id===rid);if(!r)return;const o=['todo','doing','ready','wait','done'];r.st=o[(o.indexOf(r.st)+1+o.length)%o.length];bizTouch();}
+function bizDelRoad(rid){if(!confirm('この項目を削除しますか?'))return;const d=bizD();d.roadmap=d.roadmap.filter(x=>x.id!==rid);bizTouch();}
+// --- イシュー・タスク ---
+function bizAddIssue(){const t=(prompt('イシュー(課題)のタイトル')||'').trim();if(!t)return;const why=(prompt('なぜ重要か(省略可)')||'').trim();bizD().issues.push({id:uid(),title:t,why,tasks:[]});bizTouch();}
+function bizEditIssue(iid){const i=bizD().issues.find(x=>x.id===iid);if(!i)return;const t=prompt('タイトル',i.title);if(t===null)return;const why=prompt('なぜ重要か(省略可)',i.why);if(why===null)return;i.title=t.trim()||i.title;i.why=(why||'').trim();bizTouch();}
+function bizDelIssue(iid){const i=bizD().issues.find(x=>x.id===iid);if(!i)return;if(!confirm('このイシューを削除しますか?(中のタスクも消えます)'))return;const d=bizD();d.issues=d.issues.filter(x=>x.id!==iid);bizTouch();}
+function bizAddTask(iid){const i=bizD().issues.find(x=>x.id===iid);if(!i)return;const text=(prompt('タスク内容')||'').trim();if(!text)return;const owner=(prompt('担当(省略可)')||'').trim();const due=(prompt('期限(省略可)')||'').trim();i.tasks.push({id:uid(),text,owner,due,done:false});bizTouch();}
+function bizEditTask(iid,tid){const i=bizD().issues.find(x=>x.id===iid);if(!i)return;const t=i.tasks.find(x=>x.id===tid);if(!t)return;const text=prompt('タスク内容',t.text);if(text===null)return;const owner=prompt('担当(省略可)',t.owner);if(owner===null)return;const due=prompt('期限(省略可)',t.due);if(due===null)return;t.text=text.trim()||t.text;t.owner=(owner||'').trim();t.due=(due||'').trim();bizTouch();}
+function bizDelTask(iid,tid){const i=bizD().issues.find(x=>x.id===iid);if(!i)return;i.tasks=i.tasks.filter(x=>x.id!==tid);bizTouch();}
+function bizToggleTask(iid,tid){const i=bizD().issues.find(x=>x.id===iid);if(!i)return;const t=i.tasks.find(x=>x.id===tid);if(!t)return;t.done=!t.done;bizTouch();}
+// --- 定例サイクル(全社共通) ---
+function bizAddCadence(){const t=(prompt('定例サイクル項目')||'').trim();if(!t)return;biz2().cadence.push({id:uid(),text:t});bizTouch();}
+function bizEditCadence(cid){const c=biz2().cadence.find(x=>x.id===cid);if(!c)return;const t=prompt('項目',c.text);if(t===null)return;c.text=t.trim()||c.text;bizTouch();}
+function bizDelCadence(cid){if(!confirm('この項目を削除しますか?'))return;const b=biz2();b.cadence=b.cadence.filter(x=>x.id!==cid);bizTouch();}
+
+const BIZ_RMAP={todo:['予定','var(--t3)'],doing:['進行中','var(--amber)'],ready:['実行待ち','var(--amber)'],wait:['審査待ち','var(--t3)'],done:['完了','var(--green)']};
+function rBizBoard(){
+  const b=biz2();const d=bizD();const active=b.active;
+  const allT=[];d.issues.forEach(i=>i.tasks.forEach(t=>allT.push(t)));
+  const doneCount=allT.filter(t=>t.done).length;
+  const totalPct=_pct(doneCount,allT.length);
+  const activeName=(b.units.find(u=>u.id===active)||{}).name||'';
+  const tabs=b.units.map(u=>{const on=u.id===active;return`<button class="btn btn-g btn-xs" style="${on?'background:var(--purple);color:#fff;border-color:var(--purple)':''};font-weight:700" onclick="bizSetActive('${u.id}')">${esc(u.name)}</button>`;}).join('');
+  const goalRow=(g)=>`<div class="card" style="margin-bottom:0;position:relative;border-left:3px solid var(--amber)">
+    <div style="position:absolute;top:6px;right:6px;display:flex;gap:4px"><button class="btn btn-g btn-xs" onclick="bizEditGoal('${g.id}')">✎</button><button class="btn btn-g btn-xs" onclick="bizDelGoal('${g.id}')">✕</button></div>
     <div style="font-size:11px;color:var(--t3);font-weight:700;padding-right:52px">${esc(g.label)}</div>
-    <div style="font-weight:800;font-size:15px;color:var(--green);margin:2px 0">${esc(g.target)}</div>
-    <div style="font-size:11px;color:var(--t2);line-height:1.5">${esc(g.detail)}</div>
-  </div>`).join('')}
-</div>
-<div style="font-weight:800;font-size:15px;color:var(--purple);margin:18px 0 8px">🗺 ロードマップ(会長指示 7項目)</div>
-<div class="card">
-  ${BIZ_BOARD.roadmap.map(r=>{const ov=b.roadOv[r.no]||{};const title=ov.title||r.title,note=ov.note!==undefined?ov.note:r.note,st=ov.st||r.st;const[label,color]=RSTYLE[st]||RSTYLE.doing;return`
-  <div style="display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-top:1px solid var(--card2)">
-    <div style="font-weight:800;color:var(--t3);width:18px;flex-shrink:0">${r.no}</div>
-    <div style="min-width:0;flex:1">
-      <div style="font-size:13px;font-weight:600;line-height:1.5">${esc(title)}</div>
-      <div style="font-size:10.5px;color:var(--t3)">${esc(note)}</div>
-    </div>
-    <button class="btn btn-g btn-xs" style="font-size:11px;font-weight:700;color:${color};white-space:nowrap" onclick="bbCycleRoadmapFixed(${r.no})" title="タップで状態切替">${label}</button>
-    <button class="btn btn-g btn-xs" onclick="bbEditRoadmapFixed(${r.no})">✎</button>
-  </div>`;}).join('')}
-  ${bizState().userRoadmap.map(r=>{const M={todo:['予定','var(--t3)'],doing:['進行中','var(--amber)'],done:['完了','var(--green)']};const m=M[r.st]||M.todo;return`
-  <div style="display:flex;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--card2)">
-    <div style="font-weight:800;color:var(--t3);width:18px;flex-shrink:0">＋</div>
-    <div style="min-width:0;flex:1;font-size:13px;${r.st==='done'?'color:var(--t3);text-decoration:line-through':''}">${esc(r.title)}</div>
-    <button class="btn btn-g btn-xs" style="color:${m[1]};font-weight:800" onclick="bbCycleRoadmap('${r.id}')">${m[0]}</button>
-    <button class="btn btn-g btn-xs" onclick="bbEditRoadmapUser('${r.id}')">✎</button>
-    <button class="btn btn-g btn-xs" onclick="bbDelRoadmap('${r.id}')">✕</button>
-  </div>`;}).join('')}
-  <div style="margin-top:8px"><button class="btn btn-g btn-xs" onclick="bbAddRoadmap()">＋ 項目を追加</button></div>
-</div>
-<div style="font-weight:800;font-size:15px;color:var(--purple);margin:18px 0 8px">🔥 イシュー × タスク <button class="btn btn-g btn-xs" onclick="bbAddIssue()">＋ イシューを追加</button></div>
-${BIZ_BOARD.issues.filter(i=>!b.hiddenIssues.includes(i.id)).map(i=>{
-  const seedTasks=i.tasks.filter(t=>!b.hiddenTasks.includes(t.id));
-  const extras=b.extra.filter(x=>x.issueId===i.id);
-  const ids=[...seedTasks.map(t=>t.id),...extras.map(x=>x.id)];
-  const dn=ids.filter(id=>b.done[id]).length;
-  const pct=_pct(dn,ids.length);
-  return`<div class="card" style="margin-bottom:10px">
-    <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
-      <div style="min-width:0"><div style="font-weight:800">${esc(i.id)}. ${esc(i.title)}</div>
-      <div style="font-size:11px;color:var(--t3);line-height:1.5;margin-top:2px">${esc(i.why)}</div></div>
-      <div style="white-space:nowrap"><span style="font-weight:800;color:${pct===100?'var(--green)':'var(--amber)'}">${dn}/${ids.length}</span>
-      <button class="btn btn-g btn-xs" onclick="bbDelSeedIssue('${i.id}')">✕</button></div>
-    </div>
-    <div style="background:var(--card2);border-radius:6px;height:6px;margin:8px 0 4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${pct===100?'var(--green)':'var(--amber)'}"></div></div>
-    ${seedTasks.map(t=>taskRow(t,false)).join('')}
-    ${extras.map(x=>taskRow(x,true)).join('')}
-    <div style="margin-top:8px"><button class="btn btn-g btn-xs" onclick="bizAddTask('${i.id}')">＋ タスク追加</button></div>
+    <div style="font-weight:800;font-size:15px;color:var(--green);margin:2px 0">${esc(g.target||'')}</div>
+    <div style="font-size:11px;color:var(--t2);line-height:1.5">${esc(g.detail||'')}</div>
   </div>`;
-}).join('')}
-${bizState().userIssues.map(i=>{
-  const ids=i.tasks.map(t=>t.id);
-  const dn=ids.filter(id=>b.done[id]).length;
-  const pct=_pct(dn,ids.length||1);
-  return`<div class="card" style="margin-bottom:10px;border-left:3px solid var(--amber)">
+  const roadRow=(r)=>{const[label,color]=BIZ_RMAP[r.st]||BIZ_RMAP.todo;return`
+    <div style="display:flex;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--card2)">
+      <div style="min-width:0;flex:1"><div style="font-size:13px;font-weight:600;line-height:1.5;${r.st==='done'?'color:var(--t3);text-decoration:line-through':''}">${esc(r.title)}</div>${r.note?`<div style="font-size:10.5px;color:var(--t3)">${esc(r.note)}</div>`:''}</div>
+      <button class="btn btn-g btn-xs" style="color:${color};font-weight:700;white-space:nowrap" onclick="bizCycleRoad('${r.id}')" title="タップで状態切替">${label}</button>
+      <button class="btn btn-g btn-xs" onclick="bizEditRoad('${r.id}')">✎</button>
+      <button class="btn btn-g btn-xs" onclick="bizDelRoad('${r.id}')">✕</button>
+    </div>`;};
+  const taskRow=(iid,t)=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--card2)">
+      <div style="width:18px;height:18px;border-radius:5px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;${t.done?'background:var(--green);color:#fff':'border:1.5px solid var(--t3)'}" onclick="bizToggleTask('${iid}','${t.id}')">${t.done?'✓':''}</div>
+      <div style="min-width:0;flex:1;cursor:pointer" onclick="bizToggleTask('${iid}','${t.id}')"><div style="font-size:13px;line-height:1.5;${t.done?'text-decoration:line-through;color:var(--t3)':''}">${esc(t.text)}</div>
+      <div style="font-size:10.5px;color:var(--t3);margin-top:1px">👤 ${esc(t.owner||'未定')}${t.due?` ・📅 ${esc(t.due)}`:''}</div></div>
+      <button class="btn btn-g btn-xs" onclick="bizEditTask('${iid}','${t.id}')">✎</button>
+      <button class="btn btn-g btn-xs" onclick="bizDelTask('${iid}','${t.id}')">✕</button>
+    </div>`;
+  const issueCard=(i)=>{const dn=i.tasks.filter(t=>t.done).length;const pct=_pct(dn,i.tasks.length);const full=pct===100&&i.tasks.length>0;return`<div class="card" style="margin-bottom:10px">
     <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
-      <div style="min-width:0"><div style="font-weight:800">${esc(i.title)} <span style="font-size:10px;color:var(--t3)">(追加分)</span></div>
-      ${i.why?`<div style="font-size:11px;color:var(--t3);line-height:1.5;margin-top:2px">${esc(i.why)}</div>`:''}</div>
-      <div style="white-space:nowrap"><span style="font-weight:800;color:${dn===ids.length&&ids.length>0?'var(--green)':'var(--amber)'}">${dn}/${ids.length}</span>
-      <button class="btn btn-g btn-xs" onclick="bbDelIssue('${i.id}')">✕</button></div>
+      <div style="min-width:0"><div style="font-weight:800">${esc(i.title)}</div>${i.why?`<div style="font-size:11px;color:var(--t3);line-height:1.5;margin-top:2px">${esc(i.why)}</div>`:''}</div>
+      <div style="white-space:nowrap;display:flex;align-items:center;gap:4px"><span style="font-weight:800;color:${full?'var(--green)':'var(--amber)'}">${dn}/${i.tasks.length}</span>
+      <button class="btn btn-g btn-xs" onclick="bizEditIssue('${i.id}')">✎</button>
+      <button class="btn btn-g btn-xs" onclick="bizDelIssue('${i.id}')">✕</button></div>
     </div>
-    ${i.tasks.map(t=>{const done=!!b.done[t.id];return`
-    <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--card2);cursor:pointer" onclick="bizToggle('${t.id}')">
-      <div style="width:18px;height:18px;border-radius:5px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:12px;${done?'background:var(--green);color:#fff':'border:1.5px solid var(--t3)'}">${done?'✓':''}</div>
-      <div style="min-width:0;flex:1"><div style="font-size:13px;line-height:1.5;${done?'text-decoration:line-through;color:var(--t3)':''}">${esc(t.text)}</div>
-      <div style="font-size:10.5px;color:var(--t3)">👤 ${esc(t.owner||'未定')}</div></div>
-      <button class="btn btn-g btn-xs" onclick="event.stopPropagation();bbDelIssueTask('${i.id}','${t.id}')">✕</button>
-    </div>`;}).join('')}
-    <div style="margin-top:8px"><button class="btn btn-g btn-xs" onclick="bbAddIssueTask('${i.id}')">＋ タスク追加</button></div>
-  </div>`;}).join('')}
-<div style="font-weight:800;font-size:15px;color:var(--purple);margin:18px 0 8px">🔁 定例サイクル</div>
-<div class="card">
-  ${BIZ_BOARD.cadence.map(c=>`<div style="font-size:12.5px;padding:5px 0;color:var(--t2)">・${esc(c)}</div>`).join('')}
-  <div style="font-size:10.5px;color:var(--t3);margin-top:8px">※目標・ロードマップは ✎ でその場編集、状態ラベルはタップで切替できます。編集内容はGoogleサインインでクラウドにも保存されます。</div>
-</div>`;
+    <div style="background:var(--card2);border-radius:6px;height:6px;margin:8px 0 4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${full?'var(--green)':'var(--amber)'}"></div></div>
+    ${i.tasks.map(t=>taskRow(i.id,t)).join('')}
+    <div style="margin-top:8px"><button class="btn btn-g btn-xs" onclick="bizAddTask('${i.id}')">＋ タスク追加</button></div>
+  </div>`;};
+  return`${secTitle('🏢 経営ボード — 事業部ごとに管理(追加・削除OK)')}
+  <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:12px">
+    ${tabs}
+    <button class="btn btn-g btn-xs" onclick="bizAddUnit()">＋ 事業部</button>
+    ${active!=='all'?`<button class="btn btn-g btn-xs" onclick="bizRenameUnit('${active}')">✎ 名称</button><button class="btn btn-g btn-xs" onclick="bizDelUnit('${active}')">✕ この事業部を削除</button>`:''}
+  </div>
+  <div class="card" style="margin-bottom:12px;border-left:3px solid var(--purple);position:relative">
+    <button class="btn btn-g btn-xs" style="position:absolute;top:8px;right:8px" onclick="bizEditNorth()">✎</button>
+    <div style="font-size:11px;color:var(--t3);font-weight:700;letter-spacing:.05em;margin-bottom:4px">NORTH STAR</div>
+    <div style="font-weight:700;font-size:14px;line-height:1.6;padding-right:30px">${esc(b.north)}</div>
+    <div style="background:var(--card2);border-radius:6px;height:8px;margin-top:12px;overflow:hidden"><div style="height:100%;width:${totalPct}%;background:var(--purple)"></div></div>
+    <div style="font-size:11px;color:var(--t3);margin-top:4px">${esc(activeName)}のタスク進捗: ${doneCount}/${allT.length}(${totalPct}%)</div>
+  </div>
+  <div style="font-weight:800;font-size:15px;color:var(--purple);margin:14px 0 8px">🎯 目標（${esc(activeName)}） <button class="btn btn-g btn-xs" onclick="bizAddGoal()">＋ 目標を追加</button></div>
+  ${d.goals.length?`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px">${d.goals.map(goalRow).join('')}</div>`:`<div class="card" style="color:var(--t3);font-size:12px">目標はまだありません。「＋ 目標を追加」で登録できます。</div>`}
+  <div style="font-weight:800;font-size:15px;color:var(--purple);margin:18px 0 8px">🗺 ロードマップ <button class="btn btn-g btn-xs" onclick="bizAddRoad()">＋ 項目を追加</button></div>
+  <div class="card">
+    ${d.roadmap.length?d.roadmap.map(roadRow).join(''):`<div style="color:var(--t3);font-size:12px">項目はまだありません。</div>`}
+  </div>
+  <div style="font-weight:800;font-size:15px;color:var(--purple);margin:18px 0 8px">🔥 イシュー × タスク <button class="btn btn-g btn-xs" onclick="bizAddIssue()">＋ イシューを追加</button></div>
+  ${d.issues.length?d.issues.map(issueCard).join(''):`<div class="card" style="color:var(--t3);font-size:12px">イシューはまだありません。「＋ イシューを追加」で登録できます。</div>`}
+  <div style="font-weight:800;font-size:15px;color:var(--purple);margin:18px 0 8px">🔁 定例サイクル(全社共通) <button class="btn btn-g btn-xs" onclick="bizAddCadence()">＋ 追加</button></div>
+  <div class="card">
+    ${b.cadence.length?b.cadence.map(c=>`<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-top:1px solid var(--card2)"><div style="flex:1;font-size:12.5px;color:var(--t2)">・${esc(c.text)}</div><button class="btn btn-g btn-xs" onclick="bizEditCadence('${c.id}')">✎</button><button class="btn btn-g btn-xs" onclick="bizDelCadence('${c.id}')">✕</button></div>`).join(''):`<div style="color:var(--t3);font-size:12px">項目はまだありません。</div>`}
+    <div style="font-size:10.5px;color:var(--t3);margin-top:8px">※上のタブで事業部を切替。目標・ロードマップ・イシューは事業部ごと、定例サイクルは全社共通です。すべて＋で追加・✎で編集・✕で削除でき、Googleサインインでクラウド共有されます。</div>
+  </div>`;
 }
 // ===事業部ボード(佐々木さんと共有: 事業部ごとの目標・営業/採用記録)===
 // データはTEAM_KEYS('bizUnits')でチーム共有。誰のアカウントでも同じ内容が見える
@@ -12518,7 +12450,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260715-7';
+const APP_VERSION='20260715-8';
 
 render();
 function forceAppUpdate(){
