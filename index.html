@@ -1872,7 +1872,24 @@ function hakenRowToJob(row, existing){
     hakenId: hakenId
   };
   if(existing){
-    for(var k in mapped){ existing[k]=mapped[k]; }
+    // 【データ保護 2026-07-16】既存案件をシートで無条件上書きしない。
+    // 会長がアプリで手入力する項目(ステータスの進行・支払額)を絶対に潰さない。
+    // シートに値がある項目だけ更新し、空欄のときは既存値を維持する。
+    if(mapped.title) existing.title=mapped.title;
+    if(client) existing.clientId=mapped.clientId;
+    if(worker){ existing.workerId=mapped.workerId; existing.workerIds=mapped.workerIds; }
+    if(scope) existing.scope=mapped.scope;
+    if(unitPrice>0) existing.unitPrice=unitPrice;
+    if(unitPrice>0 && !(existing.profit>0)) existing.profit=unitPrice;
+    if(workerPay>0) existing.workerPay=workerPay;
+    if(noukiDate) existing.deliveryDate=noukiDate;
+    if(payin) existing.paymentDate=payin;
+    if(shiharai==='支払済' && !existing.payoutDate) existing.payoutDate=mapped.payoutDate;
+    if((seikyu==='請求済'||seikyu==='入金済') && !existing.invoiceDate) existing.invoiceDate=mapped.invoiceDate;
+    if(mapped.notes) existing.notes=mapped.notes;
+    existing.hakenId=hakenId;
+    // ステータスは後退させない。入金済(シートで完了確定)のときだけ「完了」へ前進させる。
+    if(seikyu==='入金済') existing.status='完了';
     return existing;
   }
   mapped.id=uid(); mapped.subtasks=[]; mapped.createdAt=new Date().toISOString();
@@ -1915,7 +1932,7 @@ async function hakenImportModal(){
        var cli=esc(String(r[2]||'').trim()); var wk=esc(String(r[3]||'').trim());
        var price=_hkNum(r[7]);
        return '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:8px;border:1px solid '+(it.isUpdate?'var(--amber)':'var(--border)')+';background:var(--card);cursor:pointer">'
-        +'<input type="checkbox" class="hk-chk" data-idx="'+i+'" checked style="margin-top:3px;flex-shrink:0">'
+        +'<input type="checkbox" class="hk-chk" data-idx="'+i+'" '+(it.isUpdate?'':'checked')+' style="margin-top:3px;flex-shrink:0">'
         +'<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+title+'</div>'
         +'<div style="display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--t2);margin-top:3px">'
         +(price?'<span>¥'+price.toLocaleString()+'</span>':'')
@@ -12762,7 +12779,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260715-19';
+const APP_VERSION='20260715-20';
 
 render();
 function forceAppUpdate(){
