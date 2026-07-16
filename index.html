@@ -4590,7 +4590,10 @@ function habitsForDate(date){
     // 月1回など「毎月◯日」: 指定日に表示。指定日が月末を超える月は月末日に表示(例: 31日→30日/2月末)
     if(h.freq==='monthly'){const d=Math.min(Math.max(+h.dom||1,1),31);return d===domN||(d>lastDom&&domN===lastDom);}
     // 毎日(daysOfWeek空) / 毎週(daysOfWeekに曜日指定=週1回も含む) / 旧データ
-    return !h.daysOfWeek?.length||h.daysOfWeek.includes(dow);
+    // ※旧バージョンは曜日を文字列(["4"])で保存する事があり、["4"].includes(4)はfalseで一致しない。
+    //   数値化してから比較し、曜日指定の家事が確実にスケジュールへ出るようにする。
+    const days=(h.daysOfWeek||[]).map(Number);
+    return !days.length||days.includes(dow);
   });
 }
 // 習慣をタスクビュー内で表示するアイテム（interactive=trueで今日チェック可）
@@ -10544,7 +10547,7 @@ function saveJob(){
 function openHabitModal(id){
   EID=id||null;
   const h=id?S.habits.find(h=>h.id===id):null;
-  const selDays=h?.daysOfWeek||[];
+  const selDays=(h?.daysOfWeek||[]).map(Number); // 旧データの文字列曜日(["4"])も数値化して確実にプリチェック
   const curFreq=h?(h.freq||((h.daysOfWeek&&h.daysOfWeek.length)?'weekly':'daily')):'daily';
   const curDom=Math.min(Math.max(+((h&&h.dom)||new Date().getDate()),1),31);
   openModal(`<div class="mhdr"><div class="mtitle">${h?'習慣編集':'習慣追加'}</div><button class="mclose" onclick="closeModal()">✕</button></div>
@@ -12759,7 +12762,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260715-18';
+const APP_VERSION='20260715-19';
 
 render();
 function forceAppUpdate(){
