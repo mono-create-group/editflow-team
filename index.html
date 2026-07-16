@@ -12045,7 +12045,21 @@ function slSearchInput(el){
   },350);
 }
 const SL_PAGE_SIZE=100;
-const SL_GOAL_MONTH=10; // 今月の成約目標件数
+const SL_GOAL_MONTH_DEFAULT=10; // 今月の成約目標件数(既定値・未設定時のフォールバック)
+// 事業別の月間成約目標。S.settings.slGoalMonth[事業キー] に保持(未設定なら既定値)
+function slGoalMonth(biz){biz=biz||_slBiz;const g=S.settings&&S.settings.slGoalMonth;const v=g&&g[biz];return(typeof v==='number'&&v>=0)?v:SL_GOAL_MONTH_DEFAULT;}
+function slSetGoalMonth(){
+  const cur=slGoalMonth();
+  const inp=prompt(`「${slBizLabel(_slBiz)}」の今月の成約目標(件数)を入力:`,String(cur));
+  if(inp===null)return;
+  const n=parseInt(String(inp).trim(),10);
+  if(isNaN(n)||n<0){toast('0以上の数字を入力してください','err');return;}
+  if(!S.settings)S.settings={};
+  if(!S.settings.slGoalMonth||typeof S.settings.slGoalMonth!=='object')S.settings.slGoalMonth={};
+  S.settings.slGoalMonth[_slBiz]=n;
+  save();render();
+  toast(`🎯 ${slBizLabel(_slBiz)}の成約目標を${n}件に更新`);
+}
 
 function slRegion(address){
   if(!address)return '全国';
@@ -12448,7 +12462,7 @@ function rSalesLeads(){
       <span class="sl-summary-chip sl-架電予定" style="border:1.5px solid var(--blue)">架電予定 <strong>${counts['架電予定']||0}</strong></span>
       <span class="sl-summary-chip sl-アポ" style="border:1.5px solid rgba(180,83,9,0.25)">アポ <strong>${counts['アポ']||0}</strong></span>
       <span class="sl-summary-chip sl-商談" style="border:1.5px solid rgba(109,40,217,0.25)">商談 <strong>${counts['商談']||0}</strong></span>
-      <span class="sl-summary-chip sl-成約" style="border:1.5px solid rgba(5,150,105,0.25)">成約 <strong>${wonThisMonth}</strong>/<span style="font-weight:400">${SL_GOAL_MONTH}件目標</span>
+      <span class="sl-summary-chip sl-成約" style="border:1.5px solid rgba(5,150,105,0.25)">成約 <strong>${wonThisMonth}</strong>/<button onclick="slSetGoalMonth()" title="成約目標を変更" style="background:none;border:none;padding:0;font:inherit;font-weight:400;color:inherit;cursor:pointer;text-decoration:underline dotted">${slGoalMonth()}件目標 ✎</button>
         <span style="font-size:10px;opacity:.7">(今月)</span>
       </span>
     </div>`;
@@ -12873,7 +12887,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260716-02';
+const APP_VERSION='20260716-03';
 
 render();
 function forceAppUpdate(){
