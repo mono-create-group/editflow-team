@@ -1114,10 +1114,28 @@ function _teamSnapRebase(){
   TEAM_KEYS.forEach(k=>{(S[k]||[]).forEach(e=>{if(e&&e.id)window._teamSnap[e.id]=_entSig(e);});});
   if(S.bizBoard){const{updatedAt,...rest}=S.bizBoard;window._teamSnap['__bizBoard']=JSON.stringify(rest);}
 }
-function mergeTeamArr(local,remote){
+// 【データ保護 2026-07-16】案件について、incoming(新しい方)が cur(既存)の実データを
+// 消す=破壊的リグレッションかを判定。他端末や旧キャッシュ版アプリが持つ「初期状態の案件」で
+// 会長の手入力(ステータス進行・支払額)が上書きされる事故(=案件掲載中に戻る/支払消失)を防ぐ。
+function _jobDataLoss(cur,incoming){
+  if(!cur||!incoming)return false;
+  if(incoming.status==='案件掲載中'&&cur.status&&cur.status!=='案件掲載中')return true; // 掲載中へ逆戻り
+  if((cur.unitPrice||0)>0&&!((incoming.unitPrice||0)>0))return true; // 単価が消える
+  if((cur.workerPay||0)>0&&!((incoming.workerPay||0)>0))return true; // 編集者報酬が消える
+  if((cur.profit||0)>0&&!((incoming.profit||0)>0))return true;
+  return false;
+}
+function mergeTeamArr(local,remote,key){
   const by={};
   (local||[]).forEach(e=>{if(e&&e.id)by[e.id]=e;});
-  (remote||[]).forEach(e=>{if(!e||!e.id)return;const ex=by[e.id];if(!ex||(e.updatedAt||0)>(ex.updatedAt||0))by[e.id]=e;});
+  (remote||[]).forEach(e=>{if(!e||!e.id)return;const ex=by[e.id];
+    if(!ex){by[e.id]=e;return;}
+    if((e.updatedAt||0)>(ex.updatedAt||0)){
+      // 更新時刻が新しくても、実データを消す破壊的な取り込みは採用しない(データ喪失を構造的に防ぐ)
+      if(key==='jobs'&&_jobDataLoss(ex,e))return;
+      by[e.id]=e;
+    }
+  });
   return Object.values(by);
 }
 function _teamSave(){
@@ -1145,7 +1163,7 @@ function fbSetupTeamSync(){
       if(typeof d[k]!=='string')return;
       const remote=_teamDecode(d[k]);
       if(remote==null)return;
-      const merged=mergeTeamArr(S[k]||[],remote);
+      const merged=mergeTeamArr(S[k]||[],remote,k);
       if(JSON.stringify(merged)!==JSON.stringify(S[k]||[])){S[k]=merged;changed=true;}
     });
     // 経営ボード(bizBoard): オブジェクト全体を「新しい方優先」で取り込む。
@@ -1162,7 +1180,7 @@ function fbSetupTeamSync(){
       if(!doc.exists)return;
       const remote=_teamDecode((doc.data()||{}).part);
       if(!Array.isArray(remote)||!remote.length)return;
-      const merged=mergeTeamArr(S.salesLeads||[],remote);
+      const merged=mergeTeamArr(S.salesLeads||[],remote,'salesLeads');
       if(JSON.stringify(merged)!==JSON.stringify(S.salesLeads||[])){
         S.salesLeads=merged;_teamSnapRebase();localStorage.setItem(DB,JSON.stringify(S));renderSyncSafe();
       }
@@ -12855,7 +12873,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260716-01';
+const APP_VERSION='20260716-02';
 
 render();
 function forceAppUpdate(){
