@@ -497,6 +497,9 @@ a{color:inherit;text-decoration:none}
 .sl-appr-btn:hover{border-color:var(--purple)}
 .sl-appr-btn.act{background:var(--purple);border-color:var(--purple);color:#fff}
 .sl-summary-chip{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:100px;font-size:13px;font-weight:700;border:1.5px solid;margin-right:6px;margin-bottom:6px}
+.sl-daily-table{width:100%;border-collapse:collapse;font-size:12px;min-width:360px}
+.sl-daily-table th{padding:6px 8px;text-align:center;color:var(--t2);font-weight:700;border-bottom:1.5px solid var(--border);white-space:nowrap}
+.sl-daily-table td{padding:6px 8px;text-align:center;color:var(--text);border-bottom:1px solid var(--border)}
 .sl-biz-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;padding:4px;background:var(--card2);border:1.5px solid var(--border);border-radius:12px}
 .sl-biz-tab{flex:1;min-width:120px;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 14px;border-radius:9px;font-size:13px;font-weight:700;border:1.5px solid transparent;background:transparent;color:var(--t2);cursor:pointer;transition:all .15s}
 .sl-biz-tab:hover{color:var(--text);background:var(--card)}
@@ -11951,12 +11954,20 @@ function slRecentOtherContact(l,biz){
   });
   return best;
 }
-// 接触履歴を1件追記(接触系ステータスへ変化した時に呼ぶ・同日同事業の重複は付けない)
-function slPushContact(l,biz,channel){
+// 接触履歴を1件追記(接触系ステータスへ変化した時に呼ぶ・同日同事業は1件に集約)
+// a=担当者(誰が営業したか・件数カウンターの集計キー) / s=その時の状態。既存の{d,b,c}形とも後方互換。
+function slPushContact(l,biz,channel,assignee,status){
   if(!Array.isArray(l.contacts))l.contacts=[];
-  const today=new Date().toISOString().slice(0,10);
-  if(l.contacts.some(c=>c&&c.d===today&&c.b===biz))return;
-  l.contacts.push({d:today,b:biz,c:channel||''});
+  const td=today();
+  const a=assignee||l.assignee||'';
+  const ex=l.contacts.find(c=>c&&c.d===td&&c.b===biz);
+  if(ex){  // 同日同事業は水増ししない。担当・チャネル・状態だけ最新へ更新
+    if(channel)ex.c=channel;
+    if(a)ex.a=a;
+    if(status)ex.s=status;
+    return;
+  }
+  l.contacts.push({d:td,b:biz,c:channel||'',a:a,s:status||''});
 }
 function slIgHandle(v){
   // Instagram値からハンドルを抽出。フルURL/@付き/素ハンドルいずれにも対応。
@@ -12000,6 +12011,7 @@ let _slFilterRegion='all';
 let _slFilterContact='all';  // all / ig / email / both
 let _slFilterAssignee='all';  // all / 会長 / 佐々木 / アオイ / 未割当
 let _slFilterOverlap=false;   // true=他事業で直近接触ありの店を除外(被りなしのみ表示)
+let _slShowDaily=false;       // true=今日の営業件数カウンターの下に「毎日の記録」を展開
 let _slSearch='';
 // 検索は1文字ごとに全再描画すると入力欄が作り直されてIME入力が壊れるため、
 // 変換中は待ち、確定後350msデバウンスで描画し、フォーカスとカーソルを復元する
@@ -12055,6 +12067,43 @@ function slFilteredLeads(){
     if(q&&!(l.name||'').toLowerCase().includes(q)&&!(l.address||'').toLowerCase().includes(q))return false;
     return true;
   });
+}
+
+// ═══ 営業件数カウンター(担当者別・日次) ═══
+// 接触履歴(contacts)から日付×担当者で件数を集計。1店=1事業=1日で最大1件(水増しなし)。
+// 追加のトップレベルデータや同期は増やさず、salesLeadsの既存シャーディングに相乗りする。
+function slActivityBuckets(){
+  // 戻り値: { [YYYY-MM-DD]: { [担当者]: 件数 } }
+  const m={};
+  (S.salesLeads||[]).forEach(l=>{
+    if(!l||!Array.isArray(l.contacts))return;
+    l.contacts.forEach(c=>{
+      if(!c||!c.d)return;
+      const who=c.a||'未割当';
+      (m[c.d]||(m[c.d]={}));
+      m[c.d][who]=(m[c.d][who]||0)+1;
+    });
+  });
+  return m;
+}
+function slTodayCounts(){return slActivityBuckets()[today()]||{};}
+// 毎日の記録テーブル(直近14日・担当者別)
+function slDailyRecordHtml(){
+  const buckets=slActivityBuckets();
+  const dates=Object.keys(buckets).sort().reverse().slice(0,14);
+  const people=[...SL_ASSIGNEES,'未割当'];
+  if(!dates.length)return`<div style="margin-top:12px;font-size:12px;color:var(--t3)">まだ記録がありません。営業（電話済・メール済み・DM済み等）を記録すると、その日・担当者ごとに件数が残ります。</div>`;
+  const head=`<tr><th style="text-align:left">日付</th>${people.map(p=>`<th>${esc(p)}</th>`).join('')}<th>合計</th></tr>`;
+  const rows=dates.map(d=>{
+    const day=buckets[d]||{};
+    const tot=people.reduce((s,p)=>s+(day[p]||0),0);
+    const isToday=d===today();
+    return`<tr${isToday?' style="background:rgba(109,40,217,0.06)"':''}><td style="text-align:left;white-space:nowrap;font-weight:${isToday?700:400}">${esc(d)}${isToday?' <span style="font-size:10px;color:var(--purple)">今日</span>':''}</td>${people.map(p=>`<td>${day[p]||0}</td>`).join('')}<td style="font-weight:700">${tot}</td></tr>`;
+  }).join('');
+  return`<div style="margin-top:12px;overflow-x:auto">
+    <table class="sl-daily-table">${head}${rows}</table>
+    <div style="font-size:10.5px;color:var(--t3);margin-top:6px">※ 1店舗・1事業につき1日1件で集計（同じ店の状態変更は重複計上しません）。担当ボタン未設定のまま営業を記録すると「未割当」に入ります。</div>
+  </div>`;
 }
 
 // ═══ HP維持費管理(年間¥10,000の徴収システム) ═══
@@ -12345,6 +12394,32 @@ function rSalesLeads(){
   if(_slPage>=totalPages)_slPage=totalPages-1;
   const pageLeads=filtered.slice(_slPage*SL_PAGE_SIZE,(_slPage+1)*SL_PAGE_SIZE);
 
+  // ─── 今日の営業件数カウンター(担当者別・全事業・毎日の記録つき) ───
+  const todayCounts=slTodayCounts();
+  const counterPeople=[...SL_ASSIGNEES,'未割当'];
+  const dayTotal=counterPeople.reduce((s,p)=>s+(todayCounts[p]||0),0);
+  const counterHtml=`
+    <div class="card" style="margin-bottom:14px;padding:12px 14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:700;color:var(--t2);letter-spacing:.03em">今日の営業件数 <span style="font-weight:400;color:var(--t3);font-size:11px">${today()}・全事業</span></div>
+        <button class="btn btn-g btn-xs" onclick="_slShowDaily=!_slShowDaily;render()">${_slShowDaily?'記録を閉じる':'毎日の記録'}</button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${counterPeople.map(p=>{
+          const n=todayCounts[p]||0;const z=n===0;
+          return`<div style="flex:1;min-width:100px;padding:10px 12px;border-radius:var(--rs);border:1.5px solid ${z?'var(--border)':'var(--purple)'};background:${z?'var(--card2)':'rgba(109,40,217,0.07)'};text-align:center">
+            <div style="font-size:11px;color:var(--t2);margin-bottom:2px">${esc(p)}</div>
+            <div style="font-size:22px;font-weight:800;color:${z?'var(--t3)':'var(--purple)'};line-height:1">${n}<span style="font-size:11px;font-weight:600;color:var(--t3)"> 件</span></div>
+          </div>`;
+        }).join('')}
+        <div style="flex:1;min-width:100px;padding:10px 12px;border-radius:var(--rs);border:1.5px solid var(--green);background:rgba(5,150,105,0.07);text-align:center">
+          <div style="font-size:11px;color:var(--t2);margin-bottom:2px">合計</div>
+          <div style="font-size:22px;font-weight:800;color:var(--green);line-height:1">${dayTotal}<span style="font-size:11px;font-weight:600;color:var(--t3)"> 件</span></div>
+        </div>
+      </div>
+      ${_slShowDaily?slDailyRecordHtml():''}
+    </div>`;
+
   // ─── 全体集計チップ(現在の事業ビューの状態で集計) ───
   const summaryHtml=`
     <div style="font-size:12px;color:var(--t2);margin-bottom:8px">集計中の事業: <strong style="color:var(--purple)">${slBizLabel(_slBiz)}</strong></div>
@@ -12512,6 +12587,7 @@ function rSalesLeads(){
     <button class="btn btn-g btn-sm" onclick="slAddManual()">＋ 手動追加</button>
   </div>
   ${bizTabHtml}
+  ${counterHtml}
   ${summaryHtml}
   ${regionSummaryHtml}
   ${importHtml}
@@ -12558,7 +12634,7 @@ function slSetStatus(id,status){
   const b=slBizObj(l,biz);
   b.s=status;
   // 接触系ステータスなら接触履歴を自動追記(被り防止の元データ)
-  if(SL_CONTACT_STATUSES.includes(status))slPushContact(l,biz,l.approach||'');
+  if(SL_CONTACT_STATUSES.includes(status))slPushContact(l,biz,l.approach||'',l.assignee||'',status);
   // HP事業の成約は従来どおり lead.status/wonAt にも反映(既存の集計・クライアント化と互換)
   if(biz==='hp')l.status=status;
   if(status==='成約'&&!l.wonAt)l.wonAt=new Date().toISOString().slice(0,10);
@@ -12779,7 +12855,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260715-20';
+const APP_VERSION='20260716-01';
 
 render();
 function forceAppUpdate(){
