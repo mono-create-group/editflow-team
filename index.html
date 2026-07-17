@@ -1074,16 +1074,39 @@ function _teamDecode(raw){
 const SL_SHARD_N=4;
 let _slShardJson='';
 let _slShardUnsubs=[];
+let _slShardEnc=[];   // shardごとの{raw,part}キャッシュ。無変更shardの再圧縮・再書き込みを避ける(2026-07-17)
 function _slEncodeShard(arr){const j=JSON.stringify(arr);return (window.LZString&&j.length>4000)?'LZ:'+LZString.compressToBase64(j):j;}
+// 【性能 2026-07-17】以前はshard境界を探すのに200件ごとに「累積配列全体」をLZ圧縮しており、
+// 7,489件の保存で延べ92,090件分を38回圧縮=約9.9秒メインスレッドを占有していた(会長「重すぎる」の主因)。
+// 圧縮は重い(全件で約1秒)ので、サイズ判定は非圧縮JSON長で行い、実圧縮はshardごとに1回だけにする。
+// 圧縮率が想定より悪いshardだけ後段で分割し直すので、1doc≦1MiBの保証は維持する。
 function _slSplitShards(leads){
-  const LIMIT=820000;  // 1doc≦1MiBに対し余裕を持つ(200件間隔チェックの膨らみ込みで最大~860KB)
-  const shards=[];let cur=[];
-  for(const l of (leads||[])){
-    cur.push(l);
-    if(cur.length%200===0&&_slEncodeShard(cur).length>LIMIT){cur.pop();shards.push(cur);cur=[l];}
+  const LIMIT=820000;      // 圧縮後の上限(1doc≦1MiBに余裕を持たせる)
+  const RATIO=3.0;         // 実測の圧縮率は約3.7:1。3.0と保守的に見て非圧縮長の閾値を決める
+  const RAW_LIMIT=LIMIT*RATIO;
+  const arr=leads||[];
+  // 1) 非圧縮JSON長でざっくり等分(圧縮を一切呼ばないので速い)
+  const total=JSON.stringify(arr).length;
+  const parts=Math.max(1,Math.min(SL_SHARD_N,Math.ceil(total/RAW_LIMIT)));
+  const per=Math.ceil(arr.length/parts);
+  let shards=[];
+  for(let i=0;i<arr.length;i+=per)shards.push(arr.slice(i,i+per));
+  if(!shards.length)shards=[[]];
+  // 2) 念のための保険。非圧縮長がRAW_LIMITを超えるshardだけ実圧縮して確かめ、超えていれば割る。
+  //    RATIOを実測(3.7)より保守的な3.0に置いているため、通常ここで圧縮は1回も走らない。
+  for(let guard=0;guard<SL_SHARD_N*2;guard++){
+    let split=false;
+    for(let i=0;i<shards.length;i++){
+      if(shards[i].length<=1||shards.length>=SL_SHARD_N)continue;
+      if(JSON.stringify(shards[i]).length<=RAW_LIMIT)continue;   // 圧縮せずに判定(速い)
+      if(_slEncodeShard(shards[i]).length>LIMIT){
+        const h=Math.ceil(shards[i].length/2);
+        shards.splice(i,1,shards[i].slice(0,h),shards[i].slice(h));
+        split=true;break;
+      }
+    }
+    if(!split)break;
   }
-  if(cur.length&&_slEncodeShard(cur).length>LIMIT){const h=Math.ceil(cur.length/2);shards.push(cur.slice(0,h));cur=cur.slice(h);}
-  shards.push(cur);
   while(shards.length>SL_SHARD_N){const last=shards.pop();shards[shards.length-1]=shards[shards.length-1].concat(last);}
   while(shards.length<SL_SHARD_N)shards.push([]);
   return shards;
@@ -1094,9 +1117,16 @@ function _slShardsSave(){
   if(json===_slShardJson)return;      // リード変更なし→書き込み節約
   _slShardJson=json;
   const shards=_slSplitShards(S.salesLeads||[]);
+  // 【性能 2026-07-17】中身が変わっていないshardは再圧縮も書き込みもしない。
+  // 1件編集しただけで全4shardを圧縮(約0.8秒)＋Firestoreへ4docs書いていたのを、変わったshardだけにする。
+  _slShardEnc=_slShardEnc||[];
   shards.forEach((arr,i)=>{
+    const raw=JSON.stringify(arr);
+    if(_slShardEnc[i]&&_slShardEnc[i].raw===raw)return;   // このshardは無変更
+    const part=_slEncodeShard(arr);
+    _slShardEnc[i]={raw,part};
     fbDb.collection('shared').doc('mcapp_leads_'+i)
-      .set({ts:firebase.firestore.FieldValue.serverTimestamp(),by:FB_USER.uid,part:_slEncodeShard(arr)},{merge:true})
+      .set({ts:firebase.firestore.FieldValue.serverTimestamp(),by:FB_USER.uid,part},{merge:true})
       .catch(e=>console.warn('leads shard save',i,(e&&e.code)||e));
   });
 }
@@ -12464,17 +12494,47 @@ function rSalesLeads(){
   const allLeads=S.salesLeads.filter(l=>!l.deleted);          // 未削除全件(バッジ集計用)
   const all=allLeads.filter(l=>slInPool(l,_slBiz));           // 現事業プール(飲食/非飲食で振り分け)
   const total=all.length;
-  const counts={};
-  SL_STATUSES.forEach(s=>{counts[s]=all.filter(l=>slStatusOf(l)===s).length;});
   const thisMonth=new Date().toISOString().slice(0,7);
-  const wonThisMonth=all.filter(l=>slStatusOf(l)==='成約'&&(l.wonAt||'').startsWith(thisMonth)).length;
-  const overlapCount=all.filter(l=>slRecentOtherContact(l)).length;
+  // 集計は1パスで行う(2026-07-17)。以前はステータス別・地域別・連絡先別に配列を都度filterしており、
+  // 7,400件×約40スキャン=30万要素/レンダーを走査していた(タブ切替のたびに体感で固まる原因)。
+  const counts={};SL_STATUSES.forEach(s=>{counts[s]=0;});
+  const regionCounts={};SL_REGIONS.forEach(r=>{regionCounts[r]={total:0,未接触:0,アポ:0,成約:0};});
+  let wonThisMonth=0,overlapCount=0,igCount=0,emailCount=0,bothCount=0,igNoHpCount=0,thFreshCount=0;
+  const genreSet=new Set();
+  for(const l of all){
+    const st=slStatusOf(l);
+    if(counts[st]!==undefined)counts[st]++;
+    if(st==='成約'&&(l.wonAt||'').startsWith(thisMonth))wonThisMonth++;
+    if(slRecentOtherContact(l))overlapCount++;
+    if(l.genre)genreSet.add(l.genre);
+    const hasIg=!!(l.instagram&&l.instagram.trim());
+    const hasMail=!!(l.email&&l.email.trim());
+    if(hasIg)igCount++;
+    if(hasMail)emailCount++;
+    if(hasIg&&hasMail)bothCount++;
+    if(hasIg){const h=(l.hp||'').trim();if(h!==''&&h!=='あり'&&h!=='不明')igNoHpCount++;}
+    if(slThPostUrl(l.postUrl)&&st==='未接触')thFreshCount++;
+    const rc=regionCounts[slRegionOf(l)];
+    if(rc){rc.total++;if(rc[st]!==undefined)rc[st]++;}
+  }
 
   // ─── 事業切替タブ(HP／AIコンサル／AIアプリ／シフトさん) ───
   // 件数は区分('any')を問わず集計する。サブタブを切り替えても事業タブの数字が動かないようにするため。
+  // 事業タブ・区分タブの件数も1パスで数える(以前は タブ数×全件 のスキャンだった)
+  const bizCount={},srcCount={};
+  SL_BIZ.forEach(b=>{bizCount[b.k]=0;});
+  SL_SRC.forEach(s=>{srcCount[s.k]=0;});
+  for(const l of allLeads){
+    for(const b of SL_BIZ){
+      if(slInPool(l,b.k,'any')&&slStatusOf(l,b.k)!=='未接触')bizCount[b.k]++;  // その事業で動いた店数
+    }
+    for(const s of SL_SRC){
+      if(slInPool(l,'hp',s.k))srcCount[s.k]++;
+    }
+  }
   const bizTabHtml=`<div class="sl-biz-tabs">
     ${SL_BIZ.map(b=>{
-      const c=allLeads.filter(l=>slInPool(l,b.k,'any')&&slStatusOf(l,b.k)!=='未接触').length;  // その事業で動いた店数
+      const c=bizCount[b.k];
       return`<button class="sl-biz-tab${_slBiz===b.k?' act':''}" onclick="slSetBiz('${b.k}')">${b.label}<span class="sl-biz-count">${c}</span></button>`;
     }).join('')}
   </div>`;
@@ -12482,36 +12542,13 @@ function rSalesLeads(){
   // ─── 流入元サブタブ(HP制作の中の「店舗／スレッズ」区分) ───
   const srcTabHtml=(_slBiz!=='hp')?'':`<div class="sl-biz-tabs" style="margin-top:-8px">
     ${SL_SRC.map(s=>{
-      const c=allLeads.filter(l=>slInPool(l,'hp',s.k)).length;
+      const c=srcCount[s.k];
       return`<button class="sl-biz-tab${_slSrc===s.k?' act':''}" onclick="slSetSrc('${s.k}')" title="${esc(s.hint)}">${s.k==='threads'?'🧵 ':''}${s.label}<span class="sl-biz-count">${c}</span></button>`;
     }).join('')}
   </div>`;
 
-  // genres for filter
-  const genres=[...new Set(all.map(l=>l.genre||'').filter(Boolean))].sort();
-
-  // 連絡先(Instagram/メール)集計
-  const igCount=all.filter(l=>l.instagram&&l.instagram.trim()).length;
-  const emailCount=all.filter(l=>l.email&&l.email.trim()).length;
-  const bothCount=all.filter(l=>l.instagram&&l.instagram.trim()&&l.email&&l.email.trim()).length;
-  // IGあり×自社HPなし(本命ターゲット): hp=なし(本命)/ポータルのみ(本命)のみ。'あり'・'不明'・未設定は除外
-  const igNoHpCount=all.filter(l=>{
-    if(!(l.instagram&&l.instagram.trim()))return false;
-    const h=(l.hp||'').trim();
-    return h!==''&&h!=='あり'&&h!=='不明';
-  }).length;
-
-  // 地域別集計
-  const regionCounts={};
-  SL_REGIONS.forEach(r=>{
-    const rLeads=all.filter(l=>slRegionOf(l)===r);
-    regionCounts[r]={
-      total:rLeads.length,
-      未接触:rLeads.filter(l=>slStatusOf(l)==='未接触').length,
-      アポ:rLeads.filter(l=>slStatusOf(l)==='アポ').length,
-      成約:rLeads.filter(l=>slStatusOf(l)==='成約').length,
-    };
-  });
+  // genres for filter(集計は上の1パスで済ませてある)
+  const genres=[...genreSet].sort();
 
   const filtered=slFilteredLeads();
   const totalPages=Math.max(1,Math.ceil(filtered.length/SL_PAGE_SIZE));
@@ -12546,7 +12583,7 @@ function rSalesLeads(){
 
   // ─── 全体集計チップ(現在の事業ビューの状態で集計) ───
   // スレッズ区分の本命 = 投稿URLがあってまだ未接触(＝これから開いて営業できる投稿)
-  const thFreshCount=all.filter(l=>slThPostUrl(l.postUrl)&&slStatusOf(l)==='未接触').length;
+  // thFreshCount は上の1パスで算出済み
   const summaryHtml=`
     <div style="font-size:12px;color:var(--t2);margin-bottom:8px">集計中の事業: <strong style="color:var(--purple)">${slBizLabel(_slBiz)}</strong>${_slBiz==='hp'?` <span style="color:var(--t3)">／区分:</span> <strong style="color:var(--purple)">${slSrcLabel(_slSrc)}</strong>`:''}</div>
     <div style="margin-bottom:16px;display:flex;flex-wrap:wrap;gap:0">
@@ -13081,7 +13118,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260717-01';
+const APP_VERSION='20260717-02';
 
 render();
 function forceAppUpdate(){
