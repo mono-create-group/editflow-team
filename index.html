@@ -11903,7 +11903,7 @@ function initReminders(){
 }
 // ===営業リスト===
 const SL_STATUSES=['未接触','架電予定','HP作成済','電話済','メール済み','DM済み','アポ','商談','成約','失注'];
-const SL_APPROACHES=['電話','メール','InstagramDM','LINE','訪問'];  // 営業方法(記録用)
+const SL_APPROACHES=['電話','メール','InstagramDM','ThreadsDM','LINE','訪問'];  // 営業方法(記録用)
 const SL_ASSIGNEES=['中村航汰','佐々木','アオイ'];  // 営業担当者(誰が営業をかけたか)。旧「会長」は2026-07-13に改名(slMigrateAssigneeで移行)
 
 // ─── 事業切替(店舗は分割せず1レコードに事業別の営業状態を持たせる) ───
@@ -11923,12 +11923,31 @@ const SL_BIZ_KEYS=SL_BIZ.map(b=>b.k);
 function slBizLabel(k){const b=SL_BIZ.find(x=>x.k===k);return b?b.label:k;}
 let _slBiz='hp';  // 既定=HP制作
 
+// ─── 流入元(src)の区分: HP制作タブの中を「店舗」と「スレッズ」に分ける ───
+// 2026-07-17 会長指示: Threadsで「HP作りたい」と言っている個人事業者の投稿をリスト化する。
+// 店舗リード(src未設定=store)とは性質が違う(業種・住所・電話がなく、投稿URLが主キー)ため
+// レコードは同じ salesLeads に置きつつ、表示プールだけ分ける(物理移動なし・完全可逆)。
+const SL_SRC=[
+  {k:'store',label:'店舗',hint:'リサーチで集めた実店舗(電話・DM・メール営業)'},
+  {k:'threads',label:'スレッズ',hint:'Threadsで「HPが欲しい」と発信している事業者(投稿へワンタップ)'},
+];
+let _slSrc='store';  // 既定=店舗。HP制作タブでのみ切替可
+function slSrcOf(l){return l.src==='threads'?'threads':'store';}
+function slSrcLabel(k){const s=SL_SRC.find(x=>x.k===k);return s?s.label:k;}
+// 現在のビューがスレッズ区分か(HP制作タブ限定)
+function slIsThreadsView(){return _slBiz==='hp'&&_slSrc==='threads';}
+
 // 飲食業種(シフトさん営業の対象。HP等の営業リストからは除外)
 // 2026-07-13 会長指示「食べ物関連は全てシフトさんへ」: 飲食店だけでなく食品物販(パン/洋菓子/和菓子/鮮魚/精肉/青果/酒屋)も含める
 const SL_FOOD_GENRES=new Set(['飲食','ラーメン','居酒屋','焼肉','寿司','カフェ','スナック','バー','焼き鳥','食堂','そば','うどん','洋食','中華','イタリアン','ジンギスカン','海鮮','弁当・惣菜','喫茶','定食','ダイニング','ビストロ','バル','焼き鳥・串','鉄板焼き','パン','洋菓子','和菓子','鮮魚','精肉','青果','酒屋']);
 // この店がこの事業タブのプールに属するか。シフトさん=飲食のみ／他事業=非飲食のみ
-function slInPool(l,bizKey){
+// srcKey: 'store'/'threads'/'any'(区分を問わない・タブ件数用)。省略時は現在のビューに従う。
+function slInPool(l,bizKey,srcKey){
   const bk=bizKey||_slBiz;
+  const sk=srcKey!==undefined?srcKey:((bk==='hp')?_slSrc:'store');
+  // スレッズ発リードはHP制作の「スレッズ」区分にのみ属する(他事業・店舗区分には出さない)
+  if(slSrcOf(l)==='threads')return bk==='hp'&&(sk==='threads'||sk==='any');
+  if(sk==='threads')return false;
   const isFood=SL_FOOD_GENRES.has(l.genre||'');
   if(bk==='shift')return isFood;
   // HP事業(2026-07-15 会長厳命): 自社HPなしが確定した「本命」だけを営業対象にする。
@@ -12020,6 +12039,66 @@ function slIgOpenBtn(v){
   if(!h)return '';
   return `<a href="https://www.instagram.com/${h}/" target="_blank" rel="noopener" class="tact" style="text-decoration:none;font-size:11px;color:#c13584" title="Instagramプロフィールを開く">📷 開く</a>`;
 }
+
+// ─── Threads(スレッズ)リンク: IGと同じ作りでプロフィール/投稿をワンタップで開く ───
+function slThHandle(v){
+  // Threads値からハンドルを抽出。フルURL(threads.com / threads.net)/@付き/素ハンドルに対応。
+  v=(v||'').trim();
+  if(!v)return null;
+  let h=v;
+  if(/^https?:\/\//i.test(v)){
+    try{
+      const u=new URL(v);
+      if(!/(^|\.)threads\.(com|net)$/i.test(u.hostname))return null;
+      h=u.pathname.replace(/^\/+/,'').split('/')[0]||'';
+    }catch(e){return null;}
+  }
+  h=h.replace(/^@/,'').split('?')[0].split('/')[0].trim();
+  if(!h||!/^[A-Za-z0-9._]{1,30}$/.test(h))return null;
+  return h;
+}
+function slThUrl(v){
+  const h=slThHandle(v);
+  return h?('https://www.threads.com/@'+h):'#';
+}
+function slThLink(v){
+  // 一覧共通: リンク化できれば @handle のタップ可能リンク、できなければプレーン表示。
+  const h=slThHandle(v);
+  if(h)return `<a href="https://www.threads.com/@${h}" target="_blank" rel="noopener" style="color:var(--text);font-size:11px;font-weight:700">🧵 @${esc(h)}</a>`;
+  return `<span style="color:var(--t3);font-size:11px">🧵 ${esc((v||'').trim())}</span>`;
+}
+function slThOpenBtn(v){
+  const h=slThHandle(v);
+  if(!h)return '';
+  return `<a href="https://www.threads.com/@${h}" target="_blank" rel="noopener" class="tact" style="text-decoration:none;font-size:11px" title="Threadsプロフィールを開く">🧵 開く</a>`;
+}
+// 投稿URLの検証。threads.com / threads.net の投稿URLだけを通す(他ドメインへ飛ばさない)
+function slThPostUrl(v){
+  v=(v||'').trim();
+  if(!v)return null;
+  try{
+    const u=new URL(v);
+    if(!/^https?:$/i.test(u.protocol))return null;
+    if(!/(^|\.)threads\.(com|net)$/i.test(u.hostname))return null;
+    return u.href;
+  }catch(e){return null;}
+}
+// 投稿本人のハンドルを投稿URLから拾う(/@handle/post/xxxx)
+function slThHandleFromPost(v){
+  const url=slThPostUrl(v);
+  if(!url)return null;
+  try{
+    const seg=new URL(url).pathname.replace(/^\/+/,'').split('/')[0]||'';
+    return slThHandle(seg);
+  }catch(e){return null;}
+}
+// ワンタップで投稿を開くボタン(スレッズ区分の主動線)
+function slThPostBtn(v,big){
+  const url=slThPostUrl(v);
+  if(!url)return '';
+  if(big)return `<a href="${esc(url)}" target="_blank" rel="noopener" class="btn btn-p btn-xs" style="text-decoration:none" title="この投稿をThreadsで開く">🧵 投稿を開く</a>`;
+  return `<a href="${esc(url)}" target="_blank" rel="noopener" class="tact" style="text-decoration:none;font-size:11px" title="この投稿をThreadsで開く">🧵 投稿</a>`;
+}
 const SL_STATUS_NEXT={'未接触':'電話済','架電予定':'電話済','電話済':'アポ','メール済み':'アポ','DM済み':'アポ','アポ':'商談','商談':'成約','HP作成済':'電話済','成約':'成約','失注':'失注'};
 const SL_REGIONS=['旭川','札幌','全道','全国'];
 let _slPage=0;
@@ -12096,7 +12175,11 @@ function slFilteredLeads(){
       else if(l.assignee!==_slFilterAssignee)return false;
     }
     if(_slFilterOverlap&&slRecentOtherContact(l))return false;  // 被りなしのみ
-    if(q&&!(l.name||'').toLowerCase().includes(q)&&!(l.address||'').toLowerCase().includes(q))return false;
+    if(q){
+      // スレッズ区分は住所を持たないため、@ハンドルと投稿本文も検索対象にする
+      const hay=[l.name,l.address,l.threads,l.postText].map(v=>(v||'').toLowerCase());
+      if(!hay.some(v=>v.includes(q)))return false;
+    }
     return true;
   });
 }
@@ -12387,11 +12470,20 @@ function rSalesLeads(){
   const wonThisMonth=all.filter(l=>slStatusOf(l)==='成約'&&(l.wonAt||'').startsWith(thisMonth)).length;
   const overlapCount=all.filter(l=>slRecentOtherContact(l)).length;
 
-  // ─── 事業切替タブ(HP／AIコンサル／AIアプリ／IG運用) ───
+  // ─── 事業切替タブ(HP／AIコンサル／AIアプリ／シフトさん) ───
+  // 件数は区分('any')を問わず集計する。サブタブを切り替えても事業タブの数字が動かないようにするため。
   const bizTabHtml=`<div class="sl-biz-tabs">
     ${SL_BIZ.map(b=>{
-      const c=allLeads.filter(l=>slInPool(l,b.k)&&slStatusOf(l,b.k)!=='未接触').length;  // その事業で動いた店数
+      const c=allLeads.filter(l=>slInPool(l,b.k,'any')&&slStatusOf(l,b.k)!=='未接触').length;  // その事業で動いた店数
       return`<button class="sl-biz-tab${_slBiz===b.k?' act':''}" onclick="slSetBiz('${b.k}')">${b.label}<span class="sl-biz-count">${c}</span></button>`;
+    }).join('')}
+  </div>`;
+
+  // ─── 流入元サブタブ(HP制作の中の「店舗／スレッズ」区分) ───
+  const srcTabHtml=(_slBiz!=='hp')?'':`<div class="sl-biz-tabs" style="margin-top:-8px">
+    ${SL_SRC.map(s=>{
+      const c=allLeads.filter(l=>slInPool(l,'hp',s.k)).length;
+      return`<button class="sl-biz-tab${_slSrc===s.k?' act':''}" onclick="slSetSrc('${s.k}')" title="${esc(s.hint)}">${s.k==='threads'?'🧵 ':''}${s.label}<span class="sl-biz-count">${c}</span></button>`;
     }).join('')}
   </div>`;
 
@@ -12453,11 +12545,15 @@ function rSalesLeads(){
     </div>`;
 
   // ─── 全体集計チップ(現在の事業ビューの状態で集計) ───
+  // スレッズ区分の本命 = 投稿URLがあってまだ未接触(＝これから開いて営業できる投稿)
+  const thFreshCount=all.filter(l=>slThPostUrl(l.postUrl)&&slStatusOf(l)==='未接触').length;
   const summaryHtml=`
-    <div style="font-size:12px;color:var(--t2);margin-bottom:8px">集計中の事業: <strong style="color:var(--purple)">${slBizLabel(_slBiz)}</strong></div>
+    <div style="font-size:12px;color:var(--t2);margin-bottom:8px">集計中の事業: <strong style="color:var(--purple)">${slBizLabel(_slBiz)}</strong>${_slBiz==='hp'?` <span style="color:var(--t3)">／区分:</span> <strong style="color:var(--purple)">${slSrcLabel(_slSrc)}</strong>`:''}</div>
     <div style="margin-bottom:16px;display:flex;flex-wrap:wrap;gap:0">
       <span class="sl-summary-chip" style="background:var(--card2);border-color:var(--border);color:var(--t2)">総数 <strong style="color:var(--text)">${total}</strong></span>
-      <span class="sl-summary-chip" style="background:rgba(214,41,118,0.08);border:1.5px solid rgba(214,41,118,0.35);color:#d62976" title="Instagramあり×自社HPなし＝DM営業の本命ターゲット">IGあり・HPなし <strong>${igNoHpCount}</strong></span>
+      ${slIsThreadsView()
+        ?`<span class="sl-summary-chip" style="background:var(--card2);border:1.5px solid var(--purple);color:var(--purple)" title="投稿URLがあり、まだ未接触＝これからワンタップで開いて営業できる投稿">未接触の投稿 <strong>${thFreshCount}</strong></span>`
+        :`<span class="sl-summary-chip" style="background:rgba(214,41,118,0.08);border:1.5px solid rgba(214,41,118,0.35);color:#d62976" title="Instagramあり×自社HPなし＝DM営業の本命ターゲット">IGあり・HPなし <strong>${igNoHpCount}</strong></span>`}
       <span class="sl-summary-chip sl-未接触" style="border:1.5px solid var(--border)">未接触 <strong>${counts['未接触']||0}</strong></span>
       <span class="sl-summary-chip sl-架電予定" style="border:1.5px solid var(--blue)">架電予定 <strong>${counts['架電予定']||0}</strong></span>
       <span class="sl-summary-chip sl-アポ" style="border:1.5px solid rgba(180,83,9,0.25)">アポ <strong>${counts['アポ']||0}</strong></span>
@@ -12529,12 +12625,14 @@ function rSalesLeads(){
   </div>`;
 
   const searchHtml=`<div style="margin-bottom:14px;display:flex;gap:8px;align-items:center">
-    <input type="search" id="sl-search" placeholder="店名・住所で検索…" value="${esc(_slSearch)}" oninput="slSearchInput(this)" oncompositionstart="_slComposing=true" oncompositionend="_slComposing=false;slSearchInput(this)" style="max-width:280px">
+    <input type="search" id="sl-search" placeholder="${slIsThreadsView()?'投稿者・@id・投稿本文で検索…':'店名・住所で検索…'}" value="${esc(_slSearch)}" oninput="slSearchInput(this)" oncompositionstart="_slComposing=true" oncompositionend="_slComposing=false;slSearchInput(this)" style="max-width:280px">
     <span style="font-size:12px;color:var(--t2)">${filtered.length}件</span>
   </div>`;
 
   // ─── リスト行 ───
-  const rowsHtml=pageLeads.length===0?`<div class="empty"><div class="empty-icon">📭</div><div class="empty-title">該当なし</div></div>`
+  const rowsHtml=pageLeads.length===0?(slIsThreadsView()&&!total
+      ?`<div class="empty"><div class="empty-icon">🧵</div><div class="empty-title">スレッズのリードがまだありません</div><div style="font-size:12px;color:var(--t2);margin-top:6px;line-height:1.7">「HPを作りたい」と発信している事業者の投稿URLを<br>「＋ 投稿を追加」で貼るか、上のCSVインポートでまとめて取り込みます。</div></div>`
+      :`<div class="empty"><div class="empty-icon">📭</div><div class="empty-title">該当なし</div></div>`)
     :pageLeads.map(l=>{
       const sid=l.id;
       const curStatus=slStatusOf(l);
@@ -12550,9 +12648,16 @@ function rSalesLeads(){
       // 被り防止バッジ: 他事業で直近30日に接触あり
       const oc=slRecentOtherContact(l);
       const overlapBadge=oc?`<div style="margin-top:4px"><span style="display:inline-block;font-size:11px;font-weight:700;color:var(--amber);background:var(--adim);border:1px solid rgba(180,83,9,.4);border-radius:6px;padding:2px 8px">⚠ 他事業接触あり: ${slBizLabel(oc.b)}${oc.c?'で'+esc(oc.c):''} ${esc(oc.d.slice(5))}</span></div>`:'';
-      return`<div class="sl-row"${oc?' style="border-color:rgba(180,83,9,.35)"':''}>
-        <div style="flex:1;min-width:0">
-          <div class="sl-name">${esc(l.name||'')}</div>
+      const isTh=slSrcOf(l)==='threads';
+      // スレッズ区分: 業種・電話・住所の代わりに @ハンドル／投稿日／投稿本文を出し、投稿へワンタップで飛ばす
+      const metaHtml=isTh?`
+          <div class="sl-meta">
+            ${l.threads&&l.threads.trim()?slThLink(l.threads):''}
+            ${l.postedAt?`<span style="font-size:11px;color:var(--t3)">${esc(l.postedAt)}の投稿</span>`:''}
+            ${l.email&&l.email.trim()?`<a href="mailto:${esc(l.email)}" style="color:var(--green);font-size:11px">✉️ ${esc(l.email)}</a>`:''}
+          </div>
+          ${l.postText?`<div style="font-size:12px;color:var(--t2);margin-top:4px;padding:6px 10px;background:var(--card2);border:1.5px solid var(--border);border-radius:var(--rs);line-height:1.6;white-space:pre-wrap">${esc(l.postText)}</div>`:''}`
+      :`
           <div class="sl-meta">
             ${l.genre?`<span class="badge bk">${esc(l.genre)}</span>`:''}
             ${l.phone?`<a href="tel:${esc(l.phone)}" style="color:var(--blue);font-size:11px">📞 ${esc(l.phone)}</a>`:''}
@@ -12560,7 +12665,22 @@ function rSalesLeads(){
             ${l.email&&l.email.trim()?`<a href="mailto:${esc(l.email)}" style="color:var(--green);font-size:11px">✉️ ${esc(l.email)}</a>`:''}
             <span style="font-size:11px;color:var(--t3)">HP: ${esc(l.hp||'未確認')}</span>
           </div>
-          ${l.address?`<div style="font-size:11px;color:var(--t3);margin-top:2px">${esc(l.address)}</div>`:''}
+          ${l.address?`<div style="font-size:11px;color:var(--t3);margin-top:2px">${esc(l.address)}</div>`:''}`;
+      // 連絡先の直接編集欄。スレッズ区分は Threads/投稿URL、店舗は Instagram/メール
+      const contactInputs=isTh?`
+            <input type="text" class="sl-inline-input" placeholder="🧵 Threads @id/URL" value="${esc(l.threads||'')}" onchange="slUpdate('${sid}','threads',this.value)" style="width:180px">
+            ${slThOpenBtn(l.threads)}
+            <input type="url" class="sl-inline-input" placeholder="🧵 投稿URL" value="${esc(l.postUrl||'')}" onchange="slUpdate('${sid}','postUrl',this.value)" style="width:220px">
+            ${slThPostBtn(l.postUrl)}
+            <input type="email" class="sl-inline-input" placeholder="✉️ メールアドレス" value="${esc(l.email||'')}" onchange="slUpdate('${sid}','email',this.value)" style="width:180px">`
+      :`
+            <input type="text" class="sl-inline-input" placeholder="📷 Instagram URL/@id" value="${esc(l.instagram||'')}" onchange="slUpdate('${sid}','instagram',this.value)" style="width:180px">
+            ${slIgOpenBtn(l.instagram)}
+            <input type="email" class="sl-inline-input" placeholder="✉️ メールアドレス" value="${esc(l.email||'')}" onchange="slUpdate('${sid}','email',this.value)" style="width:180px">`;
+      return`<div class="sl-row"${oc?' style="border-color:rgba(180,83,9,.35)"':''}>
+        <div style="flex:1;min-width:0">
+          <div class="sl-name">${esc(l.name||'')}</div>
+          ${metaHtml}
           ${overlapBadge}
           <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;align-items:center">
             <span style="font-size:11px;color:var(--t2)">営業方法:</span>${apprBtns}
@@ -12569,10 +12689,7 @@ function rSalesLeads(){
             <span style="font-size:11px;color:var(--t2)">担当:</span>${assigneeBtns}
             ${l.assignee?`<span style="font-size:10px;color:var(--t3)">(${esc(l.assignee)}が対応)</span>`:'<span style="font-size:10px;color:var(--t3)">未割当</span>'}
           </div>
-          <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;align-items:center">
-            <input type="text" class="sl-inline-input" placeholder="📷 Instagram URL/@id" value="${esc(l.instagram||'')}" onchange="slUpdate('${sid}','instagram',this.value)" style="width:180px">
-            ${slIgOpenBtn(l.instagram)}
-            <input type="email" class="sl-inline-input" placeholder="✉️ メールアドレス" value="${esc(l.email||'')}" onchange="slUpdate('${sid}','email',this.value)" style="width:180px">
+          <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;align-items:center">${contactInputs}
           </div>
           <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;align-items:center">
             <span style="font-size:11px;color:var(--t2)">次アクション<span style="color:var(--purple)">(${slBizLabel(_slBiz)})</span>:</span>
@@ -12583,7 +12700,8 @@ function rSalesLeads(){
         </div>
         <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
           ${slChip(curStatus)}
-          ${l.rating?`<span style="font-size:11px;color:var(--amber)">★${esc(String(l.rating))}</span>`:''}
+          ${isTh?slThPostBtn(l.postUrl,true):''}
+          ${!isTh&&l.rating?`<span style="font-size:11px;color:var(--amber)">★${esc(String(l.rating))}</span>`:''}
           <button class="btn btn-g btn-xs" onclick="crmFromLead('${sid}')" title="このリードをクライアント台帳に登録">🤝 クライアント化</button>
           <button class="tact del" onclick="slDelete('${sid}')" title="削除">🗑</button>
         </div>
@@ -12599,8 +12717,10 @@ function rSalesLeads(){
 
   // ─── インポートパネル ───
   const importHtml=`<div class="card" style="margin-bottom:18px">
-    <div style="font-size:13px;font-weight:700;margin-bottom:8px">CSVインポート</div>
-    <div style="font-size:11px;color:var(--t2);margin-bottom:8px">列順: 店名,業種,電話,住所,評価,口コミ数,HP有無,Instagram,アプローチ手段,状態,次アクション日,メモ,メール</div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px">CSVインポート${slIsThreadsView()?'（スレッズ投稿）':''}</div>
+    <div style="font-size:11px;color:var(--t2);margin-bottom:8px">列順: ${slIsThreadsView()
+      ?'投稿者,Threads(@id/URL),投稿URL,投稿日,投稿本文,状態,次アクション日,メモ,メール<br><span style="color:var(--t3)">投稿URLが同じものは重複追加せず既存へマージします（営業状態は壊しません）。</span>'
+      :'店名,業種,電話,住所,評価,口コミ数,HP有無,Instagram,アプローチ手段,状態,次アクション日,メモ,メール'}</div>
     <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
       <label style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1.5px solid var(--border);border-radius:var(--rs);cursor:pointer;font-size:12px;font-weight:600;background:var(--card);transition:all .15s" onmouseover="this.style.borderColor='var(--purple)'" onmouseout="this.style.borderColor='var(--border)'">
         📂 ファイル選択
@@ -12615,18 +12735,21 @@ function rSalesLeads(){
     <div id="sl-import-progress" style="font-size:11px;color:var(--t2);margin-top:6px"></div>
   </div>`;
 
+  // スレッズ区分は業種・住所・IG/メールを持たないため、店舗専用のまとめとフィルタは出さない
+  const isThV=slIsThreadsView();
   return`<div class="ph"><div class="ph-title">📞 営業リスト</div>
-    <button class="btn btn-g btn-sm" onclick="slAddManual()">＋ 手動追加</button>
+    <button class="btn btn-g btn-sm" onclick="slAddManual()">＋ ${isThV?'投稿を追加':'手動追加'}</button>
   </div>
   ${bizTabHtml}
+  ${srcTabHtml}
   ${counterHtml}
   ${summaryHtml}
-  ${regionSummaryHtml}
+  ${isThV?'':regionSummaryHtml}
   ${importHtml}
   ${statusFilterHtml}
-  ${genreFilterHtml}
-  ${regionFilterHtml}
-  ${contactFilterHtml}
+  ${isThV?'':genreFilterHtml}
+  ${isThV?'':regionFilterHtml}
+  ${isThV?'':contactFilterHtml}
   ${assigneeFilterHtml}
   ${overlapFilterHtml}
   ${searchHtml}
@@ -12644,6 +12767,15 @@ function slUpdate(id,key,val){
 function slSetBiz(biz){
   if(!SL_BIZ_KEYS.includes(biz))return;
   _slBiz=biz;_slPage=0;
+  if(biz!=='hp')_slSrc='store';  // 他事業はスレッズ区分を持たない
+  render();
+}
+
+function slSetSrc(src){
+  if(!SL_SRC.some(s=>s.k===src))return;
+  _slSrc=src;_slPage=0;
+  // 店舗専用フィルタはスレッズ区分では非表示になるため、残したままだと解除できず0件に見える
+  _slFilterGenre='all';_slFilterRegion='all';_slFilterContact='all';
   render();
 }
 
@@ -12700,20 +12832,88 @@ function slDelete(id){
 
 function slAddManual(){
   if(!S.salesLeads)S.salesLeads=[];
+  if(slIsThreadsView())return slAddThreadsLead();
   const name=prompt('店名を入力:');
   if(!name)return;
   S.salesLeads.push({id:uid(),name:name.trim(),status:'未接触',biz:{hp:{s:'未接触',n:'',m:''}},contacts:[],createdAt:new Date().toISOString()});
   save();render();
 }
 
-function slClearAll(){
-  if(!confirm('営業リストを全件削除しますか？この操作は元に戻せません。'))return;
-  S.salesLeads=[];
+// スレッズ区分の追加: 投稿URLを貼るだけで @ハンドルと投稿者名を自動で埋める
+function slAddThreadsLead(){
+  const url=prompt('Threadsの投稿URLを貼り付け:\n(例: https://www.threads.com/@handle/post/XXXXXXX)');
+  if(url===null)return;
+  const postUrl=slThPostUrl(url);
+  if(!postUrl){toast('ThreadsのURLではありません','warn');return;}
+  const dup=(S.salesLeads||[]).find(l=>!l.deleted&&l.postUrl===postUrl);
+  if(dup){toast('その投稿は既にリストにあります','warn');return;}
+  const h=slThHandleFromPost(postUrl);
+  const name=(prompt('投稿者名（空ならハンドルを使います）:',h?('@'+h):'')||'').trim()||(h?('@'+h):'(名称未設定)');
+  const postText=(prompt('投稿の抜粋（「HP作りたい」など・任意）:')||'').trim();
+  S.salesLeads.push({
+    id:uid(),src:'threads',name,
+    threads:h||'',postUrl,postText,postedAt:today(),
+    status:'未接触',biz:{hp:{s:'未接触',n:'',m:''}},contacts:[],
+    createdAt:new Date().toISOString()
+  });
   save();render();
-  toast('🗑 全件削除しました');
+  toast('🧵 スレッズのリードを追加しました');
+}
+
+function slClearAll(){
+  // 表示中の区分だけを消す。スレッズ区分から店舗リード(数千件)を巻き込んで消す事故を防ぐ。
+  const label=_slBiz==='hp'?`HP制作／${slSrcLabel(_slSrc)}`:slBizLabel(_slBiz);
+  const targets=(S.salesLeads||[]).filter(l=>!l.deleted&&slInPool(l,_slBiz));
+  if(!targets.length){toast('削除対象がありません','warn');return;}
+  if(!confirm(`いま表示中の「${label}」のリード ${targets.length}件を削除しますか？\n(他の区分・事業のリードは残ります。この操作は元に戻せません)`))return;
+  targets.forEach(l=>{l.deleted=true;});
+  save();render();
+  toast(`🗑 ${label} を${targets.length}件削除しました`);
+}
+
+// 1行をカラム配列へ(ダブルクォート対応)
+function _slSplitCSVLine(line){
+  const cols=[];
+  let cur='',inQ=false;
+  for(let c=0;c<line.length;c++){
+    const ch=line[c];
+    if(ch==='"'){if(inQ&&line[c+1]==='"'){cur+='"';c++;}else inQ=!inQ;}
+    else if(ch===','&&!inQ){cols.push(cur);cur='';}
+    else cur+=ch;
+  }
+  cols.push(cur);
+  return cols;
+}
+
+// スレッズ投稿CSV: 投稿者,Threads,投稿URL,投稿日,投稿本文,状態,次アクション日,メモ,メール
+// 投稿URLが取れない行はスキップ(ワンタップで開けないリードは価値がないため)
+function _slParseThreadsCSV(text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  if(!lines.length)return[];
+  let start=0;
+  if(/^(投稿者|投稿URL|Threads)[,\t]/i.test(lines[0]))start=1;
+  const results=[];
+  for(let i=start;i<lines.length;i++){
+    const[name,threads,postUrl,postedAt,postText,status,nextAction,memo,email]=_slSplitCSVLine(lines[i]).map(s=>s.trim());
+    const url=slThPostUrl(postUrl);
+    if(!url)continue;
+    const h=slThHandle(threads)||slThHandleFromPost(url)||'';
+    const st=SL_STATUSES.includes(status)?status:'未接触';
+    results.push({
+      id:uid(),src:'threads',
+      name:name||(h?('@'+h):'(名称未設定)'),
+      threads:h,postUrl:url,postedAt:postedAt||'',postText:postText||'',
+      email:email||'',status:st,
+      biz:{hp:{s:st,n:nextAction||'',m:memo||''}},
+      contacts:[],
+      createdAt:new Date().toISOString()
+    });
+  }
+  return results;
 }
 
 function _slParseCSV(text){
+  if(slIsThreadsView())return _slParseThreadsCSV(text);
   // ヘッダー行スキップ(店名で始まる行 or 1行目)
   const lines=text.split(/\r?\n/).filter(l=>l.trim());
   if(!lines.length)return[];
@@ -12721,16 +12921,7 @@ function _slParseCSV(text){
   if(/^店名[,\t]/.test(lines[0]))start=1;
   const results=[];
   for(let i=start;i<lines.length;i++){
-    // CSVパース(ダブルクォート対応)
-    const cols=[];
-    let cur='',inQ=false;
-    for(let c=0;c<lines[i].length;c++){
-      const ch=lines[i][c];
-      if(ch==='"'){if(inQ&&lines[i][c+1]==='"'){cur+='"';c++;}else inQ=!inQ;}
-      else if(ch===','&&!inQ){cols.push(cur);cur='';}
-      else cur+=ch;
-    }
-    cols.push(cur);
+    const cols=_slSplitCSVLine(lines[i]);
     const[name,genre,phone,address,rating,reviewCount,hp,instagram,approach,status,nextAction,memo,email]=cols.map(s=>s.trim());
     if(!name)continue;
     const st=SL_STATUSES.includes(status)?status:'未接触';
@@ -12754,22 +12945,25 @@ function _slParseCSV(text){
 
 async function _slSaveChunked(leads){
   if(!S.salesLeads)S.salesLeads=[];
-  // 既存レコードを店名+電話でインデックス化(重複は新規追加せず既存へマージ)
+  // 重複判定キー: 店舗=店名+電話 / スレッズ=投稿URL(同じ投稿を二重に持たない)
+  const keyOf=l=>slSrcOf(l)==='threads'?('th:'+(l.postUrl||l.threads||l.name||'')):('st:'+(l.name||'')+(l.phone||''));
+  // 既存レコードをインデックス化(重複は新規追加せず既存へマージ)
   const existBy={};
-  (S.salesLeads||[]).filter(l=>!l.deleted).forEach(l=>{existBy[(l.name||'')+(l.phone||'')]=l;});
+  (S.salesLeads||[]).filter(l=>!l.deleted).forEach(l=>{existBy[keyOf(l)]=l;});
   const newLeads=[];
   let merged=0;
   leads.forEach(x=>{
-    const ex=existBy[(x.name||'')+(x.phone||'')];
+    const k=keyOf(x);
+    const ex=existBy[k];
     if(ex){
       // 既存へマージ: 空欄だけ埋める(既存の営業状態・接触履歴は壊さない)
-      ['genre','address','rating','reviewCount','hp','instagram','email','region'].forEach(k=>{
-        if((ex[k]==null||ex[k]==='')&&x[k]!=null&&x[k]!=='')ex[k]=x[k];
+      ['genre','address','rating','reviewCount','hp','instagram','email','region','threads','postUrl','postText','postedAt'].forEach(key=>{
+        if((ex[key]==null||ex[key]==='')&&x[key]!=null&&x[key]!=='')ex[key]=x[key];
       });
       merged++;
     }else{
       newLeads.push(x);
-      existBy[(x.name||'')+(x.phone||'')]=x;  // 同一バッチ内重複も1件に
+      existBy[k]=x;  // 同一バッチ内重複も1件に
     }
   });
   const prog=document.getElementById('sl-import-progress');
@@ -12887,7 +13081,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260716-03';
+const APP_VERSION='20260717-01';
 
 render();
 function forceAppUpdate(){
