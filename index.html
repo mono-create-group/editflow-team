@@ -7268,7 +7268,7 @@ function crmOpenCard(id,prefill){
 <div class="fg"><div class="fl">電話</div><input id="crm-phone" value="${esc(data.phone||'')}"></div>
 <div class="fg"><div class="fl">メール</div><input id="crm-email" value="${esc(data.email||'')}"></div>
 <div class="fg"><div class="fl">Instagram</div><input id="crm-instagram" value="${esc(data.instagram||'')}" placeholder="@id または URL"></div>
-<div class="fg"><div class="fl">金額</div><input id="crm-amount" value="${esc(data.amount||'')}" placeholder="例: HP制作¥49,800＋維持費年¥10,000"></div>
+<div class="fg"><div class="fl">金額</div><input id="crm-amount" value="${esc(data.amount||'')}" placeholder="例: HP制作¥49,800＋維持費月¥3,000"></div>
 <div class="fg"><div class="fl">契約日</div><input type="date" id="crm-contractDate" value="${esc(data.contractDate||'')}"></div>
 <div class="fg"><div class="fl">次回更新日(維持費請求の目安)</div><input type="date" id="crm-nextRenew" value="${esc(data.nextRenew||'')}"></div>
 <div class="fg"><div class="fl">契約内容メモ</div><textarea id="crm-contractNote" rows="4">${esc(data.contractNote||'')}</textarea></div>
@@ -12252,35 +12252,34 @@ function slDailyRecordHtml(){
   </div>`;
 }
 
-// ═══ HP維持費管理(年間¥10,000の徴収システム) ═══
-const HP_FEE=10000;               // 年間維持費(円)
+// ═══ HP維持費管理(月額¥3,000の徴収システム) ═══
+const HP_FEE=3000;                // 月額維持費(円)
 const HP_FEE_STATUSES=['未請求','請求済','入金済'];
-function hpFeeNext(l){             // 次回請求日=契約日の次の記念日(>=今日)
+function hpFeeNext(l){             // 次回請求日=契約日と同じ「日」の次の月次請求日(>=今日)
   if(!l.contractDate)return '';
   const c=new Date(l.contractDate); if(isNaN(c))return '';
   const now=new Date(); now.setHours(0,0,0,0);
-  const next=new Date(c);
-  next.setFullYear(now.getFullYear());
-  if(next<now)next.setFullYear(now.getFullYear()+1);
+  let next=new Date(Date.UTC(now.getFullYear(),now.getMonth(),c.getUTCDate()));
+  if(next<now)next=new Date(Date.UTC(now.getFullYear(),now.getMonth()+1,c.getUTCDate()));
   return next.toISOString().slice(0,10);
 }
-function hpFeeDue(l){             // 請求すべきか(次回請求日30日以内 or 過ぎ、かつ入金済でない)
+function hpFeeDue(l){             // 請求すべきか(次回請求日7日以内 or 過ぎ、かつ入金済でない)
   const n=hpFeeNext(l); if(!n)return false;
   if(l.status==='入金済')return false;
   const days=(new Date(n)-new Date())/86400000;
-  return days<=30;
+  return days<=7;
 }
 function rHpFee(){
   if(!S.hpFees)S.hpFees=[];
   const all=S.hpFees.filter(l=>!l.deleted);
   const dueList=all.filter(hpFeeDue);
   const unpaid=all.filter(l=>l.status==='請求済');
-  const annual=all.length*HP_FEE;
+  const monthly=all.length*HP_FEE;
   const summary=`<div style="margin-bottom:14px;display:flex;flex-wrap:wrap;gap:8px">
     <span class="sl-summary-chip" style="background:var(--card2);border-color:var(--border)">顧客 <strong style="color:var(--text)">${all.length}</strong></span>
     <span class="sl-summary-chip" style="border:1.5px solid rgba(180,83,9,.25);color:var(--amber)">要請求 <strong>${dueList.length}</strong></span>
     <span class="sl-summary-chip" style="border:1.5px solid rgba(220,38,38,.25);color:var(--red)">未回収(請求済) <strong>${unpaid.length}</strong></span>
-    <span class="sl-summary-chip" style="border:1.5px solid rgba(5,150,105,.25);color:var(--green)">年間維持費 <strong>¥${annual.toLocaleString()}</strong></span>
+    <span class="sl-summary-chip" style="border:1.5px solid rgba(5,150,105,.25);color:var(--green)">月額合計 <strong>¥${monthly.toLocaleString()}</strong></span>
   </div>`;
   const rows=all.length===0?`<div class="empty"><div class="empty-icon">💴</div><div class="empty-title">HP顧客がまだありません</div><div style="font-size:12px;color:var(--t3);margin-top:4px">「＋顧客を追加」から登録してください</div></div>`
     :all.slice().sort((a,b)=>(hpFeeNext(a)||'9999').localeCompare(hpFeeNext(b)||'9999')).map(l=>{
@@ -12292,7 +12291,7 @@ function rHpFee(){
         <div class="sl-name">${esc(l.name||'')} ${due?'<span style="font-size:10px;color:var(--amber);font-weight:700">● 要請求</span>':''}</div>
         <div class="sl-meta">
           ${l.url?`<a href="${esc(l.url)}" target="_blank" rel="noopener" style="color:var(--blue);font-size:11px">🌐 HP</a>`:''}
-          <span style="font-size:11px;color:var(--t2)">年間維持費 ¥${HP_FEE.toLocaleString()}</span>
+          <span style="font-size:11px;color:var(--t2)">月額維持費 ¥${HP_FEE.toLocaleString()}</span>
           ${next?`<span style="font-size:11px;color:${due?'var(--amber)':'var(--t2)'}">次回請求: ${next}</span>`:''}
           ${l.lastPaidAt?`<span style="font-size:11px;color:var(--green)">最終入金: ${esc(l.lastPaidAt)}</span>`:''}
         </div>
@@ -12305,7 +12304,7 @@ function rHpFee(){
         <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px;align-items:center">
           <span style="font-size:11px;color:var(--t2)">請求状態:</span>${stBtns}
           <button class="btn btn-g btn-xs" onclick="hpFeeCopyInvoice('${l.id}')">振込案内をコピー</button>
-          ${l.status==='入金済'?`<button class="btn btn-g btn-xs" onclick="hpFeeNextCycle('${l.id}')">翌年分へ繰越</button>`:''}
+          ${l.status==='入金済'?`<button class="btn btn-g btn-xs" onclick="hpFeeNextCycle('${l.id}')">翌月分へ繰越</button>`:''}
         </div>
       </div>
       <div style="flex-shrink:0"><button class="tact del" onclick="hpFeeDelete('${l.id}')" title="削除">🗑</button></div>
@@ -12314,7 +12313,7 @@ function rHpFee(){
   return`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px">
       <h2 style="font-size:18px;font-weight:800;margin:0">💴 HP維持費管理</h2>
       <button class="btn btn-p" onclick="hpFeeAdd()">＋顧客を追加</button></div>
-    <div style="font-size:12px;color:var(--t2);margin-bottom:12px">HP納品後の年間維持費(¥${HP_FEE.toLocaleString()}/年)の請求・入金を管理します。次回請求日が近い顧客はオレンジで表示されます。</div>
+    <div style="font-size:12px;color:var(--t2);margin-bottom:12px">HP納品後の月額維持費(¥${HP_FEE.toLocaleString()}/月)の請求・入金を管理します。次回請求日が近い顧客はオレンジで表示されます。</div>
     ${summary}${rows}`;
 }
 function hpFeeAdd(){
@@ -12346,7 +12345,7 @@ function hpFeeDelete(id){
 function hpFeeCopyInvoice(id){
   const l=(S.hpFees||[]).find(x=>x.id===id); if(!l)return;
   const next=hpFeeNext(l)||'（契約日を入力してください）';
-  const txt=`${l.name} 御中\n\nいつもお世話になっております。mono.create（旭川）です。\nホームページの年間維持費のご案内です。\n\n■ 年間維持費：¥${HP_FEE.toLocaleString()}（税込）\n■ お支払い期限：${next}\n■ お振込先：〇〇銀行 〇〇支店 普通 0000000 モノクリエイト\n\n維持費には、サーバー・ドメインの維持、軽微な修正、稼働監視が含まれます。\nご不明点はLINEまたはお電話でお気軽にどうぞ。\n\nmono.create\n0166-00-0000`;
+  const txt=`${l.name} 御中\n\nいつもお世話になっております。mono.create（旭川）です。\nホームページの月額維持費のご案内です。\n\n■ 月額維持費：¥${HP_FEE.toLocaleString()}（税込）\n■ お支払い期限：${next}\n■ お振込先：〇〇銀行 〇〇支店 普通 0000000 モノクリエイト\n\n維持費には、サーバー・ドメインの維持、軽微な修正、稼働監視が含まれます。\nご不明点はLINEまたはお電話でお気軽にどうぞ。\n\nmono.create\n0166-00-0000`;
   (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast('振込案内をコピーしました','ok')).catch(()=>{prompt('コピーしてご利用ください:',txt);});
 }
 
@@ -13119,7 +13118,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260718-01';
+const APP_VERSION='20260718-02';
 
 render();
 function forceAppUpdate(){
