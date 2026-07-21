@@ -3128,7 +3128,7 @@ function bizOrgSeed(){
   const aoi=R('アオイ','営業部長','ai',rep.id);
   const kent=R('ケント','開発部長','ai',rep.id);
   const haru=R('ハル','納品・CS 部長','ai',rep.id);
-  const tsubasa=R('ツバサ','AIアプリ事業部長','ai',rep.id);
+  const tsubasa=R('ツバサ','自動化ツール事業部長','ai',rep.id);
   const riku=R('リク','公式LINE構築','ai',rep.id);
   const mio=R('ミオ','データアナリスト','ai',sora.id);
   const gaku=R('ガク','グロース広告','ai',sora.id);
@@ -11952,7 +11952,7 @@ const SL_ASSIGNEES=['中村航汰','佐々木','アオイ'];  // 営業担当者
 const SL_BIZ=[
   {k:'hp',label:'HP制作',short:'HP'},
   {k:'consult',label:'AIコンサル',short:'コンサル'},
-  {k:'app',label:'AIアプリ',short:'アプリ'},
+  {k:'app',label:'自動化ツール',short:'自動化'},
   {k:'shift',label:'シフトさん',short:'シフト'},
 ];
 const SL_BIZ_KEYS=SL_BIZ.map(b=>b.k);
@@ -12144,6 +12144,7 @@ let _slFilterRegion='all';
 let _slFilterContact='all';  // all / ig / email / both
 let _slFilterAssignee='all';  // all / 会長 / 佐々木 / アオイ / 未割当
 let _slFilterOverlap=false;   // true=他事業で直近接触ありの店を除外(被りなしのみ表示)
+let _slFilterApproach='all';  // all / 電話(テレアポ) / 訪問(訪問営業) / InstagramDM・ThreadsDM・LINE(DM営業) 等・SL_APPROACHESの値
 let _slShowDaily=false;       // true=今日の営業件数カウンターの下に「毎日の記録」を展開
 let _slSearch='';
 // 検索は1文字ごとに全再描画すると入力欄が作り直されてIME入力が壊れるため、
@@ -12211,6 +12212,8 @@ function slFilteredLeads(){
       else if(l.assignee!==_slFilterAssignee)return false;
     }
     if(_slFilterOverlap&&slRecentOtherContact(l))return false;  // 被りなしのみ
+    if(_slFilterApproach==='__none__'){if(l.approach)return false;}
+    else if(_slFilterApproach!=='all'&&l.approach!==_slFilterApproach)return false;
     if(q){
       // スレッズ区分は住所を持たないため、@ハンドルと投稿本文も検索対象にする
       const hay=[l.name,l.address,l.threads,l.postText].map(v=>(v||'').toLowerCase());
@@ -12523,7 +12526,7 @@ function rSalesLeads(){
     if(rc){rc.total++;if(rc[st]!==undefined)rc[st]++;}
   }
 
-  // ─── 事業切替タブ(HP／AIコンサル／AIアプリ／シフトさん) ───
+  // ─── 事業切替タブ(HP／AIコンサル／自動化ツール／シフトさん) ───
   // 件数は区分('any')を問わず集計する。サブタブを切り替えても事業タブの数字が動かないようにするため。
   // 事業タブ・区分タブの件数も1パスで数える(以前は タブ数×全件 のスキャンだった)
   const bizCount={},srcCount={};
@@ -12660,6 +12663,16 @@ function rSalesLeads(){
     <button class="fbtn${_slFilterAssignee==='未割当'?' act':''}" onclick="_slFilterAssignee='未割当';_slPage=0;render()">未割当 ${unassignedCount}</button>
   </div>`;
 
+  // ─── 営業方法フィルタ(テレアポ=電話／訪問営業=訪問／DM営業=InstagramDM・ThreadsDM・LINE の状況を絞り込み) ───
+  const approachCounts={};
+  SL_APPROACHES.forEach(a=>{approachCounts[a]=all.filter(l=>l.approach===a).length;});
+  const approachNoneCount=all.filter(l=>!l.approach).length;
+  const approachFilterHtml=`<div class="filter-bar" style="margin-bottom:8px">
+    <button class="fbtn${_slFilterApproach==='all'?' act':''}" onclick="_slFilterApproach='all';_slPage=0;render()">営業方法すべて</button>
+    ${SL_APPROACHES.map(a=>`<button class="fbtn${_slFilterApproach===a?' act':''}" onclick="_slFilterApproach='${a}';_slPage=0;render()">${a} ${approachCounts[a]}</button>`).join('')}
+    <button class="fbtn${_slFilterApproach==='__none__'?' act':''}" onclick="_slFilterApproach='__none__';_slPage=0;render()">未設定 ${approachNoneCount}</button>
+  </div>`;
+
   // ─── 被り防止フィルタ(他事業で直近接触ありの店を除外) ───
   const overlapFilterHtml=`<div class="filter-bar" style="margin-bottom:8px">
     <button class="fbtn${!_slFilterOverlap?' act':''}" onclick="_slFilterOverlap=false;_slPage=0;render()">全て表示</button>
@@ -12792,6 +12805,7 @@ function rSalesLeads(){
   ${isThV?'':genreFilterHtml}
   ${isThV?'':regionFilterHtml}
   ${isThV?'':contactFilterHtml}
+  ${isThV?'':approachFilterHtml}
   ${assigneeFilterHtml}
   ${overlapFilterHtml}
   ${searchHtml}
@@ -12817,7 +12831,7 @@ function slSetSrc(src){
   if(!SL_SRC.some(s=>s.k===src))return;
   _slSrc=src;_slPage=0;
   // 店舗専用フィルタはスレッズ区分では非表示になるため、残したままだと解除できず0件に見える
-  _slFilterGenre='all';_slFilterRegion='all';_slFilterContact='all';
+  _slFilterGenre='all';_slFilterRegion='all';_slFilterContact='all';_slFilterApproach='all';
   render();
 }
 
@@ -13123,7 +13137,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260721-02';
+const APP_VERSION='20260722-01';
 
 render();
 function forceAppUpdate(){
