@@ -13123,7 +13123,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260721-01';
+const APP_VERSION='20260721-02';
 
 render();
 function forceAppUpdate(){
@@ -13173,6 +13173,31 @@ if('serviceWorker' in navigator){
     });
   }).catch(e=>console.warn('SW:',e));
 }
+
+// ===STALE TAB AUTO-UPDATE (2026-07-21)===
+// スマホSafari等の長寿命タブは何日もリロードされず、古いビルドのJSが動き続ける
+// (データはFirestore購読で最新に見えるため気づけない)。サーバーのsw.jsから
+// リリース版番を定期取得し、自ビルドと違えば自動で最新版へ再読み込みする。
+let _verChkLast=0;
+function checkServerVersion(){
+  const now=Date.now();
+  if(now-_verChkLast<60000)return;  // 問い合わせは最短1分間隔
+  _verChkLast=now;
+  fetch('sw.js?vchk='+now,{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{
+    const m=t.match(/mcshanai-(\d{8}-\d{2})/);
+    if(!m||m[1]===APP_VERSION)return;
+    // 編集中(モーダル表示 or 未保存入力)は壊さない。次回チェックで再試行される
+    if(document.getElementById('modal-overlay')||window._modalDirty)return;
+    // リロードループ防止: 自動更新は10分に1回まで
+    const last=parseInt(localStorage.getItem('ef_vchk_reload')||'0');
+    if(now-last<600000)return;
+    localStorage.setItem('ef_vchk_reload',String(now));
+    forceAppUpdate();
+  }).catch(()=>{});
+}
+setInterval(checkServerVersion,15*60*1000);                                        // 15分ごと
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
+window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
 </script>
 </body>
 </html>
