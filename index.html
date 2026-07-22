@@ -11994,6 +11994,9 @@ function slInPool(l,bizKey,srcKey){
     const h=(l.hp||'').trim();
     return h!==''&&h!=='あり'&&h!=='不明';
   }
+  // 自動化ツール事業(2026-07-22 会長決定): テレアポ・訪問営業・DM営業の対象業種に「宿泊・飲食」を明示選択。
+  // 2026-07-13のHP営業除外ルールとは別決定のため、飲食もプールに含める(シフトさんタブの表示はそのまま維持・両タブに出てよい)。
+  if(bk==='app')return true;
   return !isFood;
 }
 // 接触系ステータス(この状態へ変わると contacts へ履歴を自動追記し、被り防止の対象になる)
@@ -13137,7 +13140,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260722-01';
+const APP_VERSION='20260722-02';
 
 render();
 function forceAppUpdate(){
