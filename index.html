@@ -5546,6 +5546,20 @@ function unmarkJobPaid(id){
   j.paymentDate=null;
   save();render();toast('入金済みを取り消しました');
 }
+// 入金日が指定日以降(cutoff含む)の入金済みを一括取消(2026-07-23 会長指示: シート取込等で全件入金済みになった誤りの修正)。
+// バックアップを取ってから実行。paymentDateだけを消し、他の項目(ステータス/金額)は触らない。
+const PAID_CLEANUP_CUTOFF='2026-07-31';
+function _paidFromCutoff(cutoff){return (S.jobs||[]).filter(j=>j&&!j.deleted&&j.paymentDate&&j.paymentDate>=cutoff);}
+function unmarkPaidFrom(cutoff){
+  cutoff=cutoff||PAID_CLEANUP_CUTOFF;
+  const affected=_paidFromCutoff(cutoff);
+  if(!affected.length){toast('対象の案件はありません');return;}
+  if(!confirm(`入金日が ${cutoff} 以降の案件 ${affected.length}件 を「未入金」に戻します。\nよろしいですか？（元に戻せるよう自動でバックアップを取ります）`))return;
+  try{localStorage.setItem('mcapp_paid_cleanup_bak_'+Date.now(),JSON.stringify(affected.map(j=>({id:j.id,title:j.title,paymentDate:j.paymentDate}))));}catch(_){}
+  const now=Date.now();
+  affected.forEach(j=>{j.paymentDate=null;j.updatedAt=now;});
+  save();render();toast(`✅ ${affected.length}件を未入金に戻しました`);
+}
 function markJobPayout(id){
   const j=S.jobs.find(j=>j.id===id);if(!j)return;
   j.payoutDate=today();
@@ -5990,8 +6004,14 @@ function rProjProfit(){
   const totalIn=unpaid.reduce((s,j)=>s+jobMainIn(j),0);
   const totalPay=unpaid.reduce((s,j)=>s+jobMainOut(j),0);
   const paidIn=paid.reduce((s,j)=>s+jobMainIn(j),0);
+  const futurePaid=_paidFromCutoff(PAID_CLEANUP_CUTOFF);
   return`${secTitle('💰 売上（月別・回収予定）')}
 <div style="font-size:11px;color:var(--t3);margin:-6px 0 12px">「回収予定売上」は<b>未入金</b>の完了案件の<b>売上（単価）</b>を集計します。入金済みは薄く表示され合計から除外（各行の「取消」で未入金に戻せます）。入金済みを含む累計はクライアント一覧・ダッシュボードで確認できます。</div>
+${futurePaid.length?`<div class="card" style="border:1px solid var(--amber);margin-bottom:14px">
+  <div style="font-size:13px;font-weight:700;color:var(--amber);margin-bottom:4px">⚠️ 入金日が ${PAID_CLEANUP_CUTOFF} 以降の案件が ${futurePaid.length}件 入金済みになっています</div>
+  <div style="font-size:11px;color:var(--t2);margin-bottom:10px">まだ受け取っていない未来日付の入金日です（シート取込などで誤って入金済みになった可能性）。まとめて未入金に戻せます。実行前に自動でバックアップを取ります。</div>
+  <button class="btn btn-p btn-sm" onclick="unmarkPaidFrom('${PAID_CLEANUP_CUTOFF}')">${PAID_CLEANUP_CUTOFF}以降の入金済みを ${futurePaid.length}件 まとめて取消</button>
+</div>`:''}
 <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
   <select style="width:150px" onchange="window._profitMonth=this.value;render()">
     ${months.map(m=>`<option value="${m}" ${m===curM?'selected':''}>${m}</option>`).join('')}
@@ -13302,7 +13322,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260723-05';
+const APP_VERSION='20260723-06';
 
 render();
 function forceAppUpdate(){
