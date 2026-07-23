@@ -12832,27 +12832,47 @@ function rSalesLeads(){
   const all=allLeads.filter(l=>slInPool(l,_slBiz));           // 現事業プール(飲食/非飲食で振り分け)
   const total=all.length;
   const thisMonth=new Date().toISOString().slice(0,7);
-  // 集計は1パスで行う(2026-07-17)。以前はステータス別・地域別・連絡先別に配列を都度filterしており、
-  // 7,400件×約40スキャン=30万要素/レンダーを走査していた(タブ切替のたびに体感で固まる原因)。
+  const q=_slSearch.toLowerCase();
+  const _searchHit=l=>{ if(!q)return true; return [l.name,l.address,l.threads,l.postText].some(v=>(v||'').toLowerCase().includes(q)); };
+  // ─── ファセット集計(2026-07-24) ───
+  // 各フィルタ次元の件数は「自分以外の絞り込みを適用した集合」で数える(faceted search)。
+  // これにより業種や地域を選ぶと、他のフィルタの数字がその絞り込みに追従してリアルタイムに変わる。
+  // 実装: 1パスで各次元の合否を出し、「全次元通過」or「当該次元だけ不通過」の店のみ、その次元の内訳へ寄与。
   const counts={};SL_STATUSES.forEach(s=>{counts[s]=0;});
+  const genreCounts={};
   const regionCounts={};SL_REGIONS.forEach(r=>{regionCounts[r]={total:0,未接触:0,アポ:0,成約:0};});
-  let wonThisMonth=0,overlapCount=0,igCount=0,emailCount=0,bothCount=0,igNoHpCount=0,thFreshCount=0;
+  const assigneeCounts={};SL_ASSIGNEES.forEach(a=>{assigneeCounts[a]=0;});
+  const approachCounts={};SL_APPROACHES.forEach(a=>{approachCounts[a]=0;});
+  let wonThisMonth=0,overlapCount=0,igCount=0,emailCount=0,bothCount=0;
+  let statusBase=0,genreBase=0,regionBase=0,contactBase=0,assigneeBase=0,approachBase=0,overlapBase=0;
+  let unassignedCount=0,approachNoneCount=0;
   const genreSet=new Set();
   for(const l of all){
+    if(l.genre)genreSet.add(l.genre);                 // 業種チップは常に全業種を出す(件数は下でファセット)
     const st=slStatusOf(l);
-    if(counts[st]!==undefined)counts[st]++;
-    if(st==='成約'&&(l.wonAt||'').startsWith(thisMonth))wonThisMonth++;
-    if(slRecentOtherContact(l))overlapCount++;
-    if(l.genre)genreSet.add(l.genre);
+    if(st==='成約'&&(l.wonAt||'').startsWith(thisMonth))wonThisMonth++;  // 今月成約=月次目標(絞り込み非依存)
+    if(!_searchHit(l))continue;                        // 検索は全次元共通のゲート
     const hasIg=!!(l.instagram&&l.instagram.trim());
     const hasMail=!!(l.email&&l.email.trim());
-    if(hasIg)igCount++;
-    if(hasMail)emailCount++;
-    if(hasIg&&hasMail)bothCount++;
-    if(hasIg){const h=(l.hp||'').trim();if(h!==''&&h!=='あり'&&h!=='不明')igNoHpCount++;}
-    if(slThPostUrl(l.postUrl)&&st==='未接触')thFreshCount++;
-    const rc=regionCounts[slRegionOf(l)];
-    if(rc){rc.total++;if(rc[st]!==undefined)rc[st]++;}
+    const isOverlap=slRecentOtherContact(l);
+    // 各次元の合否(all=通過)
+    const pStatus=_slFilterStatus==='all'||st===_slFilterStatus;
+    const pGenre=_slFilterGenre==='all'||l.genre===_slFilterGenre;
+    const pRegion=_slFilterRegion==='all'||slRegionOf(l)===_slFilterRegion;
+    const pContact=_slFilterContact==='all'||(_slFilterContact==='ig'&&hasIg)||(_slFilterContact==='email'&&hasMail)||(_slFilterContact==='both'&&hasIg&&hasMail);
+    const pAssignee=_slFilterAssignee==='all'||(_slFilterAssignee==='未割当'?!l.assignee:l.assignee===_slFilterAssignee);
+    const pApproach=_slFilterApproach==='all'||(_slFilterApproach==='__none__'?!l.approach:l.approach===_slFilterApproach);
+    const pOverlap=!_slFilterOverlap||!isOverlap;
+    const fail=(pStatus?0:1)+(pGenre?0:1)+(pRegion?0:1)+(pContact?0:1)+(pAssignee?0:1)+(pApproach?0:1)+(pOverlap?0:1);
+    // only(d): 当該次元を除いた全次元が通過しているか。d=当該次元のpass値
+    const only=d=>fail===0||(fail===1&&!d);
+    if(only(pStatus)){if(counts[st]!==undefined)counts[st]++;statusBase++;}
+    if(only(pGenre)){genreBase++;if(l.genre)genreCounts[l.genre]=(genreCounts[l.genre]||0)+1;}
+    if(only(pRegion)){regionBase++;const rc=regionCounts[slRegionOf(l)];if(rc){rc.total++;if(rc[st]!==undefined)rc[st]++;}}
+    if(only(pContact)){contactBase++;if(hasIg)igCount++;if(hasMail)emailCount++;if(hasIg&&hasMail)bothCount++;}
+    if(only(pAssignee)){assigneeBase++;if(l.assignee){if(assigneeCounts[l.assignee]!==undefined)assigneeCounts[l.assignee]++;}else unassignedCount++;}
+    if(only(pApproach)){approachBase++;if(l.approach){if(approachCounts[l.approach]!==undefined)approachCounts[l.approach]++;}else approachNoneCount++;}
+    if(only(pOverlap)){overlapBase++;if(isOverlap)overlapCount++;}
   }
 
   // ─── 事業切替タブ(HP／AIコンサル／自動化ツール／シフトさん) ───
@@ -12892,6 +12912,17 @@ function rSalesLeads(){
   if(_slPage>=totalPages)_slPage=totalPages-1;
   const pageLeads=filtered.slice(_slPage*SL_PAGE_SIZE,(_slPage+1)*SL_PAGE_SIZE);
 
+  // ─── サマリーチップは「現在の絞り込み後の表示集合」で集計(全フィルタ反映) ───
+  const viewTotal=filtered.length;
+  const sum={未接触:0,架電予定:0,アポ:0,商談:0};let igNoHpCount=0,thFreshCount=0;
+  for(const l of filtered){
+    const st=slStatusOf(l);
+    if(sum[st]!==undefined)sum[st]++;
+    const hasIg=!!(l.instagram&&l.instagram.trim());
+    if(hasIg){const h=(l.hp||'').trim();if(h!==''&&h!=='あり'&&h!=='不明')igNoHpCount++;}
+    if(slThPostUrl(l.postUrl)&&st==='未接触')thFreshCount++;
+  }
+
   // ─── 今日の営業件数カウンター(担当者別・全事業・毎日の記録つき) ───
   const todayCounts=slTodayCounts();
   const counterPeople=[...SL_ASSIGNEES,'未割当'];
@@ -12924,14 +12955,14 @@ function rSalesLeads(){
   const summaryHtml=`
     <div style="font-size:12px;color:var(--t2);margin-bottom:8px">集計中の事業: <strong style="color:var(--purple)">${slBizLabel(_slBiz)}</strong>${_slBiz==='hp'?` <span style="color:var(--t3)">／区分:</span> <strong style="color:var(--purple)">${slSrcLabel(_slSrc)}</strong>`:''}</div>
     <div style="margin-bottom:16px;display:flex;flex-wrap:wrap;gap:0">
-      <span class="sl-summary-chip" style="background:var(--card2);border-color:var(--border);color:var(--t2)">総数 <strong style="color:var(--text)">${total}</strong></span>
+      <span class="sl-summary-chip" style="background:var(--card2);border-color:var(--border);color:var(--t2)">総数 <strong style="color:var(--text)">${viewTotal}</strong></span>
       ${slIsThreadsView()
         ?`<span class="sl-summary-chip" style="background:var(--card2);border:1.5px solid var(--purple);color:var(--purple)" title="投稿URLがあり、まだ未接触＝これからワンタップで開いて営業できる投稿">未接触の投稿 <strong>${thFreshCount}</strong></span>`
         :`<span class="sl-summary-chip" style="background:rgba(214,41,118,0.08);border:1.5px solid rgba(214,41,118,0.35);color:#d62976" title="Instagramあり×自社HPなし＝DM営業の本命ターゲット">IGあり・HPなし <strong>${igNoHpCount}</strong></span>`}
-      <span class="sl-summary-chip sl-未接触" style="border:1.5px solid var(--border)">未接触 <strong>${counts['未接触']||0}</strong></span>
-      <span class="sl-summary-chip sl-架電予定" style="border:1.5px solid var(--blue)">架電予定 <strong>${counts['架電予定']||0}</strong></span>
-      <span class="sl-summary-chip sl-アポ" style="border:1.5px solid rgba(180,83,9,0.25)">アポ <strong>${counts['アポ']||0}</strong></span>
-      <span class="sl-summary-chip sl-商談" style="border:1.5px solid rgba(109,40,217,0.25)">商談 <strong>${counts['商談']||0}</strong></span>
+      <span class="sl-summary-chip sl-未接触" style="border:1.5px solid var(--border)">未接触 <strong>${sum['未接触']}</strong></span>
+      <span class="sl-summary-chip sl-架電予定" style="border:1.5px solid var(--blue)">架電予定 <strong>${sum['架電予定']}</strong></span>
+      <span class="sl-summary-chip sl-アポ" style="border:1.5px solid rgba(180,83,9,0.25)">アポ <strong>${sum['アポ']}</strong></span>
+      <span class="sl-summary-chip sl-商談" style="border:1.5px solid rgba(109,40,217,0.25)">商談 <strong>${sum['商談']}</strong></span>
       <span class="sl-summary-chip sl-成約" style="border:1.5px solid rgba(5,150,105,0.25)">成約 <strong>${wonThisMonth}</strong>/<button onclick="slSetGoalMonth()" title="成約目標を変更" style="background:none;border:none;padding:0;font:inherit;font-weight:400;color:inherit;cursor:pointer;text-decoration:underline dotted">${slGoalMonth()}件目標 ✎</button>
         <span style="font-size:10px;opacity:.7">(今月)</span>
       </span>
@@ -12961,50 +12992,44 @@ function rSalesLeads(){
 
   // ─── フィルタバー ───
   const statusFilterHtml=`<div class="filter-bar" style="margin-bottom:8px">
-    ${['all',...SL_STATUSES].map(s=>`<button class="fbtn${_slFilterStatus===s?' act':''}" onclick="_slFilterStatus='${s}';_slPage=0;render()">${s==='all'?'すべて':s} <span style="opacity:.65;font-size:10px">${s==='all'?total:(counts[s]||0)}</span></button>`).join('')}
+    ${['all',...SL_STATUSES].map(s=>`<button class="fbtn${_slFilterStatus===s?' act':''}" onclick="_slFilterStatus='${s}';_slPage=0;render()">${s==='all'?'すべて':s} <span style="opacity:.65;font-size:10px">${s==='all'?statusBase:(counts[s]||0)}</span></button>`).join('')}
   </div>`;
 
   const genreFilterHtml=genres.length?`<div class="filter-bar" style="margin-bottom:8px">
-    <button class="fbtn${_slFilterGenre==='all'?' act':''}" onclick="_slFilterGenre='all';_slPage=0;render()">全業種</button>
-    ${genres.map(g=>`<button class="fbtn${_slFilterGenre===g?' act':''}" onclick="_slFilterGenre='${esc(g)}';_slPage=0;render()">${esc(g)}</button>`).join('')}
+    <button class="fbtn${_slFilterGenre==='all'?' act':''}" onclick="_slFilterGenre='all';_slPage=0;render()">全業種 <span style="opacity:.65;font-size:10px">${genreBase}</span></button>
+    ${genres.map(g=>`<button class="fbtn${_slFilterGenre===g?' act':''}" onclick="_slFilterGenre='${esc(g)}';_slPage=0;render()">${esc(g)} <span style="opacity:.65;font-size:10px">${genreCounts[g]||0}</span></button>`).join('')}
   </div>`:'';
 
   const regionFilterHtml=`<div class="filter-bar" style="margin-bottom:8px">
-    <button class="fbtn${_slFilterRegion==='all'?' act':''}" onclick="_slFilterRegion='all';_slPage=0;render()">全地域</button>
-    ${SL_REGIONS.map(r=>`<button class="fbtn${_slFilterRegion===r?' act':''}" onclick="_slFilterRegion='${r}';_slPage=0;render()">${r}</button>`).join('')}
+    <button class="fbtn${_slFilterRegion==='all'?' act':''}" onclick="_slFilterRegion='all';_slPage=0;render()">全地域 <span style="opacity:.65;font-size:10px">${regionBase}</span></button>
+    ${SL_REGIONS.map(r=>`<button class="fbtn${_slFilterRegion===r?' act':''}" onclick="_slFilterRegion='${r}';_slPage=0;render()">${r} <span style="opacity:.65;font-size:10px">${regionCounts[r].total}</span></button>`).join('')}
   </div>`;
 
   // ─── 連絡先フィルタ(Instagram / メール / 両方) ───
   const contactFilterHtml=`<div class="filter-bar" style="margin-bottom:8px">
-    <button class="fbtn${_slFilterContact==='all'?' act':''}" onclick="_slFilterContact='all';_slPage=0;render()">連絡先すべて</button>
+    <button class="fbtn${_slFilterContact==='all'?' act':''}" onclick="_slFilterContact='all';_slPage=0;render()">連絡先すべて <span style="opacity:.65;font-size:10px">${contactBase}</span></button>
     <button class="fbtn${_slFilterContact==='ig'?' act':''}" onclick="_slFilterContact='ig';_slPage=0;render()">📷 IG有 ${igCount}</button>
     <button class="fbtn${_slFilterContact==='email'?' act':''}" onclick="_slFilterContact='email';_slPage=0;render()">✉️ メール有 ${emailCount}</button>
     <button class="fbtn${_slFilterContact==='both'?' act':''}" onclick="_slFilterContact='both';_slPage=0;render()">📷+✉️ 両方有 ${bothCount}</button>
   </div>`;
 
-  // ─── 担当者フィルタ(誰が営業をかけたか) ───
-  const assigneeCounts={};
-  SL_ASSIGNEES.forEach(a=>{assigneeCounts[a]=all.filter(l=>l.assignee===a).length;});
-  const unassignedCount=all.filter(l=>!l.assignee).length;
+  // ─── 担当者フィルタ(誰が営業をかけたか。件数は上のファセット集計を使用) ───
   const assigneeFilterHtml=`<div class="filter-bar" style="margin-bottom:8px">
-    <button class="fbtn${_slFilterAssignee==='all'?' act':''}" onclick="_slFilterAssignee='all';_slPage=0;render()">担当すべて</button>
+    <button class="fbtn${_slFilterAssignee==='all'?' act':''}" onclick="_slFilterAssignee='all';_slPage=0;render()">担当すべて <span style="opacity:.65;font-size:10px">${assigneeBase}</span></button>
     ${SL_ASSIGNEES.map(a=>`<button class="fbtn${_slFilterAssignee===a?' act':''}" onclick="_slFilterAssignee='${a}';_slPage=0;render()">${a} ${assigneeCounts[a]}</button>`).join('')}
     <button class="fbtn${_slFilterAssignee==='未割当'?' act':''}" onclick="_slFilterAssignee='未割当';_slPage=0;render()">未割当 ${unassignedCount}</button>
   </div>`;
 
-  // ─── 営業方法フィルタ(テレアポ=電話／訪問営業=訪問／DM営業=InstagramDM・ThreadsDM・LINE の状況を絞り込み) ───
-  const approachCounts={};
-  SL_APPROACHES.forEach(a=>{approachCounts[a]=all.filter(l=>l.approach===a).length;});
-  const approachNoneCount=all.filter(l=>!l.approach).length;
+  // ─── 営業方法フィルタ(テレアポ=電話／訪問営業=訪問／DM営業=InstagramDM・ThreadsDM・LINE の状況を絞り込み。件数はファセット集計) ───
   const approachFilterHtml=`<div class="filter-bar" style="margin-bottom:8px">
-    <button class="fbtn${_slFilterApproach==='all'?' act':''}" onclick="_slFilterApproach='all';_slPage=0;render()">営業方法すべて</button>
+    <button class="fbtn${_slFilterApproach==='all'?' act':''}" onclick="_slFilterApproach='all';_slPage=0;render()">営業方法すべて <span style="opacity:.65;font-size:10px">${approachBase}</span></button>
     ${SL_APPROACHES.map(a=>`<button class="fbtn${_slFilterApproach===a?' act':''}" onclick="_slFilterApproach='${a}';_slPage=0;render()">${a} ${approachCounts[a]}</button>`).join('')}
     <button class="fbtn${_slFilterApproach==='__none__'?' act':''}" onclick="_slFilterApproach='__none__';_slPage=0;render()">未設定 ${approachNoneCount}</button>
   </div>`;
 
   // ─── 被り防止フィルタ(他事業で直近接触ありの店を除外) ───
   const overlapFilterHtml=`<div class="filter-bar" style="margin-bottom:8px">
-    <button class="fbtn${!_slFilterOverlap?' act':''}" onclick="_slFilterOverlap=false;_slPage=0;render()">全て表示</button>
+    <button class="fbtn${!_slFilterOverlap?' act':''}" onclick="_slFilterOverlap=false;_slPage=0;render()">全て表示 <span style="opacity:.65;font-size:10px">${overlapBase}</span></button>
     <button class="fbtn${_slFilterOverlap?' act':''}" onclick="_slFilterOverlap=true;_slPage=0;render()">⚠ 被りなしのみ (他事業接触 ${overlapCount}件を除外)</button>
   </div>`;
 
@@ -13466,7 +13491,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260724-02';
+const APP_VERSION='20260724-03';
 
 render();
 try{renderAuthGate();}catch(e){console.warn('authGate init',e);}  // 認証確定まではログイン/読込画面で画面を覆う
