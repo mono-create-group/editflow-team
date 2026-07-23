@@ -5974,70 +5974,36 @@ function rJobItem(j){
 }
 
 function rProjProfit(){
-  const now=new Date();
-  const [py,pm]=[(now.getFullYear()),(now.getMonth()+1)];
-  const selM=`${py}-${String(pm).padStart(2,'0')}`;
-  const months=[...new Set(S.jobs.filter(j=>!j.deleted&&j.paymentDate).map(j=>j.paymentDate.slice(0,7)))].sort().reverse();
-  if(!months.includes(selM))months.unshift(selM);
-  const curM=window._profitMonth||selM;
-  const jobs=S.jobs.filter(j=>!j.deleted&&j.paymentDate?.startsWith(curM));
+  // 入金済み(paymentDate設定済み)はこのタブに出さない。未入金＝これから回収する利益のみ表示。
+  const jobs=S.jobs.filter(j=>!j.deleted&&!j.paymentDate&&j.status==='完了'&&jobMainIn(j)>0)
+    .sort((a,b)=>String(b.deliveryDate||b.invoiceDate||b.createdAt||'').localeCompare(String(a.deliveryDate||a.invoiceDate||a.createdAt||'')));
   const totalIn=jobs.reduce((s,j)=>s+jobMainIn(j),0);
   const totalPay=jobs.reduce((s,j)=>s+jobMainOut(j),0);
   const totalProfit=jobs.reduce((s,j)=>s+jobMainProfit(j),0);
-  // 入金待ち: 完了済みだが入金日未設定の案件
-  const pendingJobs=S.jobs.filter(j=>!j.deleted&&j.status==='完了'&&!j.paymentDate&&jobMainIn(j)>0);
-  const pendingTotal=pendingJobs.reduce((s,j)=>s+jobMainIn(j),0);
-  return`${secTitle('💰 月別利益')}
-${pendingJobs.length?`<div class="card" style="margin-bottom:14px;border:1px solid var(--adim)">
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-    <div>
-      <div style="font-size:12px;color:var(--amber);font-weight:600;margin-bottom:4px">⏳ 入金待ち ${pendingJobs.length}件</div>
-      <div style="font-size:18px;font-weight:700;color:var(--amber)">¥${pendingTotal.toLocaleString()}</div>
-    </div>
-  </div>
-  <div style="margin-top:10px">
-    ${pendingJobs.map(j=>{const cl=S.clients.find(c=>c.id===j.clientId);return`<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border);gap:8px;flex-wrap:wrap">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(j.title)}</div>
-        <div style="font-size:11px;color:var(--t2)">${cl?esc(cl.name):''} ${j.deliveryDate?`| 納品 ${j.deliveryDate}`:''}</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-        <span style="font-weight:700;color:var(--blue)">¥${jobMainIn(j).toLocaleString()}</span>
-        <button class="btn btn-p btn-sm" onclick="markJobPaid('${j.id}')">💰 入金済みにする</button>
-      </div>
-    </div>`;}).join('')}
-  </div>
-</div>`:''}
-<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-  <select style="width:160px" onchange="window._profitMonth=this.value;render()">
-    ${months.map(m=>`<option value="${m}" ${m===curM?'selected':''}>${m}</option>`).join('')}
-  </select>
-  <span style="font-size:12px;color:var(--t2)">${jobs.length}件</span>
-</div>
+  return`${secTitle('💰 利益（未入金・回収予定）')}
+<div style="font-size:11px;color:var(--t3);margin:-6px 0 12px">入金済みにした案件はこの一覧から外れます（入金済みを含む累計実績はクライアント一覧・ダッシュボードで確認できます）</div>
 <div class="card" style="margin-bottom:16px">
-  <div style="display:flex;gap:20px;flex-wrap:wrap">
+  <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">
+    <div><div style="font-size:11px;color:var(--t2)">未入金件数</div><div style="font-size:20px;font-weight:700;color:var(--amber)">${jobs.length}件</div></div>
     <div><div style="font-size:11px;color:var(--t2)">総売上</div><div style="font-size:20px;font-weight:700;color:var(--blue)">¥${totalIn.toLocaleString()}</div></div>
     <div><div style="font-size:11px;color:var(--t2)">支払額</div><div style="font-size:20px;font-weight:700;color:var(--amber)">¥${totalPay.toLocaleString()}</div></div>
-    <div><div style="font-size:11px;color:var(--t2)">純利益</div><div style="font-size:20px;font-weight:700;color:${totalProfit>=0?'var(--green)':'var(--red)'}">¥${totalProfit.toLocaleString()}</div></div>
+    <div><div style="font-size:11px;color:var(--t2)">回収予定利益</div><div style="font-size:20px;font-weight:700;color:${totalProfit>=0?'var(--green)':'var(--red)'}">¥${totalProfit.toLocaleString()}</div></div>
   </div>
 </div>
 ${jobs.length?`<div class="card" style="padding:0;overflow:hidden">
   <div class="profit-row" style="font-weight:700;font-size:12px;color:var(--t2);background:var(--card2)">
-    <span>案件名</span><span>単価</span><span>支払</span><span>利益</span><span>入金日</span>
+    <span>案件名</span><span>単価</span><span>支払</span><span>利益</span><span>操作</span>
   </div>
   ${jobs.map(j=>{const pr=jobMainProfit(j);const cl=S.clients.find(c=>c.id===j.clientId);
   return`<div class="profit-row">
-    <span style="font-weight:600;cursor:pointer" onclick="openJobModal('${j.id}')">${esc(j.title)}<br><span style="font-size:11px;color:var(--t2)">${cl?esc(cl.name):''}</span></span>
+    <span style="font-weight:600;cursor:pointer" onclick="openJobModal('${j.id}')">${esc(j.title)}<br><span style="font-size:11px;color:var(--t2)">${cl?esc(cl.name):''}${j.deliveryDate?` | 納品 ${j.deliveryDate}`:''}</span></span>
     <span>¥${jobMainIn(j).toLocaleString()}</span>
     <span style="color:var(--amber)">¥${jobMainOut(j).toLocaleString()}</span>
     <span style="${pr>=0?'color:var(--green)':'color:var(--red)'}">¥${pr.toLocaleString()}</span>
-    <span style="font-size:11px;color:var(--t2);display:flex;align-items:center;gap:4px">
-      ${j.paymentDate}
-      <button class="btn btn-xs btn-red" onclick="unmarkJobPaid('${j.id}')" style="font-size:10px;padding:1px 5px" title="取り消し">✕</button>
-    </span>
+    <span><button class="btn btn-xs" onclick="event.stopPropagation();markJobPaid('${j.id}')" style="border:1px solid var(--green);color:var(--green);background:transparent;padding:2px 7px;border-radius:100px;font-size:10px;cursor:pointer;white-space:nowrap">💰 入金済み</button></span>
   </div>`;}).join('')}
 </div>`
-:`<div class="empty" style="padding:30px 0"><div class="empty-icon">💰</div><div>${curM} の入金記録なし</div></div>`}`;
+:`<div class="empty" style="padding:30px 0"><div class="empty-icon">💰</div><div>未入金の完了案件はありません</div></div>`}`;
 }
 
 function getPayEntries(month){
@@ -10397,7 +10363,13 @@ function openJobModal(id,preStatus,preClientId){
   <div class="fg"><div class="fl">支払期日</div><input type="date" id="j-due" value="${j?.dueDate||''}"></div>
 </div>
 <div class="frow">
-  <div class="fg"><div class="fl">入金日</div><input type="date" id="j-payin" value="${j?.paymentDate||''}"></div>
+  <div class="fg"><div class="fl">入金日</div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <input type="date" id="j-payin" value="${j?.paymentDate||''}" style="flex:1" onchange="updPayinBtn()">
+      <button type="button" id="j-payin-btn" class="btn btn-xs" onclick="togglePayinToday()" style="white-space:nowrap"></button>
+    </div>
+    <div style="font-size:10px;color:var(--t3);margin-top:3px">入金済みにすると「💰 利益」タブの回収予定から外れます</div>
+  </div>
   <div class="fg"><div class="fl">支払日</div><input type="date" id="j-payout" value="${j?.payoutDate||''}"></div>
 </div>
 <div id="jf-subs">
@@ -10416,6 +10388,25 @@ function openJobModal(id,preStatus,preClientId){
 </div>`);
   document.getElementById('j-ttl')?.focus();
   setJobType(document.getElementById('j-type')?.value||'edit');
+  updPayinBtn();
+}
+// 入金日フィールドのワンタップ入金済みボタン。実際の保存は保存ボタンで行う（フィールド値を書き換えるだけ）。
+function updPayinBtn(){
+  const el=document.getElementById('j-payin'),btn=document.getElementById('j-payin-btn');
+  if(!el||!btn)return;
+  if(el.value){
+    btn.textContent='取消';
+    btn.style.cssText='white-space:nowrap;border:1px solid var(--border);color:var(--t2);background:transparent';
+  }else{
+    btn.textContent='💰 入金済み';
+    btn.style.cssText='white-space:nowrap;border:1px solid var(--green);color:var(--green);background:transparent';
+  }
+}
+function togglePayinToday(){
+  const el=document.getElementById('j-payin');
+  if(!el)return;
+  el.value=el.value?'':today();
+  updPayinBtn();
 }
 function setJobType(t){
   const el=document.getElementById('j-type');if(el)el.value=t;
@@ -13140,7 +13131,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260722-02';
+const APP_VERSION='20260723-01';
 
 render();
 function forceAppUpdate(){
