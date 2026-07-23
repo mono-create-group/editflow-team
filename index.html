@@ -6858,8 +6858,11 @@ function rDocs(){
 <div style="font-size:11px;color:var(--t3);margin-bottom:12px">Googleドキュメントと同じ書き心地のチーム共有ドキュメント。開いてそのまま入力すると1秒後に自動保存されます。</div>
 ${!pages.length?`<div class="empty"><div class="empty-icon">📄</div><div class="empty-title">まだドキュメントがありません</div></div>`:pages.map(p=>{
   const own=_gdocIsOwner(p);
-  const badge=_gdocVis(p)==='team'
+  const _v=_gdocVis(p);
+  const badge=_v==='team'
     ?'<span class="pill" style="background:var(--pldim);color:var(--pl);font-size:10px;font-weight:700;padding:2px 7px;border-radius:100px;flex-shrink:0">誰でも閲覧OK</span>'
+    :_v==='link'
+    ?'<span class="pill" style="background:var(--bg);color:var(--t2);font-size:10px;font-weight:700;padding:2px 7px;border-radius:100px;flex-shrink:0" title="リンクを知っている人のみ">🔗 リンク限定</span>'
     :'<span class="pill" style="background:var(--bg);color:var(--t3);font-size:10px;font-weight:700;padding:2px 7px;border-radius:100px;flex-shrink:0" title="オーナーのみ表示">🔒 非公開</span>';
   return`
 <div class="card" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer" onclick="gdocOpen('${p.id}')">
@@ -6944,20 +6947,24 @@ function gdocShareModal(id,src){
   const p=_gdocColl(src).find(x=>x.id===id);if(!p){toast('ドキュメントが見つかりません','err');return;}
   if(src==='tp'&&!_gdocIsOwner(p)){toast('このドキュメントのオーナーだけが共有できます','warn');return;}
   const vlink=_gdocMakeLink(p,src,'view'),elink=_gdocMakeLink(p,src,'edit');
-  const isTeam=_gdocVis(p)==='team';
+  const vis=(src==='tp')?_gdocVis(p):'team'; // bi(事業情報)は公開範囲の概念なし=常にリンク表示
+  const cur=k=>vis===k;
+  const vb=(k,label)=>`<button class="btn btn-sm ${cur(k)?'btn-p':'btn-g'}" onclick="gdocSetVis('${p.id}','tp','${k}')">${label}${cur(k)?'（現在）':''}</button>`;
   const visCard=src!=='tp'?'':`
   <div class="card" style="margin-bottom:12px">
-    <div style="font-weight:700;font-size:13px;margin-bottom:2px">🌐 社内での公開範囲</div>
-    <div style="font-size:11px;color:var(--t2);margin-bottom:10px">「誰でも閲覧OK」にすると、社内アプリのメンバー全員がこのドキュメントを一覧で見られます（読むだけ・編集はオーナーのみ）。オフの間はオーナーだけに表示されます。</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-sm ${isTeam?'btn-g':'btn-p'}" onclick="gdocSetVis('${p.id}','tp','private')">🔒 オーナーのみ${isTeam?'':'（現在）'}</button>
-      <button class="btn btn-sm ${isTeam?'btn-p':'btn-g'}" onclick="gdocSetVis('${p.id}','tp','team')">👁 誰でも閲覧OK${isTeam?'（現在）':''}</button>
+    <div style="font-weight:700;font-size:13px;margin-bottom:2px">🌐 公開範囲</div>
+    <div style="font-size:11px;color:var(--t2);margin-bottom:10px">このドキュメントを誰が見られるかを選びます。<br>🔒 <b>オーナーのみ</b>＝あなただけ（リンク共有もオフ）／🔗 <b>リンクを知っている人のみ</b>＝一覧には出さず、リンクを渡した相手だけ／👁 <b>誰でも閲覧OK</b>＝社内メンバー全員が一覧で読める（編集はオーナーのみ）。</div>
+    <div style="display:flex;flex-direction:column;gap:6px;align-items:stretch">
+      ${vb('private','🔒 オーナーのみ')}
+      ${vb('link','🔗 リンクを知っている人のみ')}
+      ${vb('team','👁 誰でも閲覧OK')}
     </div>
   </div>`;
-  openModalLg(`<div class="mhdr"><div class="mtitle">🔗 共有・公開範囲</div><button class="mclose" onclick="closeModal()">✕</button></div>
-  <div style="font-size:13px;font-weight:700;margin-bottom:4px">${esc(p.title||'無題のドキュメント')}</div>
-  <div style="font-size:11px;color:var(--t3);margin-bottom:14px">下の「社内での公開範囲」は社内アプリのメンバー向け。共有リンクは社外の相手にも渡せます（リンクを知っている人だけが開けます・検索には出ません）。</div>
-  ${visCard}
+  // オーナーのみ(private)のときはリンク共有をオフにする。リンク限定/誰でも閲覧OK のときだけリンクを出す。
+  const linkCards=(vis==='private')?`
+  <div class="card">
+    <div style="font-size:12px;color:var(--t2);line-height:1.7">🔒 いまは「オーナーのみ」です。共有リンクを渡すには、上で「🔗 リンクを知っている人のみ」または「👁 誰でも閲覧OK」を選んでください。</div>
+  </div>`:`
   <div class="card" style="margin-bottom:12px">
     <div style="font-weight:700;font-size:13px;margin-bottom:2px">👁 閲覧リンク（読むだけ）</div>
     <div style="font-size:11px;color:var(--t2);margin-bottom:8px">相手は読めますが編集はできません。</div>
@@ -6981,7 +6988,12 @@ function gdocShareModal(id,src){
       <input id="sh-return" placeholder="https://…/share.html#r=…" style="flex:1;min-width:180px;font-size:11px">
       <button class="btn btn-g btn-sm" style="flex-shrink:0" onclick="gdocImportReturn('${id}','${src}')">取り込む</button>
     </div>
-  </div>`);
+  </div>`;
+  openModalLg(`<div class="mhdr"><div class="mtitle">🔗 共有・公開範囲</div><button class="mclose" onclick="closeModal()">✕</button></div>
+  <div style="font-size:13px;font-weight:700;margin-bottom:4px">${esc(p.title||'無題のドキュメント')}</div>
+  <div style="font-size:11px;color:var(--t3);margin-bottom:14px">公開範囲は社内アプリのメンバー向け。共有リンクは社外の相手にも渡せます（リンクを知っている人だけが開けます・検索には出ません）。</div>
+  ${visCard}
+  ${linkCards}`);
 }
 function gdocCopyLink(inputId,label){
   const el=document.getElementById(inputId);if(!el)return;
@@ -7112,11 +7124,12 @@ function gdocSetVis(id,src,vis){
   src=src||'tp';
   const p=_gdocColl(src).find(x=>x.id===id);if(!p)return;
   if(!_gdocIsOwner(p)){toast('このドキュメントのオーナーだけが変更できます','warn');return;}
-  p.vis=(vis==='team')?'team':'private';
+  p.vis=(vis==='team'||vis==='link')?vis:'private';
   if(!_gdocOwnerEmail(p))p.ownerEmail=_myEmail(); // 旧ドキュメントに初めて公開範囲を設定した会長を所有者として記録
   p.updatedAt=Date.now();
-  save();closeModal();render();
-  toast(p.vis==='team'?'誰でも閲覧OKにしました 👁':'オーナーのみ表示にしました 🔒');
+  save();
+  toast({team:'誰でも閲覧OKにしました 👁',link:'リンクを知っている人のみにしました 🔗',private:'オーナーのみ表示にしました 🔒'}[p.vis]);
+  gdocShareModal(id,src); // モーダルを開き直して新しい公開範囲とリンク表示を反映
 }
 function gdocDel(id,src){
   src=src||'tp';
@@ -13492,7 +13505,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260724-04';
+const APP_VERSION='20260724-05';
 
 render();
 try{renderAuthGate();}catch(e){console.warn('authGate init',e);}  // 認証確定まではログイン/読込画面で画面を覆う
