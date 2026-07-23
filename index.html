@@ -989,7 +989,7 @@ function _applyCloudData(json){
   if(keepBiz!==undefined)S.bizBoard=keepBiz;
   ['tasks','habits','jobs','logs','journals','goals','clients','workers','checkIns','customPages','customEx','navConfig','meals','workouts','pipeline','teamKgis','teamKpis','teamPosts','teamDocs','teamPages','bizUnits','teamMeetings','salesLeads','hpFees','salesSites','templates','bizInfo','crmClients','memberRoles','signins'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=def[k]||[];});
   if(FB_USER)S._uid=FB_USER.uid;
-  localStorage.setItem(DB,JSON.stringify(S));
+  _lsSaveState(S);
 }
 
 function fbSetupRealtimeSync(){
@@ -1009,7 +1009,7 @@ function fbSetupRealtimeSync(){
     S=migrate(defState());
     S._uid=FB_USER.uid;S._savedAt=0;
     window._teamSnap={};
-    localStorage.setItem(DB,JSON.stringify(S));
+    _lsSaveState(S);
     if(typeof render==='function')render();
   }
   // FB_USER確定後に理想スケジュール移行を再評価（会長アカウントはこの時点でfsが確定・クラウドへも同期される）
@@ -1206,7 +1206,7 @@ function fbSetupTeamSync(){
     // 種データ(_seed)は updatedAt=0 なので、実データ(updatedAt>0)が常に勝ち、種で上書きされない。
     // 取り込みで内容が入れ替わる直前に、現在の実データを必ずローカルへバックアップ(誤消失の復元用)。
     if(typeof d.bizBoard==='string'){const rb=_teamDecode(d.bizBoard);if(rb&&(rb.updatedAt||0)>((S.bizBoard&&S.bizBoard.updatedAt)||0)){bizBackup('cloud-adopt');S.bizBoard=rb;changed=true;}}
-    if(changed){_teamSnapRebase();localStorage.setItem(DB,JSON.stringify(S));renderSyncSafe();}
+    if(changed){_teamSnapRebase();_lsSaveState(S);renderSyncSafe();}
   },e=>{const c=e&&e.code;if(c==='permission-denied'&&TEAM_SHARE_OK!==false){TEAM_SHARE_OK=false;renderAuthUI();}console.warn('team share sync:',c||e);});
   // salesLeads分割doc(mcapp_leads_0..3)の購読。各shardは部分集合なのでid+updatedAtでマージ(削除しない)
   _slShardUnsubs.forEach(u=>{try{u();}catch(_){}});
@@ -1218,7 +1218,7 @@ function fbSetupTeamSync(){
       if(!Array.isArray(remote)||!remote.length)return;
       const merged=mergeTeamArr(S.salesLeads||[],remote,'salesLeads');
       if(JSON.stringify(merged)!==JSON.stringify(S.salesLeads||[])){
-        S.salesLeads=merged;_teamSnapRebase();localStorage.setItem(DB,JSON.stringify(S));renderSyncSafe();
+        S.salesLeads=merged;_teamSnapRebase();_lsSaveState(S);renderSyncSafe();
       }
     },e=>console.warn('leads shard sync',i,(e&&e.code)||e)));
   }
@@ -2176,7 +2176,7 @@ function defState(){return{
 function migrate(d){
   // migrate ef_v4 → ef_v5
   const old=localStorage.getItem(DB_OLD);
-  if(old&&!localStorage.getItem(DB)){try{const o=JSON.parse(old);Object.assign(d,o);localStorage.setItem(DB,JSON.stringify(d));localStorage.removeItem(DB_OLD);}catch{}}
+  if(old&&!localStorage.getItem(DB)){try{const o=JSON.parse(old);Object.assign(d,o);_lsSaveState(d);localStorage.removeItem(DB_OLD);}catch{}}
   // migrate v10→v11: 指定ワーカーをトライアルに設定、誤採用ログ削除
   if(!d.settings._workerTrialMigrated2){
     const trialWorkerNames=['矢田部','菅野','鈴木','松下'];
@@ -2259,7 +2259,37 @@ function migrate(d){
   }
   return d;
 }
-function load(){try{const d=Object.assign(defState(),JSON.parse(localStorage.getItem(DB))||{});return migrate(d);}catch{return defState();}}
+// ── localStorage保存のLZ圧縮化(QuotaExceededError対策・2026-07-24) ──
+// 全状態Sを生JSONで保存するとsalesLeads等で5MB上限を超え、保存のたびに失敗していた。
+// 'LZ1:'マーカー付きで圧縮保存し、旧形式(生JSON)も読める後方互換にする。
+// 圧縮しても超過する場合はsalesLeads(shared/mcappが唯一の真実・クラウドが正)を外してコアを確実に残す。
+function _lsSaveState(obj){
+  try{
+    const json=JSON.stringify(obj);
+    const payload=window.LZString?('LZ1:'+LZString.compressToUTF16(json)):json;
+    localStorage.setItem(DB,payload);
+    return true;
+  }catch(e){
+    try{
+      const lite=Object.assign({},obj,{salesLeads:[]});
+      const lj=JSON.stringify(lite);
+      const lp=window.LZString?('LZ1:'+LZString.compressToUTF16(lj)):lj;
+      localStorage.setItem(DB,lp);
+      console.warn('save: salesLeadsを除外してローカル保存(容量超過回避・クラウドが正)');
+      return true;
+    }catch(e2){console.warn('save error',e2);return false;}
+  }
+}
+function _lsReadState(){
+  let raw;try{raw=localStorage.getItem(DB);}catch(_){return null;}
+  if(raw==null)return null;
+  if(raw.slice(0,4)==='LZ1:'){
+    if(!window.LZString)return null;
+    try{const d=LZString.decompressFromUTF16(raw.slice(4));return d==null?null:JSON.parse(d);}catch(_){return null;}
+  }
+  try{return JSON.parse(raw);}catch(_){return null;}
+}
+function load(){try{const d=Object.assign(defState(),_lsReadState()||{});return migrate(d);}catch{return defState();}}
 // ─── パフォーマンス最適化 ───────────────────────────────────────────
 // localStorageへの書き込みをRAFでバッチ化（同フレーム内の複数save()を1回に集約）
 let _lsPending=false;
@@ -2271,7 +2301,7 @@ function save(){
     _lsPending=true;
     requestAnimationFrame(()=>{
       _lsPending=false;
-      try{localStorage.setItem(DB,JSON.stringify(S));}catch(e){console.warn('save error',e);}
+      _lsSaveState(S);
     });
   }
 }
@@ -2306,7 +2336,7 @@ function syncToSheet(manual){
 }
 // ページを閉じる直前に必ずフラッシュ
 window.addEventListener('beforeunload',()=>{
-  try{localStorage.setItem(DB,JSON.stringify(S));}catch(e){}
+  _lsSaveState(S);
 });
 // ─────────────────────────────────────────────────────────────────────
 function allEx(){return [...(S.customEx||[]),'プッシュアップ','ワイドプッシュアップ','スクワット','ジャンプスクワット','ランジ','プランク','サイドプランク','クランチ','レッグレイズ','バーピー','マウンテンクライマー','ヒップリフト','ジャンピングジャック','ランニング'];}
@@ -13505,7 +13535,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260724-05';
+const APP_VERSION='20260724-06';
 
 render();
 try{renderAuthGate();}catch(e){console.warn('authGate init',e);}  // 認証確定まではログイン/読込画面で画面を覆う
