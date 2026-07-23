@@ -1290,6 +1290,7 @@ fbAuth.getRedirectResult().catch(e=>{console.warn('getRedirectResult:',e&&e.code
 
 fbAuth.onAuthStateChanged(user=>{
   FB_USER=user;
+  _authSettled=true;
   if(user){
     fbSetupRealtimeSync();
     fbSetupTeamSync();
@@ -1298,6 +1299,7 @@ fbAuth.onAuthStateChanged(user=>{
     if(_teamUnsub){_teamUnsub();_teamUnsub=null;}
     TEAM_SHARE_OK=null;
   }
+  try{renderAuthGate();}catch(e){console.warn('authGate',e);}
   renderAuthUI();
   renderGcalUI();
   // Gcal連携済みならサイレント再認証
@@ -7085,6 +7087,7 @@ function _gdocEditingActive(){
 // (データのマージ自体は先に済んでいる。次の保存でローカルが優先=last-writer-wins。他タブは次の描画で反映)
 function renderSyncSafe(){
   if(_gdocEditingActive()){window._gdocRenderPending=true;return;}
+  try{if(typeof renderAuthGate==='function')renderAuthGate();}catch(_){}  // memberRoles同期後にゲート/オンボ状態を再評価
   render();
 }
 function gdocCmd(cmd,val){
@@ -9450,8 +9453,14 @@ ${myRole()==='full'?`${secTitle('🔑 メンバー権限（共有相手の表示
   </div>
   ${(S.memberRoles||[]).filter(m=>m&&!m.deleted).length?`<div style="display:flex;flex-direction:column;gap:6px">
     ${(S.memberRoles||[]).filter(m=>m&&!m.deleted).sort((a,b)=>(a.email||'').localeCompare(b.email||'')).map(m=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--card2);border-radius:8px">
-      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px">${esc(m.email||'')}</span>
-      <span class="badge ${m.role==='sales'?'ba':'bg'}" style="font-size:10px">${m.role==='sales'?'営業・情報のみ':'フル'}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.name||'（名前未登録）')}</div>
+        <div style="font-size:11px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.email||'')}${(m.jobs&&m.jobs.length)?' ・ '+esc(m.jobs.join('/')):''}</div>
+      </div>
+      <select onchange="mrSetRole('${m.id}',this.value)" style="font-size:11px;padding:3px 4px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text)">
+        <option value="sales" ${m.role!=='full'?'selected':''}>営業・情報のみ</option>
+        <option value="full" ${m.role==='full'?'selected':''}>フル</option>
+      </select>
       <button class="btn btn-red btn-xs" onclick="mrRemoveMember('${m.id}')">削除</button>
     </div>`).join('')}
   </div>`:`<div style="font-size:12px;color:var(--t3)">まだ登録がありません。営業スタッフのGoogleメールを追加してください。</div>`}
@@ -11234,10 +11243,10 @@ const ADMIN_EMAILS=['nakamurakouta512@gmail.com','mono.create.group@gmail.com'];
 function _myEmail(){try{return((typeof FB_USER!=='undefined'&&FB_USER&&FB_USER.email)||'').toLowerCase();}catch(_){return'';}}
 function myRole(){
   const em=_myEmail();
-  if(!em)return 'full';                         // 未サインイン(ローカルのみ)は制限しない
-  if(ADMIN_EMAILS.includes(em))return 'full';
+  if(!em)return 'full';                          // 未サインイン(ローカルのみ)。認証ゲートで画面自体は遮断される
+  if(ADMIN_EMAILS.includes(em))return 'full';    // 会長は常にフル
   const r=(S.memberRoles||[]).find(m=>m&&(m.email||'').toLowerCase()===em);
-  return (r&&r.role==='sales')?'sales':'full';  // 未登録=full
+  return (r&&r.role==='full')?'full':'sales';    // 既定=営業スタッフ(安全側)。フルは会長がメンバー権限で付与
 }
 const ROLE_SALES_CATS=['sales','info'];
 function _salesAllowedViews(){const vs=[];NAV_CATS.forEach(c=>{if(ROLE_SALES_CATS.includes(c.id))vs.push(...c.views);});return vs;}
@@ -11260,12 +11269,115 @@ function mrAddMember(){
   else{S.memberRoles.push({id:uid(),email:em,role,createdAt:today(),updatedAt:Date.now(),addedBy:_myEmail()});}
   save();render();toast(`${em} を ${role==='sales'?'営業スタッフ(営業・情報のみ)':'フル'} に設定しました`);
 }
+function mrSetRole(id,role){
+  if(myRole()!=='full'){toast('権限がありません','err');render();return;}
+  const m=(S.memberRoles||[]).find(x=>x.id===id);if(!m)return;
+  m.role=(role==='full')?'full':'sales';m.deleted=false;m.updatedAt=Date.now();
+  save();render();toast(`${m.name||m.email} を ${m.role==='full'?'フル':'営業・情報のみ'} に変更しました`);
+}
 function mrRemoveMember(id){
   if(myRole()!=='full'){toast('権限がありません','err');return;}
   const m=(S.memberRoles||[]).find(x=>x.id===id);if(!m)return;
-  if(!confirm(`${m.email} の権限設定を削除しますか？（このアカウントは次回サインイン時にフル表示へ戻ります）`))return;
+  if(!confirm(`${m.email} の権限設定を削除しますか？（このアカウントは次回サインイン時に営業スタッフ表示へ戻ります）`))return;
   m.deleted=true;m.updatedAt=Date.now();
   save();render();toast('権限設定を削除しました');
+}
+
+// ===認証ゲート＋オンボーディング(2026-07-23 会長指示: 共有時はログイン必須・初回に名前/職種登録)===
+// ・未サインインでは画面自体を隠し、ログイン画面だけを見せる(データを一切見せない)
+// ・Googleサインイン後、初回のみ「名前・職種」を登録(会長=ADMINはスキップ)
+// ・アクセス権限(営業/フル)は会長がメンバー権限で設定。新規は営業スタッフ(安全側)。
+let _authSettled=false;
+const JOB_OPTIONS=['動画編集者','動画撮影者','画像作成者','営業','ディレクター','その他'];
+function _myProfile(){const em=_myEmail();return em?(S.memberRoles||[]).find(m=>m&&!m.deleted&&(m.email||'').toLowerCase()===em):null;}
+function _hasProfile(){
+  if(ADMIN_EMAILS.includes(_myEmail()))return true;       // 会長はオンボ不要
+  const em=_myEmail(); if(!em)return false;
+  try{if(localStorage.getItem('mcapp_prof_'+em))return true;}catch(_){}
+  const p=_myProfile(); return !!(p&&p.name);
+}
+function _injectAuthGateCSS(){
+  if(document.getElementById('auth-gate-css'))return;
+  const st=document.createElement('style');st.id='auth-gate-css';
+  st.textContent=`
+  #auth-gate{position:fixed;inset:0;z-index:100000;display:none;align-items:center;justify-content:center;padding:20px;
+    background:var(--bg,#0d0f14);overflow:auto}
+  body.auth-locked{overflow:hidden}
+  body.auth-locked #sidebar,body.auth-locked #main,body.auth-locked #mob-nav,
+  body.auth-locked #mob-hamburger,body.auth-locked #mob-drawer,body.auth-locked #mob-overlay{display:none !important}
+  .agw{width:100%;max-width:420px;text-align:center}
+  .agw .brand{font-size:26px;font-weight:800;color:var(--text);letter-spacing:.3px}
+  .agw .sub{font-size:13px;color:var(--t3);margin:6px 0 26px}
+  .agw .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:26px 22px;box-shadow:0 10px 40px rgba(0,0,0,.25);text-align:left}
+  .agw .glogin{width:100%;background:#fff;border:1px solid #dadce0;border-radius:10px;padding:12px;font-size:14px;font-weight:700;color:#3c4043;display:flex;align-items:center;gap:10px;justify-content:center;cursor:pointer}
+  .agw .fl{font-size:12px;font-weight:700;color:var(--t2);margin:14px 0 5px}
+  .agw input{width:100%;border:1px solid var(--border);border-radius:9px;padding:11px 12px;font-size:15px;background:var(--card2,var(--bg));color:var(--text)}
+  .agw .jobs{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+  .agw .ob-job{flex:1;min-width:96px;text-align:center;border:1px solid var(--border);border-radius:10px;padding:12px 8px;font-size:13px;font-weight:700;color:var(--t2);background:var(--card);cursor:pointer;user-select:none}
+  .agw .ob-job.sel{background:var(--text);color:var(--bg);border-color:var(--text)}
+  .agw .prim{width:100%;margin-top:20px;background:var(--pl,#d6338c);color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:800;cursor:pointer}
+  .agw .note{font-size:11px;color:var(--t3);margin-top:14px;line-height:1.6;text-align:center}
+  .agw .who{font-size:12px;color:var(--t2);text-align:center;margin-bottom:6px}
+  `;
+  document.head.appendChild(st);
+}
+function _gateLogo(){return`<div class="brand">mono.create</div><div class="sub">社内連絡アプリ</div>`;}
+function _gateLoadingHTML(){return`<div class="agw">${_gateLogo()}<div class="card"><div style="text-align:center;color:var(--t3);font-size:13px;padding:14px 0">読み込み中…</div></div></div>`;}
+function _gateLoginHTML(){
+  const wv=_isEmbeddedWebview();
+  return`<div class="agw">${_gateLogo()}
+  <div class="card">
+    <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px">サインインしてください</div>
+    <div style="font-size:12px;color:var(--t3);margin-bottom:18px">このアプリはログインした人だけが利用できます。</div>
+    ${wv?`<div style="font-size:11px;line-height:1.7;background:#fff4e5;border:1px solid #f0c98a;border-radius:8px;padding:10px 12px;color:#8a5a00;margin-bottom:12px">
+      <div style="font-weight:700;margin-bottom:4px">このままではGoogleログインできません</div>
+      アプリ内ブラウザでは、Googleがログインをブロックします。<b>Safari/Chromeで開いて</b>からログインしてください。
+      <div style="margin-top:8px"><button onclick="_copyAppUrl()" style="width:100%;background:#111;color:#fff;border:none;border-radius:6px;padding:8px;font-size:11px;font-weight:700">リンクをコピー</button></div>
+    </div>`:''}
+    <button class="glogin" onclick="signInWithGoogle()"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>Googleでサインイン</button>
+    <div class="note">アカウントをお持ちでない方も、Googleでそのまま始められます。<br>連絡先や契約形態などの詳細は、ログイン後に登録できます。</div>
+  </div></div>`;
+}
+function _gateOnboardHTML(){
+  const p=_myProfile();
+  const name=(p&&p.name)||(FB_USER&&FB_USER.displayName)||'';
+  const jobs=(p&&p.jobs)||[];
+  return`<div class="agw">${_gateLogo()}
+  <div class="card">
+    <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:2px">はじめまして 👋</div>
+    <div style="font-size:12px;color:var(--t3);margin-bottom:8px">最初に、あなたの情報を登録してください。</div>
+    <div class="who">${esc((FB_USER&&FB_USER.email)||'')}</div>
+    <div class="fl">名前</div>
+    <input id="ob-name" value="${esc(name)}" placeholder="例: 中村航汰" autocomplete="name">
+    <div class="fl">職種（複数選択可）</div>
+    <div class="jobs">${JOB_OPTIONS.map(j=>`<div class="ob-job${jobs.includes(j)?' sel':''}" data-job="${esc(j)}" onclick="this.classList.toggle('sel')">${esc(j)}</div>`).join('')}</div>
+    <button class="prim" onclick="obSave()">この内容で始める</button>
+    <div class="note">表示できる範囲（営業／全体）は管理者が設定します。<br>初期は「営業・情報」タブが表示されます。</div>
+  </div></div>`;
+}
+function renderAuthGate(){
+  _injectAuthGateCSS();
+  let el=document.getElementById('auth-gate');
+  if(!el){el=document.createElement('div');el.id='auth-gate';document.body.appendChild(el);}
+  const show=(html)=>{document.body.classList.add('auth-locked');el.style.display='flex';el.innerHTML=html;};
+  if(!_authSettled){show(_gateLoadingHTML());return;}
+  if(!FB_USER){show(_gateLoginHTML());return;}
+  if(!_hasProfile()){show(_gateOnboardHTML());return;}
+  document.body.classList.remove('auth-locked');el.style.display='none';el.innerHTML='';
+}
+function obSave(){
+  const name=(document.getElementById('ob-name')?.value||'').trim();
+  if(!name){toast('名前を入力してください','warn');return;}
+  const jobs=[...document.querySelectorAll('#auth-gate .ob-job.sel')].map(e=>e.dataset.job);
+  const em=_myEmail();
+  if(!em){toast('サインインが必要です','err');return;}
+  if(!Array.isArray(S.memberRoles))S.memberRoles=[];
+  let m=S.memberRoles.find(x=>x&&(x.email||'').toLowerCase()===em);
+  if(m){m.name=name;m.jobs=jobs;m.deleted=false;if(!m.role)m.role='sales';m.updatedAt=Date.now();}
+  else{S.memberRoles.push({id:uid(),email:em,name,jobs,role:'sales',createdAt:today(),updatedAt:Date.now()});}
+  try{localStorage.setItem('mcapp_prof_'+em,JSON.stringify({name,jobs}));}catch(_){}
+  save();renderAuthGate();render();
+  toast('ようこそ、'+name+'さん');
 }
 const NAVCATS_LS='mc_navcats';
 function getNavCatState(){try{const o=JSON.parse(localStorage.getItem(NAVCATS_LS)||'{}');return (o&&typeof o==='object')?o:{};}catch(_){return{};}}
@@ -13325,9 +13437,10 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260723-07';
+const APP_VERSION='20260723-08';
 
 render();
+try{renderAuthGate();}catch(e){console.warn('authGate init',e);}  // 認証確定まではログイン/読込画面で画面を覆う
 function forceAppUpdate(){
   const bust='?v='+Date.now();
   if('caches' in window){
