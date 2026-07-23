@@ -10380,14 +10380,14 @@ function openJobModal(id,preStatus,preClientId){
   </div>
   <div class="fg"><div class="fl">支払日</div><input type="date" id="j-payout" value="${j?.payoutDate||''}"></div>
 </div>
-${j?`<div class="fg"><div class="fl">入金状態</div>
+<div class="fg"><div class="fl">入金状態</div>
   <input type="hidden" id="j-paid-val" value="${j?.paidAt||''}">
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <button type="button" id="j-paid-btn" class="btn btn-sm" onclick="togglePaid()" style="white-space:nowrap"></button>
     <span id="j-paid-lbl" style="font-size:12px"></span>
   </div>
   <div style="font-size:10px;color:var(--t3);margin-top:3px">実際に入金があったら「入金済みにする」を押してください。押すと「💰 利益」タブの回収予定から外れます。</div>
-</div>`:''}
+</div>
 <div id="jf-subs">
 <div style="font-size:12px;font-weight:700;color:var(--t2);margin:10px 0 4px">✅ サブタスク <span style="font-weight:400;color:var(--t3)">（単価・支払はサブタスクごとに入力すると案件全体の金額が自動計算されます）</span></div>
 <div id="j-sub-cont">${subs.map((s,i)=>mkSubRow(s,`サブタスク ${i+1}`)).join('')}</div>
@@ -13308,7 +13308,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260723-10';
+const APP_VERSION='20260723-11';
 
 render();
 try{renderAuthGate();}catch(e){console.warn('authGate init',e);}  // 認証確定まではログイン/読込画面で画面を覆う
