@@ -986,7 +986,7 @@ function _applyCloudData(json){
   S=migrate(Object.assign(def,cloud));
   TEAM_KEYS.forEach(k=>{if(keepTeam[k]!==undefined)S[k]=keepTeam[k];});
   if(keepBiz!==undefined)S.bizBoard=keepBiz;
-  ['tasks','habits','jobs','logs','journals','goals','clients','workers','checkIns','customPages','customEx','navConfig','meals','workouts','pipeline','teamKgis','teamKpis','teamPosts','teamDocs','teamPages','bizUnits','teamMeetings','salesLeads','hpFees','salesSites','templates','bizInfo','crmClients'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=def[k]||[];});
+  ['tasks','habits','jobs','logs','journals','goals','clients','workers','checkIns','customPages','customEx','navConfig','meals','workouts','pipeline','teamKgis','teamKpis','teamPosts','teamDocs','teamPages','bizUnits','teamMeetings','salesLeads','hpFees','salesSites','templates','bizInfo','crmClients','memberRoles'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=def[k]||[];});
   if(FB_USER)S._uid=FB_USER.uid;
   localStorage.setItem(DB,JSON.stringify(S));
 }
@@ -1048,7 +1048,7 @@ function fbSetupRealtimeSync(){
 // チームデータは社内アプリ専用の shared/mcapp に保存(EditFlow の shared/team とは別物)。
 // Firestoreルールが共有アクセスを許可していれば自動で有効化。許可されない場合は
 // permission-denied を検知して自動で個人モードへフォールバック（現状維持・無害）。
-const TEAM_KEYS=['jobs','clients','workers','pipeline','teamKgis','teamKpis','teamPosts','teamDocs','teamPages','bizUnits','teamMeetings','salesLeads','hpFees','salesSites','templates','bizInfo','crmClients'];
+const TEAM_KEYS=['jobs','clients','workers','pipeline','teamKgis','teamKpis','teamPosts','teamDocs','teamPages','bizUnits','teamMeetings','salesLeads','hpFees','salesSites','templates','bizInfo','crmClients','memberRoles'];
 let TEAM_SHARE_OK=null;      // null=未判定 / true=共有有効 / false=個人モード
 let _teamUnsub=null;
 window._teamSnap=window._teamSnap||{};
@@ -2135,7 +2135,7 @@ let JOB_SORT='deadline'; // job sort order
 
 function defState(){return{
   tasks:[], clients:[], jobs:[], habits:[], goals:[], journals:[], logs:[], rewards:[],
-  checkIns:[], workouts:[], workers:[], memos:[], meals:[], pipeline:[], teamKgis:[], teamKpis:[], teamPosts:[], teamDocs:[], teamPages:[], salesLeads:[], hpFees:[], salesSites:[], templates:[], bizInfo:[], crmClients:[],
+  checkIns:[], workouts:[], workers:[], memos:[], meals:[], pipeline:[], teamKgis:[], teamKpis:[], teamPosts:[], teamDocs:[], teamPages:[], salesLeads:[], hpFees:[], salesSites:[], templates:[], bizInfo:[], crmClients:[], memberRoles:[],
   fs:JSON.parse(JSON.stringify(DEFAULT_FS)),
   dailySchedules:{},
   goalReviews:{},
@@ -2863,6 +2863,8 @@ function render(){
       }
     }
     sessionStorage.setItem('ef_team_view',V);
+    // 役割ガード(2026-07-23): 営業スタッフは「営業」「情報」タブ以外を開けない。許可外Vは営業リストへ退避。
+    if(!isViewAllowed(V)){V=(_salesAllowedViews()[0]||'salesleads');sessionStorage.setItem('ef_team_view',V);}
     if(V==='kpi'){V='goals';} // KPI管理は目標・KPI統合ページにリダイレクト
     const views={dashboard:rDash,tasks:rTasks,projects:rProjects,pipeline:rPipeline,teamgoals:rTeamGoals,posts:rPosts,docs:rDocs,workers:rWorkers,habits:rHabits,goals:rGoals,journal:rJournal,revenue:rRevenue,memo:rMemo,settings:rSettings,customize:rCustomize,aichat:rAIChat,fitness:rFitness,kpi:rKpi,bizboard:rBizBoard,bizunits:rBizUnits,bizinfo:rBizInfo,minutes:rMinutes,salesleads:rSalesLeads,hpfee:rHpFee,salessites:rSalesSites,inquiries:rInquiries,templates:rTemplates,crm:rCrm};
     let html;
@@ -6793,7 +6795,10 @@ ${!pages.length?`<div class="empty"><div class="empty-icon">📄</div><div class
       <div style="font-size:11px;color:var(--t3);margin-top:2px">更新 ${p.updatedAt?tpFmtDate(p.updatedAt):'-'}${p.updatedBy?` ・ ${esc(p.updatedBy)}`:''}</div>
     </div>
   </div>
-  <button class="btn btn-red btn-xs" style="flex-shrink:0" onclick="gdocDel('${p.id}');event.stopPropagation()">削除</button>
+  <div style="display:flex;gap:6px;flex-shrink:0">
+    <button class="btn btn-g btn-xs" onclick="gdocShareModal('${p.id}','tp');event.stopPropagation()" title="共有リンクを発行">🔗</button>
+    <button class="btn btn-red btn-xs" onclick="gdocDel('${p.id}');event.stopPropagation()">削除</button>
+  </div>
 </div>`).join('')}`;
   return`${docList}
 <div style="height:8px"></div>
@@ -6835,6 +6840,85 @@ function tdSaveDoc(){
   save();closeModal();render();toast('ドキュメントを保存しました 📁');
 }
 function tdDelDoc(id){const d=(S.teamDocs||[]).find(x=>x.id===id);if(!d)return;d.deleted=true;d.updatedAt=Date.now();save();closeModal();render();toast('ドキュメントを削除しました');}
+
+// ===ドキュメント共有リンク(2026-07-23 会長指示)===
+// 閲覧/編集を選んでリンク発行。内容はリンク自体(URLハッシュ)にLZ圧縮で埋め込む。
+// バックエンド不要・ログイン不要・「リンクを知っている人だけ」開ける(検索非公開)。
+// 編集リンクの相手は編集後「反映用リンク(#r=)」を送り返し、会長が取り込んでドキュメント更新。
+function _shSanitize(html){
+  try{
+    const d=document.createElement('div');d.innerHTML=String(html||'');
+    d.querySelectorAll('script,iframe,object,embed,link,meta,style,form').forEach(n=>n.remove());
+    d.querySelectorAll('*').forEach(el=>{[...el.attributes].forEach(a=>{
+      const n=a.name.toLowerCase(),v=(a.value||'').trim().toLowerCase().replace(/\s/g,'');
+      if(n.startsWith('on'))el.removeAttribute(a.name);
+      else if((n==='href'||n==='src'||n==='xlink:href')&&v.indexOf('javascript:')===0)el.removeAttribute(a.name);
+    });});
+    return d.innerHTML;
+  }catch(_){return'';}
+}
+function _gdocMakeLink(p,src,perm){
+  const data={t:p.title||'無題のドキュメント',h:_shSanitize(p.html||''),perm,src:src||'tp',id:p.id,ts:Date.now(),by:_gdWho()};
+  const mode=perm==='edit'?'e':'v';
+  const payload=LZString.compressToEncodedURIComponent(JSON.stringify(data));
+  return new URL('share.html',location.href).href+'#'+mode+'='+payload;
+}
+function gdocShareModal(id,src){
+  src=src||'tp';
+  const p=_gdocColl(src).find(x=>x.id===id);if(!p){toast('ドキュメントが見つかりません','err');return;}
+  const vlink=_gdocMakeLink(p,src,'view'),elink=_gdocMakeLink(p,src,'edit');
+  openModalLg(`<div class="mhdr"><div class="mtitle">🔗 共有リンクを発行</div><button class="mclose" onclick="closeModal()">✕</button></div>
+  <div style="font-size:13px;font-weight:700;margin-bottom:4px">${esc(p.title||'無題のドキュメント')}</div>
+  <div style="font-size:11px;color:var(--t3);margin-bottom:14px">リンクを知っている人だけが開けます（検索には出ません）。内容がリンクに含まれるので、渡す相手にだけ送ってください。</div>
+  <div class="card" style="margin-bottom:12px">
+    <div style="font-weight:700;font-size:13px;margin-bottom:2px">👁 閲覧リンク（読むだけ）</div>
+    <div style="font-size:11px;color:var(--t2);margin-bottom:8px">相手は読めますが編集はできません。</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <input id="sh-view" readonly value="${esc(vlink)}" style="flex:1;min-width:180px;font-size:11px" onclick="this.select()">
+      <button class="btn btn-p btn-sm" style="flex-shrink:0" onclick="gdocCopyLink('sh-view','閲覧リンク')">コピー</button>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:12px">
+    <div style="font-weight:700;font-size:13px;margin-bottom:2px">✏️ 編集リンク（相手が編集できる）</div>
+    <div style="font-size:11px;color:var(--t2);margin-bottom:8px">相手はブラウザ上で編集できます。編集後に相手が「反映用リンク」を送り返すと、下の取り込みでこのドキュメントを更新できます。</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <input id="sh-edit" readonly value="${esc(elink)}" style="flex:1;min-width:180px;font-size:11px" onclick="this.select()">
+      <button class="btn btn-p btn-sm" style="flex-shrink:0" onclick="gdocCopyLink('sh-edit','編集リンク')">コピー</button>
+    </div>
+  </div>
+  <div class="card">
+    <div style="font-weight:700;font-size:13px;margin-bottom:2px">↩ 反映用リンクを取り込む</div>
+    <div style="font-size:11px;color:var(--t2);margin-bottom:8px">編集リンクの相手から届いた「反映用リンク(#r=…)」を貼り付けて、このドキュメントに反映します。</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <input id="sh-return" placeholder="https://…/share.html#r=…" style="flex:1;min-width:180px;font-size:11px">
+      <button class="btn btn-g btn-sm" style="flex-shrink:0" onclick="gdocImportReturn('${id}','${src}')">取り込む</button>
+    </div>
+  </div>`);
+}
+function gdocCopyLink(inputId,label){
+  const el=document.getElementById(inputId);if(!el)return;
+  el.select();
+  const done=()=>toast((label||'リンク')+'をコピーしました 📋');
+  const fb=()=>{try{document.execCommand('copy');done();}catch(_){toast('コピーできません。長押しで選択してください','warn');}};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(el.value).then(done).catch(fb);}else fb();
+}
+function gdocImportReturn(id,src){
+  src=src||'tp';
+  const raw=(document.getElementById('sh-return')?.value||'').trim();
+  if(!raw){toast('反映用リンクを貼り付けてください','warn');return;}
+  const m=raw.match(/#r=(.+)$/);
+  if(!m){toast('反映用リンク(#r=…)ではありません','warn');return;}
+  let data;try{data=JSON.parse(LZString.decompressFromEncodedURIComponent(m[1]));}catch(_){data=null;}
+  if(!data||typeof data.h!=='string'){toast('リンクを読み取れませんでした','err');return;}
+  const targetId=data.id||id,targetSrc=data.src||src;
+  const p=_gdocColl(targetSrc).find(x=>x.id===targetId);
+  if(!p){toast('対象ドキュメントが見つかりません','err');return;}
+  if(!confirm(`「${esc(p.title||'無題')}」の内容を、届いた編集内容で上書きします。よろしいですか？`))return;
+  p.html=_shSanitize(data.h);
+  if(data.t)p.title=data.t;
+  p.updatedAt=Date.now();p.updatedBy=(_gdWho()||'')+'（取込）';
+  save();closeModal();render();toast('編集内容を反映しました ✅');
+}
 
 // ===初期ドキュメント(営業マニュアル2本・2026-07-10会長指示で登録。固定IDで冪等/全端末同一)===
 // ver:2 = 2026-07-10 md改訂反映(受注エリア全国化・出張撮影は旭川のみ・切り返し追加)。seedVerで一度きり上書き。
@@ -7035,6 +7119,7 @@ function rDocEditor(p,src){
   <button class="btn btn-g btn-sm" style="flex-shrink:0" onclick="gdocBack('${p.id}')">← 一覧へ</button>
   <input id="gdoc-title" class="gdoc-title" placeholder="無題のドキュメント" value="${esc(p.title||'')}" oninput="gdocInput('${p.id}')">
   ${buSel}
+  <button class="btn btn-g btn-sm" style="flex-shrink:0" onclick="gdocShareModal('${p.id}','${src}')" title="共有リンクを発行">🔗 共有</button>
   <span id="gdoc-savestat" class="gdoc-savestat">保存しました</span>
 </div>
 <div class="gdoc-toolbar">
@@ -9316,6 +9401,26 @@ ${secTitle('👤 アカウントとデータ管理')}
   <button class="btn btn-g btn-sm" onclick="efResetPersonalData()" ${typeof FB_USER!=='undefined'&&FB_USER?'':'disabled'}>👤 このアカウントの個人データを初期化(端末+クラウド)</button>
 </div>
 
+${myRole()==='full'?`${secTitle('🔑 メンバー権限（共有相手の表示制限）')}
+<div class="card" style="margin-bottom:16px">
+  <div style="font-size:12px;color:var(--t2);line-height:1.7;margin-bottom:10px">
+    営業スタッフのGoogleアカウント(メール)を「営業スタッフ」にすると、そのアカウントでサインインしたとき<b>「営業」タブと「情報」タブだけ</b>が表示されます（案件・経営・個人ページは非表示）。<br>
+    <span style="color:var(--t3)">※画面の表示制限です。厳密なアクセス遮断ではないため、信頼できるスタッフにのみ共有してください。</span>
+  </div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+    <input id="mr-email" type="email" placeholder="staff@gmail.com（サインインに使うメール）" style="flex:1;min-width:200px">
+    <select id="mr-role" style="width:170px"><option value="sales">営業スタッフ(営業・情報のみ)</option><option value="full">フル(全タブ)</option></select>
+    <button class="btn btn-p btn-sm" onclick="mrAddMember()">追加 / 更新</button>
+  </div>
+  ${(S.memberRoles||[]).filter(m=>m&&!m.deleted).length?`<div style="display:flex;flex-direction:column;gap:6px">
+    ${(S.memberRoles||[]).filter(m=>m&&!m.deleted).sort((a,b)=>(a.email||'').localeCompare(b.email||'')).map(m=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--card2);border-radius:8px">
+      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px">${esc(m.email||'')}</span>
+      <span class="badge ${m.role==='sales'?'ba':'bg'}" style="font-size:10px">${m.role==='sales'?'営業・情報のみ':'フル'}</span>
+      <button class="btn btn-red btn-xs" onclick="mrRemoveMember('${m.id}')">削除</button>
+    </div>`).join('')}
+  </div>`:`<div style="font-size:12px;color:var(--t3)">まだ登録がありません。営業スタッフのGoogleメールを追加してください。</div>`}
+</div>`:''}
+
 ${secTitle('🍅 ポモドーロタイマー')}
 <div class="card" style="margin-bottom:16px">
   <div class="frow">
@@ -11085,6 +11190,47 @@ const NAV_CATS=[
   {id:'mgmt',label:'経営',views:['bizboard']},
   {id:'info',label:'情報',views:['bizinfo','docs','minutes','posts']},
 ];
+// ===メンバー権限(役割) 2026-07-23 会長指示===
+// 会長=full(全タブ)。営業スタッフ=sales(「営業」「情報」カテゴリのみ表示)。役割はチーム共有(memberRoles)。
+// 会長メールは常にfull。未登録アカウントはfull(既存メンバー=佐々木等を締め出さない安全既定)。
+// 注意: これはUI制限。チームデータはサインインで同期されるため技術的な完全遮断ではない(信頼済みスタッフ向け)。
+const ADMIN_EMAILS=['nakamurakouta512@gmail.com','mono.create.group@gmail.com'];
+function _myEmail(){try{return((typeof FB_USER!=='undefined'&&FB_USER&&FB_USER.email)||'').toLowerCase();}catch(_){return'';}}
+function myRole(){
+  const em=_myEmail();
+  if(!em)return 'full';                         // 未サインイン(ローカルのみ)は制限しない
+  if(ADMIN_EMAILS.includes(em))return 'full';
+  const r=(S.memberRoles||[]).find(m=>m&&(m.email||'').toLowerCase()===em);
+  return (r&&r.role==='sales')?'sales':'full';  // 未登録=full
+}
+const ROLE_SALES_CATS=['sales','info'];
+function _salesAllowedViews(){const vs=[];NAV_CATS.forEach(c=>{if(ROLE_SALES_CATS.includes(c.id))vs.push(...c.views);});return vs;}
+function isViewAllowed(v){
+  if(myRole()!=='sales')return true;
+  if(v==='settings')return true;                // サインアウト導線
+  if(v.startsWith('doc_')||v.startsWith('bidoc_')||v.startsWith('tp_'))return true; // ドキュメント/事業情報=情報カテゴリ
+  if(v.startsWith('cp_'))return false;          // 個人カスタムページは不可
+  return _salesAllowedViews().includes(v);
+}
+function mrAddMember(){
+  if(myRole()!=='full'){toast('権限がありません','err');return;}
+  const el=document.getElementById('mr-email');const em=(el?.value||'').trim().toLowerCase();
+  const role=(document.getElementById('mr-role')?.value==='full')?'full':'sales';
+  if(!em||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){toast('メールアドレスを正しく入力してください','warn');return;}
+  if(ADMIN_EMAILS.includes(em)){toast('会長アカウントは常にフル権限です','warn');return;}
+  if(!Array.isArray(S.memberRoles))S.memberRoles=[];
+  const ex=S.memberRoles.find(m=>m&&(m.email||'').toLowerCase()===em);
+  if(ex){ex.role=role;ex.deleted=false;ex.updatedAt=Date.now();}
+  else{S.memberRoles.push({id:uid(),email:em,role,createdAt:today(),updatedAt:Date.now(),addedBy:_myEmail()});}
+  save();render();toast(`${em} を ${role==='sales'?'営業スタッフ(営業・情報のみ)':'フル'} に設定しました`);
+}
+function mrRemoveMember(id){
+  if(myRole()!=='full'){toast('権限がありません','err');return;}
+  const m=(S.memberRoles||[]).find(x=>x.id===id);if(!m)return;
+  if(!confirm(`${m.email} の権限設定を削除しますか？（このアカウントは次回サインイン時にフル表示へ戻ります）`))return;
+  m.deleted=true;m.updatedAt=Date.now();
+  save();render();toast('権限設定を削除しました');
+}
 const NAVCATS_LS='mc_navcats';
 function getNavCatState(){try{const o=JSON.parse(localStorage.getItem(NAVCATS_LS)||'{}');return (o&&typeof o==='object')?o:{};}catch(_){return{};}}
 function toggleNavCat(cid){
@@ -11115,10 +11261,12 @@ function renderNav(){
     }
     return`<div class="nav-item${V===c.id?' active':''}" data-view="${c.id}"><span class="nav-icon">${icon}</span>${label}</div>`;
   };
+  const _role=myRole();
   const grouped=(draggable)=>{
     let html='';
     const used=new Set();
-    const cats=[...NAV_CATS,{id:'other',label:'その他',views:null}];
+    let cats=[...NAV_CATS,{id:'other',label:'その他',views:null}];
+    if(_role==='sales')cats=cats.filter(cat=>ROLE_SALES_CATS.includes(cat.id)); // 営業スタッフは営業・情報のみ
     cats.forEach(cat=>{
       const items=cat.views?visible.filter(c=>cat.views.includes(c.id)):visible.filter(c=>!used.has(c.id)&&!_navCatOf(c.id));
       items.forEach(c=>used.add(c.id));
@@ -11132,10 +11280,17 @@ function renderNav(){
     return html;
   };
   el.innerHTML=grouped(true);
+  // 営業スタッフには固定の「カスタマイズ」(全タブ設定が見える)を出さない。設定はサインアウト用に残す。
+  document.querySelectorAll('#sidebar .nav-item[data-view="customize"]').forEach(el=>{el.style.display=_role==='sales'?'none':'';});
+  // モバイル下タブバー: 営業スタッフには個人用(ホーム/タスク/AI/習慣/案件)を出さず、メニューのみ残す。
+  document.querySelectorAll('#mob-nav .mnav-item').forEach(el=>{
+    const v=el.dataset.view;
+    el.style.display=(_role==='sales'&&v&&!isViewAllowed(v))?'none':'';
+  });
   // モバイルドロワー
   const dr=document.getElementById('mob-drawer-nav');if(!dr)return;
   dr.innerHTML=grouped(false)+`<div class="nav-sep"></div>
-  <div class="nav-item${V==='customize'?' active':''}" data-view="customize"><span class="nav-icon">🛠</span>カスタマイズ</div>
+  ${_role==='sales'?'':`<div class="nav-item${V==='customize'?' active':''}" data-view="customize"><span class="nav-icon">🛠</span>カスタマイズ</div>`}
   <div class="nav-item${V==='settings'?' active':''}" data-view="settings"><span class="nav-icon">⚙️</span>設定</div>`;
   // 下タブバー同期
   document.querySelectorAll('.mnav-item').forEach(el=>{
@@ -13131,7 +13286,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260723-01';
+const APP_VERSION='20260723-02';
 
 render();
 function forceAppUpdate(){
