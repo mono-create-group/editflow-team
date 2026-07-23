@@ -12876,14 +12876,15 @@ function rSalesLeads(){
   }
 
   // ─── 事業切替タブ(HP／AIコンサル／自動化ツール／シフトさん) ───
-  // 件数は区分('any')を問わず集計する。サブタブを切り替えても事業タブの数字が動かないようにするため。
-  // 事業タブ・区分タブの件数も1パスで数える(以前は タブ数×全件 のスキャンだった)
-  const bizCount={},srcCount={};
-  SL_BIZ.forEach(b=>{bizCount[b.k]=0;});
+  // バッジ=その事業のプール件数(=タブを開いたときに表示される候補数)。区分('any')で数えるので
+  // サブタブ(店舗/スレッズ)を切り替えても事業タブの数字は動かない。括弧内は接触済み(動いた店数)。
+  // 事業タブ・区分タブの件数は1パスで数える(以前は タブ数×全件 のスキャンだった)
+  const bizCount={},bizDone={},srcCount={};
+  SL_BIZ.forEach(b=>{bizCount[b.k]=0;bizDone[b.k]=0;});
   SL_SRC.forEach(s=>{srcCount[s.k]=0;});
   for(const l of allLeads){
     for(const b of SL_BIZ){
-      if(slInPool(l,b.k,'any')&&slStatusOf(l,b.k)!=='未接触')bizCount[b.k]++;  // その事業で動いた店数
+      if(slInPool(l,b.k,'any')){bizCount[b.k]++;if(slStatusOf(l,b.k)!=='未接触')bizDone[b.k]++;}
     }
     for(const s of SL_SRC){
       if(slInPool(l,'hp',s.k))srcCount[s.k]++;
@@ -12891,8 +12892,8 @@ function rSalesLeads(){
   }
   const bizTabHtml=`<div class="sl-biz-tabs">
     ${SL_BIZ.map(b=>{
-      const c=bizCount[b.k];
-      return`<button class="sl-biz-tab${_slBiz===b.k?' act':''}" onclick="slSetBiz('${b.k}')">${b.label}<span class="sl-biz-count">${c}</span></button>`;
+      const c=bizCount[b.k],d=bizDone[b.k];
+      return`<button class="sl-biz-tab${_slBiz===b.k?' act':''}" onclick="slSetBiz('${b.k}')">${b.label}<span class="sl-biz-count">${c}${d?`<span style="opacity:.6;font-weight:600"> (${d})</span>`:''}</span></button>`;
     }).join('')}
   </div>`;
 
@@ -13491,7 +13492,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260724-03';
+const APP_VERSION='20260724-04';
 
 render();
 try{renderAuthGate();}catch(e){console.warn('authGate init',e);}  // 認証確定まではログイン/読込画面で画面を覆う
