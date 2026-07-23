@@ -6009,7 +6009,8 @@ function rJobItem(j){
 function rProjProfit(){
   // 【2026-07-23改定】利益タブ=「入金予定日(paymentDate)」の月でグルーピング。
   // 入金予定日を入れても入金済みにはならない。入金済み(paidAt=ボタンで確定)の案件はこのタブに表示しない。
-  const done=(S.jobs||[]).filter(j=>!j.deleted&&j.status==='完了'&&jobMainIn(j)>0);
+  // 対象=「完了案件」または「入金予定日が入っている案件」（＝回収予定）。キャンセルは除外。
+  const done=(S.jobs||[]).filter(j=>!j.deleted&&j.status!=='キャンセル'&&jobMainIn(j)>0&&(j.status==='完了'||j.paymentDate));
   const monthOf=j=>String(j.paymentDate||j.invoiceDate||j.deliveryDate||(j.createdAt||'').slice(0,10)||'').slice(0,7);
   const now=new Date();const selDefault=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const months=[...new Set(done.map(monthOf).filter(Boolean))].sort().reverse();
@@ -6042,7 +6043,7 @@ ${jobs.length?`<div class="card" style="padding:0;overflow:hidden">
   </div>
   ${jobs.map(j=>{const pr=jobMainProfit(j);const cl=S.clients.find(c=>c.id===j.clientId);
   return`<div class="profit-row">
-    <span style="font-weight:600;cursor:pointer" onclick="openJobModal('${j.id}')">${esc(j.title)}<br><span style="font-size:11px;color:var(--t2)">${cl?esc(cl.name):''}${j.paymentDate?` | 入金予定 ${j.paymentDate}`:' | 入金予定日未設定'}</span></span>
+    <span style="font-weight:600;cursor:pointer" onclick="openJobModal('${j.id}')">${esc(j.title)}${j.status!=='完了'?` <span class="badge ba" style="font-size:9px">${esc(j.status)}</span>`:''}<br><span style="font-size:11px;color:var(--t2)">${cl?esc(cl.name):''}${j.paymentDate?` | 入金予定 ${j.paymentDate}`:' | 入金予定日未設定'}</span></span>
     <span style="font-weight:700;color:var(--blue)">¥${jobMainIn(j).toLocaleString()}</span>
     <span style="color:var(--amber)">¥${jobMainOut(j).toLocaleString()}</span>
     <span style="${pr>=0?'color:var(--green)':'color:var(--red)'}">¥${pr.toLocaleString()}</span>
@@ -13308,7 +13309,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260723-11';
+const APP_VERSION='20260723-12';
 
 render();
 try{renderAuthGate();}catch(e){console.warn('authGate init',e);}  // 認証確定まではログイン/読込画面で画面を覆う
