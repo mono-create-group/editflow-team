@@ -12133,7 +12133,7 @@ const SL_ASSIGNEES=['中村航汰','佐々木','アオイ'];  // 営業担当者
 //   店舗レコードは共通(物理移動なし)。振り分けは業種ベースの表示ロジックのみで完全可逆。
 const SL_BIZ=[
   {k:'hp',label:'HP制作',short:'HP'},
-  {k:'consult',label:'AIコンサル',short:'コンサル'},
+  {k:'consult',label:'AI顧問',short:'AI顧問'},
   {k:'app',label:'自動化ツール',short:'自動化'},
   {k:'shift',label:'シフトさん',short:'シフト'},
 ];
@@ -12178,6 +12178,9 @@ function slInPool(l,bizKey,srcKey){
   }
   // 自動化ツール事業(2026-07-22 会長決定): テレアポ・訪問営業・DM営業の対象業種に「宿泊・飲食」を明示選択。
   // 2026-07-13のHP営業除外ルールとは別決定のため、飲食もプールに含める(シフトさんタブの表示はそのまま維持・両タブに出てよい)。
+  // AI顧問事業(2026-07-23): 収集・取込した AI顧問見込み客(segment==='AI顧問')だけを表示する専用プール。
+  // 旧'consult'は非飲食全件を出すだけで絞りが無かった(手作業実績0件を実測確認済)。
+  if(bk==='consult')return l.segment==='AI顧問';
   if(bk==='app')return true;
   return !isFood;
 }
@@ -13322,7 +13325,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260723-06';
+const APP_VERSION='20260723-07';
 
 render();
 function forceAppUpdate(){
