@@ -5976,36 +5976,54 @@ function rJobItem(j){
 }
 
 function rProjProfit(){
-  // 入金済み(paymentDate設定済み)はこのタブに出さない。未入金＝これから回収する利益のみ表示。
-  const jobs=S.jobs.filter(j=>!j.deleted&&!j.paymentDate&&j.status==='完了'&&jobMainIn(j)>0)
-    .sort((a,b)=>String(b.deliveryDate||b.invoiceDate||b.createdAt||'').localeCompare(String(a.deliveryDate||a.invoiceDate||a.createdAt||'')));
-  const totalIn=jobs.reduce((s,j)=>s+jobMainIn(j),0);
-  const totalPay=jobs.reduce((s,j)=>s+jobMainOut(j),0);
-  const totalProfit=jobs.reduce((s,j)=>s+jobMainProfit(j),0);
-  return`${secTitle('💰 利益（未入金・回収予定）')}
-<div style="font-size:11px;color:var(--t3);margin:-6px 0 12px">入金済みにした案件はこの一覧から外れます（入金済みを含む累計実績はクライアント一覧・ダッシュボードで確認できます）</div>
+  // 完了案件を月別に表示(月セレクタあり)。月は納品日(なければ請求日/入金日/作成日)で分類。
+  // 入金済み(paymentDate設定済み)は薄く表示し、上部「回収予定利益」の合計には含めない(=未入金だけ集計)。
+  const done=(S.jobs||[]).filter(j=>!j.deleted&&j.status==='完了'&&jobMainIn(j)>0);
+  const monthOf=j=>String(j.deliveryDate||j.invoiceDate||j.paymentDate||(j.createdAt||'').slice(0,10)||'').slice(0,7);
+  const now=new Date();const selDefault=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const months=[...new Set(done.map(monthOf).filter(Boolean))].sort().reverse();
+  if(!months.includes(selDefault))months.unshift(selDefault);
+  const curM=(window._profitMonth&&months.includes(window._profitMonth))?window._profitMonth:(months[0]||selDefault);
+  const jobs=done.filter(j=>monthOf(j)===curM)
+    .sort((a,b)=>(a.paymentDate?1:0)-(b.paymentDate?1:0)||String(b.deliveryDate||'').localeCompare(String(a.deliveryDate||'')));
+  const unpaid=jobs.filter(j=>!j.paymentDate),paid=jobs.filter(j=>j.paymentDate);
+  const totalIn=unpaid.reduce((s,j)=>s+jobMainIn(j),0);
+  const totalPay=unpaid.reduce((s,j)=>s+jobMainOut(j),0);
+  const totalProfit=unpaid.reduce((s,j)=>s+jobMainProfit(j),0);
+  const paidProfit=paid.reduce((s,j)=>s+jobMainProfit(j),0);
+  return`${secTitle('💰 利益（月別・回収予定）')}
+<div style="font-size:11px;color:var(--t3);margin:-6px 0 12px">「回収予定利益」は<b>未入金</b>の完了案件だけを集計します。入金済みは薄く表示され合計から除外（各行の「取消」で未入金に戻せます）。入金済みを含む累計はクライアント一覧・ダッシュボードで確認できます。</div>
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+  <select style="width:150px" onchange="window._profitMonth=this.value;render()">
+    ${months.map(m=>`<option value="${m}" ${m===curM?'selected':''}>${m}</option>`).join('')}
+  </select>
+  <span style="font-size:12px;color:var(--t2)">完了 ${jobs.length}件（未入金 ${unpaid.length} / 入金済み ${paid.length}）</span>
+</div>
 <div class="card" style="margin-bottom:16px">
   <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">
-    <div><div style="font-size:11px;color:var(--t2)">未入金件数</div><div style="font-size:20px;font-weight:700;color:var(--amber)">${jobs.length}件</div></div>
-    <div><div style="font-size:11px;color:var(--t2)">総売上</div><div style="font-size:20px;font-weight:700;color:var(--blue)">¥${totalIn.toLocaleString()}</div></div>
-    <div><div style="font-size:11px;color:var(--t2)">支払額</div><div style="font-size:20px;font-weight:700;color:var(--amber)">¥${totalPay.toLocaleString()}</div></div>
+    <div><div style="font-size:11px;color:var(--t2)">未入金件数</div><div style="font-size:20px;font-weight:700;color:var(--amber)">${unpaid.length}件</div></div>
+    <div><div style="font-size:11px;color:var(--t2)">総売上(未入金)</div><div style="font-size:20px;font-weight:700;color:var(--blue)">¥${totalIn.toLocaleString()}</div></div>
+    <div><div style="font-size:11px;color:var(--t2)">支払額(未入金)</div><div style="font-size:20px;font-weight:700;color:var(--amber)">¥${totalPay.toLocaleString()}</div></div>
     <div><div style="font-size:11px;color:var(--t2)">回収予定利益</div><div style="font-size:20px;font-weight:700;color:${totalProfit>=0?'var(--green)':'var(--red)'}">¥${totalProfit.toLocaleString()}</div></div>
+    ${paid.length?`<div><div style="font-size:11px;color:var(--t3)">入金済み利益(参考)</div><div style="font-size:16px;font-weight:700;color:var(--t3)">¥${paidProfit.toLocaleString()}</div></div>`:''}
   </div>
 </div>
 ${jobs.length?`<div class="card" style="padding:0;overflow:hidden">
   <div class="profit-row" style="font-weight:700;font-size:12px;color:var(--t2);background:var(--card2)">
-    <span>案件名</span><span>単価</span><span>支払</span><span>利益</span><span>操作</span>
+    <span>案件名</span><span>単価</span><span>支払</span><span>利益</span><span>状態</span>
   </div>
-  ${jobs.map(j=>{const pr=jobMainProfit(j);const cl=S.clients.find(c=>c.id===j.clientId);
-  return`<div class="profit-row">
+  ${jobs.map(j=>{const pr=jobMainProfit(j);const cl=S.clients.find(c=>c.id===j.clientId);const isPaid=!!j.paymentDate;
+  return`<div class="profit-row" style="${isPaid?'opacity:.5':''}">
     <span style="font-weight:600;cursor:pointer" onclick="openJobModal('${j.id}')">${esc(j.title)}<br><span style="font-size:11px;color:var(--t2)">${cl?esc(cl.name):''}${j.deliveryDate?` | 納品 ${j.deliveryDate}`:''}</span></span>
     <span>¥${jobMainIn(j).toLocaleString()}</span>
     <span style="color:var(--amber)">¥${jobMainOut(j).toLocaleString()}</span>
     <span style="${pr>=0?'color:var(--green)':'color:var(--red)'}">¥${pr.toLocaleString()}</span>
-    <span><button class="btn btn-xs" onclick="event.stopPropagation();markJobPaid('${j.id}')" style="border:1px solid var(--green);color:var(--green);background:transparent;padding:2px 7px;border-radius:100px;font-size:10px;cursor:pointer;white-space:nowrap">💰 入金済み</button></span>
+    <span>${isPaid
+      ?`<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--t3);white-space:nowrap">💰入金済<button class="btn btn-xs" onclick="event.stopPropagation();unmarkJobPaid('${j.id}')" style="font-size:10px;padding:1px 6px;border:1px solid var(--border);background:transparent;color:var(--t2)" title="未入金に戻す">取消</button></span>`
+      :`<button class="btn btn-xs" onclick="event.stopPropagation();markJobPaid('${j.id}')" style="border:1px solid var(--green);color:var(--green);background:transparent;padding:2px 7px;border-radius:100px;font-size:10px;cursor:pointer;white-space:nowrap">💰 入金済み</button>`}</span>
   </div>`;}).join('')}
 </div>`
-:`<div class="empty" style="padding:30px 0"><div class="empty-icon">💰</div><div>未入金の完了案件はありません</div></div>`}`;
+:`<div class="empty" style="padding:30px 0"><div class="empty-icon">💰</div><div>${curM} の完了案件はありません</div></div>`}`;
 }
 
 function getPayEntries(month){
@@ -13286,7 +13304,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260723-02';
+const APP_VERSION='20260723-03';
 
 render();
 function forceAppUpdate(){
