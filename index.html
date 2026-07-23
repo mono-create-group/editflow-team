@@ -5989,10 +5989,9 @@ function rProjProfit(){
   const unpaid=jobs.filter(j=>!j.paymentDate),paid=jobs.filter(j=>j.paymentDate);
   const totalIn=unpaid.reduce((s,j)=>s+jobMainIn(j),0);
   const totalPay=unpaid.reduce((s,j)=>s+jobMainOut(j),0);
-  const totalProfit=unpaid.reduce((s,j)=>s+jobMainProfit(j),0);
-  const paidProfit=paid.reduce((s,j)=>s+jobMainProfit(j),0);
-  return`${secTitle('💰 利益（月別・回収予定）')}
-<div style="font-size:11px;color:var(--t3);margin:-6px 0 12px">「回収予定利益」は<b>未入金</b>の完了案件だけを集計します。入金済みは薄く表示され合計から除外（各行の「取消」で未入金に戻せます）。入金済みを含む累計はクライアント一覧・ダッシュボードで確認できます。</div>
+  const paidIn=paid.reduce((s,j)=>s+jobMainIn(j),0);
+  return`${secTitle('💰 売上（月別・回収予定）')}
+<div style="font-size:11px;color:var(--t3);margin:-6px 0 12px">「回収予定売上」は<b>未入金</b>の完了案件の<b>売上（単価）</b>を集計します。入金済みは薄く表示され合計から除外（各行の「取消」で未入金に戻せます）。入金済みを含む累計はクライアント一覧・ダッシュボードで確認できます。</div>
 <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
   <select style="width:150px" onchange="window._profitMonth=this.value;render()">
     ${months.map(m=>`<option value="${m}" ${m===curM?'selected':''}>${m}</option>`).join('')}
@@ -6002,20 +6001,19 @@ function rProjProfit(){
 <div class="card" style="margin-bottom:16px">
   <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">
     <div><div style="font-size:11px;color:var(--t2)">未入金件数</div><div style="font-size:20px;font-weight:700;color:var(--amber)">${unpaid.length}件</div></div>
-    <div><div style="font-size:11px;color:var(--t2)">総売上(未入金)</div><div style="font-size:20px;font-weight:700;color:var(--blue)">¥${totalIn.toLocaleString()}</div></div>
+    <div><div style="font-size:11px;color:var(--t2)">回収予定売上</div><div style="font-size:20px;font-weight:700;color:var(--green)">¥${totalIn.toLocaleString()}</div></div>
     <div><div style="font-size:11px;color:var(--t2)">支払額(未入金)</div><div style="font-size:20px;font-weight:700;color:var(--amber)">¥${totalPay.toLocaleString()}</div></div>
-    <div><div style="font-size:11px;color:var(--t2)">回収予定利益</div><div style="font-size:20px;font-weight:700;color:${totalProfit>=0?'var(--green)':'var(--red)'}">¥${totalProfit.toLocaleString()}</div></div>
-    ${paid.length?`<div><div style="font-size:11px;color:var(--t3)">入金済み利益(参考)</div><div style="font-size:16px;font-weight:700;color:var(--t3)">¥${paidProfit.toLocaleString()}</div></div>`:''}
+    ${paid.length?`<div><div style="font-size:11px;color:var(--t3)">入金済み売上(参考)</div><div style="font-size:16px;font-weight:700;color:var(--t3)">¥${paidIn.toLocaleString()}</div></div>`:''}
   </div>
 </div>
 ${jobs.length?`<div class="card" style="padding:0;overflow:hidden">
   <div class="profit-row" style="font-weight:700;font-size:12px;color:var(--t2);background:var(--card2)">
-    <span>案件名</span><span>単価</span><span>支払</span><span>利益</span><span>状態</span>
+    <span>案件名</span><span>売上</span><span>支払</span><span>利益</span><span>状態</span>
   </div>
   ${jobs.map(j=>{const pr=jobMainProfit(j);const cl=S.clients.find(c=>c.id===j.clientId);const isPaid=!!j.paymentDate;
   return`<div class="profit-row" style="${isPaid?'opacity:.5':''}">
     <span style="font-weight:600;cursor:pointer" onclick="openJobModal('${j.id}')">${esc(j.title)}<br><span style="font-size:11px;color:var(--t2)">${cl?esc(cl.name):''}${j.deliveryDate?` | 納品 ${j.deliveryDate}`:''}</span></span>
-    <span>¥${jobMainIn(j).toLocaleString()}</span>
+    <span style="font-weight:700;color:var(--blue)">¥${jobMainIn(j).toLocaleString()}</span>
     <span style="color:var(--amber)">¥${jobMainOut(j).toLocaleString()}</span>
     <span style="${pr>=0?'color:var(--green)':'color:var(--red)'}">¥${pr.toLocaleString()}</span>
     <span>${isPaid
@@ -13304,7 +13302,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260723-04';
+const APP_VERSION='20260723-05';
 
 render();
 function forceAppUpdate(){
