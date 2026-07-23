@@ -854,6 +854,7 @@ a{color:inherit;text-decoration:none}
   <div id="nav-items"></div>
   <div class="nav-sep"></div>
   <div class="nav-item" data-view="customize"><span class="nav-icon">🛠</span>カスタマイズ</div>
+  <div class="nav-item" data-view="accounts"><span class="nav-icon">👥</span>アカウント</div>
   <div class="nav-item" data-view="settings"><span class="nav-icon">⚙️</span>設定</div>
   <div class="nav-sep"></div>
   <div id="gcal-ui" style="padding:0 14px 8px"></div>
@@ -986,7 +987,7 @@ function _applyCloudData(json){
   S=migrate(Object.assign(def,cloud));
   TEAM_KEYS.forEach(k=>{if(keepTeam[k]!==undefined)S[k]=keepTeam[k];});
   if(keepBiz!==undefined)S.bizBoard=keepBiz;
-  ['tasks','habits','jobs','logs','journals','goals','clients','workers','checkIns','customPages','customEx','navConfig','meals','workouts','pipeline','teamKgis','teamKpis','teamPosts','teamDocs','teamPages','bizUnits','teamMeetings','salesLeads','hpFees','salesSites','templates','bizInfo','crmClients','memberRoles'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=def[k]||[];});
+  ['tasks','habits','jobs','logs','journals','goals','clients','workers','checkIns','customPages','customEx','navConfig','meals','workouts','pipeline','teamKgis','teamKpis','teamPosts','teamDocs','teamPages','bizUnits','teamMeetings','salesLeads','hpFees','salesSites','templates','bizInfo','crmClients','memberRoles','signins'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=def[k]||[];});
   if(FB_USER)S._uid=FB_USER.uid;
   localStorage.setItem(DB,JSON.stringify(S));
 }
@@ -1048,7 +1049,7 @@ function fbSetupRealtimeSync(){
 // チームデータは社内アプリ専用の shared/mcapp に保存(EditFlow の shared/team とは別物)。
 // Firestoreルールが共有アクセスを許可していれば自動で有効化。許可されない場合は
 // permission-denied を検知して自動で個人モードへフォールバック（現状維持・無害）。
-const TEAM_KEYS=['jobs','clients','workers','pipeline','teamKgis','teamKpis','teamPosts','teamDocs','teamPages','bizUnits','teamMeetings','salesLeads','hpFees','salesSites','templates','bizInfo','crmClients','memberRoles'];
+const TEAM_KEYS=['jobs','clients','workers','pipeline','teamKgis','teamKpis','teamPosts','teamDocs','teamPages','bizUnits','teamMeetings','salesLeads','hpFees','salesSites','templates','bizInfo','crmClients','memberRoles','signins'];
 let TEAM_SHARE_OK=null;      // null=未判定 / true=共有有効 / false=個人モード
 let _teamUnsub=null;
 window._teamSnap=window._teamSnap||{};
@@ -1222,6 +1223,23 @@ function fbSetupTeamSync(){
     },e=>console.warn('leads shard sync',i,(e&&e.code)||e)));
   }
 }
+// サインインしたアカウントの識別情報(uid/メール/名前/写真/最終サインイン)をチーム共有配列signinsへupsert。
+// 権限(role)はmemberRolesが単一ソース。ここでは権限を書かない(同期の競合で権限が戻る事故を防ぐ)。
+function _registerSignin(){
+  try{
+    if(!FB_USER)return;
+    if(!Array.isArray(S.signins))S.signins=[];
+    const now=Date.now();
+    let r=S.signins.find(x=>x&&x.id===FB_USER.uid);
+    if(!r){r={id:FB_USER.uid,firstSeen:now};S.signins.push(r);}
+    r.email=FB_USER.email||r.email||'';
+    r.name=FB_USER.displayName||r.name||'';
+    r.photo=FB_USER.photoURL||r.photo||'';
+    r.lastSeen=now;
+    r.updatedAt=now;
+    save();
+  }catch(e){console.warn('registerSignin',e);}
+}
 function signInWithGoogle(){
   // スマホ含め全端末でポップアップ優先(タップ直結ならモバイルSafari/Chromeでも開ける)。
   // リダイレクト方式はauthDomainがgithub.ioと異なるためモバイルの3rd-partyストレージ遮断で
@@ -1294,6 +1312,9 @@ fbAuth.onAuthStateChanged(user=>{
   if(user){
     fbSetupRealtimeSync();
     fbSetupTeamSync();
+    // サインインしたアカウントを「サインイン中アカウント一覧」に自動登録(オーナーのみ閲覧)。
+    // チーム同期の初回スナップショットが載ってから書くと重複/競合が起きにくい。
+    setTimeout(_registerSignin,1500);
   } else {
     if(_fbUnsubscribe){_fbUnsubscribe();_fbUnsubscribe=null;}
     if(_teamUnsub){_teamUnsub();_teamUnsub=null;}
@@ -2137,7 +2158,7 @@ let JOB_SORT='deadline'; // job sort order
 
 function defState(){return{
   tasks:[], clients:[], jobs:[], habits:[], goals:[], journals:[], logs:[], rewards:[],
-  checkIns:[], workouts:[], workers:[], memos:[], meals:[], pipeline:[], teamKgis:[], teamKpis:[], teamPosts:[], teamDocs:[], teamPages:[], salesLeads:[], hpFees:[], salesSites:[], templates:[], bizInfo:[], crmClients:[], memberRoles:[],
+  checkIns:[], workouts:[], workers:[], memos:[], meals:[], pipeline:[], teamKgis:[], teamKpis:[], teamPosts:[], teamDocs:[], teamPages:[], salesLeads:[], hpFees:[], salesSites:[], templates:[], bizInfo:[], crmClients:[], memberRoles:[], signins:[],
   fs:JSON.parse(JSON.stringify(DEFAULT_FS)),
   dailySchedules:{},
   goalReviews:{},
@@ -2868,7 +2889,7 @@ function render(){
     // 役割ガード(2026-07-23): 営業スタッフは「営業」「情報」タブ以外を開けない。許可外Vは営業リストへ退避。
     if(!isViewAllowed(V)){V=(myRole()==='sales'?(_salesAllowedViews()[0]||'salesleads'):'projects');sessionStorage.setItem('ef_team_view',V);}
     if(V==='kpi'){V='goals';} // KPI管理は目標・KPI統合ページにリダイレクト
-    const views={dashboard:rDash,tasks:rTasks,projects:rProjects,pipeline:rPipeline,teamgoals:rTeamGoals,posts:rPosts,docs:rDocs,workers:rWorkers,habits:rHabits,goals:rGoals,journal:rJournal,revenue:rRevenue,memo:rMemo,settings:rSettings,customize:rCustomize,aichat:rAIChat,fitness:rFitness,kpi:rKpi,bizboard:rBizBoard,bizunits:rBizUnits,bizinfo:rBizInfo,minutes:rMinutes,salesleads:rSalesLeads,hpfee:rHpFee,salessites:rSalesSites,inquiries:rInquiries,templates:rTemplates,crm:rCrm};
+    const views={dashboard:rDash,tasks:rTasks,projects:rProjects,pipeline:rPipeline,teamgoals:rTeamGoals,posts:rPosts,docs:rDocs,workers:rWorkers,habits:rHabits,goals:rGoals,journal:rJournal,revenue:rRevenue,memo:rMemo,settings:rSettings,customize:rCustomize,aichat:rAIChat,fitness:rFitness,kpi:rKpi,bizboard:rBizBoard,bizunits:rBizUnits,bizinfo:rBizInfo,minutes:rMinutes,salesleads:rSalesLeads,hpfee:rHpFee,salessites:rSalesSites,inquiries:rInquiries,templates:rTemplates,crm:rCrm,accounts:rAccounts};
     let html;
     if(V.startsWith('doc_')){
       // Googleドキュメント風エディタ(teamPages.htmlを編集)。BUILTIN_VIEWSガードを迂回する。
@@ -2892,7 +2913,7 @@ function render(){
     }else{
       // 描画ガード: navConfig(BUILTIN_VIEWS)のタブに加え、サイドバー固定の設定/カスタマイズと
       // 下タブバーのホーム/タスク/AI/習慣も許可する(1f677e1のガードが巻き込んでrProjectsに落ちていた不具合の修正)
-      const CHROME_VIEWS=['settings','customize','dashboard','tasks','aichat','habits'];
+      const CHROME_VIEWS=['settings','customize','dashboard','tasks','aichat','habits','accounts'];
       html=(((BUILTIN_VIEWS.some(v=>v.id===V)||CHROME_VIEWS.includes(V))&&views[V])?views[V]:rProjects)();
     }
     document.getElementById('view').innerHTML=rHpFeeReminder()+rGcalReminder()+rDraftReminder()+html;
@@ -9495,6 +9516,75 @@ function efResetPersonalData(){
   toast('👤 個人データを初期化しました(クラウドにも反映されます)','ok');
   render();
 }
+// ===サインイン中アカウント一覧(オーナーのみ・2026-07-24 会長指示)===
+// サインインしたGoogleアカウントを自動記録(signins)して一覧表示する。権限はmemberRolesが正。
+function _accAgo(ts){
+  if(!ts)return'—';
+  const s=Math.floor((Date.now()-ts)/1000);
+  if(s<60)return'たった今';
+  if(s<3600)return Math.floor(s/60)+'分前';
+  if(s<86400)return Math.floor(s/3600)+'時間前';
+  const d=Math.floor(s/86400);
+  if(d<30)return d+'日前';
+  return tpFmtDate(ts);
+}
+function _accRoleOf(email){
+  const em=(email||'').toLowerCase();
+  if(ADMIN_EMAILS.includes(em))return'owner';
+  const r=(S.memberRoles||[]).find(m=>m&&!m.deleted&&(m.email||'').toLowerCase()===em);
+  return (r&&r.role==='full')?'full':'sales';
+}
+function accSetRole(email,role){
+  if(!_isOwner()){toast('権限がありません','err');return;}
+  const em=(email||'').trim().toLowerCase();
+  if(!em)return;
+  if(ADMIN_EMAILS.includes(em)){toast('会長アカウントは常にフル権限です','warn');return;}
+  if(!Array.isArray(S.memberRoles))S.memberRoles=[];
+  const rl=(role==='full')?'full':'sales';
+  const ex=S.memberRoles.find(m=>m&&(m.email||'').toLowerCase()===em);
+  if(ex){ex.role=rl;ex.deleted=false;ex.updatedAt=Date.now();}
+  else{S.memberRoles.push({id:uid(),email:em,role:rl,createdAt:today(),updatedAt:Date.now(),addedBy:_myEmail()});}
+  save();render();
+  toast(`${em} を ${rl==='full'?'フル':'営業・情報のみ'} に設定しました`);
+}
+function rAccounts(){
+  if(!_isOwner())return`<div class="empty"><div class="empty-icon">🔒</div><div class="empty-title">オーナー専用ページです</div><div style="font-size:12px;color:var(--t3);margin-top:4px">このページはオーナー(会長)だけが閲覧できます。</div></div>`;
+  const list=(S.signins||[]).filter(x=>x&&x.id).slice().sort((a,b)=>(b.lastSeen||0)-(a.lastSeen||0));
+  const roleLabel={owner:'オーナー',full:'フル',sales:'営業・情報のみ'};
+  const roleColor={owner:'background:#fef3c7;color:#92400e',full:'background:#e7f6ed;color:#16a34a',sales:'background:var(--pldim);color:var(--pl)'};
+  const rows=list.map(u=>{
+    const rk=_accRoleOf(u.email);
+    const isAdmin=rk==='owner';
+    const isMe=(typeof FB_USER!=='undefined'&&FB_USER&&FB_USER.uid===u.id);
+    return`<div class="card" style="margin-bottom:8px;display:flex;align-items:center;gap:12px">
+    <img src="${esc(u.photo||'')}" alt="" style="width:40px;height:40px;border-radius:50%;flex-shrink:0;background:var(--bg);object-fit:cover" onerror="this.style.visibility='hidden'">
+    <div style="flex:1;min-width:0">
+      <div style="font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(u.name||'（名前未取得）')}${isMe?' <span style="font-size:10px;color:var(--t3);font-weight:500">(あなた)</span>':''}</div>
+      <div style="font-size:12px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(u.email||'')}</div>
+      <div style="font-size:10.5px;color:var(--t3);margin-top:2px">最終サインイン ${_accAgo(u.lastSeen)}${u.firstSeen?` ・ 初回 ${tpFmtDate(u.firstSeen)}`:''}</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+      <span class="pill" style="${roleColor[rk]};font-size:10px;font-weight:700;padding:2px 9px;border-radius:100px">${roleLabel[rk]}</span>
+      ${isAdmin?'':`<select onchange="accSetRole('${esc(u.email)}',this.value)" style="font-size:11px;padding:3px 4px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text)">
+        <option value="sales" ${rk!=='full'?'selected':''}>営業・情報のみ</option>
+        <option value="full" ${rk==='full'?'selected':''}>フル</option>
+      </select>`}
+    </div>
+  </div>`;}).join('');
+  return`<div class="ph"><div class="ph-title">👥 サインイン中アカウント</div></div>
+${secTitle('サインインしたアカウント一覧')}
+<div class="card" style="margin-bottom:14px">
+  <div style="font-size:12px;color:var(--t2);line-height:1.7">
+    このアプリに<b>Googleでサインインしたアカウント</b>が、新しくサインインした順に並びます（サインインすると自動で登録）。<br>
+    権限を「営業・情報のみ／フル」でここから変更できます（設定ページの権限管理と連動）。<br>
+    <span style="color:var(--t3)">※これは表示上の一覧・制限です。厳密なアクセス遮断ではないため、信頼できる相手にのみサインインを共有してください。</span>
+  </div>
+</div>
+<div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+  <span style="font-size:13px;color:var(--t2)">${list.length}アカウント</span>
+</div>
+${list.length?rows:`<div class="empty"><div class="empty-icon">👥</div><div class="empty-title">まだ記録がありません</div><div style="font-size:12px;color:var(--t3);margin-top:4px">メンバーがサインインすると、ここに自動で表示されます。</div></div>`}`;
+}
 function rSettings(){
   return`<div class="ph"><div class="ph-title">設定</div></div>
 
@@ -11186,7 +11276,7 @@ function myRole(){
 const ROLE_SALES_CATS=['sales','info'];
 function _salesAllowedViews(){const vs=[];NAV_CATS.forEach(c=>{if(ROLE_SALES_CATS.includes(c.id))vs.push(...c.views);});return vs;}
 function isViewAllowed(v){
-  if(v==='settings')return _isOwner();          // 設定はオーナー(会長)のみ。サインアウトはサイドバー下部のボタンから
+  if(v==='settings'||v==='accounts')return _isOwner(); // 設定・アカウント一覧はオーナー(会長)のみ
   if(myRole()!=='sales')return true;
   if(v.startsWith('doc_')||v.startsWith('bidoc_')||v.startsWith('tp_'))return true; // ドキュメント/事業情報=情報カテゴリ
   if(v.startsWith('cp_'))return false;          // 個人カスタムページは不可
@@ -11367,6 +11457,7 @@ function renderNav(){
   // 営業スタッフには固定の「カスタマイズ」を出さない。設定はオーナー(会長)のみ表示(サインアウトは下部auth-uiボタン)。
   document.querySelectorAll('#sidebar .nav-item[data-view="customize"]').forEach(el=>{el.style.display=_role==='sales'?'none':'';});
   document.querySelectorAll('#sidebar .nav-item[data-view="settings"]').forEach(el=>{el.style.display=_owner?'':'none';});
+  document.querySelectorAll('#sidebar .nav-item[data-view="accounts"]').forEach(el=>{el.style.display=_owner?'':'none';}); // サインイン中アカウント一覧はオーナーのみ
   // モバイル下タブバー: 営業スタッフには個人用(ホーム/タスク/AI/習慣/案件)を出さず、メニューのみ残す。
   document.querySelectorAll('#mob-nav .mnav-item').forEach(el=>{
     const v=el.dataset.view;
@@ -11376,6 +11467,7 @@ function renderNav(){
   const dr=document.getElementById('mob-drawer-nav');if(!dr)return;
   dr.innerHTML=grouped(false)+`<div class="nav-sep"></div>
   ${_role==='sales'?'':`<div class="nav-item${V==='customize'?' active':''}" data-view="customize"><span class="nav-icon">🛠</span>カスタマイズ</div>`}
+  ${_owner?`<div class="nav-item${V==='accounts'?' active':''}" data-view="accounts"><span class="nav-icon">👥</span>アカウント</div>`:''}
   ${_owner?`<div class="nav-item${V==='settings'?' active':''}" data-view="settings"><span class="nav-icon">⚙️</span>設定</div>`:''}`;
   // 下タブバー同期
   document.querySelectorAll('.mnav-item').forEach(el=>{
@@ -13374,7 +13466,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260724-01';
+const APP_VERSION='20260724-02';
 
 render();
 try{renderAuthGate();}catch(e){console.warn('authGate init',e);}  // 認証確定まではログイン/読込画面で画面を覆う
