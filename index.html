@@ -6020,7 +6020,7 @@ ${jobs.length?`<div class="card" style="padding:0;overflow:hidden">
     <span style="${pr>=0?'color:var(--green)':'color:var(--red)'}">¥${pr.toLocaleString()}</span>
     <span>${isPaid
       ?`<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--t3);white-space:nowrap">💰入金済<button class="btn btn-xs" onclick="event.stopPropagation();unmarkJobPaid('${j.id}')" style="font-size:10px;padding:1px 6px;border:1px solid var(--border);background:transparent;color:var(--t2)" title="未入金に戻す">取消</button></span>`
-      :`<button class="btn btn-xs" onclick="event.stopPropagation();markJobPaid('${j.id}')" style="border:1px solid var(--green);color:var(--green);background:transparent;padding:2px 7px;border-radius:100px;font-size:10px;cursor:pointer;white-space:nowrap">💰 入金済み</button>`}</span>
+      :`<button class="btn btn-xs" onclick="event.stopPropagation();markJobPaid('${j.id}')" style="border:1px solid var(--green);color:var(--green);background:transparent;padding:2px 7px;border-radius:100px;font-size:10px;cursor:pointer;white-space:nowrap">入金済みにする</button>`}</span>
   </div>`;}).join('')}
 </div>`
 :`<div class="empty" style="padding:30px 0"><div class="empty-icon">💰</div><div>${curM} の完了案件はありません</div></div>`}`;
@@ -10489,9 +10489,9 @@ function openJobModal(id,preStatus,preClientId){
   <div class="fg"><div class="fl">入金日</div>
     <div style="display:flex;gap:6px;align-items:center">
       <input type="date" id="j-payin" value="${j?.paymentDate||''}" style="flex:1" onchange="updPayinBtn()">
-      <button type="button" id="j-payin-btn" class="btn btn-xs" onclick="togglePayinToday()" style="white-space:nowrap"></button>
+      ${j?`<button type="button" id="j-payin-btn" class="btn btn-xs" onclick="togglePayinToday()" style="white-space:nowrap"></button>`:''}
     </div>
-    <div style="font-size:10px;color:var(--t3);margin-top:3px">入金済みにすると「💰 利益」タブの回収予定から外れます</div>
+    <div style="font-size:10px;color:var(--t3);margin-top:3px">${j?'入金があったら「入金済みにする」を押すと「💰 利益」タブの回収予定から外れます':'入金日は空のままでOK。入金があってから記録します'}</div>
   </div>
   <div class="fg"><div class="fl">支払日</div><input type="date" id="j-payout" value="${j?.payoutDate||''}"></div>
 </div>
@@ -10521,7 +10521,7 @@ function updPayinBtn(){
     btn.textContent='取消';
     btn.style.cssText='white-space:nowrap;border:1px solid var(--border);color:var(--t2);background:transparent';
   }else{
-    btn.textContent='💰 入金済み';
+    btn.textContent='入金済みにする';
     btn.style.cssText='white-space:nowrap;border:1px solid var(--green);color:var(--green);background:transparent';
   }
 }
@@ -13304,7 +13304,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260723-03';
+const APP_VERSION='20260723-04';
 
 render();
 function forceAppUpdate(){
