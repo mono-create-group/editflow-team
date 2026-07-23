@@ -2461,27 +2461,27 @@ function rGoalActionWidget(){
   </div>`;
 }
 function revGoalStats(g){
-  // 収益目標 = 売上ベース（paymentDate基準・単価/売上合計、外注費は引かない）
+  // 収益目標 = 売上ベース（実際に入金済み=paidAt基準・単価/売上合計、外注費は引かない）
   const n=new Date(),td=today(),yr=n.getFullYear(),mo=n.getMonth();
   const hz=g.horizon||'this_month';
-  const paidJobs=(S.jobs||[]).filter(j=>!j.deleted&&j.paymentDate);
+  const paidJobs=(S.jobs||[]).filter(j=>!j.deleted&&isJobPaid(j));
   let earned=0,endDate;
   if(hz==='this_month'){
     const ym=td.slice(0,7);
-    earned=paidJobs.filter(j=>j.paymentDate.startsWith(ym)).reduce((s,j)=>s+jobMainIn(j),0);
+    earned=paidJobs.filter(j=>j.paidAt.startsWith(ym)).reduce((s,j)=>s+jobMainIn(j),0);
     endDate=new Date(yr,mo+1,0);
   }else if(hz==='next_month'){
     const nm=new Date(yr,mo+1,1);
     const ym=`${nm.getFullYear()}-${String(nm.getMonth()+1).padStart(2,'0')}`;
-    earned=paidJobs.filter(j=>j.paymentDate.startsWith(ym)).reduce((s,j)=>s+jobMainIn(j),0);
+    earned=paidJobs.filter(j=>j.paidAt.startsWith(ym)).reduce((s,j)=>s+jobMainIn(j),0);
     endDate=new Date(yr,mo+2,0);
   }else if(hz==='monthly'){
     const tm=g.targetMonth||td.slice(0,7);
-    earned=paidJobs.filter(j=>j.paymentDate.startsWith(tm)).reduce((s,j)=>s+jobMainIn(j),0);
+    earned=paidJobs.filter(j=>j.paidAt.startsWith(tm)).reduce((s,j)=>s+jobMainIn(j),0);
     const[tyr,tmo]=tm.split('-').map(Number);
     endDate=new Date(tyr,tmo,0);
   }else if(hz==='year1'){
-    earned=paidJobs.filter(j=>j.paymentDate.startsWith(String(yr))).reduce((s,j)=>s+jobMainIn(j),0);
+    earned=paidJobs.filter(j=>j.paidAt.startsWith(String(yr))).reduce((s,j)=>s+jobMainIn(j),0);
     endDate=new Date(yr,11,31);
   }else{
     earned=paidJobs.reduce((s,j)=>s+jobMainIn(j),0);
@@ -5402,7 +5402,7 @@ function rProjClients(){
   const allDoneJobs=S.jobs.filter(j=>!j.deleted&&j.status==='完了');
   const totalRevenue=allDoneJobs.reduce((s,j)=>s+jobMainIn(j),0);
   const totalProfit=allDoneJobs.reduce((s,j)=>s+jobMainProfit(j),0);
-  const totalPending=allDoneJobs.filter(j=>!j.paymentDate).reduce((s,j)=>s+jobMainIn(j),0);
+  const totalPending=allDoneJobs.filter(j=>!isJobPaid(j)).reduce((s,j)=>s+jobMainIn(j),0);
   const trialClients=clients.filter(c=>c.isTrial);
   const contractClients=clients.filter(c=>!c.isTrial);
 
@@ -5431,7 +5431,7 @@ ${sorted.map(cl=>{
   const allJobs=S.jobs.filter(j=>!j.deleted&&j.clientId===cl.id);
   const revenue=doneJobs.reduce((s,j)=>s+jobMainIn(j),0);
   const profit=doneJobs.reduce((s,j)=>s+jobMainProfit(j),0);
-  const pending=doneJobs.filter(j=>!j.paymentDate).reduce((s,j)=>s+jobMainIn(j),0);
+  const pending=doneJobs.filter(j=>!isJobPaid(j)).reduce((s,j)=>s+jobMainIn(j),0);
   const activeTotal=activeJobs.reduce((s,j)=>s+jobMainIn(j),0);
 
   // ステータス別件数
@@ -5537,15 +5537,18 @@ function jobMainOut(j){
   return mainPay+subPay;
 }
 function jobMainProfit(j){return jobMainIn(j)-jobMainOut(j);}
+// 【2026-07-23改定】入金済み判定は paidAt(実際に入金があってボタンで設定)。
+// paymentDate は「入金予定日」であり、記入しても入金済みにはならない。
+function isJobPaid(j){return !!(j&&j.paidAt);}
 function markJobPaid(id){
   const j=S.jobs.find(j=>j.id===id);if(!j)return;
-  j.paymentDate=today();
+  j.paidAt=today();j.updatedAt=Date.now();
   save();render();toast('💰 入金済みにしました');
 }
 function unmarkJobPaid(id){
   const j=S.jobs.find(j=>j.id===id);if(!j)return;
   if(!confirm('入金済みを取り消しますか？'))return;
-  j.paymentDate=null;
+  j.paidAt=null;j.updatedAt=Date.now();
   save();render();toast('入金済みを取り消しました');
 }
 // 入金日が指定日以降(cutoff含む)の入金済みを一括取消(2026-07-23 会長指示: シート取込等で全件入金済みになった誤りの修正)。
@@ -5583,8 +5586,8 @@ function rProjCard(j){
   </div>`:''}
   <div class="proj-card-meta" style="flex-wrap:wrap;gap:4px">
     <span class="badge ${SCOLBG[j.status]||'bk'}">${j.status}</span>
-    ${j.paymentDate
-      ?`<span class="badge bg" onclick="event.stopPropagation();unmarkJobPaid('${j.id}')" style="cursor:pointer" title="クリックで取り消し">💰 入金済 ${j.paymentDate}</span>`
+    ${isJobPaid(j)
+      ?`<span class="badge bg" onclick="event.stopPropagation();unmarkJobPaid('${j.id}')" style="cursor:pointer" title="クリックで取り消し">💰 入金済 ${j.paidAt}</span>`
       :`<button class="btn btn-xs" onclick="event.stopPropagation();markJobPaid('${j.id}')" style="border:1px solid var(--green);color:var(--green);background:transparent;padding:2px 7px;border-radius:100px;font-size:10px;cursor:pointer">💰 入金済みにする</button>`
     }
   </div>
@@ -5931,15 +5934,27 @@ function saveInvoiceInfo(){
   save();closeModal();render();toast('請求元情報を保存しました');
 }
 function rProjCompleted(){
-  const done=S.jobs.filter(j=>!j.deleted&&(j.status==='完了'||j.status==='キャンセル')).sort((a,b)=>(b.deliveryDate||b.createdAt||'')>(a.deliveryDate||a.createdAt||'')?1:-1);
-  if(!done.length)return`<div class="empty"><div class="empty-icon">✅</div><div class="empty-title">完了済み案件なし</div><div style="color:var(--t2)">完了・キャンセルした案件がここに表示されます</div></div>`;
+  const all=S.jobs.filter(j=>!j.deleted&&(j.status==='完了'||j.status==='キャンセル'));
+  if(!all.length)return`<div class="empty"><div class="empty-icon">✅</div><div class="empty-title">完了済み案件なし</div><div style="color:var(--t2)">完了・キャンセルした案件がここに表示されます</div></div>`;
+  // 月指定(2026-07-23): 納品日(なければ請求日/入金予定日/作成日)の月で絞り込み
+  const monthOf=j=>String(j.deliveryDate||j.invoiceDate||j.paymentDate||(j.createdAt||'').slice(0,10)||'').slice(0,7);
+  const months=[...new Set(all.map(monthOf).filter(Boolean))].sort().reverse();
+  const curM=(window._completedMonth&&(window._completedMonth==='all'||months.includes(window._completedMonth)))?window._completedMonth:'all';
+  const done=(curM==='all'?all:all.filter(j=>monthOf(j)===curM)).sort((a,b)=>(b.deliveryDate||b.createdAt||'')>(a.deliveryDate||a.createdAt||'')?1:-1);
   const totalIn=done.filter(j=>j.status==='完了').reduce((s,j)=>s+jobTotalIn(j),0);
-  return`<div class="card" style="margin-bottom:14px;display:flex;gap:20px;flex-wrap:wrap">
+  return`<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+  <select style="width:160px" onchange="window._completedMonth=this.value;render()">
+    <option value="all" ${curM==='all'?'selected':''}>すべての月</option>
+    ${months.map(m=>`<option value="${m}" ${m===curM?'selected':''}>${m}</option>`).join('')}
+  </select>
+  <span style="font-size:12px;color:var(--t2)">${done.length}件</span>
+</div>
+<div class="card" style="margin-bottom:14px;display:flex;gap:20px;flex-wrap:wrap">
   <div><div style="font-size:11px;color:var(--t2)">完了件数</div><div style="font-size:20px;font-weight:700;color:var(--green)">${done.filter(j=>j.status==='完了').length}件</div></div>
   <div><div style="font-size:11px;color:var(--t2)">キャンセル</div><div style="font-size:20px;font-weight:700;color:var(--t2)">${done.filter(j=>j.status==='キャンセル').length}件</div></div>
   ${totalIn?`<div><div style="font-size:11px;color:var(--t2)">完了案件 総売上</div><div style="font-size:20px;font-weight:700;color:var(--blue)">¥${totalIn.toLocaleString()}</div></div>`:''}
 </div>
-${done.map(j=>rJobItem(j)).join('')}`;
+${done.length?done.map(j=>rJobItem(j)).join(''):`<div class="empty" style="padding:30px 0"><div class="empty-icon">✅</div><div>${curM==='all'?'':curM+' の'}完了済み案件はありません</div></div>`}`;
 }
 
 function rProjList(clients){
@@ -5980,8 +5995,8 @@ function rJobItem(j){
   ${to?`<span style="font-size:12px;color:var(--amber)">支払 ¥${to.toLocaleString()}</span>`:''}
   ${ti?`<span style="font-size:12px;font-weight:700;color:${pr>=0?'var(--green)':'var(--red)'}">利益 ¥${pr.toLocaleString()}</span>`:''}
   ${subTot?`<span class="badge bb">☑ ${subDone}/${subTot}</span>`:''}
-  ${j.paymentDate
-    ?`<span class="badge bg" onclick="event.stopPropagation();unmarkJobPaid('${j.id}')" style="cursor:pointer" title="クリックで取り消し">💰 入金済 ${j.paymentDate}</span>`
+  ${isJobPaid(j)
+    ?`<span class="badge bg" onclick="event.stopPropagation();unmarkJobPaid('${j.id}')" style="cursor:pointer" title="クリックで取り消し">💰 入金済 ${j.paidAt}</span>`
     :`<button class="btn btn-xs" onclick="event.stopPropagation();markJobPaid('${j.id}')" style="border:1px solid var(--green);color:var(--green);background:transparent;padding:2px 7px;border-radius:100px;font-size:10px;cursor:pointer">💰 入金済みにする</button>`
   }
   <div class="job-dates">
@@ -5992,58 +6007,49 @@ function rJobItem(j){
 }
 
 function rProjProfit(){
-  // 完了案件を月別に表示(月セレクタあり)。月は納品日(なければ請求日/入金日/作成日)で分類。
-  // 入金済み(paymentDate設定済み)は薄く表示し、上部「回収予定利益」の合計には含めない(=未入金だけ集計)。
+  // 【2026-07-23改定】利益タブ=「入金予定日(paymentDate)」の月でグルーピング。
+  // 入金予定日を入れても入金済みにはならない。入金済み(paidAt=ボタンで確定)の案件はこのタブに表示しない。
   const done=(S.jobs||[]).filter(j=>!j.deleted&&j.status==='完了'&&jobMainIn(j)>0);
-  const monthOf=j=>String(j.deliveryDate||j.invoiceDate||j.paymentDate||(j.createdAt||'').slice(0,10)||'').slice(0,7);
+  const monthOf=j=>String(j.paymentDate||j.invoiceDate||j.deliveryDate||(j.createdAt||'').slice(0,10)||'').slice(0,7);
   const now=new Date();const selDefault=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const months=[...new Set(done.map(monthOf).filter(Boolean))].sort().reverse();
   if(!months.includes(selDefault))months.unshift(selDefault);
   const curM=(window._profitMonth&&months.includes(window._profitMonth))?window._profitMonth:(months[0]||selDefault);
-  const jobs=done.filter(j=>monthOf(j)===curM)
-    .sort((a,b)=>(a.paymentDate?1:0)-(b.paymentDate?1:0)||String(b.deliveryDate||'').localeCompare(String(a.deliveryDate||'')));
-  const unpaid=jobs.filter(j=>!j.paymentDate),paid=jobs.filter(j=>j.paymentDate);
-  const totalIn=unpaid.reduce((s,j)=>s+jobMainIn(j),0);
-  const totalPay=unpaid.reduce((s,j)=>s+jobMainOut(j),0);
-  const paidIn=paid.reduce((s,j)=>s+jobMainIn(j),0);
-  const futurePaid=_paidFromCutoff(PAID_CLEANUP_CUTOFF);
-  return`${secTitle('💰 売上（月別・回収予定）')}
-<div style="font-size:11px;color:var(--t3);margin:-6px 0 12px">「回収予定売上」は<b>未入金</b>の完了案件の<b>売上（単価）</b>を集計します。入金済みは薄く表示され合計から除外（各行の「取消」で未入金に戻せます）。入金済みを含む累計はクライアント一覧・ダッシュボードで確認できます。</div>
-${futurePaid.length?`<div class="card" style="border:1px solid var(--amber);margin-bottom:14px">
-  <div style="font-size:13px;font-weight:700;color:var(--amber);margin-bottom:4px">⚠️ 入金日が ${PAID_CLEANUP_CUTOFF} 以降の案件が ${futurePaid.length}件 入金済みになっています</div>
-  <div style="font-size:11px;color:var(--t2);margin-bottom:10px">まだ受け取っていない未来日付の入金日です（シート取込などで誤って入金済みになった可能性）。まとめて未入金に戻せます。実行前に自動でバックアップを取ります。</div>
-  <button class="btn btn-p btn-sm" onclick="unmarkPaidFrom('${PAID_CLEANUP_CUTOFF}')">${PAID_CLEANUP_CUTOFF}以降の入金済みを ${futurePaid.length}件 まとめて取消</button>
-</div>`:''}
+  const monthJobs=done.filter(j=>monthOf(j)===curM);
+  const jobs=monthJobs.filter(j=>!isJobPaid(j))            // 入金済みは非表示
+    .sort((a,b)=>String(a.paymentDate||'zzz').localeCompare(String(b.paymentDate||'zzz')));
+  const paidHidden=monthJobs.filter(j=>isJobPaid(j)).length;
+  const totalIn=jobs.reduce((s,j)=>s+jobMainIn(j),0);
+  const totalPay=jobs.reduce((s,j)=>s+jobMainOut(j),0);
+  return`${secTitle('💰 売上（入金予定月・回収予定）')}
+<div style="font-size:11px;color:var(--t3);margin:-6px 0 12px"><b>入金予定日</b>の月で集計します（入金予定日を入れても入金済みにはなりません）。<b>「入金済みにする」を押した案件はこの一覧から消えます</b>。入金済みを含む累計はダッシュボードで確認できます。</div>
 <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
   <select style="width:150px" onchange="window._profitMonth=this.value;render()">
     ${months.map(m=>`<option value="${m}" ${m===curM?'selected':''}>${m}</option>`).join('')}
   </select>
-  <span style="font-size:12px;color:var(--t2)">完了 ${jobs.length}件（未入金 ${unpaid.length} / 入金済み ${paid.length}）</span>
+  <span style="font-size:12px;color:var(--t2)">回収予定 ${jobs.length}件${paidHidden?` ・ 入金済み ${paidHidden}件は非表示`:''}</span>
 </div>
 <div class="card" style="margin-bottom:16px">
   <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">
-    <div><div style="font-size:11px;color:var(--t2)">未入金件数</div><div style="font-size:20px;font-weight:700;color:var(--amber)">${unpaid.length}件</div></div>
+    <div><div style="font-size:11px;color:var(--t2)">回収予定件数</div><div style="font-size:20px;font-weight:700;color:var(--amber)">${jobs.length}件</div></div>
     <div><div style="font-size:11px;color:var(--t2)">回収予定売上</div><div style="font-size:20px;font-weight:700;color:var(--green)">¥${totalIn.toLocaleString()}</div></div>
-    <div><div style="font-size:11px;color:var(--t2)">支払額(未入金)</div><div style="font-size:20px;font-weight:700;color:var(--amber)">¥${totalPay.toLocaleString()}</div></div>
-    ${paid.length?`<div><div style="font-size:11px;color:var(--t3)">入金済み売上(参考)</div><div style="font-size:16px;font-weight:700;color:var(--t3)">¥${paidIn.toLocaleString()}</div></div>`:''}
+    <div><div style="font-size:11px;color:var(--t2)">支払額</div><div style="font-size:20px;font-weight:700;color:var(--amber)">¥${totalPay.toLocaleString()}</div></div>
   </div>
 </div>
 ${jobs.length?`<div class="card" style="padding:0;overflow:hidden">
   <div class="profit-row" style="font-weight:700;font-size:12px;color:var(--t2);background:var(--card2)">
     <span>案件名</span><span>売上</span><span>支払</span><span>利益</span><span>状態</span>
   </div>
-  ${jobs.map(j=>{const pr=jobMainProfit(j);const cl=S.clients.find(c=>c.id===j.clientId);const isPaid=!!j.paymentDate;
-  return`<div class="profit-row" style="${isPaid?'opacity:.5':''}">
-    <span style="font-weight:600;cursor:pointer" onclick="openJobModal('${j.id}')">${esc(j.title)}<br><span style="font-size:11px;color:var(--t2)">${cl?esc(cl.name):''}${j.deliveryDate?` | 納品 ${j.deliveryDate}`:''}</span></span>
+  ${jobs.map(j=>{const pr=jobMainProfit(j);const cl=S.clients.find(c=>c.id===j.clientId);
+  return`<div class="profit-row">
+    <span style="font-weight:600;cursor:pointer" onclick="openJobModal('${j.id}')">${esc(j.title)}<br><span style="font-size:11px;color:var(--t2)">${cl?esc(cl.name):''}${j.paymentDate?` | 入金予定 ${j.paymentDate}`:' | 入金予定日未設定'}</span></span>
     <span style="font-weight:700;color:var(--blue)">¥${jobMainIn(j).toLocaleString()}</span>
     <span style="color:var(--amber)">¥${jobMainOut(j).toLocaleString()}</span>
     <span style="${pr>=0?'color:var(--green)':'color:var(--red)'}">¥${pr.toLocaleString()}</span>
-    <span>${isPaid
-      ?`<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--t3);white-space:nowrap">💰入金済<button class="btn btn-xs" onclick="event.stopPropagation();unmarkJobPaid('${j.id}')" style="font-size:10px;padding:1px 6px;border:1px solid var(--border);background:transparent;color:var(--t2)" title="未入金に戻す">取消</button></span>`
-      :`<button class="btn btn-xs" onclick="event.stopPropagation();markJobPaid('${j.id}')" style="border:1px solid var(--green);color:var(--green);background:transparent;padding:2px 7px;border-radius:100px;font-size:10px;cursor:pointer;white-space:nowrap">入金済みにする</button>`}</span>
+    <span><button class="btn btn-xs" onclick="event.stopPropagation();markJobPaid('${j.id}')" style="border:1px solid var(--green);color:var(--green);background:transparent;padding:2px 7px;border-radius:100px;font-size:10px;cursor:pointer;white-space:nowrap">入金済みにする</button></span>
   </div>`;}).join('')}
 </div>`
-:`<div class="empty" style="padding:30px 0"><div class="empty-icon">💰</div><div>${curM} の完了案件はありません</div></div>`}`;
+:`<div class="empty" style="padding:30px 0"><div class="empty-icon">💰</div><div>${curM} の回収予定案件はありません${paidHidden?`（入金済み ${paidHidden}件は非表示）`:''}</div></div>`}`;
 }
 
 function getPayEntries(month){
@@ -6079,8 +6085,8 @@ function rProjPayment(){
   const entries=getPayEntries(curM);
   const total=entries.reduce((s,e)=>s+e.workerPay,0);
   // 入金済み件数・未入金件数の集計
-  const paidEntries=entries.filter(e=>{const j=S.jobs.find(j=>j.id===e.jobId);return j?.paymentDate;});
-  const unpaidEntries=entries.filter(e=>{const j=S.jobs.find(j=>j.id===e.jobId);return !j?.paymentDate;});
+  const paidEntries=entries.filter(e=>{const j=S.jobs.find(j=>j.id===e.jobId);return isJobPaid(j);});
+  const unpaidEntries=entries.filter(e=>{const j=S.jobs.find(j=>j.id===e.jobId);return !isJobPaid(j);});
   const byWorker={};
   entries.forEach(e=>{if(!byWorker[e.workerId])byWorker[e.workerId]=[];byWorker[e.workerId].push(e);});
   const rewardsAll=(S.rewards||[]).filter(r=>!r.deleted);
@@ -6121,7 +6127,7 @@ ${Object.entries(byWorker).length?Object.entries(byWorker).map(([wid,es])=>{
     <div style="font-weight:700;margin-bottom:8px">${w?esc(w.name):'担当者未設定'} — <span style="color:var(--amber)">¥${wTotal.toLocaleString()}</span></div>
     ${es.map(e=>{
       const job=S.jobs.find(j=>j.id===e.jobId);
-      const isClientPaid=!!job?.paymentDate;
+      const isClientPaid=isJobPaid(job);
       return`<div class="payment-row" style="flex-wrap:wrap;gap:4px">
         <span class="pmt-worker">${e.label}</span>
         <span class="pmt-amount">¥${e.workerPay.toLocaleString()}</span>
@@ -8190,8 +8196,8 @@ function getAchievements(from,to){
   const hiresLog=(S.logs||[]).filter(l=>!l.deleted&&l.type==='hire'&&l.result==='内定'&&inRange(l.date)).length;
   const hiresWorker=(S.workers||[]).filter(w=>!w.deleted&&w.status==='本採用'&&inRange((w.hiredAt||w.createdAt||'').slice(0,10))).length;
   const hires=hiresLog||hiresWorker;
-  // 利益: paymentDateベース（案件管理の月別利益と同じ基準）
-  const profit=(S.jobs||[]).filter(j=>!j.deleted&&inRange(j.paymentDate)).reduce((s,j)=>s+jobMainProfit(j),0);
+  // 利益: 実際に入金済み(paidAt)ベース（実現利益）
+  const profit=(S.jobs||[]).filter(j=>!j.deleted&&inRange(j.paidAt)).reduce((s,j)=>s+jobMainProfit(j),0);
   return{sales,hires,profit};
 }
 function rAchievementBox(from,to,label){
@@ -9960,7 +9966,7 @@ function backfillGoalsData(){
     if(!already){
       const amount=(j.unitPrice||0)-(j.workerPay||0);
       if(amount<=0)return;
-      const dt=j.paymentDate||j.deliveryDate||(j.createdAt||new Date().toISOString()).slice(0,10);
+      const dt=j.paidAt||j.paymentDate||j.deliveryDate||(j.createdAt||new Date().toISOString()).slice(0,10);
       const client=S.clients?.find(c=>c.id===j.clientId);
       S.logs.push({id:uid(),type:'revenue',date:dt,title:j.title,clientId:j.clientId||null,amount,sourceJobId:j.id,note:'過去データ一括登録',createdAt:new Date().toISOString()});
       revN++;
@@ -10513,15 +10519,20 @@ function openJobModal(id,preStatus,preClientId){
   <div class="fg"><div class="fl">支払期日</div><input type="date" id="j-due" value="${j?.dueDate||''}"></div>
 </div>
 <div class="frow">
-  <div class="fg"><div class="fl">入金日</div>
-    <div style="display:flex;gap:6px;align-items:center">
-      <input type="date" id="j-payin" value="${j?.paymentDate||''}" style="flex:1" onchange="updPayinBtn()">
-      ${j?`<button type="button" id="j-payin-btn" class="btn btn-xs" onclick="togglePayinToday()" style="white-space:nowrap"></button>`:''}
-    </div>
-    <div style="font-size:10px;color:var(--t3);margin-top:3px">${j?'入金があったら「入金済みにする」を押すと「💰 利益」タブの回収予定から外れます':'入金日は空のままでOK。入金があってから記録します'}</div>
+  <div class="fg"><div class="fl">入金予定日</div>
+    <input type="date" id="j-payin" value="${j?.paymentDate||''}" style="width:100%">
+    <div style="font-size:10px;color:var(--t3);margin-top:3px">入金が予定される日付。入れても入金済みにはなりません（「💰 利益」タブの月分けに使います）。</div>
   </div>
   <div class="fg"><div class="fl">支払日</div><input type="date" id="j-payout" value="${j?.payoutDate||''}"></div>
 </div>
+${j?`<div class="fg"><div class="fl">入金状態</div>
+  <input type="hidden" id="j-paid-val" value="${j?.paidAt||''}">
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <button type="button" id="j-paid-btn" class="btn btn-sm" onclick="togglePaid()" style="white-space:nowrap"></button>
+    <span id="j-paid-lbl" style="font-size:12px"></span>
+  </div>
+  <div style="font-size:10px;color:var(--t3);margin-top:3px">実際に入金があったら「入金済みにする」を押してください。押すと「💰 利益」タブの回収予定から外れます。</div>
+</div>`:''}
 <div id="jf-subs">
 <div style="font-size:12px;font-weight:700;color:var(--t2);margin:10px 0 4px">✅ サブタスク <span style="font-weight:400;color:var(--t3)">（単価・支払はサブタスクごとに入力すると案件全体の金額が自動計算されます）</span></div>
 <div id="j-sub-cont">${subs.map((s,i)=>mkSubRow(s,`サブタスク ${i+1}`)).join('')}</div>
@@ -10538,25 +10549,27 @@ function openJobModal(id,preStatus,preClientId){
 </div>`);
   document.getElementById('j-ttl')?.focus();
   setJobType(document.getElementById('j-type')?.value||'edit');
-  updPayinBtn();
+  updPaidBtn();
 }
-// 入金日フィールドのワンタップ入金済みボタン。実際の保存は保存ボタンで行う（フィールド値を書き換えるだけ）。
-function updPayinBtn(){
-  const el=document.getElementById('j-payin'),btn=document.getElementById('j-payin-btn');
-  if(!el||!btn)return;
-  if(el.value){
-    btn.textContent='取消';
+// 入金状態(入金済み=paidAt)のトグル。入金予定日(j-payin)とは別物。保存はj-paid-valの値を保存ボタンで確定。
+function updPaidBtn(){
+  const val=document.getElementById('j-paid-val'),btn=document.getElementById('j-paid-btn'),lbl=document.getElementById('j-paid-lbl');
+  if(!val||!btn)return;
+  if(val.value){
+    btn.textContent='入金済みを取り消す';
     btn.style.cssText='white-space:nowrap;border:1px solid var(--border);color:var(--t2);background:transparent';
+    if(lbl){lbl.textContent='💰 入金済み（'+val.value+'）';lbl.style.color='var(--green)';}
   }else{
     btn.textContent='入金済みにする';
     btn.style.cssText='white-space:nowrap;border:1px solid var(--green);color:var(--green);background:transparent';
+    if(lbl){lbl.textContent='未入金';lbl.style.color='var(--t3)';}
   }
 }
-function togglePayinToday(){
-  const el=document.getElementById('j-payin');
-  if(!el)return;
-  el.value=el.value?'':today();
-  updPayinBtn();
+function togglePaid(){
+  const val=document.getElementById('j-paid-val');
+  if(!val)return;
+  val.value=val.value?'':today();
+  updPaidBtn();
 }
 function setJobType(t){
   const el=document.getElementById('j-type');if(el)el.value=t;
@@ -10737,7 +10750,7 @@ function saveJob(){
   const onlySelf=selWorkerIds.length===0||selWorkerIds.every(id=>id===SELF_WID);
   const workerPay=hasPricedSubs?subtasks.filter(s=>s.workerId!==SELF_WID).reduce((s,sub)=>s+(sub.workerPay||0),0):(onlySelf?0:parseInt(document.getElementById('j-wpay')?.value)||0);
   const isTrial=document.getElementById('j-trial-val')?.value==='1';
-  const data={title,jobType:document.getElementById('j-type')?.value||'edit',clientId:document.getElementById('j-cl').value||null,workerIds:selWorkerIds,workerId:selWorkerIds[0]||null,scope:document.getElementById('j-scope').value||null,status:document.getElementById('j-stat').value,isTrial,unitPrice,profit:unitPrice,workerPay,sharedDate:document.getElementById('j-shared').value||null,editorDraftDate:document.getElementById('j-editor-draft').value||null,clientDraftDate:document.getElementById('j-client-draft').value||null,thumbnailDate:document.getElementById('j-thumbnail')?.value||null,deliveryDate:document.getElementById('j-deliver').value||null,invoiceDate:document.getElementById('j-invoice').value||null,dueDate:document.getElementById('j-due')?.value||null,paymentDate:document.getElementById('j-payin').value||null,payoutDate:document.getElementById('j-payout').value||null,notes:document.getElementById('j-notes').value.trim(),subtasks};
+  const data={title,jobType:document.getElementById('j-type')?.value||'edit',clientId:document.getElementById('j-cl').value||null,workerIds:selWorkerIds,workerId:selWorkerIds[0]||null,scope:document.getElementById('j-scope').value||null,status:document.getElementById('j-stat').value,isTrial,unitPrice,profit:unitPrice,workerPay,sharedDate:document.getElementById('j-shared').value||null,editorDraftDate:document.getElementById('j-editor-draft').value||null,clientDraftDate:document.getElementById('j-client-draft').value||null,thumbnailDate:document.getElementById('j-thumbnail')?.value||null,deliveryDate:document.getElementById('j-deliver').value||null,invoiceDate:document.getElementById('j-invoice').value||null,dueDate:document.getElementById('j-due')?.value||null,paymentDate:document.getElementById('j-payin').value||null,paidAt:document.getElementById('j-paid-val')?.value||null,payoutDate:document.getElementById('j-payout').value||null,notes:document.getElementById('j-notes').value.trim(),subtasks};
   if(EID){
     const j=S.jobs.find(j=>j.id===EID);
     const prevStatus=j?.status;
@@ -13437,7 +13450,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260723-08';
+const APP_VERSION='20260723-09';
 
 render();
 try{renderAuthGate();}catch(e){console.warn('authGate init',e);}  // 認証確定まではログイン/読込画面で画面を覆う
