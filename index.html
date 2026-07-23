@@ -2866,7 +2866,7 @@ function render(){
     }
     sessionStorage.setItem('ef_team_view',V);
     // 役割ガード(2026-07-23): 営業スタッフは「営業」「情報」タブ以外を開けない。許可外Vは営業リストへ退避。
-    if(!isViewAllowed(V)){V=(_salesAllowedViews()[0]||'salesleads');sessionStorage.setItem('ef_team_view',V);}
+    if(!isViewAllowed(V)){V=(myRole()==='sales'?(_salesAllowedViews()[0]||'salesleads'):'projects');sessionStorage.setItem('ef_team_view',V);}
     if(V==='kpi'){V='goals';} // KPI管理は目標・KPI統合ページにリダイレクト
     const views={dashboard:rDash,tasks:rTasks,projects:rProjects,pipeline:rPipeline,teamgoals:rTeamGoals,posts:rPosts,docs:rDocs,workers:rWorkers,habits:rHabits,goals:rGoals,journal:rJournal,revenue:rRevenue,memo:rMemo,settings:rSettings,customize:rCustomize,aichat:rAIChat,fitness:rFitness,kpi:rKpi,bizboard:rBizBoard,bizunits:rBizUnits,bizinfo:rBizInfo,minutes:rMinutes,salesleads:rSalesLeads,hpfee:rHpFee,salessites:rSalesSites,inquiries:rInquiries,templates:rTemplates,crm:rCrm};
     let html;
@@ -9446,11 +9446,13 @@ ${secTitle('👤 アカウントとデータ管理')}
   <button class="btn btn-g btn-sm" onclick="efResetPersonalData()" ${typeof FB_USER!=='undefined'&&FB_USER?'':'disabled'}>👤 このアカウントの個人データを初期化(端末+クラウド)</button>
 </div>
 
-${myRole()==='full'?`${secTitle('🔑 メンバー権限（共有相手の表示制限）')}
+${_isOwner()?`${secTitle('🔑 サインインしたメンバー・権限')}
 <div class="card" style="margin-bottom:16px">
   <div style="font-size:12px;color:var(--t2);line-height:1.7;margin-bottom:10px">
-    営業スタッフのGoogleアカウント(メール)を「営業スタッフ」にすると、そのアカウントでサインインしたとき<b>「営業」タブと「情報」タブだけ</b>が表示されます（案件・経営・個人ページは非表示）。<br>
-    <span style="color:var(--t3)">※画面の表示制限です。厳密なアクセス遮断ではないため、信頼できるスタッフにのみ共有してください。</span>
+    <b>オーナー: ${esc(_myEmail())}</b><br>
+    サインインして初回登録したメンバーが下に一覧表示されます（サインイン後に名前・職種を登録すると反映）。<br>
+    「営業スタッフ」にすると、そのアカウントは<b>「営業」タブと「情報」タブだけ</b>表示（案件・経営・個人ページ・設定は非表示）。「フル」で全タブ表示。<br>
+    <span style="color:var(--t3)">※画面の表示制限です。厳密なアクセス遮断ではないため、信頼できるスタッフにのみ共有してください。メール欄からの事前登録も可能です。</span>
   </div>
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
     <input id="mr-email" type="email" placeholder="staff@gmail.com（サインインに使うメール）" style="flex:1;min-width:200px">
@@ -9471,134 +9473,6 @@ ${myRole()==='full'?`${secTitle('🔑 メンバー権限（共有相手の表示
     </div>`).join('')}
   </div>`:`<div style="font-size:12px;color:var(--t3)">まだ登録がありません。営業スタッフのGoogleメールを追加してください。</div>`}
 </div>`:''}
-
-${secTitle('🍅 ポモドーロタイマー')}
-<div class="card" style="margin-bottom:16px">
-  <div class="frow">
-    <div class="fg">
-      <div class="fl">集中時間（分）</div>
-      <input type="number" id="set-work" value="${S.settings.workMin||25}" min="1" max="120">
-    </div>
-    <div class="fg">
-      <div class="fl">休憩時間（分）</div>
-      <input type="number" id="set-break" value="${S.settings.breakMin||5}" min="1" max="60">
-    </div>
-  </div>
-  <button class="btn btn-p btn-sm" onclick="savePomoSettings()">保存</button>
-</div>
-
-${secTitle('💰 月間収益目標')}
-<div class="card" style="margin-bottom:16px">
-  <div class="fg">
-    <div class="fl">月間目標（円）</div>
-    <input type="number" id="set-target" value="${S.settings.target||0}" min="0" placeholder="例: 500000">
-  </div>
-  <button class="btn btn-p btn-sm" onclick="saveTarget()">保存</button>
-</div>
-
-${secTitle('📊 目標データ一括登録')}
-<div class="card" style="margin-bottom:16px">
-  <div style="font-size:12px;color:var(--t2);margin-bottom:10px">既存のワーカー・クライアント・完了案件を目標達成記録に一括登録します。重複は自動スキップされます。</div>
-  <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--t2);margin-bottom:10px">
-    <span>👤 採用目標: ワーカー ${(S.workers||[]).length}人</span>
-    <span>📞 営業目標: クライアント ${(S.clients||[]).length}社</span>
-    <span>💰 収益目標: 完了案件 ${(S.jobs||[]).filter(j=>!j.deleted&&j.status==='完了').length}件</span>
-  </div>
-  <button class="btn btn-p btn-sm" onclick="backfillGoalsData()">📥 過去データを目標に一括登録</button>
-</div>
-
-${secTitle('🧠 アイデンティティ')}
-<div class="card" style="margin-bottom:16px">
-  <div class="fg">
-    <div class="fl">私は〇〇です</div>
-    <input id="set-identity" value="${esc(S.settings.identity||'')}" placeholder="例：毎日コンテンツを届けるクリエイターです">
-  </div>
-  <div class="fhint">ダッシュボードに表示され、行動のブレを防ぎます</div>
-  <button class="btn btn-p btn-sm" onclick="saveIdentity()">保存</button>
-</div>
-
-${secTitle('🔒 ジャーナルロック設定')}
-<div class="card" style="margin-bottom:16px">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-    <div>
-      <div style="font-size:13px;font-weight:600">朝のジャーナルロック</div>
-      <div style="font-size:12px;color:var(--t2);margin-top:2px">ONにすると、朝のジャーナル未記入の場合8〜18時はアプリがロックされます</div>
-    </div>
-    <div onclick="S.settings.morningLockEnabled=!(S.settings.morningLockEnabled!==false);save();render()" style="cursor:pointer;width:44px;height:24px;border-radius:12px;background:${S.settings.morningLockEnabled!==false?'var(--purple)':'var(--border)'};position:relative;transition:background .2s;flex-shrink:0">
-      <div style="position:absolute;top:3px;left:${S.settings.morningLockEnabled!==false?'23':'3'}px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .2s"></div>
-    </div>
-  </div>
-  <div style="display:flex;align-items:center;justify-content:space-between">
-    <div>
-      <div style="font-size:13px;font-weight:600">夜の記録ロック</div>
-      <div style="font-size:12px;color:var(--t2);margin-top:2px">ONにすると、19時以降に夜ジャーナル・習慣未完了でアプリがロックされます</div>
-    </div>
-    <div onclick="S.settings.eveningLockEnabled=!(S.settings.eveningLockEnabled!==false);save();render()" style="cursor:pointer;width:44px;height:24px;border-radius:12px;background:${S.settings.eveningLockEnabled!==false?'var(--purple)':'var(--border)'};position:relative;transition:background .2s;flex-shrink:0">
-      <div style="position:absolute;top:3px;left:${S.settings.eveningLockEnabled!==false?'23':'3'}px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .2s"></div>
-    </div>
-  </div>
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px">
-    <div>
-      <div style="font-size:13px;font-weight:600">KPI振り返りロック</div>
-      <div style="font-size:12px;color:var(--t2);margin-top:2px">ONにすると、今週の1w KPIが未更新の場合アプリがロックされます</div>
-    </div>
-    <div onclick="S.settings.kpiLockEnabled=!S.settings.kpiLockEnabled;save();render()" style="cursor:pointer;width:44px;height:24px;border-radius:12px;background:${S.settings.kpiLockEnabled?'var(--purple)':'var(--border)'};position:relative;transition:background .2s;flex-shrink:0">
-      <div style="position:absolute;top:3px;left:${S.settings.kpiLockEnabled?'23':'3'}px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .2s"></div>
-    </div>
-  </div>
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px">
-    <div>
-      <div style="font-size:13px;font-weight:600">初稿・クライアント提出確認ロック</div>
-      <div style="font-size:12px;color:var(--t2);margin-top:2px">ONにすると、朝は当日・夜は翌日の初稿期限案件を確認するまでアプリがロックされます</div>
-    </div>
-    <div onclick="S.settings.draftLockEnabled=!(S.settings.draftLockEnabled!==false);save();render()" style="cursor:pointer;width:44px;height:24px;border-radius:12px;background:${S.settings.draftLockEnabled!==false?'var(--purple)':'var(--border)'};position:relative;transition:background .2s;flex-shrink:0">
-      <div style="position:absolute;top:3px;left:${S.settings.draftLockEnabled!==false?'23':'3'}px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .2s"></div>
-    </div>
-  </div>
-</div>
-
-${secTitle('💪 筋トレコミットメント')}
-<div class="card" style="margin-bottom:16px">
-  <div style="display:flex;align-items:center;justify-content:space-between">
-    <div>
-      <div style="font-size:13px;font-weight:600">筋トレロック</div>
-      <div style="font-size:12px;color:var(--t2);margin-top:2px">ONにすると、当日の筋トレ記録がないと19時以降アプリがロックされます</div>
-    </div>
-    <div onclick="S.settings.gymCommit=!S.settings.gymCommit;save();render()" style="cursor:pointer;width:44px;height:24px;border-radius:12px;background:${S.settings.gymCommit?'var(--purple)':'var(--border)'};position:relative;transition:background .2s;flex-shrink:0">
-      <div style="position:absolute;top:3px;left:${S.settings.gymCommit?'23':'3'}px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .2s"></div>
-    </div>
-  </div>
-  <button class="btn btn-p btn-sm" style="margin-top:10px" onclick="V='fitness';render()">💪 フィットネスページへ</button>
-</div>
-
-${secTitle('📅 固定タイムスケジュール')}
-<div class="card">
-  <div style="font-size:12px;color:var(--t2);margin-bottom:12px">タスク管理のスケジュール表示に使われる固定の時間割です</div>
-  <div id="fs-list">
-    ${S.fs.map((f,i)=>`<div class="sched-edit-item">
-      <div style="display:flex;flex-direction:column;gap:1px;flex-shrink:0">
-        <button class="tact" style="padding:1px 5px;font-size:11px;line-height:1.2;opacity:${i===0?'0.2':'0.7'}" ${i===0?'disabled':''} onclick="fsMove(${i},-1)" title="上へ">▲</button>
-        <button class="tact" style="padding:1px 5px;font-size:11px;line-height:1.2;opacity:${i===S.fs.length-1?'0.2':'0.7'}" ${i===S.fs.length-1?'disabled':''} onclick="fsMove(${i},1)" title="下へ">▼</button>
-      </div>
-      <div class="sched-edit-color" style="background:${f.c}"></div>
-      <input style="width:34px;flex-shrink:0;padding:4px 4px;font-size:14px;text-align:center" value="${esc(f.icon||'')}" onchange="S.fs[${i}].icon=this.value.trim();save();render()" placeholder="🔥" title="ノードに表示するアイコン（1文字・未入力ならタイトル頭文字）" maxlength="4">
-      <input type="time" step="60" style="width:92px;flex-shrink:0;padding:4px 6px;font-size:12px" value="${fsTimeInputVal(f.s)}" onchange="S.fs[${i}].s=this.value" placeholder="開始">
-      <button class="tact" style="font-size:10px;padding:1px 4px;flex-shrink:0;opacity:${f.s?'0.7':'0.2'}" onclick="S.fs[${i}].s='';save();render()" title="開始時間をクリア">✕</button>
-      <span style="color:var(--t2)">〜</span>
-      <input type="time" step="60" style="width:92px;flex-shrink:0;padding:4px 6px;font-size:12px" value="${fsTimeInputVal(f.e)}" onchange="S.fs[${i}].e=this.value" placeholder="${f.e==='24:00'?'24:00(終日)':'終了'}">
-      <button class="tact" style="font-size:10px;padding:1px 4px;flex-shrink:0;opacity:${f.e?'0.7':'0.2'}" onclick="S.fs[${i}].e='';save();render()" title="終了時間をクリア">✕</button>
-      <input style="flex:1;padding:4px 8px;font-size:12px" value="${esc(f.t)}" onchange="S.fs[${i}].t=this.value" placeholder="内容（→区切りで複数項目）">
-      <input type="color" value="${f.c}" style="width:32px;height:32px;padding:2px;border-radius:6px;cursor:pointer;background:none;border:1px solid var(--border)" onchange="S.fs[${i}].c=this.value">
-      ${f.t.includes('→')?`<button class="btn btn-xs" style="background:${f.c}12;color:${f.c};border:1px solid ${f.c}30;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;flex-shrink:0" onclick="save();openFsDetailModal('${f.id||('b'+i)}')" title="項目ごとの時刻・チェックを編集">項目時刻</button>`:''}
-      <button class="tact del" onclick="S.fs.splice(${i},1);save();render()">✕</button>
-    </div>`).join('')}
-  </div>
-  <div style="display:flex;gap:8px;margin-top:10px">
-    <button class="btn btn-g btn-sm" onclick="S.fs.push({id:uid(),s:'',e:'',t:'',c:'#7c3aed',icon:''});save();render()">＋ 追加</button>
-    <button class="btn btn-p btn-sm" onclick="saveFS()">保存</button>
-    <button class="btn btn-g btn-sm" onclick="if(confirm('デフォルトに戻しますか？')){S.fs=JSON.parse(JSON.stringify(DEFAULT_FS));save();render();}">リセット</button>
-  </div>
-</div>
 
 ${secTitle('📊 Googleスプレッドシート連携')}
 <div class="card" style="margin-bottom:16px">
@@ -9632,25 +9506,6 @@ ${secTitle('👤 担当者管理')}
     <button class="btn btn-p btn-sm" onclick="addWorker()">追加</button>
   </div>
   <button class="btn btn-g btn-sm" style="margin-top:8px;width:100%;border:1px solid var(--green);color:var(--green)" onclick="hakenEnsureAllWorkerTabs()" title="社内アプリのワーカー全員ぶんの記入タブを派遣シートに作成（既存はスキップ）">派遣シートにワーカータブを一括生成</button>
-</div>
-
-${secTitle('💪 カスタム筋トレメニュー')}
-<div class="card" style="margin-bottom:16px">
-  <div style="font-size:12px;color:var(--t2);margin-bottom:10px">習慣トラッカーの筋トレメニューに追加されます</div>
-  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
-    ${(S.customEx||[]).map((ex,i)=>`<div class="worker-chip">${esc(ex)}<button style="border:none;background:none;color:var(--red);cursor:pointer;font-size:11px;margin-left:4px" onclick="S.customEx.splice(${i},1);save();render()">✕</button></div>`).join('')}
-    ${!(S.customEx||[]).length?'<span style="color:var(--t3);font-size:12px">カスタムメニューなし</span>':''}
-  </div>
-  <div style="display:flex;gap:8px">
-    <input id="new-ex-name" placeholder="メニュー名を入力" style="flex:1">
-    <button class="btn btn-p btn-sm" onclick="addCustomEx()">追加</button>
-  </div>
-</div>
-
-${secTitle('📅 固定タイムスケジュール（再掲）')}
-<div class="card" style="margin-bottom:16px">
-  <div style="font-size:12px;color:var(--t2);margin-bottom:8px">スケジュール表示に使われる固定の時間割です</div>
-  <button class="btn btn-g btn-sm" onclick="V='tasks';TV='schedule';render()">スケジュール表示を開く</button>
 </div>
 
 ${secTitle('🔄 アプリのアップデート')}
@@ -11254,6 +11109,7 @@ const NAV_CATS=[
 // 注意: これはUI制限。チームデータはサインインで同期されるため技術的な完全遮断ではない(信頼済みスタッフ向け)。
 const ADMIN_EMAILS=['nakamurakouta512@gmail.com','mono.create.group@gmail.com'];
 function _myEmail(){try{return((typeof FB_USER!=='undefined'&&FB_USER&&FB_USER.email)||'').toLowerCase();}catch(_){return'';}}
+function _isOwner(){return ADMIN_EMAILS.includes(_myEmail());}  // オーナー=会長。設定はオーナーのみ閲覧可
 function myRole(){
   const em=_myEmail();
   if(!em)return 'full';                          // 未サインイン(ローカルのみ)。認証ゲートで画面自体は遮断される
@@ -11264,8 +11120,8 @@ function myRole(){
 const ROLE_SALES_CATS=['sales','info'];
 function _salesAllowedViews(){const vs=[];NAV_CATS.forEach(c=>{if(ROLE_SALES_CATS.includes(c.id))vs.push(...c.views);});return vs;}
 function isViewAllowed(v){
+  if(v==='settings')return _isOwner();          // 設定はオーナー(会長)のみ。サインアウトはサイドバー下部のボタンから
   if(myRole()!=='sales')return true;
-  if(v==='settings')return true;                // サインアウト導線
   if(v.startsWith('doc_')||v.startsWith('bidoc_')||v.startsWith('tp_'))return true; // ドキュメント/事業情報=情報カテゴリ
   if(v.startsWith('cp_'))return false;          // 個人カスタムページは不可
   return _salesAllowedViews().includes(v);
@@ -11441,8 +11297,10 @@ function renderNav(){
     return html;
   };
   el.innerHTML=grouped(true);
-  // 営業スタッフには固定の「カスタマイズ」(全タブ設定が見える)を出さない。設定はサインアウト用に残す。
+  const _owner=_isOwner();
+  // 営業スタッフには固定の「カスタマイズ」を出さない。設定はオーナー(会長)のみ表示(サインアウトは下部auth-uiボタン)。
   document.querySelectorAll('#sidebar .nav-item[data-view="customize"]').forEach(el=>{el.style.display=_role==='sales'?'none':'';});
+  document.querySelectorAll('#sidebar .nav-item[data-view="settings"]').forEach(el=>{el.style.display=_owner?'':'none';});
   // モバイル下タブバー: 営業スタッフには個人用(ホーム/タスク/AI/習慣/案件)を出さず、メニューのみ残す。
   document.querySelectorAll('#mob-nav .mnav-item').forEach(el=>{
     const v=el.dataset.view;
@@ -11452,7 +11310,7 @@ function renderNav(){
   const dr=document.getElementById('mob-drawer-nav');if(!dr)return;
   dr.innerHTML=grouped(false)+`<div class="nav-sep"></div>
   ${_role==='sales'?'':`<div class="nav-item${V==='customize'?' active':''}" data-view="customize"><span class="nav-icon">🛠</span>カスタマイズ</div>`}
-  <div class="nav-item${V==='settings'?' active':''}" data-view="settings"><span class="nav-icon">⚙️</span>設定</div>`;
+  ${_owner?`<div class="nav-item${V==='settings'?' active':''}" data-view="settings"><span class="nav-icon">⚙️</span>設定</div>`:''}`;
   // 下タブバー同期
   document.querySelectorAll('.mnav-item').forEach(el=>{
     el.classList.toggle('active',el.dataset.view===V);
@@ -13450,7 +13308,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260723-09';
+const APP_VERSION='20260723-10';
 
 render();
 try{renderAuthGate();}catch(e){console.warn('authGate init',e);}  // 認証確定まではログイン/読込画面で画面を覆う
