@@ -5609,10 +5609,10 @@ function jobProfit(j){return jobTotalIn(j)-jobTotalOut(j);}
 // 利益ページ用：サブタスクを含まずメインタスクの金額のみ
 function jobMainIn(j){return j.unitPrice||j.profit||0;}
 function jobMainOut(j){
+  // 利益ページは売上(jobMainIn)がメインタスクのみを見るので、支払も同じ土俵で
+  // メインタスクの workerPay のみを計上する（サブタスク分を足すと二重計上で支払が水増しされる）。
   const wids=getJobWorkerIds(j);
-  const mainPay=(wids.length&&!wids.every(id=>id===SELF_WID))?(j.workerPay||0):0;
-  const subPay=(j.subtasks||[]).filter(s=>s.workerId!==SELF_WID).reduce((sum,s)=>sum+(s.workerPay||0),0);
-  return mainPay+subPay;
+  return (wids.length&&!wids.every(id=>id===SELF_WID))?(j.workerPay||0):0;
 }
 function jobMainProfit(j){return jobMainIn(j)-jobMainOut(j);}
 // 【2026-07-23改定】入金済み判定は paidAt(実際に入金があってボタンで設定)。
@@ -13558,7 +13558,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260724-07';
+const APP_VERSION='20260724-08';
 
 render();
 try{renderAuthGate();}catch(e){console.warn('authGate init',e);}  // 認証確定まではログイン/読込画面で画面を覆う
