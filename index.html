@@ -1081,6 +1081,11 @@ const SL_SHARD_N=4;
 let _slShardJson='';
 let _slShardUnsubs=[];
 let _slShardEnc=[];   // shardごとの{raw,part}キャッシュ。無変更shardの再圧縮・再書き込みを避ける(2026-07-17)
+// 【安全策 2026-07-24】salesLeadsはローカル(localStorage)に保存せずクラウドshardのみを正とするため、
+// 起動直後〜shard受信までは必ず S.salesLeads=[] の空窓が生じる。その状態で書き戻すと全件消失するため、
+// 「クラウド未受信の空」と「実際の激減」を両方ブロックするガードを本体側に入れる(旧: leads_ioのみ対応)。
+let _slCloudLoaded=false;   // 1度でもクラウドshardを受信したか
+let _slCloudCount=0;        // 受信済みの既知件数(この件数からの激減は書かない)
 function _slEncodeShard(arr){const j=JSON.stringify(arr);return (window.LZString&&j.length>4000)?'LZ:'+LZString.compressToBase64(j):j;}
 // 【性能 2026-07-17】以前はshard境界を探すのに200件ごとに「累積配列全体」をLZ圧縮しており、
 // 7,489件の保存で延べ92,090件分を38回圧縮=約9.9秒メインスレッドを占有していた(会長「重すぎる」の主因)。
@@ -1119,6 +1124,18 @@ function _slSplitShards(leads){
 }
 function _slShardsSave(){
   if(!FB_USER||TEAM_SHARE_OK===false||!window.LZString)return;
+  // ── 消失防止ガード(2026-07-24) ──
+  const _cur=(S.salesLeads||[]).length;
+  // ① クラウド未受信のまま0件で書き戻さない(起動直後の空窓で全件消去するのを防ぐ)
+  if(!_slCloudLoaded&&_cur===0)return;
+  // ② 既知件数からの激減(100件超 かつ 2割超の減少)は書かない。誤操作/同期不整合での消失を止める。
+  //    リード削除は論理削除(deletedフラグ)で配列長は減らないため、長さの激減は不整合の疑いが濃い。
+  //    閾値0.5では過去の実事故(7636→3818=ちょうど半分)をすり抜けたため0.8にする。
+  if(_slCloudCount>0&&(_slCloudCount-_cur)>100&&_cur<_slCloudCount*0.8){
+    console.warn('leads shard save 中止(激減ガード): '+_slCloudCount+'→'+_cur+'件');
+    return;
+  }
+  if(_cur>_slCloudCount)_slCloudCount=_cur;
   const json=JSON.stringify(S.salesLeads||[]);
   if(json===_slShardJson)return;      // リード変更なし→書き込み節約
   _slShardJson=json;
@@ -1217,6 +1234,9 @@ function fbSetupTeamSync(){
       const remote=_teamDecode((doc.data()||{}).part);
       if(!Array.isArray(remote)||!remote.length)return;
       const merged=mergeTeamArr(S.salesLeads||[],remote,'salesLeads');
+      // クラウドから実データを受信した=以降は書き戻して良い(空窓ガード解除)。既知件数も更新する
+      _slCloudLoaded=true;
+      if(merged.length>_slCloudCount)_slCloudCount=merged.length;
       if(JSON.stringify(merged)!==JSON.stringify(S.salesLeads||[])){
         S.salesLeads=merged;_teamSnapRebase();_lsSaveState(S);renderSyncSafe();
       }
@@ -2259,23 +2279,26 @@ function migrate(d){
   }
   return d;
 }
-// ── localStorage保存のLZ圧縮化(QuotaExceededError対策・2026-07-24) ──
+// ── localStorage保存のLZ圧縮化 + 重量データ除外(QuotaExceededError対策・2026-07-24) ──
 // 全状態Sを生JSONで保存するとsalesLeads等で5MB上限を超え、保存のたびに失敗していた。
-// 'LZ1:'マーカー付きで圧縮保存し、旧形式(生JSON)も読める後方互換にする。
-// 圧縮しても超過する場合はsalesLeads(shared/mcappが唯一の真実・クラウドが正)を外してコアを確実に残す。
+// ①'LZ1:'マーカー付きで圧縮保存(旧形式=生JSONも読める後方互換)
+// ②salesLeadsは恒久的にローカルへ保存しない。shared/mcapp_leads_0..3(クラウドshard)が唯一の真実で、
+//   件数が増え続けるため将来また上限に達する。起動時の空窓は _slShardsSave の消失防止ガードで担保する。
+const LS_OMIT_KEYS=['salesLeads'];
 function _lsSaveState(obj){
+  const strip=(o,keys)=>{const c=Object.assign({},o);keys.forEach(k=>{delete c[k];});return c;};
+  const put=(o)=>{
+    const json=JSON.stringify(o);
+    localStorage.setItem(DB,window.LZString?('LZ1:'+LZString.compressToUTF16(json)):json);
+  };
   try{
-    const json=JSON.stringify(obj);
-    const payload=window.LZString?('LZ1:'+LZString.compressToUTF16(json)):json;
-    localStorage.setItem(DB,payload);
+    put(strip(obj,LS_OMIT_KEYS));
     return true;
   }catch(e){
+    // まだ超過する場合は増え続ける従属データも落としてコア(案件/クライアント/設定)を確実に残す
     try{
-      const lite=Object.assign({},obj,{salesLeads:[]});
-      const lj=JSON.stringify(lite);
-      const lp=window.LZString?('LZ1:'+LZString.compressToUTF16(lj)):lj;
-      localStorage.setItem(DB,lp);
-      console.warn('save: salesLeadsを除外してローカル保存(容量超過回避・クラウドが正)');
+      put(strip(obj,LS_OMIT_KEYS.concat(['logs','signins','teamPosts','salesSites','crmClients'])));
+      console.warn('save: 従属データを除外してローカル保存(容量超過回避・クラウドが正)');
       return true;
     }catch(e2){console.warn('save error',e2);return false;}
   }
@@ -13535,7 +13558,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260724-06';
+const APP_VERSION='20260724-07';
 
 render();
 try{renderAuthGate();}catch(e){console.warn('authGate init',e);}  // 認証確定まではログイン/読込画面で画面を覆う
