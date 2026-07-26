@@ -12940,7 +12940,7 @@ function slDirectivesHtml(){
   const rows=mine.map(d=>`<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
       <span style="background:${d.assignee==='全員'?'var(--adim)':'var(--pldim)'};color:${d.assignee==='全員'?'var(--amber)':'var(--purple)'};font-size:10.5px;font-weight:800;padding:3px 10px;border-radius:100px;flex-shrink:0;margin-top:2px">${esc(d.assignee)}</span>
       <div style="flex:1;min-width:0;font-size:13px;line-height:1.6">
-        <b>${slBizLabel(d.biz||'hp')}</b> × <b>${esc(d.genre||'全ジャンル')}</b>
+        <b>${slBizLabel(d.biz||'hp')}</b> × <b>${esc(_slDirGenres(d).join('・')||'全ジャンル')}</b>
         ${d.note?`<div style="font-size:12px;color:var(--t2);margin-top:2px;white-space:pre-wrap">${esc(d.note)}</div>`:''}
         <div style="font-size:10px;color:var(--t3);margin-top:2px">${d.updatedAt?tpFmtDate(d.updatedAt):''}${d.updatedBy?` ・ ${esc(d.updatedBy)}`:''}</div>
       </div>
@@ -12956,21 +12956,66 @@ function slDirectivesHtml(){
     ${!full&&mine.length?`<div style="font-size:11px;color:var(--t3);margin-top:8px">この指示に合わせて事業タブとジャンル絞り込みを設定してから送付してください。</div>`:''}
   </div>`;
 }
+// ジャンルは複数選択(2026-07-26 会長指示)。旧データ(genre文字列)は配列に読み替える後方互換。
+function _slDirGenres(d){
+  if(!d)return[];
+  if(Array.isArray(d.genres))return d.genres.filter(Boolean);
+  return d.genre?[d.genre]:[];
+}
+let _dirGenreSel=[];
+function _slDirKnownGenres(){
+  const fromLeads=(S.salesLeads||[]).filter(l=>l&&!l.deleted).map(l=>l.genre).filter(Boolean);
+  const fromDirs=(S.salesDirectives||[]).flatMap(d=>_slDirGenres(d));
+  return [...new Set([...fromLeads,...fromDirs,..._dirGenreSel])].sort();
+}
+function _slDirGenreChips(){
+  const known=_slDirKnownGenres();
+  return`${known.map(g=>{
+    const on=_dirGenreSel.includes(g);
+    return`<button type="button" onclick="slDirGenreToggle('${esc(g).replace(/'/g,"\\'")}')" style="border:1.5px solid ${on?'var(--purple)':'var(--border)'};background:${on?'rgba(109,40,217,0.1)':'var(--card2)'};color:${on?'var(--purple)':'var(--t2)'};font-weight:${on?'700':'500'};font-size:12px;border-radius:100px;padding:5px 12px;cursor:pointer">${on?'✓ ':''}${esc(g)}</button>`;
+  }).join('')}`;
+}
+function _slDirGenreRefresh(){
+  const box=document.getElementById('dir-genre-chips');
+  if(box)box.innerHTML=_slDirGenreChips();
+  const cnt=document.getElementById('dir-genre-count');
+  if(cnt)cnt.textContent=_dirGenreSel.length?`選択中: ${_dirGenreSel.join('・')}`:'未選択（＝全ジャンルが対象）';
+}
+function slDirGenreToggle(g){
+  const i=_dirGenreSel.indexOf(g);
+  if(i>=0)_dirGenreSel.splice(i,1);else _dirGenreSel.push(g);
+  _slDirGenreRefresh();
+}
+function slDirGenreAdd(){
+  const inp=document.getElementById('dir-genre-new');
+  const g=(inp.value||'').trim();
+  if(!g)return;
+  if(!_dirGenreSel.includes(g))_dirGenreSel.push(g);
+  inp.value='';
+  _slDirGenreRefresh();
+}
 function slDirOpen(id){
   const d=id?_slDirs().find(x=>x.id===id):null;
   const people=['全員',..._slAssignees()];
-  const genres=[...new Set((S.salesLeads||[]).filter(l=>l&&!l.deleted).map(l=>l.genre).filter(Boolean))].sort();
+  _dirGenreSel=_slDirGenres(d);
   openModal(`<div class="mhdr"><div class="mtitle">${d?'営業指示を編集':'営業指示を追加'}</div><button class="mclose" onclick="closeModal()">✕</button></div>
 <div class="fg"><div class="fl">対象者</div><select id="dir-assignee">${people.map(p=>`<option value="${esc(p)}"${d&&d.assignee===p?' selected':''}>${esc(p)}</option>`).join('')}</select></div>
 <div class="fg"><div class="fl">事業</div><select id="dir-biz">${SL_BIZ.map(b=>`<option value="${b.k}"${d&&d.biz===b.k?' selected':''}>${b.label}</option>`).join('')}</select></div>
-<div class="fg"><div class="fl">ジャンル(業種)</div><input id="dir-genre" value="${esc(d?.genre||'')}" placeholder="例: 美容室（空欄=全ジャンル）" list="dir-genres"><datalist id="dir-genres">${genres.map(g=>`<option value="${esc(g)}">`).join('')}</datalist></div>
+<div class="fg"><div class="fl">ジャンル(業種)・複数選択可</div>
+  <div id="dir-genre-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px">${_slDirGenreChips()}</div>
+  <div style="display:flex;gap:6px">
+    <input id="dir-genre-new" placeholder="リストにないジャンルを入力して追加" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();slDirGenreAdd();}">
+    <button type="button" class="btn btn-g btn-sm" onclick="slDirGenreAdd()">追加</button>
+  </div>
+  <div id="dir-genre-count" style="font-size:11px;color:var(--t3);margin-top:6px">${_dirGenreSel.length?`選択中: ${esc(_dirGenreSel.join('・'))}`:'未選択（＝全ジャンルが対象）'}</div>
+</div>
 <div class="fg"><div class="fl">メモ(任意)</div><textarea id="dir-note" rows="2" placeholder="例: 完成イメージURL・地域の指定など">${esc(d?.note||'')}</textarea></div>
 <div class="mfooter"><button class="btn btn-g" onclick="closeModal()">キャンセル</button>${d?`<button class="btn btn-red" onclick="slDirDel('${d.id}')">削除</button>`:''}<button class="btn btn-p" onclick="slDirSave('${d?d.id:''}')">保存</button></div>`);
 }
 function slDirSave(id){
   if(!Array.isArray(S.salesDirectives))S.salesDirectives=[];
   const data={assignee:document.getElementById('dir-assignee').value,biz:document.getElementById('dir-biz').value,
-    genre:document.getElementById('dir-genre').value.trim(),note:document.getElementById('dir-note').value.trim(),
+    genres:[..._dirGenreSel],genre:_dirGenreSel.join('・'),note:document.getElementById('dir-note').value.trim(),
     updatedAt:Date.now(),updatedBy:_myDisplayName()||_myEmail()};
   if(id){const d=S.salesDirectives.find(x=>x.id===id);if(d)Object.assign(d,data);}
   else S.salesDirectives.push(Object.assign({id:uid(),createdAt:today()},data));
@@ -13648,7 +13693,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260726-03';
+const APP_VERSION='20260726-04';
 
 render();
 try{renderAuthGate();}catch(e){console.warn('authGate init',e);}  // 認証確定まではログイン/読込画面で画面を覆う
