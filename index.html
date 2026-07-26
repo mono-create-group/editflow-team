@@ -920,6 +920,7 @@ const BUILTIN_VIEWS=[
   {id:'bizboard',label:'経営ボード',icon:'🏢'},
   {id:'minutes',label:'議事録',icon:'📝'},
   {id:'salesleads',label:'営業リスト',icon:'📞'},
+  {id:'salesrank',label:'営業ランキング',icon:'🏆'},
   {id:'hpfee',label:'維持費',icon:'💴'},
   {id:'salessites',label:'営業用サイト',icon:'🌐'},
   // テンプレ保管(templates)は会長指示で非表示化(2026-07-10)。S.templates/TEAM_KEYS/rTemplatesは残置し復活可能。
@@ -3025,7 +3026,7 @@ function render(){
     // 役割ガード(2026-07-23): 営業スタッフは「営業」「情報」タブ以外を開けない。許可外Vは営業リストへ退避。
     if(!isViewAllowed(V)){V=(myRole()==='sales'?(_salesAllowedViews()[0]||'salesleads'):'projects');sessionStorage.setItem('ef_team_view',V);}
     if(V==='kpi'){V='goals';} // KPI管理は目標・KPI統合ページにリダイレクト
-    const views={dashboard:rDash,tasks:rTasks,projects:rProjects,pipeline:rPipeline,teamgoals:rTeamGoals,posts:rPosts,docs:rDocs,workers:rWorkers,habits:rHabits,goals:rGoals,journal:rJournal,revenue:rRevenue,memo:rMemo,settings:rSettings,customize:rCustomize,aichat:rAIChat,fitness:rFitness,kpi:rKpi,bizboard:rBizBoard,bizunits:rBizUnits,bizinfo:rBizInfo,minutes:rMinutes,salesleads:rSalesLeads,hpfee:rHpFee,salessites:rSalesSites,inquiries:rInquiries,templates:rTemplates,crm:rCrm,accounts:rAccounts};
+    const views={dashboard:rDash,tasks:rTasks,projects:rProjects,pipeline:rPipeline,teamgoals:rTeamGoals,posts:rPosts,docs:rDocs,workers:rWorkers,habits:rHabits,goals:rGoals,journal:rJournal,revenue:rRevenue,memo:rMemo,settings:rSettings,customize:rCustomize,aichat:rAIChat,fitness:rFitness,kpi:rKpi,bizboard:rBizBoard,bizunits:rBizUnits,bizinfo:rBizInfo,minutes:rMinutes,salesleads:rSalesLeads,salesrank:rSalesRank,hpfee:rHpFee,salessites:rSalesSites,inquiries:rInquiries,templates:rTemplates,crm:rCrm,accounts:rAccounts};
     let html;
     if(V.startsWith('doc_')){
       // Googleドキュメント風エディタ(teamPages.htmlを編集)。BUILTIN_VIEWSガードを迂回する。
@@ -11447,7 +11448,7 @@ function navMeta(id){
 }
 // ナビのカテゴリー分け(2026-07-10 会長指示)。開閉状態は端末localStorage記憶。設定/カスタマイズは従来どおり下部固定。
 const NAV_CATS=[
-  {id:'sales',label:'営業',views:['salesleads','pipeline','inquiries','crm','salessites']},
+  {id:'sales',label:'営業',views:['salesleads','salesrank','pipeline','inquiries','crm','salessites']},
   {id:'prod',label:'制作・派遣',views:['projects','workers','hpfee']},
   {id:'mgmt',label:'経営',views:['bizboard']},
   {id:'info',label:'情報',views:['bizinfo','docs','minutes','posts']},
@@ -13135,6 +13136,89 @@ function slDirDel(id){
   d.deleted=true;d.updatedAt=Date.now();
   save();closeModal();render();toast('営業指示を削除しました');
 }
+// ═══ 営業ランキング(2026-07-26 会長指示) ═══
+// 全員が見られる成績表。接触履歴(contacts)を担当者×期間で集計する。
+// 成約=contactsのs==='成約'を1件として数える(同日同事業は1件に丸められるので水増しなし)。
+const SR_REWARD=10000;                       // DM営業スタッフの成約1件あたり報酬
+let _srRange='month';                        // today / week / month / all
+function _srRangeStart(r){
+  const d=new Date();d.setHours(0,0,0,0);
+  if(r==='today')return today();
+  if(r==='week'){const w=(d.getDay()+6)%7;d.setDate(d.getDate()-w);return d.toISOString().slice(0,10);}  // 月曜始まり
+  if(r==='month')return today().slice(0,7)+'-01';
+  return '0000-00-00';
+}
+function _srRangeLabel(r){return r==='today'?'今日':r==='week'?'今週':r==='month'?'今月':'全期間';}
+function srStats(range){
+  const from=_srRangeStart(range||_srRange);
+  const m={};
+  const touch=who=>{const k=who||'未割当';if(!m[k])m[k]={who:k,sent:0,won:0};return m[k];};
+  (S.salesLeads||[]).forEach(l=>{
+    if(!l||l.deleted||!Array.isArray(l.contacts))return;
+    l.contacts.forEach(c=>{
+      if(!c||!c.d||c.d<from)return;
+      const e=touch(c.a);
+      e.sent++;
+      if(c.s==='成約')e.won++;
+    });
+  });
+  // 表に出す人: 実績がある人＋登録済み担当者(0件でも並べて競争を可視化)
+  _slAssignees().forEach(a=>{if(!m[a])m[a]={who:a,sent:0,won:0};});
+  return Object.values(m)
+    .filter(e=>e.who!=='未割当'||e.sent>0)
+    .map(e=>Object.assign(e,{rate:e.sent?Math.round(e.won/e.sent*1000)/10:0}))
+    .sort((a,b)=>(b.won-a.won)||(b.sent-a.sent)||a.who.localeCompare(b.who));
+}
+function srSetRange(r){_srRange=r;render();}
+function rSalesRank(){
+  const rows=srStats(_srRange);
+  const me=(typeof _myDisplayName==='function')?_myDisplayName():'';
+  const totalWon=rows.reduce((s,e)=>s+e.won,0);
+  const totalSent=rows.reduce((s,e)=>s+e.sent,0);
+  const medal=['🥇','🥈','🥉'];
+  const podium=rows.slice(0,3).filter(e=>e.sent>0||e.won>0);
+  const podiumHtml=podium.length?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+    ${podium.map((e,i)=>`<div style="flex:1;min-width:150px;border:1.5px solid ${i===0?'var(--amber)':'var(--border)'};background:${i===0?'var(--adim)':'var(--card)'};border-radius:14px;padding:14px 12px;text-align:center;box-shadow:var(--shadow)">
+      <div style="font-size:26px;line-height:1">${medal[i]}</div>
+      <div style="font-weight:800;font-size:14px;margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(e.who)}${e.who===me?'<span style="font-size:10px;color:var(--t3);font-weight:600"> (あなた)</span>':''}</div>
+      <div style="font-size:24px;font-weight:800;color:var(--green);line-height:1.2;margin-top:4px">${e.won}<span style="font-size:11px;color:var(--t3);font-weight:600"> 成約</span></div>
+      <div style="font-size:11px;color:var(--t2);margin-top:2px">送信 ${e.sent}件 ・ 成約率 ${e.rate}%</div>
+    </div>`).join('')}
+  </div>`:'';
+  const tableRows=rows.map((e,i)=>{
+    const isMe=e.who===me;
+    return`<tr style="${isMe?'background:rgba(109,40,217,0.07)':''}">
+      <td style="font-weight:800;color:${i<3?'var(--amber)':'var(--t3)'}">${i+1}</td>
+      <td style="text-align:left;font-weight:${isMe?800:600}">${esc(e.who)}${isMe?' <span style="font-size:10px;color:var(--t3);font-weight:600">(あなた)</span>':''}</td>
+      <td style="font-weight:800;color:var(--green)">${e.won}</td>
+      <td>${e.sent}</td>
+      <td>${e.rate}%</td>
+    </tr>`;}).join('');
+  const rangeBtns=[['today','今日'],['week','今週'],['month','今月'],['all','全期間']].map(([k,l])=>
+    `<button class="fbtn${_srRange===k?' act':''}" onclick="srSetRange('${k}')">${l}</button>`).join('');
+  const myRow=rows.find(e=>e.who===me);
+  const myHtml=myRow?`<div class="card" style="margin-bottom:14px;padding:14px 16px;border-left:4px solid var(--purple)">
+    <div style="font-size:12px;color:var(--t2);margin-bottom:6px">あなたの成績（${_srRangeLabel(_srRange)}）</div>
+    <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:baseline">
+      <div><span style="font-size:26px;font-weight:800;color:var(--purple)">${rows.indexOf(myRow)+1}</span><span style="font-size:12px;color:var(--t3)"> 位 / ${rows.length}人中</span></div>
+      <div><span style="font-size:22px;font-weight:800;color:var(--green)">${myRow.won}</span><span style="font-size:12px;color:var(--t3)"> 成約</span></div>
+      <div><span style="font-size:22px;font-weight:800">${myRow.sent}</span><span style="font-size:12px;color:var(--t3)"> 送信</span></div>
+      <div><span style="font-size:18px;font-weight:800;color:var(--amber)">¥${(myRow.won*SR_REWARD).toLocaleString()}</span><span style="font-size:11px;color:var(--t3)"> 成果報酬の目安</span></div>
+    </div>
+  </div>`:'';
+  return`<div class="ph"><div class="ph-title">🏆 営業ランキング</div></div>
+${myHtml}
+<div class="filter-bar">${rangeBtns}</div>
+<div style="font-size:12px;color:var(--t2);margin-bottom:10px">集計期間: <strong style="color:var(--purple)">${_srRangeLabel(_srRange)}</strong> ／ チーム合計 <strong>${totalWon}</strong>成約・<strong>${totalSent}</strong>送信</div>
+${podiumHtml}
+${rows.length?`<div class="card" style="padding:12px 14px;overflow-x:auto">
+  <table class="sl-daily-table">
+    <tr><th style="width:36px">順位</th><th style="text-align:left">担当者</th><th>成約</th><th>送信</th><th>成約率</th></tr>
+    ${tableRows}
+  </table>
+  <div style="font-size:10.5px;color:var(--t3);margin-top:8px">※ 送信＝営業リストで記録した接触件数（1店舗・1事業につき1日1件で集計）。成約＝ステータスを「成約」にした件数。記録を忘れるとランキングに反映されません。</div>
+</div>`:`<div class="empty"><div class="empty-icon">🏆</div><div class="empty-title">まだ記録がありません</div><div style="font-size:12px;color:var(--t3);margin-top:4px">営業リストで担当・営業方法・ステータスを記録すると、ここに成績が並びます。</div></div>`}`;
+}
 function rSalesLeads(){
   if(!S.salesLeads)S.salesLeads=[];
   const allLeads=S.salesLeads.filter(l=>!l.deleted);          // 未削除全件(バッジ集計用)
@@ -13802,7 +13886,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260726-06';
+const APP_VERSION='20260726-07';
 
 render();
 try{renderAuthGate();}catch(e){console.warn('authGate init',e);}  // 認証確定まではログイン/読込画面で画面を覆う
