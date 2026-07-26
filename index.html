@@ -3051,7 +3051,7 @@ function render(){
     }else{
       // 描画ガード: navConfig(BUILTIN_VIEWS)のタブに加え、サイドバー固定の設定/カスタマイズと
       // 下タブバーのホーム/タスク/AI/習慣も許可する(1f677e1のガードが巻き込んでrProjectsに落ちていた不具合の修正)
-      const CHROME_VIEWS=['settings','customize','dashboard','tasks','aichat','habits','accounts'];
+      const CHROME_VIEWS=['settings','customize','dashboard','tasks','aichat','habits','accounts','igaccounts'];
       html=(((BUILTIN_VIEWS.some(v=>v.id===V)||CHROME_VIEWS.includes(V))&&views[V])?views[V]:rProjects)();
     }
     document.getElementById('view').innerHTML=rHpFeeReminder()+rGcalReminder()+rDraftReminder()+html;
@@ -13994,7 +13994,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260726-08';
+const APP_VERSION='20260726-09';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
