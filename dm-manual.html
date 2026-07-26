@@ -152,6 +152,18 @@ a{color:var(--pl)}
   <div class="sec-head"><div class="num">手順<br>1</div><h2>Instagramアカウントの作成</h2><span class="once">初回のみ</span></div>
   <p class="sec-lead">営業専用のアカウントを新しく作ります。個人アカウントは使いません。</p>
 
+  <div class="card" style="border:1.5px solid var(--pl)">
+    <h3><span class="mini">0</span>登録は「会社発行メール」で行う（最重要）</h3>
+    <p>登録完了メール（件名: DM営業スタッフ登録が完了しました）に、あなた専用の<b>会社発行メールアドレス</b>（mono.create.group+dm◯◯@gmail.com）と<b>初期パスワード</b>が書かれています。Instagramの新規登録は<b>必ずこの2つ</b>で行ってください。</p>
+    <ul>
+      <li>自分の個人メールや電話番号では<b>登録しない</b></li>
+      <li>初期パスワードは<b>変更しない</b></li>
+      <li>登録時に届く<b>確認コードは、数分以内にあなたのメールへ自動転送</b>されます（5分待っても届かなければ中村へ連絡）</li>
+    </ul>
+    <div class="note"><b>理由:</b> 会社の営業用アカウントのため、運営（中村）もログインして管理します。発行メールで作ることで、引き継ぎやトラブル時にも会社側で復旧できます。</div>
+    <div class="okbox">まだ登録完了メールを受け取っていない場合は、先に<a href="https://mono-create-group.github.io/editflow-team/dm-entry.html">スタッフ登録フォーム</a>を送信してください。</div>
+  </div>
+
   <div class="card">
     <h3><span class="mini">A</span>アイコンを設定する</h3>
     <p>アイコンは全員共通で、下のロゴ画像を使います。スマホなら画像を<b>長押し→「写真に保存」</b>、パソコンなら「画像を開く」から右クリックで保存して、Instagramのプロフィール写真に設定してください。</p>
@@ -206,6 +218,16 @@ AI導入支援・コンサル
       <pre id="linkText">https://mono-create-group.github.io/lp/mono-create/</pre>
       <button class="copybtn" onclick="copyEl('linkText','リンクURL')">コピー</button>
     </div>
+  </div>
+
+  <div class="card">
+    <h3><span class="mini">E</span>作成完了を報告する</h3>
+    <p>プロフィールまで設定できたら、Instagramの<b>ユーザーネーム</b>（@から始まる英字のID）をここから送信してください。運営に自動で記録・通知されます。</p>
+    <div class="staffbox">
+      <input id="igHandle" placeholder="IGユーザーネーム（例: monocreate_soudan）" maxlength="40">
+      <button class="btn-claim" id="igReportBtn" onclick="reportIg()" style="padding:12px 22px">完了を報告する</button>
+    </div>
+    <div class="claimResult" id="igReportResult"></div>
   </div>
 
   <div class="fig">
@@ -399,9 +421,11 @@ AI導入支援・コンサル
   <div class="sec-head"><div class="num" style="background:var(--ink);box-shadow:none">確認</div><h2 style="font-size:18px">初日のセルフチェック</h2></div>
   <div class="card">
     <ul class="check">
+      <li>Instagramを「会社発行メール＋初期パスワード」で登録した（個人メール登録はNG）</li>
       <li>アイコンが共通ロゴになっている</li>
       <li>名前をこのページで予約し、その名前をInstagramに設定した</li>
       <li>プロフィール文（4行）とリンク欄URLを設定した</li>
+      <li>「作成完了を報告する」からIGユーザーネームを送信した</li>
       <li>自分用のDM文章を作り、メモアプリに保存した</li>
       <li>社内アプリにサインインでき、営業リストを絞り込めた</li>
       <li>送信→記録（担当・営業方法・DM済み）の3タップを1回やってみた</li>
@@ -502,6 +526,31 @@ function claimName(){
     $('claimResult').className='claimResult ng';
     $('claimResult').textContent='通信に失敗しました。電波の良い場所で再度お試しください。';
     updateClaimUI();
+  });
+}
+
+/* ── IG作成完了の報告 ── */
+function reportIg(){
+  var me=($('staffName').value||'').trim();
+  var ig=($('igHandle').value||'').trim().replace(/^@/,'');
+  var box=$('igReportResult');
+  if(!me){box.className='claimResult ng';box.textContent='上の「B」で自分の本名を入力してから報告してください。';return;}
+  if(!ig){box.className='claimResult ng';box.textContent='IGユーザーネームを入力してください。';return;}
+  var btn=$('igReportBtn');btn.disabled=true;
+  fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'dmstaff_igreport',name:me,ig:ig})})
+  .then(function(r){return r.json();}).then(function(d){
+    if(d.success){
+      box.className='claimResult ok';
+      box.innerHTML='<b>報告を受け付けました。</b>運営に通知済みです。このまま手順2へ進んでください。';
+    }else{
+      box.className='claimResult ng';
+      box.textContent='報告に失敗しました。時間をおいて再度お試しください。（'+String(d.error||'不明なエラー')+'）';
+      btn.disabled=false;
+    }
+  }).catch(function(){
+    box.className='claimResult ng';
+    box.textContent='通信に失敗しました。電波の良い場所で再度お試しください。';
+    btn.disabled=false;
   });
 }
 
