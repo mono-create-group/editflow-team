@@ -7764,7 +7764,9 @@ function rInquiries(){
   // rows[0]=ヘッダー行(シート1行目)。データはrows[1..]。rows[i]のシート行番号=i+1。
   const items=[];
   for(let i=1;i<rows.length;i++){items.push({r:rows[i]||[],sheetRow:i+1});}
-  items.reverse(); // 新しい順
+  // 新しい順。復元した行は末尾に追記されるため、行番号ではなく受信日時で並べる。
+  const _inqT=x=>{const t=Date.parse((x.r[0]!=null?String(x.r[0]):'').trim());return isNaN(t)?-x.sheetRow:t;};
+  items.sort((a,b)=>_inqT(b)-_inqT(a));
   const total=items.length;
   const untouched=items.filter(x=>((x.r[8]||'').trim()==='未対応'||!(x.r[8]||'').trim())).length;
   const F=(r,i)=>esc((r[i]!=null?String(r[i]):'').trim());
@@ -7782,7 +7784,10 @@ function rInquiries(){
     <span>✉️ ${F(r,3)||'-'}</span><span>📞 ${F(r,4)||'-'}</span><span>🏷 ${F(r,5)||'-'}</span><span>種別 ${F(r,6)||'-'}</span>
   </div>
   <div style="font-size:13px;color:var(--t2);margin-top:8px;white-space:pre-wrap;line-height:1.75">${F(r,7)||'(相談内容なし)'}</div>
-  ${cur==='成約'?`<div style="margin-top:8px"><button class="btn btn-g btn-xs" onclick="crmFromInquiry(${JSON.stringify(String(r[1]||'')).replace(/"/g,'&quot;')},${JSON.stringify(String(r[2]||'')).replace(/"/g,'&quot;')},${JSON.stringify(String(r[3]||'')).replace(/"/g,'&quot;')},${JSON.stringify(String(r[4]||'')).replace(/"/g,'&quot;')})" title="このお問い合わせをクライアント台帳に登録">🤝 クライアント登録</button></div>`:''}
+  <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+  ${cur==='成約'?`<button class="btn btn-g btn-xs" onclick="crmFromInquiry(${JSON.stringify(String(r[1]||'')).replace(/"/g,'&quot;')},${JSON.stringify(String(r[2]||'')).replace(/"/g,'&quot;')},${JSON.stringify(String(r[3]||'')).replace(/"/g,'&quot;')},${JSON.stringify(String(r[4]||'')).replace(/"/g,'&quot;')})" title="このお問い合わせをクライアント台帳に登録">🤝 クライアント登録</button>`:''}
+    <button class="btn btn-g btn-red btn-xs" onclick="inqDelete(${x.sheetRow},${JSON.stringify(String(r[1]||'')+' / '+String(r[2]||'')).replace(/"/g,'&quot;')})" title="このお問い合わせを削除(削除済みシートへ退避)">🗑 削除</button>
+  </div>
 </div>`;
   }).join('');
   return`${head}
@@ -7790,7 +7795,9 @@ function rInquiries(){
   <span style="font-size:13px;font-weight:800;background:var(--card2);padding:4px 10px;border-radius:8px">総件数 ${total}</span>
   <span style="font-size:13px;font-weight:800;color:var(--amber);background:var(--card2);padding:4px 10px;border-radius:8px">未対応 ${untouched}</span>
   <button class="btn btn-g btn-sm" onclick="inqReload()">🔄 再読み込み</button>
+  <button class="btn btn-g btn-sm" onclick="inqToggleTrash()">${INQ_TRASH_OPEN?'✕ 削除済みを閉じる':'🗑 削除済み'}</button>
 </div>
+${INQ_TRASH_OPEN?inqTrashHtml():''}
 ${body}`;
 }
 async function inqSetStatus(sheetRow,status,el){
@@ -7806,6 +7813,70 @@ async function inqSetStatus(sheetRow,status,el){
     toast('対応状況を更新しました 📮');
   }catch(e){toast('更新に失敗しました','err');}
   if(el)el.disabled=false;
+}
+// ===削除済みお問い合わせ(退避シート)の表示と復元===
+let INQ_TRASH_OPEN=false;
+function inqToggleTrash(){
+  INQ_TRASH_OPEN=!INQ_TRASH_OPEN;
+  if(INQ_TRASH_OPEN&&!Array.isArray(window.__poittoTrash))inqTrashLoad();
+  render();
+}
+async function inqTrashLoad(){
+  const key=await _poittoKey();
+  if(!key)return;
+  try{
+    const res=await fetch(`${POITTO_EXEC}?key=${encodeURIComponent(key)}&action=trash_list`);
+    const data=await res.json();
+    window.__poittoTrash=Array.isArray(data.rows)?data.rows:[];
+  }catch(e){window.__poittoTrash=[];}
+  render();
+}
+function inqTrashHtml(){
+  const rows=window.__poittoTrash;
+  if(!Array.isArray(rows))return`<div class="card" style="margin-bottom:12px"><div style="color:var(--t2);font-size:12px">削除済みを読み込み中…</div></div>`;
+  const items=[];
+  for(let i=1;i<rows.length;i++)items.push({r:rows[i]||[],sheetRow:i+1});
+  items.reverse();
+  const inner=!items.length?`<div style="color:var(--t3);font-size:12px">削除済みはありません</div>`:items.map(x=>{
+    const r=x.r,g=i=>esc((r[i]!=null?String(r[i]):'').trim());
+    return`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--border)">
+    <div style="min-width:0">
+      <div style="font-weight:700;font-size:13px">${g(2)||'(お名前なし)'}<span style="font-size:11px;font-weight:600;color:var(--t2)"> / ${g(3)||'店名なし'}</span></div>
+      <div style="font-size:11px;color:var(--t3)">受信 ${g(1)||'-'} ／ 削除 ${g(0)||'-'}</div>
+    </div>
+    <button class="btn btn-g btn-xs" onclick="inqRestore(${x.sheetRow})">↩ 復元</button>
+  </div>`;}).join('');
+  return`<div class="card" style="margin-bottom:12px;border-left:3px solid var(--t3)">
+  <div style="font-weight:800;font-size:13px;margin-bottom:4px">🗑 削除済み ${Math.max(0,rows.length-1)}件</div>
+  <div style="font-size:11px;color:var(--t3);margin-bottom:4px">削除しても中身はここに残ります。復元すると一覧の最後に戻ります。</div>
+  ${inner}
+</div>`;
+}
+async function inqRestore(trashRow){
+  const key=await _poittoKey();
+  if(!key){toast('設定未完了: 管理キーがありません','warn');return;}
+  try{
+    const res=await fetch(`${POITTO_EXEC}?key=${encodeURIComponent(key)}&action=trash_restore&row=${encodeURIComponent(trashRow)}`);
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||!data.success)throw new Error(data.error||'復元に失敗しました');
+    toast('お問い合わせを復元しました ↩');
+    window.__poittoTrash=null;inqTrashLoad();inqReload();
+  }catch(e){toast('復元に失敗しました','err');}
+}
+// お問い合わせを1件削除(GASのスプレッドシートから行削除。中身は「inquiries_削除済み」シートへ退避されるので復元可)
+async function inqDelete(sheetRow,label){
+  if(!confirm(`このお問い合わせを削除しますか？\n\n${label||''}\n\n削除済みシートに控えが残るので、あとから復元できます。`))return;
+  const key=await _poittoKey();
+  if(!key){toast('設定未完了: 管理キーがありません','warn');return;}
+  try{
+    const res=await fetch(`${POITTO_EXEC}?key=${encodeURIComponent(key)}&action=delrow&row=${encodeURIComponent(sheetRow)}`);
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||!data.success)throw new Error(data.error||'削除に失敗しました');
+    toast('お問い合わせを削除しました 🗑');
+    window.__poittoTrash=null;
+    if(INQ_TRASH_OPEN)inqTrashLoad();
+    inqReload();  // 行番号がずれるため必ずGASから取り直す
+  }catch(e){toast('削除に失敗しました','err');}
 }
 // ===チームKGI/KPI（全アカウント共有・個人目標とは別）===
 function _pct(cur,tgt){tgt=+tgt||0;if(!tgt)return 0;return Math.max(0,Math.min(100,Math.round((+cur||0)/tgt*100)));}
@@ -13994,7 +14065,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260726-09';
+const APP_VERSION='20260726-10';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
