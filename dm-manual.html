@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>DM営業 業務手順書 — mono.create</title>
+<style>
+:root{
+  --bg:#f4f5f8;--card:#ffffff;--text:#151822;--t2:#4b5563;--t3:#9ca3af;
+  --border:#e5e7eb;--pl:#6d5efc;--pldim:#efeaff;--pldeep:#4c3fd6;
+  --green:#16a34a;--greendim:#e8f7ee;--amber:#d97706;--amberdim:#fdf3e3;
+  --red:#dc2626;--reddim:#fdecec;--ink:#111318;
+  --shadow:0 1px 3px rgba(15,23,42,.07),0 10px 28px rgba(15,23,42,.07);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic UI",sans-serif;
+  line-height:1.85;-webkit-text-size-adjust:100%}
+.wrap{max-width:860px;margin:0 auto;padding:0 16px 90px}
+
+/* ── ヘッダー ── */
+.hero{background:var(--ink);color:#fff;border-radius:0 0 22px 22px;margin:0 -16px;padding:40px 22px 34px;text-align:center}
+.hero .brand{display:inline-flex;align-items:center;gap:10px;margin-bottom:14px}
+.hero .brand img{width:40px;height:40px;border-radius:10px}
+.hero .brand b{font-size:15px;letter-spacing:.4px}
+.hero h1{font-size:clamp(22px,5.4vw,30px);font-weight:800;margin:0 0 10px;line-height:1.45}
+.hero p{font-size:13px;color:#c9cdd6;margin:0;line-height:2}
+.hero .accent{color:#b3a8ff}
+
+/* ── 全体の流れ ── */
+.flow{display:flex;gap:0;align-items:stretch;margin:26px 0 8px;flex-wrap:wrap}
+.flow .fstep{flex:1;min-width:150px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 14px;text-align:center;box-shadow:var(--shadow);position:relative;margin:0 14px 14px 0}
+.flow .fstep:last-child{margin-right:0}
+.flow .fstep:not(:last-child)::after{content:"";position:absolute;right:-14px;top:50%;width:14px;height:2px;background:var(--t3)}
+.fstep .fnum{display:inline-block;background:var(--pldim);color:var(--pldeep);font-weight:800;font-size:11px;border-radius:100px;padding:2px 12px;margin-bottom:8px}
+.fstep .ft{font-weight:800;font-size:14px;line-height:1.5}
+.fstep .fs{font-size:11px;color:var(--t3);margin-top:4px}
+@media(max-width:560px){
+  .flow{flex-direction:column}
+  .flow .fstep{margin:0 0 22px}
+  .flow .fstep:not(:last-child)::after{right:50%;top:auto;bottom:-14px;width:2px;height:14px;transform:translateX(1px)}
+}
+
+/* ── セクション ── */
+.sec{margin-top:44px}
+.sec-head{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+.sec-head .num{flex-shrink:0;width:46px;height:46px;border-radius:14px;background:var(--pl);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;line-height:1.2;text-align:center;box-shadow:0 6px 16px rgba(109,94,252,.35)}
+.sec-head h2{font-size:clamp(18px,4.6vw,22px);font-weight:800;margin:0;line-height:1.4}
+.sec-head .once{font-size:10.5px;font-weight:700;background:var(--amberdim);color:var(--amber);border-radius:100px;padding:2px 10px;white-space:nowrap}
+.sec-head .daily{font-size:10.5px;font-weight:700;background:var(--greendim);color:var(--green);border-radius:100px;padding:2px 10px;white-space:nowrap}
+.sec-lead{font-size:13.5px;color:var(--t2);margin:0 0 16px 60px}
+@media(max-width:560px){.sec-lead{margin-left:0}}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:22px 20px;margin-bottom:16px}
+.card h3{font-size:15.5px;font-weight:800;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.card h3 .mini{flex-shrink:0;width:24px;height:24px;border-radius:8px;background:var(--pldim);color:var(--pldeep);font-size:12px;font-weight:800;display:inline-flex;align-items:center;justify-content:center}
+.card p{font-size:13.5px;margin:8px 0;color:var(--t2)}
+.card p b,.card li b{color:var(--text)}
+.card ol,.card ul{margin:8px 0;padding-left:22px;font-size:13.5px;color:var(--t2)}
+.card li{margin:5px 0}
+.note{background:var(--amberdim);border-radius:10px;padding:10px 14px;font-size:12.5px;color:#8a5a10;margin-top:10px;line-height:1.8}
+.note b{color:#7c4a00}
+.okbox{background:var(--greendim);border-radius:10px;padding:10px 14px;font-size:12.5px;color:#0f6b33;margin-top:10px}
+
+/* コピー枠 */
+.copybox{position:relative;background:#f7f7fa;border:1.5px dashed #c9c4f5;border-radius:12px;padding:16px 16px 52px;margin:12px 0 4px}
+.copybox pre{margin:0;font-family:inherit;font-size:13.5px;white-space:pre-wrap;word-break:break-word;color:var(--text);line-height:1.9}
+.copybtn{position:absolute;right:10px;bottom:10px;border:none;background:var(--pl);color:#fff;font-weight:700;font-size:12.5px;border-radius:100px;padding:8px 18px;cursor:pointer}
+.copybtn:active{transform:scale(.97)}
+
+/* アイコンDL */
+.iconrow{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.iconrow img{width:96px;height:96px;border-radius:24px;border:1px solid var(--border);box-shadow:var(--shadow)}
+.btn-dl{display:inline-block;background:var(--ink);color:#fff;font-weight:700;font-size:13px;border-radius:100px;padding:10px 22px;text-decoration:none}
+.btn-sub{display:inline-block;background:var(--card);border:1.5px solid var(--border);color:var(--t2);font-weight:700;font-size:12px;border-radius:100px;padding:8px 16px;text-decoration:none}
+
+/* 名前予約 */
+.staffbox{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 14px}
+.staffbox input{flex:1;min-width:200px;border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;font-size:14px;font-family:inherit}
+.staffbox input:focus{outline:none;border-color:var(--pl)}
+.namegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-top:12px}
+.namecard{border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;background:var(--card);cursor:pointer;transition:border-color .12s, background .12s;position:relative}
+.namecard .nm{font-weight:700;font-size:13.5px;line-height:1.5}
+.namecard .st{font-size:11px;margin-top:4px;color:var(--green);font-weight:700}
+.namecard:hover{border-color:var(--pl)}
+.namecard.sel{border-color:var(--pl);background:var(--pldim)}
+.namecard.taken{cursor:default;background:#f2f3f6;border-color:var(--border);opacity:.75}
+.namecard.taken:hover{border-color:var(--border)}
+.namecard.taken .nm{color:var(--t3);text-decoration:line-through;text-decoration-thickness:1px}
+.namecard.taken .st{color:var(--t3)}
+.namecard.mine{border-color:var(--green);background:var(--greendim);cursor:default}
+.namecard.mine .st{color:var(--green)}
+.badge-ai{position:absolute;top:-9px;right:10px;background:var(--ink);color:#fff;font-size:10px;font-weight:700;border-radius:100px;padding:2px 10px}
+.claimbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px}
+.btn-claim{border:none;background:var(--pl);color:#fff;font-weight:800;font-size:14px;border-radius:100px;padding:12px 28px;cursor:pointer;box-shadow:0 6px 16px rgba(109,94,252,.35)}
+.btn-claim:disabled{background:#c7c9d4;box-shadow:none;cursor:default}
+.btn-ghost{border:1.5px solid var(--border);background:var(--card);color:var(--t2);font-weight:700;font-size:12px;border-radius:100px;padding:9px 18px;cursor:pointer}
+.aiCheck{display:none;font-size:12.5px;color:var(--t2);background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;margin-top:12px}
+.aiCheck.show{display:block}
+.claimResult{display:none;margin-top:14px;border-radius:12px;padding:14px 16px;font-size:13.5px;line-height:1.9}
+.claimResult.ok{display:block;background:var(--greendim);color:#0f6b33}
+.claimResult.ng{display:block;background:var(--reddim);color:var(--red)}
+.namestatus{font-size:12px;color:var(--t3);margin-top:8px}
+
+/* DM文章ジェネレーター */
+.gen input{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;font-size:14px;font-family:inherit;margin-top:4px}
+.gen input:focus{outline:none;border-color:var(--pl)}
+.gen label{font-size:12.5px;font-weight:700;color:var(--t2);display:block;margin-top:12px}
+.gen label small{font-weight:400;color:var(--t3)}
+
+/* ルール */
+.rules{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-top:6px}
+.rule{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--red);border-radius:12px;padding:13px 15px;box-shadow:var(--shadow)}
+.rule b{font-size:13.5px;display:block;margin-bottom:3px}
+.rule span{font-size:12px;color:var(--t2);line-height:1.7;display:block}
+
+/* チェックリスト */
+.check{list-style:none;padding:0;margin:6px 0 0}
+.check li{position:relative;padding:9px 0 9px 34px;border-bottom:1px solid var(--border);font-size:13.5px;color:var(--t2)}
+.check li:last-child{border-bottom:none}
+.check li::before{content:"";position:absolute;left:2px;top:12px;width:18px;height:18px;border:2px solid var(--pl);border-radius:5px}
+
+/* 図版 */
+.fig{margin:16px auto 4px;text-align:center}
+.fig svg{max-width:100%;height:auto}
+.fig .cap{font-size:11.5px;color:var(--t3);margin-top:6px}
+
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:11px 22px;border-radius:100px;font-size:13px;font-weight:700;opacity:0;transition:opacity .2s;pointer-events:none;z-index:60;white-space:nowrap}
+.toast.show{opacity:1}
+.footer{margin-top:60px;text-align:center;font-size:12px;color:var(--t3);line-height:2}
+a{color:var(--pl)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <div class="brand"><img src="https://mono-create-group.github.io/lp/img/mc-logo-icon.jpg" alt="mono.create"><b>mono.create</b></div>
+  <h1>DM営業 業務手順書</h1>
+  <p>Instagramアカウントの準備から毎日の送付まで、<span class="accent">この1ページだけ</span>で始められます。<br>初回セットアップは約15分。手順①②は最初の1回だけです。</p>
+</header>
+
+<div class="flow">
+  <div class="fstep"><span class="fnum">手順 1</span><div class="ft">Instagram<br>アカウント作成</div><div class="fs">初回のみ・約10分</div></div>
+  <div class="fstep"><span class="fnum">手順 2</span><div class="ft">自分用の<br>DM文章を作成</div><div class="fs">初回のみ・約3分</div></div>
+  <div class="fstep"><span class="fnum">手順 3</span><div class="ft">営業リストを見て<br>毎日送付</div><div class="fs">毎日・1日20通まで</div></div>
+</div>
+
+<!-- ═══════════ 手順 1 ═══════════ -->
+<section class="sec" id="step1">
+  <div class="sec-head"><div class="num">手順<br>1</div><h2>Instagramアカウントの作成</h2><span class="once">初回のみ</span></div>
+  <p class="sec-lead">営業専用のアカウントを新しく作ります。個人アカウントは使いません。</p>
+
+  <div class="card">
+    <h3><span class="mini">A</span>アイコンを設定する</h3>
+    <p>アイコンは全員共通で、下のロゴ画像を使います。スマホなら画像を<b>長押し→「写真に保存」</b>、パソコンなら「画像を開く」から右クリックで保存して、Instagramのプロフィール写真に設定してください。</p>
+    <div class="iconrow">
+      <img src="https://mono-create-group.github.io/lp/img/mc-logo-icon.jpg" alt="mono.create 共通アイコン">
+      <div>
+        <a class="btn-dl" href="https://mono-create-group.github.io/lp/img/mc-logo-icon.jpg" target="_blank" rel="noopener">画像を開く（保存用）</a>
+        <div style="font-size:12px;color:var(--t3);margin-top:8px">黒背景に白の「M」ロゴ。これ以外のアイコンは使用不可。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3><span class="mini">B</span>アカウント名を予約する（早い者勝ち）</h3>
+    <p>名前は下の候補から選びます。<b>他のスタッフと同じ名前は使えない</b>ため、このページ上で予約する仕組みになっています。予約すると、その名前は他の人の画面で選べなくなります。</p>
+    <ol>
+      <li>まず<b>自分の本名</b>を入力する</li>
+      <li>空いている名前をタップして選ぶ</li>
+      <li>「この名前で確定する」を押す</li>
+      <li>確定した名前を、Instagramの<b>「名前」欄</b>にそのまま入力する</li>
+    </ol>
+    <div class="staffbox">
+      <input id="staffName" placeholder="自分の本名（例: 山田太郎）" maxlength="30">
+    </div>
+    <div id="nameGrid" class="namegrid"><div style="grid-column:1/-1;font-size:13px;color:var(--t3)">候補を読み込んでいます…</div></div>
+    <div class="namestatus" id="nameStatus"></div>
+    <div class="aiCheck" id="aiCheck"><label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer"><input type="checkbox" id="aiOk" style="margin-top:4px">この名前は<b>AI事業の営業担当のみ</b>使えます。私は中村からAI事業営業を指定されています。</label></div>
+    <div class="claimbar">
+      <button class="btn-claim" id="claimBtn" onclick="claimName()" disabled>この名前で確定する</button>
+      <button class="btn-ghost" onclick="loadNames()">最新の空き状況に更新</button>
+    </div>
+    <div class="claimResult" id="claimResult"></div>
+    <div class="note">間違えて確定した場合は、自分の本名を入れたまま別の名前を選び直して確定すれば、前の予約は自動で解放されます。うまくいかない時は中村へ連絡してください。</div>
+  </div>
+
+  <div class="card">
+    <h3><span class="mini">C</span>プロフィール文（概要）を設定する</h3>
+    <p>「プロフィールを編集」→<b>自己紹介</b>の欄に、下の文をそのまま貼り付けます。</p>
+    <div class="copybox">
+      <pre id="bioText">SNS・LINE・HPで集客導線を仕組み化
+編集代行｜HP制作｜公式LINE構築・運用
+AI導入支援・コンサル
+ご相談・ご依頼はDMから📩</pre>
+      <button class="copybtn" onclick="copyEl('bioText','プロフィール文')">コピー</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3><span class="mini">D</span>リンク欄にURLを設定する</h3>
+    <p>「プロフィールを編集」→<b>リンク</b>→「外部リンクを追加」に、下のURLを貼り付けます。</p>
+    <div class="copybox">
+      <pre id="linkText">https://mono-create-group.github.io/lp/mono-create/</pre>
+      <button class="copybtn" onclick="copyEl('linkText','リンクURL')">コピー</button>
+    </div>
+  </div>
+
+  <div class="fig">
+    <svg viewBox="0 0 640 420" width="640" role="img" aria-label="Instagramプロフィールの完成イメージ">
+      <defs>
+        <clipPath id="phoneclip"><rect x="200" y="18" width="240" height="470" rx="28"/></clipPath>
+      </defs>
+      <!-- phone -->
+      <rect x="196" y="14" width="248" height="400" rx="32" fill="#151822"/>
+      <rect x="204" y="24" width="232" height="384" rx="24" fill="#ffffff"/>
+      <!-- header -->
+      <text x="320" y="52" text-anchor="middle" font-size="12" font-weight="700" fill="#151822">mono.create_soudan</text>
+      <!-- icon -->
+      <circle cx="252" cy="96" r="26" fill="#0b0b0d"/>
+      <path d="M240 108 V86 l9 12 8-10 v20 M258 96 l8-10 M266 86 h-7 M266 86 v7" stroke="#ffffff" stroke-width="4" fill="none" stroke-linecap="square"/>
+      <!-- stats -->
+      <g font-size="9" fill="#6b7280" text-anchor="middle">
+        <text x="308" y="93">投稿</text><text x="356" y="93">フォロワー</text><text x="408" y="93">フォロー中</text>
+      </g>
+      <!-- name -->
+      <rect x="228" y="132" width="150" height="11" rx="3" fill="#6d5efc"/>
+      <!-- bio lines -->
+      <rect x="228" y="152" width="176" height="7" rx="3" fill="#d3d6df"/>
+      <rect x="228" y="165" width="184" height="7" rx="3" fill="#d3d6df"/>
+      <rect x="228" y="178" width="140" height="7" rx="3" fill="#d3d6df"/>
+      <rect x="228" y="191" width="160" height="7" rx="3" fill="#d3d6df"/>
+      <!-- link -->
+      <rect x="228" y="208" width="170" height="8" rx="3" fill="#2d6cdf"/>
+      <!-- buttons -->
+      <rect x="228" y="228" width="88" height="20" rx="6" fill="#eceef2"/>
+      <rect x="324" y="228" width="88" height="20" rx="6" fill="#eceef2"/>
+      <rect x="204" y="262" width="232" height="146" fill="#f4f5f8"/>
+      <!-- callouts left -->
+      <g font-size="11.5" font-weight="700" fill="#151822">
+        <circle cx="96" cy="96" r="11" fill="#6d5efc"/><text x="96" y="100" text-anchor="middle" fill="#fff" font-size="11">A</text>
+        <text x="10" y="88" fill="#4b5563" font-weight="400" font-size="11">共通アイコン</text>
+        <text x="10" y="103" fill="#4b5563" font-weight="400" font-size="11">（ロゴを設定）</text>
+        <line x1="112" y1="96" x2="222" y2="96" stroke="#6d5efc" stroke-width="1.6" stroke-dasharray="4 3"/>
+        <circle cx="96" cy="137" r="11" fill="#6d5efc"/><text x="96" y="141" text-anchor="middle" fill="#fff" font-size="11">B</text>
+        <text x="10" y="129" fill="#4b5563" font-weight="400" font-size="11">予約した名前</text>
+        <text x="10" y="144" fill="#4b5563" font-weight="400" font-size="11">（名前の欄へ）</text>
+        <line x1="112" y1="137" x2="224" y2="137" stroke="#6d5efc" stroke-width="1.6" stroke-dasharray="4 3"/>
+      </g>
+      <!-- callouts right -->
+      <g font-size="11" fill="#4b5563">
+        <circle cx="530" cy="172" r="11" fill="#6d5efc"/><text x="530" y="176" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">C</text>
+        <text x="548" y="169">プロフィール文</text>
+        <text x="548" y="184">（4行コピペ）</text>
+        <line x1="416" y1="172" x2="516" y2="172" stroke="#6d5efc" stroke-width="1.6" stroke-dasharray="4 3"/>
+        <circle cx="530" cy="212" r="11" fill="#2d6cdf"/><text x="530" y="216" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">D</text>
+        <text x="548" y="209">リンク欄にURL</text>
+        <line x1="402" y1="212" x2="516" y2="212" stroke="#2d6cdf" stroke-width="1.6" stroke-dasharray="4 3"/>
+      </g>
+    </svg>
+    <div class="cap">プロフィール完成イメージ。A〜Dがそのまま上の作業に対応しています。</div>
+  </div>
+</section>
+
+<!-- ═══════════ 手順 2 ═══════════ -->
+<section class="sec" id="step2">
+  <div class="sec-head"><div class="num">手順<br>2</div><h2>自分用のDM文章を作成</h2><span class="once">初回のみ</span></div>
+  <p class="sec-lead">送信文はテンプレートが決まっています。名前だけ自分のものに差し替えて、メモアプリに保存しておきます。</p>
+
+  <div class="card gen">
+    <h3><span class="mini">A</span>文章を自動生成する</h3>
+    <label>自分の名前（手順1で入力した本名が自動で入ります）</label>
+    <input id="genName" placeholder="例: 山田太郎" maxlength="30">
+    <label>完成イメージのURL <small>（任意。担当ジャンルの完成イメージは中村からその都度共有されます。空欄なら「完成イメージ」の段落ごと省かれます）</small></label>
+    <input id="genUrl" placeholder="https://…（共有されたらここに貼る）">
+    <div class="copybox" style="margin-top:16px">
+      <pre id="dmText"></pre>
+      <button class="copybtn" onclick="copyEl('dmText','DM文章')">コピー</button>
+    </div>
+    <div class="okbox">コピーしたら<b>自分のメモアプリに貼り付けて保存</b>してください。毎日ここから貼るのではなく、メモアプリから貼るのが基本動作です。</div>
+    <div class="note"><b>完成イメージについて:</b> 送付相手のジャンル（美容室・整体など）の完成イメージURLがある場合だけ添付します。担当ジャンルと完成イメージは中村から都度共有されるので、共有されたら上の欄に貼って作り直してください。</div>
+  </div>
+</section>
+
+<!-- ═══════════ 手順 3 ═══════════ -->
+<section class="sec" id="step3">
+  <div class="sec-head"><div class="num">手順<br>3</div><h2>営業送付（社内アプリ「営業リスト」の使い方）</h2><span class="daily">毎日</span></div>
+  <p class="sec-lead">送り先は社内アプリの営業リストで管理しています。「開く→絞り込む→送る→その場で記録」の4動作だけです。</p>
+
+  <div class="card">
+    <h3><span class="mini">A</span>社内アプリを開く</h3>
+    <ol>
+      <li>下のURLを開き、<b>登録済みのGoogleアカウントでサインイン</b>する（初回のみ。未登録の場合は中村に連絡すると追加されます）</li>
+      <li>下部メニューの<b>「営業」→「営業リスト」</b>タブを開く</li>
+    </ol>
+    <div class="copybox">
+      <pre id="appUrl">https://mono-create-group.github.io/editflow-team/</pre>
+      <button class="copybtn" onclick="copyEl('appUrl','アプリURL')">コピー</button>
+    </div>
+    <p style="font-size:12px;color:var(--t3)">スマホはブラウザで開いて「ホーム画面に追加」しておくと、アプリのように毎日開けます。</p>
+  </div>
+
+  <div class="card">
+    <h3><span class="mini">B</span>今日の送信先を絞り込む</h3>
+    <p>画面上部の絞り込みボタンを、毎回この組み合わせにします。</p>
+    <ol>
+      <li>事業タブ: <b>HP制作</b>（AI事業担当の人は指示された事業タブ）</li>
+      <li>ステータス: <b>未接触</b></li>
+      <li>連絡先: <b>IGあり</b>（Instagramが登録されている店だけに絞る）</li>
+      <li>担当: <b>未割当</b>（他の人が着手していない店だけに絞る）</li>
+      <li><b>「被りなし」をON</b>（他の事業で最近接触した店を除外する）</li>
+    </ol>
+    <p>この状態で上から順に送っていきます。リストの店を探したり選んだりする判断は不要です。</p>
+  </div>
+
+  <div class="card">
+    <h3><span class="mini">C</span>DMを送る</h3>
+    <ol>
+      <li>店舗カードの<b>Instagramリンク</b>をタップしてプロフィールを開く</li>
+      <li>投稿を1〜2個見て、実在の営業中の店か確認する（閉店・更新停止ならメモに「休止」と書いて次へ）</li>
+      <li>メモアプリに保存した<b>自分用のDM文章</b>を貼り付けて送信する（完成イメージURLがあるジャンルは差し込む）</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h3><span class="mini">D</span>送ったらその場で記録する（後回し禁止）</h3>
+    <p>送信した直後に、同じ店舗カードで次の3つをタップします。</p>
+    <ol>
+      <li>担当: <b>自分の名前</b>（ボタンに自分の名前がない場合は中村に連絡すると追加されます）</li>
+      <li>営業方法: <b>InstagramDM</b></li>
+      <li>ステータス: <b>「未接触」→「DM済み」</b>に変更</li>
+    </ol>
+    <p>この3タップで「今日・誰が・何件送ったか」が自動で集計されます。記録がない送信は件数に入りません。</p>
+    <div class="fig">
+      <svg viewBox="0 0 620 210" width="620" role="img" aria-label="営業リストのカードで記録する場所">
+        <rect x="10" y="10" width="600" height="190" rx="16" fill="#ffffff" stroke="#e5e7eb"/>
+        <rect x="30" y="30" width="180" height="13" rx="4" fill="#374151"/>
+        <rect x="30" y="53" width="240" height="8" rx="3" fill="#d3d6df"/>
+        <rect x="290" y="49" width="86" height="18" rx="9" fill="#efeaff"/>
+        <text x="333" y="62" text-anchor="middle" font-size="10" font-weight="700" fill="#4c3fd6">Instagram</text>
+        <text x="30" y="95" font-size="10.5" fill="#9ca3af">担当</text>
+        <rect x="30" y="102" width="66" height="22" rx="11" fill="#6d5efc"/>
+        <text x="63" y="117" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">自分の名前</text>
+        <rect x="102" y="102" width="52" height="22" rx="11" fill="#eceef2"/>
+        <rect x="160" y="102" width="52" height="22" rx="11" fill="#eceef2"/>
+        <text x="240" y="95" font-size="10.5" fill="#9ca3af">営業方法</text>
+        <rect x="240" y="102" width="92" height="22" rx="11" fill="#6d5efc"/>
+        <text x="286" y="117" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">InstagramDM</text>
+        <rect x="338" y="102" width="52" height="22" rx="11" fill="#eceef2"/>
+        <text x="30" y="150" font-size="10.5" fill="#9ca3af">ステータス</text>
+        <rect x="30" y="157" width="58" height="22" rx="11" fill="#eceef2"/>
+        <text x="59" y="172" text-anchor="middle" font-size="10.5" fill="#6b7280">未接触</text>
+        <path d="M96 168 h16 m-6 -5 l6 5 -6 5" stroke="#6d5efc" stroke-width="2" fill="none"/>
+        <rect x="120" y="157" width="62" height="22" rx="11" fill="#16a34a"/>
+        <text x="151" y="172" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">DM済み</text>
+        <g font-size="11" fill="#4b5563">
+          <circle cx="452" cy="113" r="10" fill="#6d5efc"/><text x="452" y="117" text-anchor="middle" fill="#fff" font-weight="700" font-size="10">3</text>
+          <text x="468" y="110">送ったら3つ</text>
+          <text x="468" y="125">タップするだけ</text>
+        </g>
+      </svg>
+      <div class="cap">店舗カードの記録イメージ。送信直後にこの3か所をタップします。</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3><span class="mini">E</span>返信が来たら</h3>
+    <ul>
+      <li>返信には<b>その日のうちに</b>返す（鮮度が命）</li>
+      <li>興味あり（「見ました」「気になります」等）→ <b>すぐ中村へ共有</b>。商談以降は中村が引き継ぎます</li>
+      <li>お断り（「不要です」等）→ ステータスを<b>「失注」</b>にして理由をメモ。二度と送らない</li>
+      <li>3日たっても返信がない → フォローを<b>1回だけ</b>送る（それでも無反応なら追わない）</li>
+    </ul>
+    <p>フォロー文（そのまま使えます）:</p>
+    <div class="copybox">
+      <pre id="followText">先日ご連絡いたしました、mono.createの【名前】です。
+お忙しい時期でしたらすみません。
+無料デモサイトのご案内は今月末まで受け付けておりますので、
+見るだけでも間に合えば幸いです。</pre>
+      <button class="copybtn" onclick="copyEl('followText','フォロー文')">コピー</button>
+    </div>
+  </div>
+
+  <div class="sec-head" style="margin-top:30px"><div class="num" style="background:var(--red);box-shadow:0 6px 16px rgba(220,38,38,.3)">厳守</div><h2 style="font-size:18px">毎日のルール</h2></div>
+  <div class="rules">
+    <div class="rule"><b>1日20通まで</b><span>Instagramの凍結（アカウント停止）を避けるための安全上限。新規アカウントの最初の1週間は1日10通までに抑える。</span></div>
+    <div class="rule"><b>追撃は1回だけ</b><span>3日後のフォロー1通のみ。それ以上のしつこい送信は禁止。</span></div>
+    <div class="rule"><b>記録はその場で</b><span>送信のたびに担当・営業方法・ステータスをタップ。まとめて後で、は禁止。</span></div>
+    <div class="rule"><b>価格は言い切る</b><span>「49,800円のみ」。値引きの相談をされたら自分で判断せず中村へ。</span></div>
+    <div class="rule"><b>文面を勝手に変えない</b><span>テンプレートの文章はそのまま使う。変えたい案があれば中村へ提案。</span></div>
+    <div class="rule"><b>誇大表現の禁止</b><span>「絶対に売上が上がります」等は言わない。無料デモと実物で伝える。</span></div>
+  </div>
+</section>
+
+<!-- ═══════════ チェックリスト ═══════════ -->
+<section class="sec">
+  <div class="sec-head"><div class="num" style="background:var(--ink);box-shadow:none">確認</div><h2 style="font-size:18px">初日のセルフチェック</h2></div>
+  <div class="card">
+    <ul class="check">
+      <li>アイコンが共通ロゴになっている</li>
+      <li>名前をこのページで予約し、その名前をInstagramに設定した</li>
+      <li>プロフィール文（4行）とリンク欄URLを設定した</li>
+      <li>自分用のDM文章を作り、メモアプリに保存した</li>
+      <li>社内アプリにサインインでき、営業リストを絞り込めた</li>
+      <li>送信→記録（担当・営業方法・DM済み）の3タップを1回やってみた</li>
+    </ul>
+  </div>
+</section>
+
+<div class="footer">
+  困ったこと・判断に迷うことは、すべて中村へ連絡してください。<br>
+  mono.create ／ 社内用・持ち出し禁止 ／ 2026-07-26 制定
+</div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+var API='https://script.google.com/macros/s/AKfycbzftG_O0GsR_8_TYwUwSGfSFPMCjXscWfw0jmTIB54H8NrH0SnjgH445IDDOKoHnNt8XA/exec';
+var NAMES=[];var SELECTED='';
+function $(id){return document.getElementById(id);}
+function toast(m){var t=$('toast');t.textContent=m;t.className='toast show';clearTimeout(t._t);t._t=setTimeout(function(){t.className='toast';},2200);}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function copyEl(id,label){
+  var txt=$(id).textContent;
+  var done=function(){toast(label+'をコピーしました');};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done).catch(function(){fallbackCopy(txt,done);});}
+  else fallbackCopy(txt,done);
+}
+function fallbackCopy(txt,done){
+  var ta=document.createElement('textarea');ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');done();}catch(e){toast('コピーできませんでした');}
+  document.body.removeChild(ta);
+}
+
+/* ── 名前予約 ── */
+function loadNames(){
+  $('nameStatus').textContent='空き状況を確認中…';
+  fetch(API+'?action=igname_list').then(function(r){return r.json();}).then(function(d){
+    if(!d.success)throw 0;
+    NAMES=d.names;renderNames();
+    $('nameStatus').textContent='空き状況は '+new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})+' 時点です。確定する直前に「最新の空き状況に更新」を押すと確実です。';
+  }).catch(function(){
+    $('nameGrid').innerHTML='<div style="grid-column:1/-1;font-size:13px;color:var(--red)">空き状況を取得できませんでした。通信環境を確認して「最新の空き状況に更新」を押してください。何度も失敗する場合は中村へ連絡してください。</div>';
+    $('nameStatus').textContent='';
+  });
+}
+function renderNames(){
+  var me=($('staffName').value||'').trim();
+  var g=$('nameGrid');
+  g.innerHTML=NAMES.map(function(x,i){
+    var taken=!!x.by;
+    var mine=taken&&me&&x.by===me;
+    var cls='namecard'+(mine?' mine':taken?' taken':SELECTED===x.n?' sel':'');
+    var st=mine?'あなたが使用中':taken?'使用中: '+esc(x.by):'空いています';
+    return '<div class="'+cls+'" data-i="'+i+'" onclick="pickName('+i+')">'+
+      (x.ai?'<span class="badge-ai">AI事業営業のみ</span>':'')+
+      '<div class="nm">'+esc(x.n)+'</div><div class="st">'+st+'</div></div>';
+  }).join('');
+  updateClaimUI();
+}
+function pickName(i){
+  var x=NAMES[i];if(!x)return;
+  var me=($('staffName').value||'').trim();
+  if(x.by&&x.by!==me){toast('この名前は使用中です');return;}
+  SELECTED=x.n;renderNames();
+}
+function updateClaimUI(){
+  var me=($('staffName').value||'').trim();
+  var sel=NAMES.filter(function(x){return x.n===SELECTED;})[0];
+  var isAi=sel&&sel.ai;
+  $('aiCheck').className='aiCheck'+(isAi?' show':'');
+  var ok=!!(me&&sel&&(!sel.by||sel.by===me)&&(!isAi||$('aiOk').checked));
+  $('claimBtn').disabled=!ok;
+}
+function claimName(){
+  var me=($('staffName').value||'').trim();
+  if(!me||!SELECTED)return;
+  if(!confirm('「'+SELECTED+'」を '+me+' さんの名前として確定します。よろしいですか？'))return;
+  $('claimBtn').disabled=true;
+  fetch(API+'?action=igname_claim&name='+encodeURIComponent(SELECTED)+'&staff='+encodeURIComponent(me))
+  .then(function(r){return r.json();}).then(function(d){
+    var box=$('claimResult');
+    if(d.success){
+      try{localStorage.setItem('dmm_staff',me);localStorage.setItem('dmm_name',d.name);}catch(e){}
+      box.className='claimResult ok';
+      box.innerHTML='<b>予約が完了しました。</b><br>Instagramの「名前」欄に <b>'+esc(d.name)+'</b> と入力してください。<br>ユーザーネーム（英字のID）は自由ですが、mono.create が入る形を推奨します。';
+      $('genName').value=$('genName').value||me;buildDm();
+    }else if(d.error==='taken'){
+      box.className='claimResult ng';
+      box.innerHTML='一足先に <b>'+esc(d.by||'別のスタッフ')+'</b> さんがこの名前を確保しました。別の名前を選んで確定し直してください。';
+    }else{
+      box.className='claimResult ng';
+      box.textContent='予約に失敗しました。時間をおいて再度お試しください。（'+String(d.error||'不明なエラー')+'）';
+    }
+    loadNames();
+  }).catch(function(){
+    $('claimResult').className='claimResult ng';
+    $('claimResult').textContent='通信に失敗しました。電波の良い場所で再度お試しください。';
+    updateClaimUI();
+  });
+}
+
+/* ── DM文章ジェネレーター ── */
+function buildDm(){
+  var name=($('genName').value||'').trim()||'【名前】';
+  var url=($('genUrl').value||'').trim();
+  var lines=[
+    'お忙しいところ失礼いたします。','',
+    '企業様や個人事業主様向けにホームページの制作・更新や','',
+    '公式ラインの構築を行っております、','',
+    name+'と申します。','',
+    '現在、月50名様限定で、','',
+    '無料でデモサイトを作成させていただいております。','',
+    'もしご納得いただけた場合のみ','',
+    '49,800円でご購入いただけます。',''
+  ];
+  if(url){lines.push('完成イメージ','',url,'');}
+  lines.push(
+    'もしご興味を持っていただけましたら、','',
+    '以下のサイトからお問い合わせいただけると幸いです。','',
+    'https://mono-create-group.github.io/lp/sample-hp/showcase/#works','',
+    '公式ラインのお問い合わせも大歓迎です！','',
+    'お客様とのやりとりにコストを感じている方は、','',
+    'ぜひご検討ください！'
+  );
+  $('dmText').textContent=lines.join('\n');
+}
+
+$('staffName').addEventListener('input',function(){renderNames();var g=$('genName');if(!g.value||g.dataset.auto!=='0'){g.value=this.value;buildDm();}});
+$('genName').addEventListener('input',function(){this.dataset.auto='0';buildDm();});
+$('genUrl').addEventListener('input',buildDm);
+$('aiOk').addEventListener('change',updateClaimUI);
+try{
+  var savedStaff=localStorage.getItem('dmm_staff');
+  if(savedStaff){$('staffName').value=savedStaff;$('genName').value=savedStaff;}
+}catch(e){}
+buildDm();
+loadNames();
+</script>
+</body>
+</html>
