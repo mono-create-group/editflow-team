@@ -7772,23 +7772,33 @@ function rInquiries(){
   const F=(r,i)=>esc((r[i]!=null?String(r[i]):'').trim());
   const body=!total?`<div class="empty"><div class="empty-icon">📮</div><div class="empty-title">お問い合わせはまだありません</div></div>`:items.map(x=>{
     const r=x.r;const cur=(r[8]||'').trim()||'未対応';
-    // ヒアリング(J..O列=r[9]..r[14])。GASが唯一の正でFirestoreには保存しない。
-    const hStatus=(r[10]!=null?String(r[10]):'').trim()||'未送信';
-    const hTokenRaw=(r[9]!=null?String(r[9]):'').trim();
-    const hFolderRaw=(r[13]!=null?String(r[13]):'').trim();
-    const hChipCls=hStatus==='送信済'?'bb':hStatus==='回答中'?'ba':hStatus==='回答完了'?'bg':'bk';
-    const hBtns=[];
-    if(!hTokenRaw||hStatus==='未送信'){
-      hBtns.push(`<button class="btn btn-g btn-xs" onclick="inqHearingSend(${x.sheetRow},this)" title="ヒアリング案内メールを送信">📮 ヒアリングを送る</button>`);
-    }else{
-      hBtns.push(`<button class="btn btn-g btn-xs" onclick="inqHearingCopyUrl(${JSON.stringify(hTokenRaw)})" title="ヒアリングURLをコピー">🔗 URLをコピー</button>`);
-      if(hStatus==='送信済'||hStatus==='回答中'){
-        hBtns.push(`<button class="btn btn-g btn-xs" onclick="inqHearingRemind(${x.sheetRow},this)" title="残項目を明記してリマインド送信">⏰ リマインド</button>`);
-      }
-      if(hStatus==='回答中'||hStatus==='回答完了'){
-        hBtns.push(`<button class="btn btn-g btn-xs" onclick="inqHearingToggleDetail(${x.sheetRow})">${INQ_HEARING_OPEN[x.sheetRow]?'▲ 回答を閉じる':'👀 回答を見る'}</button>`);
-      }
+    // 段階管理(J..R列=r[9]..r[17])。GASが唯一の正でFirestoreには保存しない。
+    // J token / K stage / L stage_log / M updated / N folderUrl / O 予備 / P formUrl / Q demoUrl / R meetingUrl
+    const stage=(r[10]!=null?String(r[10]):'').trim()||'問い合わせ';
+    const stageToken=(r[9]!=null?String(r[9]):'').trim();
+    const stageCls=_inqStageChipCls(stage);
+    const sBtns=[];
+    if(stage==='問い合わせ'){
+      sBtns.push(`<button class="btn btn-g btn-xs" onclick="inqStageMailMeeting(${x.sheetRow},this)" title="商談日程リンクを送信">📮 商談リンクを送る</button>`);
+    }else if(stage==='商談案内済'){
+      sBtns.push(`<button class="btn btn-g btn-xs" onclick="inqStageManualSet(${x.sheetRow},'商談済',this)" title="商談が済んだら押す(メールは送らない)">✅ 商談済にする</button>`);
+      sBtns.push(`<button class="btn btn-g btn-xs" onclick="inqStageMailMeeting(${x.sheetRow},this)" title="商談日程リンクを再送">🔁 商談リンク再送</button>`);
+    }else if(stage==='商談済'){
+      sBtns.push(`<button class="btn btn-g btn-xs" onclick="inqStageHearingSend(${x.sheetRow},this)" title="ヒアリングフォームを自動作成して送信">📝 ヒアリングシートを作って送る</button>`);
+    }else if(stage==='ヒアリング送付済'){
+      if(stageToken)sBtns.push(`<button class="btn btn-g btn-xs" onclick="inqHearingCopyUrl(${JSON.stringify(stageToken)})" title="写真アップロードページのURLをコピー">🔗 写真ページURLをコピー</button>`);
+      sBtns.push(`<button class="btn btn-g btn-xs" onclick="inqStageManualSet(${x.sheetRow},'ヒアリング回収済',this)" title="回答・写真が揃ったら押す(メールは送らない)">✅ 回収済にする</button>`);
+    }else if(stage==='ヒアリング回収済'){
+      sBtns.push(`<button class="btn btn-g btn-xs" onclick="inqStageMailDemo(${x.sheetRow},this)" title="デモサイト完成の連絡を送信">🖥 デモ完成を送る</button>`);
+    }else if(stage==='デモ送付済'){
+      sBtns.push(`<button class="btn btn-g btn-xs" onclick="inqStageMailPayment(${x.sheetRow},this)" title="制作費のお支払い案内を送信">💳 お支払い案内を送る</button>`);
+      sBtns.push(`<button class="btn btn-g btn-xs" onclick="inqStageManualSet(${x.sheetRow},'入金済',this)" title="入金が確認できたら押す(メールは送らない)">✅ 入金済にする</button>`);
+    }else if(stage==='支払い案内済'){
+      sBtns.push(`<button class="btn btn-g btn-xs" onclick="inqStageManualSet(${x.sheetRow},'入金済',this)" title="入金が確認できたら押す(メールは送らない)">✅ 入金済にする</button>`);
+    }else if(stage==='入金済'){
+      sBtns.push(`<button class="btn btn-g btn-xs" onclick="inqStageMailFinal(${x.sheetRow},this)" title="完成・納品と保守案内を送信">🎉 完成・納品を送る</button>`);
     }
+    sBtns.push(`<button class="btn btn-g btn-xs" onclick="inqHearingToggleDetail(${x.sheetRow})">${INQ_HEARING_OPEN[x.sheetRow]?'▲ 詳細を閉じる':'👀 詳細を見る'}</button>`);
     return`<div class="card" style="margin-bottom:10px">
   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
     <div style="min-width:0">
@@ -7802,17 +7812,18 @@ function rInquiries(){
   </div>
   <div style="font-size:13px;color:var(--t2);margin-top:8px;white-space:pre-wrap;line-height:1.75">${F(r,7)||'(相談内容なし)'}</div>
   <div style="margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-    <span class="badge ${hChipCls}">📋 ヒアリング ${esc(hStatus)}</span>${F(r,12)?`<span style="font-size:11px;color:var(--t3)">${F(r,12)}更新</span>`:''}
+    <span class="badge ${stageCls}">${esc(stage)}</span>${F(r,12)?`<span style="font-size:11px;color:var(--t3)">${F(r,12)}更新</span>`:''}
   </div>
   <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
   ${cur==='成約'?`<button class="btn btn-g btn-xs" onclick="crmFromInquiry(${JSON.stringify(String(r[1]||'')).replace(/"/g,'&quot;')},${JSON.stringify(String(r[2]||'')).replace(/"/g,'&quot;')},${JSON.stringify(String(r[3]||'')).replace(/"/g,'&quot;')},${JSON.stringify(String(r[4]||'')).replace(/"/g,'&quot;')})" title="このお問い合わせをクライアント台帳に登録">🤝 クライアント登録</button>`:''}
-    ${hBtns.join('')}
+    ${sBtns.join('')}
     <button class="btn btn-g btn-red btn-xs" onclick="inqDelete(${x.sheetRow},${JSON.stringify(String(r[1]||'')+' / '+String(r[2]||'')).replace(/"/g,'&quot;')})" title="このお問い合わせを削除(削除済みシートへ退避)">🗑 削除</button>
   </div>
-  ${INQ_HEARING_OPEN[x.sheetRow]?_hearingDetailHtml(x.sheetRow,hFolderRaw):''}
+  ${INQ_HEARING_OPEN[x.sheetRow]?_hearingDetailHtml(x.sheetRow):''}
 </div>`;
   }).join('');
   return`${head}
+${inqBankPanelHtml()}
 <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
   <span style="font-size:13px;font-weight:800;background:var(--card2);padding:4px 10px;border-radius:8px">総件数 ${total}</span>
   <span style="font-size:13px;font-weight:800;color:var(--amber);background:var(--card2);padding:4px 10px;border-radius:8px">未対応 ${untouched}</span>
@@ -7900,41 +7911,132 @@ async function inqDelete(sheetRow,label){
     inqReload();  // 行番号がずれるため必ずGASから取り直す
   }catch(e){toast('削除に失敗しました','err');}
 }
-// ===ぽいっとHP 自動ヒアリング(GASが唯一の正。Firestore/Sには何も保存しない)===
-// 列: J(10)=r[9]token K(11)=r[10]status L(12)=r[11]json M(13)=r[12]updated N(14)=r[13]folderUrl O(15)=r[14]reminderLog
+// ===ぽいっとHP 段階管理(GASが唯一の正。Firestore/Sには何も保存しない)===
+// 列: J(10)=r[9]token K(11)=r[10]stage L(12)=r[11]stage_log M(13)=r[12]updated N(14)=r[13]folderUrl
+//      O(15)=r[14]予備(未使用) P(16)=r[15]formUrl Q(17)=r[16]demoUrl R(18)=r[17]meetingUrl
+// 段階(STAGE_LIST。GAS Code.jsと一致): 問い合わせ→商談案内済→商談済→ヒアリング送付済→ヒアリング回収済
+//      →デモ送付済→支払い案内済→入金済→納品済→保守案内済。stage_setはメールを送らず手動更新のみ行う。
 let INQ_HEARING_OPEN={};
-async function inqHearingSend(sheetRow,btn){
-  if(btn)btn.disabled=true;
-  const key=await _poittoKey();
-  if(!key){if(btn)btn.disabled=false;toast('設定未完了: 管理キーがありません','warn');return;}
-  try{
-    const res=await fetch(`${POITTO_EXEC}?key=${encodeURIComponent(key)}&action=hearing_send&row=${encodeURIComponent(sheetRow)}`);
-    const data=await res.json().catch(()=>({}));
-    if(!res.ok||!data.success)throw new Error((data&&data.error)||'HTTP '+res.status);
-    toast('ヒアリングを送信しました 📮');
-    inqReload();
-  }catch(e){toast('送信に失敗しました: '+String(e&&e.message||e),'err');}
-  if(btn)btn.disabled=false;
+function _inqStageChipCls(stage){
+  if(stage==='商談案内済'||stage==='商談済')return 'bb';
+  if(stage==='ヒアリング送付済'||stage==='ヒアリング回収済')return 'ba';
+  if(stage==='デモ送付済'||stage==='支払い案内済')return 'bp';
+  if(stage==='入金済')return 'bc';
+  if(stage==='納品済'||stage==='保守案内済')return 'bg';
+  return 'bk';
 }
 function inqHearingCopyUrl(token){
   if(!token){toast('トークンがありません','warn');return;}
   const url=`https://mono-create-group.github.io/lp/sample-hp/showcase/hearing.html#t=${encodeURIComponent(token)}`;
-  const done=()=>toast('ヒアリングURLをコピーしました 🔗');
+  const done=()=>toast('URLをコピーしました 🔗');
   const fail=()=>toast('コピーに失敗しました','err');
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(url).then(done).catch(fail);}
   else{try{const ta=document.createElement('textarea');ta.value=url;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);done();}catch(e){fail();}}
 }
-async function inqHearingRemind(sheetRow,btn){
+// 商談日程リンクを送信(段階→商談案内済)。案内済からの再送も同じ関数
+async function inqStageMailMeeting(sheetRow,btn){
   if(btn)btn.disabled=true;
   const key=await _poittoKey();
   if(!key){if(btn)btn.disabled=false;toast('設定未完了: 管理キーがありません','warn');return;}
   try{
-    const res=await fetch(`${POITTO_EXEC}?key=${encodeURIComponent(key)}&action=hearing_remind&row=${encodeURIComponent(sheetRow)}`);
+    const res=await fetch(`${POITTO_EXEC}?key=${encodeURIComponent(key)}&action=mail_meeting&row=${encodeURIComponent(sheetRow)}`);
     const data=await res.json().catch(()=>({}));
     if(!res.ok||!data.success)throw new Error((data&&data.error)||'HTTP '+res.status);
-    toast('リマインドを送信しました ⏰');
+    toast('商談リンクを送信しました 📮');
     inqReload();
-  }catch(e){toast('リマインドに失敗しました: '+String(e&&e.message||e),'err');}
+  }catch(e){toast('送信に失敗しました: '+String(e&&e.message||e),'err');}
+  if(btn)btn.disabled=false;
+}
+// メールを送らず段階だけ手動で進める(商談済・ヒアリング回収済・入金済)
+async function inqStageManualSet(sheetRow,stage,btn){
+  if(!confirm(`段階を「${stage}」に更新しますか？\n\nメールは送信されません。`))return;
+  if(btn)btn.disabled=true;
+  const key=await _poittoKey();
+  if(!key){if(btn)btn.disabled=false;toast('設定未完了: 管理キーがありません','warn');return;}
+  try{
+    const res=await fetch(`${POITTO_EXEC}?key=${encodeURIComponent(key)}&action=stage_set&row=${encodeURIComponent(sheetRow)}&stage=${encodeURIComponent(stage)}`);
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||!data.success)throw new Error((data&&data.error)||'HTTP '+res.status);
+    toast(`段階を「${stage}」に更新しました ✅`);
+    inqReload();
+  }catch(e){toast('更新に失敗しました: '+String(e&&e.message||e),'err');}
+  if(btn)btn.disabled=false;
+}
+// ヒアリングフォームを自動作成し、そのURLでヒアリング案内メールを送信(段階→ヒアリング送付済)
+async function inqStageHearingSend(sheetRow,btn){
+  if(btn)btn.disabled=true;
+  const key=await _poittoKey();
+  if(!key){if(btn)btn.disabled=false;toast('設定未完了: 管理キーがありません','warn');return;}
+  const extraRaw=(prompt('商談で出た追加の質問があれば1行1問で入力してください（空でも可）')||'').trim();
+  const extraQuestions=extraRaw?extraRaw.split('\n').map(s=>s.trim()).filter(Boolean):[];
+  const notes=(prompt('商談メモがあれば入力してください（空でも可。フォームに「商談でお伺いした内容」として載ります）')||'').trim();
+  try{
+    const cres=await fetch(POITTO_EXEC,{method:'POST',headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'hearing_form_create',key,row:sheetRow,extraQuestions,notes})});
+    const cdata=await cres.json().catch(()=>({}));
+    if(!cres.ok||!cdata.success)throw new Error((cdata&&cdata.error)||'フォームの作成に失敗しました');
+    const res=await fetch(`${POITTO_EXEC}?key=${encodeURIComponent(key)}&action=mail_hearing&row=${encodeURIComponent(sheetRow)}&form=${encodeURIComponent(cdata.formUrl||'')}`);
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||!data.success)throw new Error((data&&data.error)||'送信に失敗しました');
+    toast('ヒアリングシートを作成して送信しました 📝');
+    inqReload();
+  }catch(e){toast('失敗しました: '+String(e&&e.message||e),'err');}
+  if(btn)btn.disabled=false;
+}
+// デモ完成の連絡を送信(段階→デモ送付済)
+async function inqStageMailDemo(sheetRow,btn){
+  const demo=(prompt('デモサイトのURLを入力してください')||'').trim();
+  if(!demo){toast('URL未入力のためキャンセルしました','warn');return;}
+  if(btn)btn.disabled=true;
+  const key=await _poittoKey();
+  if(!key){if(btn)btn.disabled=false;toast('設定未完了: 管理キーがありません','warn');return;}
+  try{
+    const res=await fetch(`${POITTO_EXEC}?key=${encodeURIComponent(key)}&action=mail_demo&row=${encodeURIComponent(sheetRow)}&demo=${encodeURIComponent(demo)}`);
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||!data.success)throw new Error((data&&data.error)||'HTTP '+res.status);
+    toast('デモ完成メールを送信しました 🖥');
+    inqReload();
+  }catch(e){toast('送信に失敗しました: '+String(e&&e.message||e),'err');}
+  if(btn)btn.disabled=false;
+}
+// 支払い案内を送信(段階→支払い案内済)。振込先口座が未設定だと bank_info_unset が返る
+async function inqStageMailPayment(sheetRow,btn){
+  if(btn)btn.disabled=true;
+  const key=await _poittoKey();
+  if(!key){if(btn)btn.disabled=false;toast('設定未完了: 管理キーがありません','warn');return;}
+  try{
+    const res=await fetch(`${POITTO_EXEC}?key=${encodeURIComponent(key)}&action=mail_payment&row=${encodeURIComponent(sheetRow)}`);
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const data=await res.json().catch(()=>({}));
+    if(!data.success){
+      if(data.error==='bank_info_unset'){toast('振込先口座が未設定です。上の「支払い設定」から入力してください','warn');}
+      else{toast('送信に失敗しました: '+(data.error||'不明なエラー'),'err');}
+    }else{
+      toast('お支払い案内を送信しました 💳');
+      inqReload();
+    }
+  }catch(e){toast('送信に失敗しました: '+String(e&&e.message||e),'err');}
+  if(btn)btn.disabled=false;
+}
+// 完成・納品(保守案内込み)を送信(段階→納品済)。維持費のStripeリンクが未設定だと stripe_link_unset が返る
+async function inqStageMailFinal(sheetRow,btn){
+  const url=(prompt('公開したホームページのURLを入力してください')||'').trim();
+  if(!url){toast('URL未入力のためキャンセルしました','warn');return;}
+  if(btn)btn.disabled=true;
+  const key=await _poittoKey();
+  if(!key){if(btn)btn.disabled=false;toast('設定未完了: 管理キーがありません','warn');return;}
+  try{
+    const res=await fetch(`${POITTO_EXEC}?key=${encodeURIComponent(key)}&action=mail_final&row=${encodeURIComponent(sheetRow)}&url=${encodeURIComponent(url)}`);
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const data=await res.json().catch(()=>({}));
+    if(!data.success){
+      if(data.error==='stripe_link_unset'){toast('維持費のStripe決済リンク(STRIPE_SUB_LINK)が未設定です','warn');}
+      else{toast('送信に失敗しました: '+(data.error||'不明なエラー'),'err');}
+    }else{
+      toast('完成・納品メールを送信しました 🎉');
+      inqReload();
+    }
+  }catch(e){toast('送信に失敗しました: '+String(e&&e.message||e),'err');}
   if(btn)btn.disabled=false;
 }
 async function inqHearingToggleDetail(sheetRow){
@@ -7955,23 +8057,82 @@ async function inqHearingToggleDetail(sheetRow){
   }
   render();
 }
-function _hearingDetailHtml(sheetRow,folderUrlFallback){
+// ===支払い設定（振込先口座。GASのScript Propertiesにのみ保存。TEAM_KEYS非追加・Sに代入しない）===
+let INQ_BANK_OPEN=false;
+let INQ_BANK_STATE='unknown'; // unknown|checking|set|unset|error
+function inqBankToggleOpen(){
+  INQ_BANK_OPEN=!INQ_BANK_OPEN;
+  render();
+  if(INQ_BANK_OPEN&&INQ_BANK_STATE==='unknown')inqBankCheckStatus();
+}
+async function inqBankCheckStatus(){
+  INQ_BANK_STATE='checking';render();
+  const key=await _poittoKey();
+  if(!key){INQ_BANK_STATE='error';render();return;}
+  try{
+    const res=await fetch(`${POITTO_EXEC}?key=${encodeURIComponent(key)}&action=getprop&k=BANK_INFO`);
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const data=await res.json().catch(()=>({}));
+    INQ_BANK_STATE=(data&&data.set)?'set':'unset';
+  }catch(e){INQ_BANK_STATE='error';}
+  render();
+}
+async function inqBankSave(){
+  const el=document.getElementById('inq-bank-input');
+  const v=(el?el.value:'').trim();
+  if(!v){toast('振込先口座を入力してください','warn');return;}
+  const btn=document.getElementById('inq-bank-save-btn');
+  if(btn)btn.disabled=true;
+  const key=await _poittoKey();
+  if(!key){if(btn)btn.disabled=false;toast('設定未完了: 管理キーがありません','warn');return;}
+  try{
+    const res=await fetch(POITTO_EXEC,{method:'POST',headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'setprop2',key,k:'BANK_INFO',v})});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||!data.success)throw new Error((data&&data.error)||'HTTP '+res.status);
+    if(el)el.value='';
+    INQ_BANK_STATE='set';
+    toast('振込先口座を保存しました 💳');
+  }catch(e){toast('保存に失敗しました: '+String(e&&e.message||e),'err');}
+  if(btn)btn.disabled=false;
+  render();
+}
+function inqBankPanelHtml(){
+  const st=INQ_BANK_STATE;
+  const chip=st==='set'?`<span class="badge bg">振込先口座: 設定済み</span>`
+    :st==='unset'?`<span class="badge ba">振込先口座: 未設定</span>`
+    :st==='error'?`<span class="badge br">状態を取得できませんでした</span>`
+    :`<span class="badge bk">${st==='checking'?'確認中…':'未確認'}</span>`;
+  return`<div class="card" style="margin-bottom:12px">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;cursor:pointer" onclick="inqBankToggleOpen()">
+    <div style="font-weight:800;font-size:13px">💳 支払い設定（振込先口座）</div>
+    <div style="display:flex;align-items:center;gap:8px">${chip}<span style="font-size:11px;color:var(--t3)">${INQ_BANK_OPEN?'▲ 閉じる':'▼ 開く'}</span></div>
+  </div>
+  ${INQ_BANK_OPEN?`<div style="margin-top:10px">
+    <div style="font-size:11px;color:var(--t3);margin-bottom:8px;line-height:1.7">HP制作費のお支払い案内メールに使う振込先です。値はGASのScript Propertiesにのみ保存され、この画面には表示されません（設定済み/未設定のみ表示）。</div>
+    <div class="fg"><textarea id="inq-bank-input" rows="3" style="width:100%" placeholder="例: 〇〇銀行 〇〇支店 普通 1234567 名義 モノクリエイト"></textarea></div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px"><button class="btn btn-p btn-sm" id="inq-bank-save-btn" onclick="inqBankSave()">保存</button></div>
+  </div>`:''}
+</div>`;
+}
+function _hearingDetailHtml(sheetRow){
   const d=(window.__poittoHearingDetail||{})[sheetRow];
   if(!d)return'';
   if(d.loading)return`<div style="margin-top:10px;padding:10px;background:var(--card2);border-radius:10px;font-size:12px;color:var(--t2)">読み込み中…</div>`;
-  if(d.error)return`<div style="margin-top:10px;padding:10px;background:var(--card2);border-radius:10px;font-size:12px;color:var(--red)">回答の取得に失敗しました: ${esc(d.error)}</div>`;
-  const answers=(d&&d.answers)||{};
-  const keys=Object.keys(answers);
-  const folderUrl=(d&&d.folderUrl)||folderUrlFallback||'';
-  const rows=keys.length?keys.map(k=>{
-    const v=answers[k];
-    const disp=v==null?'':(typeof v==='object'?JSON.stringify(v):String(v));
-    return`<div style="padding:6px 0;border-top:1px solid var(--border)"><div style="font-size:11px;color:var(--t3);font-weight:700">${esc(k)}</div><div style="font-size:13px;color:var(--t2);white-space:pre-wrap;line-height:1.6">${esc(disp)||'-'}</div></div>`;
-  }).join(''):`<div style="font-size:12px;color:var(--t3)">まだ回答はありません</div>`;
+  if(d.error)return`<div style="margin-top:10px;padding:10px;background:var(--card2);border-radius:10px;font-size:12px;color:var(--red)">詳細の取得に失敗しました: ${esc(d.error)}</div>`;
+  const links=[];
+  if(d.formUrl)links.push(`<a href="${esc(d.formUrl)}" target="_blank" rel="noopener" style="color:var(--blue);font-weight:700">📝 ヒアリングフォーム</a>`);
+  if(d.uploadUrl)links.push(`<a href="${esc(d.uploadUrl)}" target="_blank" rel="noopener" style="color:var(--blue);font-weight:700">📷 写真アップロードページ</a>`);
+  if(d.folderUrl)links.push(`<a href="${esc(d.folderUrl)}" target="_blank" rel="noopener" style="color:var(--blue);font-weight:700">📁 写真フォルダ</a>`);
+  if(d.demoUrl)links.push(`<a href="${esc(d.demoUrl)}" target="_blank" rel="noopener" style="color:var(--blue);font-weight:700">🖥 デモサイト</a>`);
+  if(d.meetingUrl)links.push(`<a href="${esc(d.meetingUrl)}" target="_blank" rel="noopener" style="color:var(--blue);font-weight:700">🗓 日程調整リンク</a>`);
+  const photos=Array.isArray(d.photos)?d.photos:[];
   return`<div style="margin-top:10px;padding:10px;background:var(--card2);border-radius:10px">
-  <div style="font-weight:800;font-size:12px;margin-bottom:4px">回答内容${d.status?`（${esc(d.status)}）`:''}</div>
-  ${rows}
-  ${folderUrl?`<div style="margin-top:8px"><a href="${esc(folderUrl)}" target="_blank" rel="noopener" style="font-size:12px;color:var(--blue);font-weight:700">📁 写真フォルダを開く</a></div>`:''}
+  <div style="font-weight:800;font-size:12px;margin-bottom:6px">段階: ${esc(d.stage||'-')}${d.updated?`（${esc(d.updated)} 更新）`:''}</div>
+  ${links.length?`<div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px;margin-bottom:8px">${links.join('')}</div>`:''}
+  ${photos.length?`<div style="font-size:11px;color:var(--t3);margin-bottom:6px">写真 ${photos.length}枚</div>`:''}
+  <div style="font-size:11px;color:var(--t3);font-weight:700;margin-top:6px">経過ログ</div>
+  <div style="font-size:12px;color:var(--t2);white-space:pre-wrap;line-height:1.6">${esc(d.log||'')||'-'}</div>
 </div>`;
 }
 // ===チームKGI/KPI（全アカウント共有・個人目標とは別）===
@@ -14161,7 +14322,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260727-01';
+const APP_VERSION='20260727-02';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
