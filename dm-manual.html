@@ -142,6 +142,42 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 .fig svg{max-width:100%;height:auto}
 .fig .cap{font-size:11.5px;color:var(--t3);margin-top:6px}
 
+/* 請求書作成ツール */
+.inv-row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:560px){.inv-row2{grid-template-columns:1fr}}
+.inv-form label{font-size:12.5px;font-weight:700;color:var(--t2);display:block;margin-top:12px}
+.inv-form label small{font-weight:400;color:var(--t3)}
+.inv-form input,.inv-form select{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;font-size:14px;font-family:inherit;margin-top:4px;background:#fff;color:var(--text)}
+.inv-form input:focus,.inv-form select:focus{outline:none;border-color:var(--pl)}
+.inv-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px;align-items:center}
+.inv-actions button{border:none;font-family:inherit}
+.inv-filename{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px}
+
+.invoice-items-wrap,.invoice-bank-wrap{overflow-x:auto}
+.invoice-doc{border:1.5px solid var(--border);border-radius:14px;padding:26px 22px;background:#fff}
+.invoice-head{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:16px}
+.invoice-title{font-size:20px;font-weight:800;letter-spacing:.14em}
+.invoice-date{font-size:12.5px;color:var(--t2)}
+.invoice-to{font-size:15px;font-weight:700;margin-bottom:4px}
+.invoice-from{font-size:13px;color:var(--t2);margin-bottom:18px}
+.invoice-items{width:100%;min-width:420px;border-collapse:collapse;font-size:13px;margin-bottom:14px}
+.invoice-items th,.invoice-items td{border:1px solid var(--border);padding:9px 10px;text-align:left}
+.invoice-items thead th{background:#f4f5f8}
+.invoice-items tfoot th{background:#f4f5f8;text-align:right}
+.invoice-note{font-size:11.5px;color:var(--t3);display:block;margin-top:3px}
+.invoice-due{font-size:13.5px;font-weight:700;margin-bottom:18px}
+.invoice-bank-title{font-size:13px;font-weight:800;margin-bottom:6px}
+.invoice-bank table{width:100%;min-width:320px;border-collapse:collapse;font-size:12.5px}
+.invoice-bank th,.invoice-bank td{border:1px solid var(--border);padding:7px 10px;text-align:left}
+.invoice-bank th{width:110px;background:#f4f5f8;font-weight:700;white-space:nowrap}
+
+#invoicePrintRoot{display:none}
+@media print{
+  body>.wrap,body>.toast{display:none !important}
+  #invoicePrintRoot{display:block !important;padding:16mm 14mm;max-width:none}
+  #invoicePrintRoot .invoice-doc{border:none;padding:0}
+}
+
 .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:11px 22px;border-radius:100px;font-size:13px;font-weight:700;opacity:0;transition:opacity .2s;pointer-events:none;z-index:60;white-space:nowrap}
 .toast.show{opacity:1}
 .footer{margin-top:60px;text-align:center;font-size:12px;color:var(--t3);line-height:2}
@@ -498,57 +534,69 @@ AI導入支援・コンサル
     </div>
   </div>
 
-  <div class="card">
-    <h3><span class="mini">2</span>請求書の作り方</h3>
-    <p>下のサイトで作成してください（使えない場合は、お手持ちの他の雛形でも構いません）。</p>
-    <div class="copybox">
-      <pre id="misocaUrl">https://app.misoca.jp/invoices/38665469</pre>
-      <button class="copybtn" onclick="copyEl('misocaUrl','請求書作成URL')">コピー</button>
-    </div>
-    <p style="margin-top:14px"><b>請求書に必ず入れる項目</b></p>
-    <ul class="check" style="margin-top:2px">
-      <li>取引先: <b>mono.create</b></li>
-      <li>名前: <b>チャットワークで使っている名前</b>にする</li>
-      <li>案件名: <b>クライアント名＋成約日</b>（営業・採用スタッフはこの形式。編集スタッフは案件タイトル）</li>
-      <li>件数: <b>成約件数のみ</b>を記入（まだ成約が完了していないものは入れない）</li>
-      <li>合計請求金額: <b>成約件数 × 10,000円</b></li>
-      <li>請求日（提出した日）</li>
-      <li>支払い期限（25日までの提出なら翌月末、26日以降なら翌々月末）</li>
-      <li><b>振込先（ご自身の口座）</b>…次の5点をすべて記入</li>
-    </ul>
-    <div class="okbox"><b>報酬は1件の成約につき10,000円です。</b>合計請求金額は「成約件数 × 10,000円」で計算してください（例: 3件成約なら30,000円）。</div>
+  <div class="card inv-form">
+    <h3><span class="mini">2</span>請求書を作成</h3>
+    <p>下のフォームに入力すると、その場で請求書が自動作成されます（成約件数を入れると合計金額も自動計算されます）。</p>
 
-    <p style="margin-top:16px"><b>振込先に必要な5項目</b></p>
-    <p style="font-size:12.5px;color:var(--t2);margin:2px 0 8px">1つでも欠けると振込ができず、お支払いが翌月にずれます。通帳やアプリの画面を見ながら、そのまま書き写してください。</p>
-    <div style="overflow-x:auto">
-      <table class="sl-daily-table">
-        <tr><th style="text-align:left">項目</th><th style="text-align:left">書き方</th><th style="text-align:left">記入例</th></tr>
-        <tr><td style="text-align:left;font-weight:700;white-space:nowrap">1. 金融機関名</td><td style="text-align:left">銀行・信用金庫の名前</td><td style="text-align:left">北洋銀行</td></tr>
-        <tr><td style="text-align:left;font-weight:700;white-space:nowrap">2. 支店名</td><td style="text-align:left">支店の名前（ネット銀行は支店名か支店番号）</td><td style="text-align:left">旭川支店</td></tr>
-        <tr><td style="text-align:left;font-weight:700;white-space:nowrap">3. 預金種目</td><td style="text-align:left">普通 か 当座（ほとんどの方は「普通」）</td><td style="text-align:left">普通</td></tr>
-        <tr><td style="text-align:left;font-weight:700;white-space:nowrap">4. 口座番号</td><td style="text-align:left">7桁の数字（頭の0も省かない）</td><td style="text-align:left">1234567</td></tr>
-        <tr><td style="text-align:left;font-weight:700;white-space:nowrap">5. 口座名義</td><td style="text-align:left"><b>カタカナ</b>で、通帳の表記どおりに</td><td style="text-align:left">ヤマダ タロウ</td></tr>
-      </table>
+    <label>名前（チャットワークで使っている名前）</label>
+    <input id="invName" placeholder="例: 山田太郎" maxlength="30">
+
+    <div class="inv-row2">
+      <div>
+        <label>対象月</label>
+        <input id="invMonth" type="month">
+      </div>
+      <div>
+        <label>成約件数</label>
+        <input id="invCount" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
+      </div>
     </div>
+
+    <label>案件名の補足 <small>（任意。例: クライアント名＋成約日）</small></label>
+    <input id="invNote" placeholder="例: ○○整体院 7/20成約" maxlength="60">
+
+    <div class="okbox"><b>単価は1件10,000円です。</b>合計請求金額は「成約件数 × 10,000円」で自動計算されます（例: 3件成約なら30,000円）。取引先は<b>mono.create</b>で固定です。</div>
+
+    <p style="margin-top:18px"><b>振込先（ご自身の口座）</b></p>
+    <p style="font-size:12.5px;color:var(--t2);margin:2px 0 8px">1つでも欠けると振込ができません。通帳やアプリの画面を見ながら、そのまま入力してください（次回からは自動で復元されます）。</p>
+
+    <div class="inv-row2">
+      <div><label>1. 金融機関名</label><input id="invBank" placeholder="例: 北洋銀行"></div>
+      <div><label>2. 支店名</label><input id="invBranch" placeholder="例: 旭川支店"></div>
+    </div>
+    <div class="inv-row2">
+      <div>
+        <label>3. 預金種目</label>
+        <select id="invAcctType">
+          <option value="普通">普通</option>
+          <option value="当座">当座</option>
+        </select>
+      </div>
+      <div><label>4. 口座番号</label><input id="invAcctNo" placeholder="例: 1234567" inputmode="numeric" maxlength="10"></div>
+    </div>
+    <label>5. 口座名義 <small>（カタカナ・通帳の表記どおりに）</small></label>
+    <input id="invAcctName" placeholder="例: ヤマダ タロウ">
+
     <div class="note">
-      <b>ゆうちょ銀行の方:</b> 他行から振り込むための<b>「振込用の店名（3桁）・預金種目・口座番号（7桁）」</b>を記入してください（記号-番号のままでは振込できません）。ゆうちょのアプリや通帳、公式サイトの「振込用口座番号の確認」で調べられます。<br>
+      <b>ゆうちょ銀行の方:</b> 他行から振り込むための<b>「振込用の店名（3桁）・預金種目・口座番号（7桁）」</b>を記入してください（記号-番号のままでは振込できません）。<br>
       <b>ネット銀行の方:</b> 支店名が数字（例: 001）の場合もそのまま記入して構いません。
     </div>
     <div class="note" style="background:var(--reddim);color:var(--red)"><b>口座名義は必ずご本人名義</b>にしてください。ご家族など他人名義の口座にはお振込みできません。</div>
   </div>
 
   <div class="card">
-    <h3><span class="mini">3</span>提出のしかた</h3>
-    <p>作成した請求書は<b>必ずPDFで保存</b>し、ファイル名を下の形式にしてください。</p>
-    <div class="copybox">
-      <pre id="invoiceName">名前（チャットワークの名前）_提出月_請求書</pre>
-      <button class="copybtn" onclick="copyEl('invoiceName','ファイル名の形式')">コピー</button>
+    <h3><span class="mini">3</span>プレビュー・提出</h3>
+    <p>入力内容がそのまま下の請求書になります。内容に間違いがないか確認してください。</p>
+
+    <div id="invPreview"></div>
+
+    <div class="okbox">保存するファイル名: <b class="inv-filename" id="invFileName">名前_対象月_請求書</b></div>
+
+    <div class="inv-actions">
+      <button class="btn-claim" onclick="window.print()">PDFで保存する</button>
+      <a class="btn-dl" href="https://docs.google.com/forms/d/e/1FAIpQLScEI9VtNh8ZtGsU54vxfqpRnA6l_BTtCkdRHcu2RoDPdzER7A/viewform" target="_blank" rel="noopener">提出フォームを開く</a>
     </div>
-    <p style="margin-top:14px">下のフォームからアップロードして提出完了です。</p>
-    <div class="copybox">
-      <pre id="invoiceForm">https://docs.google.com/forms/d/e/1FAIpQLScEI9VtNh8ZtGsU54vxfqpRnA6l_BTtCkdRHcu2RoDPdzER7A/viewform</pre>
-      <button class="copybtn" onclick="copyEl('invoiceForm','提出フォームURL')">コピー</button>
-    </div>
+    <p style="font-size:12.5px;color:var(--t2);margin-top:10px">「PDFで保存する」を押すと印刷画面が開きます。<b>PDFに保存</b>を選んでから、「提出フォームを開く」でそのPDFをアップロードして提出完了です。</p>
     <div class="okbox">提出は<b>毎月25日まで</b>。月末にまとめて出すのではなく、25日を過ぎないように余裕をもって提出してください。</div>
   </div>
 </section>
@@ -576,6 +624,7 @@ AI導入支援・コンサル
 </div>
 
 </div>
+<div id="invoicePrintRoot"></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -719,7 +768,112 @@ function buildDm(){
   $('dmText').textContent=lines.join('\n');
 }
 
-$('staffName').addEventListener('input',function(){renderNames();var g=$('genName');if(!g.value||g.dataset.auto!=='0'){g.value=this.value;buildDm();}});
+/* ── 請求書作成ツール ── */
+var INV_DRAFT_KEY='dm_invoice_draft';
+function invPad2(n){return (n<10?'0':'')+n;}
+function invDefaultMonth(){var d=new Date();return d.getFullYear()+'-'+invPad2(d.getMonth()+1);}
+function invMonthLabel(ym){
+  var p=(ym||'').split('-');
+  if(p.length<2||!parseInt(p[1],10))return '';
+  return p[0]+'年'+parseInt(p[1],10)+'月分';
+}
+function invDueDate(today){
+  var y=today.getFullYear(),m=today.getMonth(),day=today.getDate();
+  var add=day<=25?2:3; /* 25日まで→翌月末(+2)、26日以降→翌々月末(+3) */
+  return new Date(y,m+add,0);
+}
+function invDueLabel(d){return (d.getMonth()+1)+'月末';}
+function invJPDate(d){return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日';}
+function invYen(n){return '¥'+(n||0).toLocaleString('ja-JP');}
+
+function invSaveDraft(){
+  try{
+    var data={
+      name:$('invName').value||'',
+      bank:$('invBank').value||'',
+      branch:$('invBranch').value||'',
+      acctType:$('invAcctType').value||'普通',
+      acctNo:$('invAcctNo').value||'',
+      acctName:$('invAcctName').value||''
+    };
+    localStorage.setItem(INV_DRAFT_KEY,JSON.stringify(data));
+  }catch(e){}
+}
+function invLoadDraft(){
+  try{
+    var raw=localStorage.getItem(INV_DRAFT_KEY);
+    if(!raw)return;
+    var d=JSON.parse(raw);
+    if(d.name&&!$('invName').value)$('invName').value=d.name;
+    if(d.bank)$('invBank').value=d.bank;
+    if(d.branch)$('invBranch').value=d.branch;
+    if(d.acctType)$('invAcctType').value=d.acctType;
+    if(d.acctNo)$('invAcctNo').value=d.acctNo;
+    if(d.acctName)$('invAcctName').value=d.acctName;
+  }catch(e){}
+}
+
+function invBuildHTML(){
+  var name=($('invName').value||'').trim()||'（名前未入力）';
+  var ym=$('invMonth').value||invDefaultMonth();
+  var count=parseInt($('invCount').value,10);if(isNaN(count)||count<0)count=0;
+  var note=($('invNote').value||'').trim();
+  var bank=($('invBank').value||'').trim();
+  var branch=($('invBranch').value||'').trim();
+  var acctType=$('invAcctType').value||'普通';
+  var acctNo=($('invAcctNo').value||'').trim();
+  var acctName=($('invAcctName').value||'').trim();
+
+  var unit=10000;
+  var total=count*unit;
+  var today=new Date();
+  var due=invDueDate(today);
+  var itemLabel='成約報酬（'+esc(invMonthLabel(ym)||ym)+'）';
+  if(note)itemLabel+='<span class="invoice-note">'+esc(note)+'</span>';
+
+  return ''+
+  '<div class="invoice-doc">'+
+    '<div class="invoice-head"><div class="invoice-title">請求書</div><div class="invoice-date">請求日: '+invJPDate(today)+'</div></div>'+
+    '<div class="invoice-to">mono.create 御中</div>'+
+    '<div class="invoice-from">請求元: '+esc(name)+'</div>'+
+    '<div class="invoice-items-wrap"><table class="invoice-items">'+
+      '<thead><tr><th>項目</th><th>数量</th><th>単価</th><th>金額</th></tr></thead>'+
+      '<tbody><tr><td>'+itemLabel+'</td><td>'+count+'件</td><td>'+invYen(unit)+'</td><td>'+invYen(total)+'</td></tr></tbody>'+
+      '<tfoot><tr><th colspan="3">合計金額</th><th>'+invYen(total)+'</th></tr></tfoot>'+
+    '</table></div>'+
+    '<div class="invoice-due">支払期限: '+invDueLabel(due)+'</div>'+
+    '<div class="invoice-bank">'+
+      '<div class="invoice-bank-title">お振込先</div>'+
+      '<div class="invoice-bank-wrap"><table>'+
+        '<tr><th>金融機関名</th><td>'+esc(bank||'未入力')+'</td></tr>'+
+        '<tr><th>支店名</th><td>'+esc(branch||'未入力')+'</td></tr>'+
+        '<tr><th>預金種目</th><td>'+esc(acctType)+'</td></tr>'+
+        '<tr><th>口座番号</th><td>'+esc(acctNo||'未入力')+'</td></tr>'+
+        '<tr><th>口座名義</th><td>'+esc(acctName||'未入力')+'</td></tr>'+
+      '</table></div>'+
+    '</div>'+
+  '</div>';
+}
+
+function invRender(){
+  var html=invBuildHTML();
+  $('invPreview').innerHTML=html;
+  $('invoicePrintRoot').innerHTML=html;
+  var ym=$('invMonth').value||invDefaultMonth();
+  var name=($('invName').value||'').trim()||'名前';
+  $('invFileName').textContent=name+'_'+ym+'_請求書';
+  invSaveDraft();
+}
+
+['invName','invMonth','invCount','invNote','invBank','invBranch','invAcctType','invAcctNo','invAcctName'].forEach(function(id){
+  var el=$(id);
+  if(!el)return;
+  el.addEventListener('input',invRender);
+  el.addEventListener('change',invRender);
+});
+$('invName').addEventListener('input',function(){this.dataset.auto='0';});
+
+$('staffName').addEventListener('input',function(){renderNames();var g=$('genName');if(!g.value||g.dataset.auto!=='0'){g.value=this.value;buildDm();}var iv=$('invName');if(!iv.value||iv.dataset.auto!=='0'){iv.value=this.value;invRender();}});
 $('genName').addEventListener('input',function(){this.dataset.auto='0';buildDm();});
 $('genUrl').addEventListener('input',buildDm);
 $('aiOk').addEventListener('change',updateClaimUI);
@@ -729,6 +883,13 @@ try{
 }catch(e){}
 buildDm();
 loadNames();
+
+$('invMonth').value=invDefaultMonth();
+invLoadDraft();
+if(!$('invName').value){
+  try{var sn=localStorage.getItem('dmm_staff');if(sn)$('invName').value=sn;}catch(e){}
+}
+invRender();
 </script>
 </body>
 </html>
