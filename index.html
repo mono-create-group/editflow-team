@@ -930,6 +930,87 @@ const PPM=1.5, SS=7*60, SE=24*60;
 const PSTATUS=['案件掲載中','未着手','進行中','編集者進行中','初稿完成','確認待ち','FB待ち','修正中','完了','キャンセル'];
 const SCOL={'案件掲載中':'--cyan','未着手':'--t3','進行中':'--blue','編集者進行中':'--pink','初稿完成':'--purple','確認待ち':'--amber','FB待ち':'--pink','修正中':'--red','完了':'--green','キャンセル':'--t3'};
 const SCOLBG={'案件掲載中':'bc','未着手':'bk','進行中':'bb','編集者進行中':'bpk','初稿完成':'bp','確認待ち':'ba','FB待ち':'bk','修正中':'br','完了':'bg','キャンセル':'bk'};
+// ===事業(BIZ)定義 2026-07-26=== 案件管理を事業別に分割。既存データは書き換えず、読み取り時に分類する（jobBiz）。
+Object.assign(SCOLBG,{'募集中':'bc','編集者決定':'bb','受注済み':'bb','受注':'bb','商談中':'ba','ヒアリング':'bc','制作中':'bb','初稿提出':'bp','公開準備':'ba','公開済み':'bg','運用中':'bg','提案中':'ba','契約中':'bb','オンボーディング':'bc','継続中':'bg','更新待ち':'ba','解約':'bk','要件ヒアリング':'bc','見積提出':'ba','開発中':'bb','テスト中':'bp','デモ提出':'bp','納品済み':'bg','検収待ち':'ba','運用保守':'bg'});
+const BOARD_COL={'案件掲載中':'#06b6d4','未着手':'#6b7280','進行中':'#3b82f6','編集者進行中':'#ec4899','FB待ち':'#ec4899','確認待ち':'#f59e0b','修正中':'#ef4444','初稿完成':'#7c3aed','募集中':'#06b6d4','編集者決定':'#3b82f6','受注済み':'#3b82f6','受注':'#3b82f6','商談中':'#f59e0b','ヒアリング':'#06b6d4','制作中':'#3b82f6','初稿提出':'#7c3aed','公開準備':'#f59e0b','公開済み':'#16a34a','運用中':'#16a34a','提案中':'#f59e0b','契約中':'#3b82f6','オンボーディング':'#06b6d4','継続中':'#16a34a','更新待ち':'#f59e0b','解約':'#6b7280','要件ヒアリング':'#06b6d4','見積提出':'#f59e0b','開発中':'#3b82f6','テスト中':'#7c3aed','デモ提出':'#7c3aed','納品済み':'#16a34a','検収待ち':'#f59e0b','運用保守':'#16a34a'};
+const BIZ_DEFS=[
+  {k:'edit',   label:'編集代行',         icon:'📹'},
+  {k:'haken',  label:'編集者派遣',       icon:'🤝'},
+  {k:'hp',     label:'HP制作',           icon:'🌐'},
+  {k:'consult',label:'AI顧問',           icon:'🤖'},
+  {k:'tool',   label:'自動化ツール制作', icon:'⚙️'}
+];
+const PTAB_LBL={board:'📋 ボード',deadline:'📅 今日明日期限',listing:'📢 掲載中',list:'📄 リスト',clients:'👥 クライアント一覧',profit:'💰 利益',payment:'💳 支払い',invoice:'🧾 請求書',completed:'✅ 完了済み',worker:'👤 担当者別',priority:'📊 優先度表'};
+const BIZ_CFG={
+  edit:{
+    statuses:['案件掲載中','未着手','進行中','編集者進行中','初稿完成','確認待ち','FB待ち','修正中','完了','キャンセル'],
+    board:['案件掲載中','未着手','進行中','編集者進行中','FB待ち','確認待ち','修正中','初稿完成'],
+    scopes:['動画編集','サムネイル制作','動画編集＋サムネイル','ショート動画','VSL','スクール動画','その他'],
+    lbl:{scope:'担当範囲',shared:'共有日',deliver:'納品日',d1:'編集者 初稿',d2:'クライアント提出 初稿',unit:'単価（円）',wpay:'ワーカー支払額（円）',profit:'利益（自動計算）',monthly:'',member:'👤 編集者別',d1s:'✏️ 編集者初稿',d2s:'📋 クライアント提出',deliverS:'📅 納品'},
+    show:{scope:1,d1:1,d2:1,thumb:1,wpay:1,subs:1,monthly:0},
+    tabs:['board','deadline','listing','list','clients','profit','payment','invoice','completed','worker','priority'],
+    prio:[['clientDraftDate','クライアント初稿'],['editorDraftDate','編集者初稿']]
+  },
+  haken:{
+    statuses:['案件掲載中','募集中','編集者決定','受注済み','進行中','初稿完成','確認待ち','修正中','完了','キャンセル'],
+    board:['案件掲載中','募集中','編集者決定','受注済み','進行中','確認待ち','修正中','初稿完成'],
+    scopes:['長尺動画','ショート動画','サムネイル制作','その他'],
+    lbl:{scope:'案件種別',shared:'受注日',deliver:'納品日',d1:'編集者 初稿',d2:'クライアント提出 初稿',unit:'クライアント請求額（円）',wpay:'編集者支払額（円）',profit:'手数料（自動計算）',monthly:'',member:'👤 編集者別',d1s:'✏️ 編集者初稿',d2s:'📋 クライアント提出',deliverS:'📅 納品'},
+    show:{scope:1,d1:1,d2:1,thumb:0,wpay:1,subs:1,monthly:0},
+    tabs:['board','deadline','listing','list','clients','profit','payment','invoice','completed','worker','priority'],
+    prio:[['clientDraftDate','クライアント初稿'],['editorDraftDate','編集者初稿']]
+  },
+  hp:{
+    statuses:['商談中','受注','ヒアリング','制作中','初稿提出','修正中','公開準備','公開済み','運用中','完了','キャンセル'],
+    board:['商談中','受注','ヒアリング','制作中','初稿提出','修正中','公開準備','公開済み'],
+    scopes:['新規制作','リニューアル','LP制作','宿泊HP','保守・運用','その他'],
+    lbl:{scope:'制作範囲',shared:'着手日',deliver:'公開日',d1:'社内 初稿完成',d2:'クライアント確認 提出',unit:'制作費（円）',wpay:'外注費（円）',profit:'利益（自動計算）',monthly:'月額維持費（円）',member:'👤 制作担当別',d1s:'🖥 社内初稿',d2s:'📋 クライアント確認',deliverS:'🚀 公開'},
+    show:{scope:1,d1:1,d2:1,thumb:0,wpay:1,subs:1,monthly:1},
+    tabs:['board','deadline','list','clients','profit','payment','invoice','completed','worker','priority'],
+    prio:[['clientDraftDate','クライアント確認'],['deliveryDate','公開日']]
+  },
+  consult:{
+    statuses:['商談中','提案中','契約中','オンボーディング','継続中','更新待ち','解約','完了','キャンセル'],
+    board:['商談中','提案中','契約中','オンボーディング','継続中','更新待ち'],
+    scopes:['月額顧問','スポット相談','社内研修','ツール開発込み','その他'],
+    lbl:{scope:'契約種別',shared:'契約開始日',deliver:'契約更新日',d1:'',d2:'',unit:'顧問料（円）',wpay:'外注費（円）',profit:'利益（自動計算）',monthly:'月額顧問料（円）',member:'👤 担当者別',d1s:'',d2s:'',deliverS:'🔄 更新'},
+    show:{scope:1,d1:0,d2:0,thumb:0,wpay:1,subs:1,monthly:1},
+    tabs:['board','list','clients','profit','payment','invoice','completed','worker','priority'],
+    prio:[['deliveryDate','契約更新日']]
+  },
+  tool:{
+    statuses:['要件ヒアリング','見積提出','受注','開発中','テスト中','デモ提出','修正中','納品済み','検収待ち','運用保守','完了','キャンセル'],
+    board:['要件ヒアリング','見積提出','受注','開発中','テスト中','デモ提出','修正中','納品済み'],
+    scopes:['業務自動化','GAS開発','スクレイピング','アプリ開発','AI組込','保守・運用','その他'],
+    lbl:{scope:'開発範囲',shared:'着手日',deliver:'納品日',d1:'開発完了（社内）',d2:'デモ提出日',unit:'開発費（円）',wpay:'外注費（円）',profit:'利益（自動計算）',monthly:'月額保守費（円）',member:'👤 開発担当別',d1s:'⚙️ 開発完了',d2s:'📋 デモ提出',deliverS:'📦 納品'},
+    show:{scope:1,d1:1,d2:1,thumb:0,wpay:1,subs:1,monthly:1},
+    tabs:['board','deadline','list','clients','profit','payment','invoice','completed','worker','priority'],
+    prio:[['clientDraftDate','デモ提出'],['deliveryDate','納品日']]
+  }
+};
+function bizCfgOf(k){return BIZ_CFG[k]||BIZ_CFG.edit;}
+function bizCfg(){return bizCfgOf(PBIZ);}
+function bizDefOf(k){return BIZ_DEFS.find(b=>b.k===k)||BIZ_DEFS[0];}
+// 既存データは書き換えない。hakenId(派遣シート由来)/jobType で読み取り時に事業を判定する。
+function jobBiz(j){
+  if(!j)return'edit';
+  if(j.biz&&BIZ_CFG[j.biz])return j.biz;
+  if(j.hakenId)return'haken';
+  if(j.jobType==='consul')return'consult';
+  return'edit';
+}
+function BJOBS(){return (S.jobs||[]).filter(j=>jobBiz(j)===PBIZ);}
+function bizStatOpts(k,cur){const list=bizCfgOf(k).statuses.slice();if(cur&&list.indexOf(cur)<0)list.unshift(cur);const sel=cur||list[0];return list.map(x=>`<option${x===sel?' selected':''}>${esc(x)}</option>`).join('');}
+function bizScopeOpts(k,cur){const list=bizCfgOf(k).scopes.slice();if(cur&&list.indexOf(cur)<0)list.unshift(cur);return'<option value="">選択</option>'+list.map(x=>`<option${x===cur?' selected':''}>${esc(x)}</option>`).join('');}
+function setPBiz(k){PBIZ=k;const t=bizCfgOf(k).tabs;if(t.indexOf(PVMT)<0)PVMT=t[0];PRIO_IDX=0;render();}
+function rBizBar(){
+  return`<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+  ${BIZ_DEFS.map(b=>{
+    const c=(S.jobs||[]).filter(j=>!j.deleted&&jobBiz(j)===b.k&&j.status!=='完了'&&j.status!=='キャンセル').length;
+    return`<button class="btn btn-sm ${PBIZ===b.k?'btn-p':'btn-g'}" onclick="setPBiz('${b.k}')">${b.icon} ${esc(b.label)}${c?` <span style="opacity:.7">${c}</span>`:''}</button>`;
+  }).join('')}
+</div>`;
+}
 const DAYS=['日','月','火','水','木','金','土'];
 const LOG_TYPES=['revenue','sales','hire'];
 
@@ -1957,6 +2038,7 @@ function hakenRowToJob(row, existing){
   if(g(16))noteParts.push(g(16));
   var mapped={
     title: g(5)||(g(3)?g(3)+(seibetsu?' '+seibetsu:''):'')||g(1)||'(無題)',
+    biz: (existing&&existing.biz)||'haken',
     jobType: (existing&&existing.jobType)||'edit',
     clientId: client?client.id:((existing&&existing.clientId)||null),
     workerId: worker?worker.id:((existing&&existing.workerId)||null),
@@ -2171,7 +2253,8 @@ let SD=0; // schedule day offset (0=today,1=tomorrow,...)
 let RV='revenue'; // revenue sub-tab
 let GV='this_month'; // goals sub-tab (horizon)
 let PVMT='board'; // projects main tab (board/list/profit/payment/worker/priority)
-let PRIO_DRAFT='client'; // 優先度表の基準: 'client'=クライアント初稿 / 'editor'=編集者初稿
+let PBIZ='edit'; // 案件管理の事業タブ(編集代行/編集者派遣/HP制作/AI顧問/自動化ツール制作)
+let PRIO_IDX=0; // 優先度表の基準インデックス(事業ごとに BIZ_CFG.prio で定義)
 let JT='morning'; // journal tab (morning/evening)
 let JCM=today().slice(0,7); // journal calendar month (YYYY-MM)
 let JOB_SORT='deadline'; // job sort order
@@ -5268,15 +5351,19 @@ function sortJobs(jobs){
 }
 function rProjects(){
   const clients=S.clients.filter(c=>!c.deleted);
-  const tabs=[['board','📋 ボード'],['deadline','📅 今日明日期限'],['listing','📢 掲載中'],['list','📄 リスト'],['clients','👥 クライアント一覧'],['profit','💰 利益'],['payment','💳 支払い'],['invoice','🧾 請求書'],['completed','✅ 完了済み'],['worker','👤 編集者別'],['priority','📊 優先度表']];
-  return`<div class="ph">
-  <div class="ph-title">案件管理</div>
+  const bc=bizCfg();
+  if(bc.tabs.indexOf(PVMT)<0)PVMT=bc.tabs[0];
+  if(PRIO_IDX>=bc.prio.length)PRIO_IDX=0;
+  const bd=bizDefOf(PBIZ);
+  const tabs=bc.tabs.map(k=>[k,k==='worker'?bc.lbl.member:PTAB_LBL[k]]);
+  return`${rBizBar()}<div class="ph">
+  <div class="ph-title">案件管理 <span style="font-size:13px;color:var(--t2)">/ ${bd.icon} ${esc(bd.label)}</span></div>
   <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
     ${tabs.map(([k,l])=>`<button class="btn btn-g btn-sm ${PVMT===k?'btn-p':''}" onclick="PVMT='${k}';render()">${l}</button>`).join('')}
     <button class="btn btn-p btn-sm" onclick="openClientModal()">＋ クライアント追加</button>
     <button class="btn btn-g btn-sm" onclick="openJobModal()">＋ 案件追加</button>
     <button class="btn btn-g btn-sm" onclick="syncToSheet(true)" title="案件をスプレッドシートに送信">📊 シート同期</button>
-    <button class="btn btn-g btn-sm" style="border:1px solid var(--green);color:var(--green)" onclick="hakenImportModal()" title="派遣管理シートから案件を取り込む（追加/更新のみ）">📥 派遣シート取込</button>
+    ${PBIZ==='haken'?`<button class="btn btn-g btn-sm" style="border:1px solid var(--green);color:var(--green)" onclick="hakenImportModal()" title="派遣管理シートから案件を取り込む（追加/更新のみ）">📥 派遣シート取込</button>`:''}
     <select style="font-size:12px;padding:4px 8px;border-radius:6px" onchange="JOB_SORT=this.value;render()">
       <option value="deadline" ${JOB_SORT==='deadline'?'selected':''}>納期順（優先度）</option>
       <option value="default" ${JOB_SORT==='default'?'selected':''}>デフォルト</option>
@@ -5290,7 +5377,7 @@ function rProjects(){
 </div>
 ${(()=>{
   const warnings=[];
-  const activeJobs=S.jobs.filter(j=>!j.deleted&&j.status!=='完了'&&j.status!=='キャンセル');
+  const activeJobs=BJOBS().filter(j=>!j.deleted&&j.status!=='完了'&&j.status!=='キャンセル');
   for(const j of activeJobs){
     // ショート動画: クライアント初稿3日前に編集者未定アラーム
     if(j.scope==='ショート動画'&&j.clientDraftDate){
@@ -5355,9 +5442,9 @@ ${{board:rProjBoard,deadline:rProjDeadline,listing:rProjListing,list:()=>rProjLi
 function rProjListing(){
   const ST='案件掲載中';
   // 掲載中の案件（job.status === ST）
-  const listingJobs=sortJobs(S.jobs.filter(j=>!j.deleted&&j.status===ST));
+  const listingJobs=sortJobs(BJOBS().filter(j=>!j.deleted&&j.status===ST));
   // 掲載中のサブタスクを持つ案件（job.status !== ST だが subtask.status === ST のもの）
-  const subListingJobs=sortJobs(S.jobs.filter(j=>!j.deleted&&j.status!==ST&&(j.subtasks||[]).some(s=>s.status===ST)));
+  const subListingJobs=sortJobs(BJOBS().filter(j=>!j.deleted&&j.status!==ST&&(j.subtasks||[]).some(s=>s.status===ST)));
   if(!listingJobs.length&&!subListingJobs.length)return`<div class="empty">
     <div class="empty-icon">📢</div>
     <div class="empty-title">掲載中の案件・サブタスクなし</div>
@@ -5369,7 +5456,7 @@ function rProjListing(){
   const totalJobOut=listingJobs.reduce((s,j)=>s+jobTotalOut(j),0);
   const totalJobProfit=listingJobs.reduce((s,j)=>s+jobProfit(j),0);
   // 掲載中サブタスク（全ジョブから）
-  const allListingSubs=S.jobs.filter(j=>!j.deleted).flatMap(j=>(j.subtasks||[]).filter(s=>s.status===ST).map(s=>({j,s})));
+  const allListingSubs=BJOBS().filter(j=>!j.deleted).flatMap(j=>(j.subtasks||[]).filter(s=>s.status===ST).map(s=>({j,s})));
   const subIn=allListingSubs.reduce((s,{s:sub})=>s+(sub.unitPrice||0),0);
   const subOut=allListingSubs.reduce((s,{s:sub,j})=>s+(sub.workerId&&sub.workerId!==SELF_WID?sub.workerPay||0:0),0);
 
@@ -5476,8 +5563,8 @@ function rProjClients(){
   if(!clients.length)return`<div class="empty"><div class="empty-icon">👤</div><div class="empty-title">クライアントなし</div><div style="color:var(--t2)">「＋ クライアント追加」から登録してください</div></div>`;
 
   // 全クライアントの集計
-  const allActiveJobs=S.jobs.filter(j=>!j.deleted&&j.status!=='完了'&&j.status!=='キャンセル');
-  const allDoneJobs=S.jobs.filter(j=>!j.deleted&&j.status==='完了');
+  const allActiveJobs=BJOBS().filter(j=>!j.deleted&&j.status!=='完了'&&j.status!=='キャンセル');
+  const allDoneJobs=BJOBS().filter(j=>!j.deleted&&j.status==='完了');
   const totalRevenue=allDoneJobs.reduce((s,j)=>s+jobMainIn(j),0);
   const totalProfit=allDoneJobs.reduce((s,j)=>s+jobMainProfit(j),0);
   const totalPending=allDoneJobs.filter(j=>!isJobPaid(j)).reduce((s,j)=>s+jobMainIn(j),0);
@@ -5504,9 +5591,9 @@ function rProjClients(){
 </div>
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
 ${sorted.map(cl=>{
-  const activeJobs=S.jobs.filter(j=>!j.deleted&&j.clientId===cl.id&&j.status!=='完了'&&j.status!=='キャンセル');
-  const doneJobs=S.jobs.filter(j=>!j.deleted&&j.clientId===cl.id&&j.status==='完了');
-  const allJobs=S.jobs.filter(j=>!j.deleted&&j.clientId===cl.id);
+  const activeJobs=BJOBS().filter(j=>!j.deleted&&j.clientId===cl.id&&j.status!=='完了'&&j.status!=='キャンセル');
+  const doneJobs=BJOBS().filter(j=>!j.deleted&&j.clientId===cl.id&&j.status==='完了');
+  const allJobs=BJOBS().filter(j=>!j.deleted&&j.clientId===cl.id);
   const revenue=doneJobs.reduce((s,j)=>s+jobMainIn(j),0);
   const profit=doneJobs.reduce((s,j)=>s+jobMainProfit(j),0);
   const pending=doneJobs.filter(j=>!isJobPaid(j)).reduce((s,j)=>s+jobMainIn(j),0);
@@ -5570,18 +5657,24 @@ ${sorted.map(cl=>{
 }
 
 function rProjBoard(){
-  const statuses=['案件掲載中','未着手','進行中','編集者進行中','FB待ち','確認待ち','修正中','初稿完成'];
-  const scols={'案件掲載中':'#06b6d4','未着手':'#6b7280','進行中':'#3b82f6','編集者進行中':'#ec4899','FB待ち':'#ec4899','確認待ち':'#f59e0b','修正中':'#ef4444','初稿完成':'#7c3aed'};
+  const statuses=bizCfg().board;
+  const base=BJOBS().filter(j=>!j.deleted&&j.status!=='完了'&&j.status!=='キャンセル');
+  // 事業のボード列に無いステータスの案件も必ずどこかに出す(消失防止)
+  const others=sortJobs(base.filter(j=>statuses.indexOf(j.status)<0));
   return`<div class="board-wrap">
 ${statuses.map(st=>{
-  const jobs=sortJobs(S.jobs.filter(j=>!j.deleted&&j.status===st&&j.status!=='完了'&&j.status!=='キャンセル'));
+  const jobs=sortJobs(base.filter(j=>j.status===st));
   return`<div class="board-col">
-    <div class="board-col-hdr" style="background:${scols[st]||'#6b7280'}20;color:${scols[st]||'#6b7280'}">
+    <div class="board-col-hdr" style="background:${BOARD_COL[st]||'#6b7280'}20;color:${BOARD_COL[st]||'#6b7280'}">
       <span>${st}</span><span style="font-size:11px">${jobs.length}</span>
     </div>
     ${jobs.map(j=>rProjCard(j)).join('')}
     <button class="add-day-btn" style="margin-top:4px" onclick="openJobModal(null,'${st}')">＋ 追加</button>
   </div>`;}).join('')}
+${others.length?`<div class="board-col">
+    <div class="board-col-hdr" style="background:#6b728020;color:#6b7280"><span>その他</span><span style="font-size:11px">${others.length}</span></div>
+    ${others.map(j=>rProjCard(j)).join('')}
+  </div>`:''}
 </div>`;
 }
 
@@ -5646,17 +5739,18 @@ function markJobPayout(id){
   save();render();toast('💳 支払い済みにしました');
 }
 function rProjCard(j){
+  const cbz=bizCfgOf(jobBiz(j));
   const cl=S.clients.find(c=>c.id===j.clientId);
   const wNames=getJobWorkerNames(j);
   const uc=urgCls(j.deliveryDate);
   const pr=jobProfit(j),ti=jobTotalIn(j),to=jobTotalOut(j);
   return`<div class="proj-card" onclick="openJobModal('${j.id}')">
-  <div class="proj-card-title">${j.jobType==='consul'?'💼 ':''}${esc(j.title)}</div>
+  <div class="proj-card-title">${esc(j.title)}</div>
   ${cl?`<div class="proj-card-client">👤 ${esc(cl.name)}</div>`:''}
   ${wNames?`<div style="font-size:11px;color:var(--t2);margin-top:2px">🛠 ${esc(wNames)}</div>`:''}
   ${j.scope?`<div style="font-size:11px;color:var(--t2);margin-top:2px">📌 ${esc(j.scope)}</div>`:''}
   ${ti?`<div class="proj-profit" style="font-size:13px">
-    単価 <span style="color:var(--blue)">¥${ti.toLocaleString()}</span>${to?` 支払 <span style="color:var(--amber)">¥${to.toLocaleString()}</span>`:''}
+    ${PBIZ==='hp'?'制作費':PBIZ==='consult'?'顧問料':PBIZ==='tool'?'開発費':'単価'} <span style="color:var(--blue)">¥${ti.toLocaleString()}</span>${to?` 支払 <span style="color:var(--amber)">¥${to.toLocaleString()}</span>`:''}
     → 利益 <span style="color:${pr>=0?'var(--green)':'var(--red)'}">¥${pr.toLocaleString()}</span>
   </div>`:''}
   <div class="proj-card-meta" style="flex-wrap:wrap;gap:4px">
@@ -5666,10 +5760,10 @@ function rProjCard(j){
       :`<button class="btn btn-xs" onclick="event.stopPropagation();markJobPaid('${j.id}')" style="border:1px solid var(--green);color:var(--green);background:transparent;padding:2px 7px;border-radius:100px;font-size:10px;cursor:pointer">💰 入金済みにする</button>`
     }
   </div>
-  ${j.editorDraftDate?`<div class="proj-due-label ${urgCls(j.editorDraftDate)}">✏️ 編集者初稿: ${j.editorDraftDate} (${fmt(j.editorDraftDate)})</div>`:''}
-  ${j.clientDraftDate?`<div class="proj-due-label ${urgCls(j.clientDraftDate)}">📋 クライアント提出: ${j.clientDraftDate} (${fmt(j.clientDraftDate)})</div>`:''}
+  ${j.editorDraftDate&&cbz.lbl.d1s?`<div class="proj-due-label ${urgCls(j.editorDraftDate)}">${cbz.lbl.d1s}: ${j.editorDraftDate} (${fmt(j.editorDraftDate)})</div>`:''}
+  ${j.clientDraftDate&&cbz.lbl.d2s?`<div class="proj-due-label ${urgCls(j.clientDraftDate)}">${cbz.lbl.d2s}: ${j.clientDraftDate} (${fmt(j.clientDraftDate)})</div>`:''}
   ${j.invoiceDate?`<div class="proj-due-label ${urgCls(j.invoiceDate)}">🧾 請求書: ${j.invoiceDate} (${fmt(j.invoiceDate)})</div>`:''}
-  ${j.deliveryDate?`<div class="proj-due-label ${uc}">📅 納品: ${j.deliveryDate} (${fmt(j.deliveryDate)})</div>`:''}
+  ${j.deliveryDate?`<div class="proj-due-label ${uc}">${cbz.lbl.deliverS}: ${j.deliveryDate} (${fmt(j.deliveryDate)})</div>`:''}
   ${(j.subtasks||[]).length?`<div class="subtask-list">${(j.subtasks||[]).map((s,i)=>`<div class="sub-item"><div class="sub-chk ${s.done?'done':''}" onclick="event.stopPropagation();toggleJobSub('${j.id}',${i})"></div><span style="${s.done?'text-decoration:line-through;color:var(--t3)':''}font-size:11px">${esc(s.title)}</span></div>`).join('')}</div>`:''}
 </div>`;
 }
@@ -5679,15 +5773,16 @@ function rProjDeadline(){
   const td=today();
   const dt=new Date();dt.setDate(dt.getDate()+1);
   const tmr=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
-  const active=S.jobs.filter(j=>!j.deleted&&j.status!=='完了'&&j.status!=='キャンセル');
+  const dbz=bizCfg();
+  const active=BJOBS().filter(j=>!j.deleted&&j.status!=='完了'&&j.status!=='キャンセル');
   const todayJobs=active.filter(j=>j.editorDraftDate===td||j.clientDraftDate===td);
   const tmrJobs=active.filter(j=>j.editorDraftDate===tmr||j.clientDraftDate===tmr);
   if(!todayJobs.length&&!tmrJobs.length)
     return`<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">今日・明日が期限の案件はありません</div><div style="color:var(--t2)">編集者初稿・クライアント初稿の提出期限が近づくとここに表示されます</div></div>`;
   const row=(j,date,color)=>{
     const parts=[];
-    if(j.editorDraftDate===date)parts.push('✏️ 編集者初稿');
-    if(j.clientDraftDate===date)parts.push('📋 クライアント初稿');
+    if(j.editorDraftDate===date&&dbz.lbl.d1s)parts.push(dbz.lbl.d1s);
+    if(j.clientDraftDate===date&&dbz.lbl.d2s)parts.push(dbz.lbl.d2s);
     const cl=S.clients.find(c=>c.id===j.clientId);
     const wNames=getJobWorkerNames(j);
     return`<div class="card card-sm" style="margin-bottom:8px;border-left:4px solid ${color};cursor:pointer" onclick="openJobModal('${j.id}')">
@@ -5725,16 +5820,16 @@ function _issuer(){
 }
 function _endNextMonth(iso){const d=iso?new Date(iso):new Date();const last=new Date(d.getFullYear(),d.getMonth()+2,0);return `${last.getFullYear()}-${String(last.getMonth()+1).padStart(2,'0')}-${String(last.getDate()).padStart(2,'0')}`;}
 function _invoiceJobs(cid,m){
-  return S.jobs.filter(j=>!j.deleted&&j.status!=='キャンセル'&&_invAmt(j)>0&&_invMonthMatch(j,m)&&((j.clientId||'')===(cid||'')));
+  return BJOBS().filter(j=>!j.deleted&&j.status!=='キャンセル'&&_invAmt(j)>0&&_invMonthMatch(j,m)&&((j.clientId||'')===(cid||'')));
 }
 function rProjInvoice(){
   const now=new Date();
   const nowM=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  const months=[...new Set(S.jobs.filter(j=>!j.deleted&&_invAmt(j)>0).map(j=>_jobInvDate(j)).filter(Boolean).map(d=>d.slice(0,7)))].sort().reverse();
+  const months=[...new Set(BJOBS().filter(j=>!j.deleted&&_invAmt(j)>0).map(j=>_jobInvDate(j)).filter(Boolean).map(d=>d.slice(0,7)))].sort().reverse();
   if(!months.includes(nowM))months.unshift(nowM);
   const curM=(window._invMonth!==undefined)?window._invMonth:nowM;
   const mLabel=curM||'すべての期間';
-  const jobs=S.jobs.filter(j=>!j.deleted&&j.status!=='キャンセル'&&_invAmt(j)>0&&_invMonthMatch(j,curM));
+  const jobs=BJOBS().filter(j=>!j.deleted&&j.status!=='キャンセル'&&_invAmt(j)>0&&_invMonthMatch(j,curM));
   const byClient={};
   jobs.forEach(j=>{const k=j.clientId||'';(byClient[k]=byClient[k]||[]).push(j);});
   const clientName=cid=>cid?(S.clients.find(c=>c.id===cid)?.name||'不明'):'クライアント未設定';
@@ -6009,7 +6104,7 @@ function saveInvoiceInfo(){
   save();closeModal();render();toast('請求元情報を保存しました');
 }
 function rProjCompleted(){
-  const all=S.jobs.filter(j=>!j.deleted&&(j.status==='完了'||j.status==='キャンセル'));
+  const all=BJOBS().filter(j=>!j.deleted&&(j.status==='完了'||j.status==='キャンセル'));
   if(!all.length)return`<div class="empty"><div class="empty-icon">✅</div><div class="empty-title">完了済み案件なし</div><div style="color:var(--t2)">完了・キャンセルした案件がここに表示されます</div></div>`;
   // 月指定(2026-07-23): 納品日(なければ請求日/入金予定日/作成日)の月で絞り込み
   const monthOf=j=>String(j.deliveryDate||j.invoiceDate||j.paymentDate||(j.createdAt||'').slice(0,10)||'').slice(0,7);
@@ -6033,12 +6128,12 @@ ${done.length?done.map(j=>rJobItem(j)).join(''):`<div class="empty" style="paddi
 }
 
 function rProjList(clients){
-  if(!clients.length&&!S.jobs.filter(j=>!j.deleted).length)
+  if(!clients.length&&!BJOBS().filter(j=>!j.deleted).length)
     return`<div class="empty"><div class="empty-icon">🎬</div><div class="empty-title">案件なし</div><div style="color:var(--t2)">クライアント・案件を追加してください</div></div>`;
-  const ungrouped=sortJobs(S.jobs.filter(j=>!j.deleted&&!j.clientId&&j.status!=='完了'&&j.status!=='キャンセル'));
+  const ungrouped=sortJobs(BJOBS().filter(j=>!j.deleted&&!j.clientId&&j.status!=='完了'&&j.status!=='キャンセル'));
   return`
 ${clients.map(cl=>{
-  const jobs=sortJobs(S.jobs.filter(j=>!j.deleted&&j.clientId===cl.id&&j.status!=='完了'&&j.status!=='キャンセル'));
+  const jobs=sortJobs(BJOBS().filter(j=>!j.deleted&&j.clientId===cl.id&&j.status!=='完了'&&j.status!=='キャンセル'));
   const total=jobs.reduce((s,j)=>s+jobProfit(j),0);
   return`<div class="client-card">
     <div class="client-hdr">
@@ -6085,7 +6180,7 @@ function rProjProfit(){
   // 【2026-07-23改定】利益タブ=「入金予定日(paymentDate)」の月でグルーピング。
   // 入金予定日を入れても入金済みにはならない。入金済み(paidAt=ボタンで確定)の案件はこのタブに表示しない。
   // 対象=「完了案件」または「入金予定日が入っている案件」（＝回収予定）。キャンセルは除外。
-  const done=(S.jobs||[]).filter(j=>!j.deleted&&j.status!=='キャンセル'&&jobMainIn(j)>0&&(j.status==='完了'||j.paymentDate));
+  const done=BJOBS().filter(j=>!j.deleted&&j.status!=='キャンセル'&&jobMainIn(j)>0&&(j.status==='完了'||j.paymentDate));
   const monthOf=j=>String(j.paymentDate||j.invoiceDate||j.deliveryDate||(j.createdAt||'').slice(0,10)||'').slice(0,7);
   const now=new Date();const selDefault=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const months=[...new Set(done.map(monthOf).filter(Boolean))].sort().reverse();
@@ -6130,7 +6225,7 @@ ${jobs.length?`<div class="card" style="padding:0;overflow:hidden">
 
 function getPayEntries(month){
   const entries=[];
-  S.jobs.filter(j=>!j.deleted).forEach(j=>{
+  BJOBS().filter(j=>!j.deleted).forEach(j=>{
     const subs=j.subtasks||[];
     const hasPricedSubs=subs.some(s=>s.unitPrice>0||s.workerPay>0);
     if(hasPricedSubs){
@@ -6152,8 +6247,8 @@ function rProjPayment(){
   const now=new Date();
   const selM=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const allDates=[
-    ...S.jobs.filter(j=>!j.deleted&&j.payoutDate).map(j=>j.payoutDate.slice(0,7)),
-    ...S.jobs.flatMap(j=>(j.subtasks||[]).filter(s=>s.payoutDate).map(s=>s.payoutDate.slice(0,7)))
+    ...BJOBS().filter(j=>!j.deleted&&j.payoutDate).map(j=>j.payoutDate.slice(0,7)),
+    ...BJOBS().flatMap(j=>(j.subtasks||[]).filter(s=>s.payoutDate).map(s=>s.payoutDate.slice(0,7)))
   ];
   const months=[...new Set(allDates)].sort().reverse();
   if(!months.includes(selM))months.unshift(selM);
@@ -6257,9 +6352,9 @@ function delReward(id){
 // ===WORKER VIEW===
 function rProjWorker(){
   const workers=S.workers||[];
-  const allJobs=S.jobs.filter(j=>!j.deleted&&j.status!=='完了'&&j.status!=='キャンセル');
+  const allJobs=BJOBS().filter(j=>!j.deleted&&j.status!=='完了'&&j.status!=='キャンセル');
   // サブタスクを持つジョブも含めて全件取得（完了・キャンセル以外）
-  const allJobsForSubs=S.jobs.filter(j=>!j.deleted);
+  const allJobsForSubs=BJOBS().filter(j=>!j.deleted);
 
   // ワーカーIDに紐づくサブタスク一覧を構築
   function subsForWorker(wid){
@@ -6324,14 +6419,16 @@ function rProjWorker(){
 }
 // ===PRIORITY VIEW===
 function rProjPriority(){
-  const isEditor=PRIO_DRAFT==='editor';
-  const field=isEditor?'editorDraftDate':'clientDraftDate';
-  const fieldLbl=isEditor?'編集者初稿':'クライアント初稿';
+  const pcfg=bizCfg();
+  const prioOpts=pcfg.prio;
+  const pi=Math.min(PRIO_IDX,prioOpts.length-1);
+  const field=prioOpts[pi][0];
+  const fieldLbl=prioOpts[pi][1];
   const td=today();
   const mk=n=>{const d=new Date();d.setDate(d.getDate()+n);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
   const tmr=mk(1),dat=mk(2);
   // 完了・キャンセルは除外。案件＋未完了サブタスクを行に。
-  const activeJobs=S.jobs.filter(j=>!j.deleted&&j.status!=='完了'&&j.status!=='キャンセル');
+  const activeJobs=BJOBS().filter(j=>!j.deleted&&j.status!=='完了'&&j.status!=='キャンセル');
   const rows=[];
   activeJobs.forEach(j=>rows.push({type:'job',job:j,date:j[field]||''}));
   activeJobs.forEach(j=>(j.subtasks||[]).filter(s=>!s.done&&s.status!=='完了'&&s.status!=='キャンセル').forEach(s=>rows.push({type:'sub',job:j,sub:s,date:s[field]||''})));
@@ -6345,8 +6442,7 @@ function rProjPriority(){
   ];
   const toggle=`<div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;flex-wrap:wrap">
     <span style="font-size:12px;color:var(--t2)">基準:</span>
-    <button class="btn btn-sm ${!isEditor?'btn-p':'btn-g'}" onclick="PRIO_DRAFT='client';render()">📋 クライアント初稿</button>
-    <button class="btn btn-sm ${isEditor?'btn-p':'btn-g'}" onclick="PRIO_DRAFT='editor';render()">✏️ 編集者初稿</button>
+    ${prioOpts.map((o,i)=>`<button class="btn btn-sm ${i===pi?'btn-p':'btn-g'}" onclick="PRIO_IDX=${i};render()">${esc(o[1])}</button>`).join('')}
   </div>
   <div style="font-size:11px;color:var(--t3);margin-bottom:10px">${fieldLbl}の日付で「今日・明日・明後日」に振り分け（完了・キャンセルは除外）</div>`;
   if(!rows.length)return`${toggle}<div class="empty"><div class="empty-icon">📊</div><div class="empty-title">案件なし</div></div>`;
@@ -10532,19 +10628,20 @@ function saveClient(){
 function openJobModal(id,preStatus,preClientId){
   EID=id||null;
   const j=id?S.jobs.find(j=>j.id===id):null;
+  const jbiz=j?jobBiz(j):(BIZ_CFG[PBIZ]?PBIZ:'edit');
   const clients=S.clients.filter(c=>!c.deleted);
   const workers=S.workers||[];
   const subs=j?.subtasks||[];
   const up=j?.unitPrice||j?.profit||0, wp=j?.workerPay||0;
   const pr=up-wp;
   openModalLg(`<div class="mhdr"><div class="mtitle">${j?'案件編集':'案件追加'}</div><button class="mclose" onclick="closeModal()">✕</button></div>
-<div class="fg"><div class="fl">案件タイプ</div>
-  <div style="display:flex;gap:6px">
-    <button type="button" id="jt-edit" class="btn btn-sm" onclick="setJobType('edit')">📹 編集案件</button>
-    <button type="button" id="jt-consul" class="btn btn-sm" onclick="setJobType('consul')">💼 コンサル案件</button>
+<div class="fg"><div class="fl">事業</div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap">
+    ${BIZ_DEFS.map(b=>`<button type="button" id="jb-${b.k}" class="btn btn-sm" onclick="setJobBiz('${b.k}')">${b.icon} ${esc(b.label)}</button>`).join('')}
   </div>
 </div>
-<input type="hidden" id="j-type" value="${j?.jobType||'edit'}">
+<input type="hidden" id="j-biz" value="${jbiz}">
+<input type="hidden" id="j-type" value="${j?.jobType||(jbiz==='consult'?'consul':'edit')}">
 <div class="fg"><div class="fl">案件タイトル *</div><input id="j-ttl" value="${esc(j?.title||'')}" placeholder="例: 歌舞伎町のご飯やさん（1本目）"></div>
 <div class="frow">
   <div class="fg"><div class="fl">クライアント名</div>
@@ -10577,13 +10674,10 @@ function openJobModal(id,preStatus,preClientId){
 <input type="hidden" id="j-trial-val" value="${j?.isTrial?'1':'0'}">
 <div class="frow">
   <div class="fg"><div class="fl">ステータス</div>
-    <select id="j-stat">${[...PSTATUS,'商談中','契約中','継続中'].map(s=>`<option ${(j?.status||preStatus||'未着手')===s?'selected':''}>${s}</option>`).join('')}</select>
+    <select id="j-stat">${bizStatOpts(jbiz,j?.status||preStatus||'')}</select>
   </div>
-  <div class="fg" id="jf-scope"><div class="fl">担当範囲</div>
-    <select id="j-scope">
-      <option value="">選択</option>
-      ${['動画編集','サムネイル制作','動画編集＋サムネイル','ショート動画','VSL','スクール動画','その他'].map(s=>`<option ${j?.scope===s?'selected':''}>${s}</option>`).join('')}
-    </select>
+  <div class="fg" id="jf-scope"><div class="fl" id="jl-scope">${bizCfgOf(jbiz).lbl.scope}</div>
+    <select id="j-scope">${bizScopeOpts(jbiz,j?.scope||'')}</select>
   </div>
 </div>
 <div style="font-size:12px;font-weight:700;color:var(--t2);margin:10px 0 6px">📅 日程</div>
@@ -10591,23 +10685,25 @@ function openJobModal(id,preStatus,preClientId){
   <div class="fg"><div class="fl" id="jl-shared">共有日</div><input type="date" id="j-shared" value="${j?.sharedDate||''}"></div>
   <div class="fg"><div class="fl" id="jl-deliver">納品日</div><input type="date" id="j-deliver" value="${j?.deliveryDate||''}"></div>
 </div>
-<div id="jf-editdates">
-<div class="frow">
-  <div class="fg"><div class="fl">編集者 初稿</div><input type="date" id="j-editor-draft" value="${j?.editorDraftDate||''}"></div>
-  <div class="fg"><div class="fl">クライアント提出 初稿</div><input type="date" id="j-client-draft" value="${j?.clientDraftDate||''}"></div>
+<div class="frow" id="jf-drafts">
+  <div class="fg"><div class="fl" id="jl-d1">編集者 初稿</div><input type="date" id="j-editor-draft" value="${j?.editorDraftDate||''}"></div>
+  <div class="fg"><div class="fl" id="jl-d2">クライアント提出 初稿</div><input type="date" id="j-client-draft" value="${j?.clientDraftDate||''}"></div>
 </div>
-<div class="frow">
+<div class="frow" id="jf-thumb">
   <div class="fg"><div class="fl">🖼 サムネイル納品日</div><input type="date" id="j-thumbnail" value="${j?.thumbnailDate||''}"></div>
   <div class="fg"></div>
-</div>
 </div>
 <div style="font-size:12px;font-weight:700;color:var(--t2);margin:10px 0 6px">💰 報酬</div>
 <div class="frow">
   <div class="fg"><div class="fl" id="jl-unit">単価（円）<span id="j-unit-hint" style="font-size:10px;color:var(--t3);font-weight:400">${subs.some(s=>s.unitPrice>0)?' (サブタスクから自動計算)':''}</span></div><input type="number" id="j-unit" value="${j?jobTotalIn(j)||'':''}" placeholder="0" oninput="updJobProfit()" ${subs.some(s=>s.unitPrice>0)?'readonly style="opacity:.6"':''}></div>
-  <div class="fg" id="jf-wpay"><div class="fl">ワーカー支払額（円）<span id="j-wpay-hint" style="font-size:10px;color:var(--t3);font-weight:400">${subs.some(s=>s.workerPay>0)?' (自動計算)':''}</span></div><input type="number" id="j-wpay" value="${j?jobTotalOut(j)||'':''}" placeholder="0" oninput="updJobProfit()" ${subs.some(s=>s.workerPay>0)?'readonly style="opacity:.6"':''}></div>
+  <div class="fg" id="jf-wpay"><div class="fl" id="jl-wpay">ワーカー支払額（円）<span id="j-wpay-hint" style="font-size:10px;color:var(--t3);font-weight:400">${subs.some(s=>s.workerPay>0)?' (自動計算)':''}</span></div><input type="number" id="j-wpay" value="${j?jobTotalOut(j)||'':''}" placeholder="0" oninput="updJobProfit()" ${subs.some(s=>s.workerPay>0)?'readonly style="opacity:.6"':''}></div>
 </div>
-<div class="fg" id="jf-profit"><div class="fl">利益（自動計算）</div>
+<div class="fg" id="jf-profit"><div class="fl" id="jl-profit">利益（自動計算）</div>
   <div id="j-profit-disp" style="padding:8px 12px;background:var(--card2);border-radius:var(--rs);font-weight:700;color:${pr>=0?'var(--green)':'var(--red)'}">¥${pr.toLocaleString()}</div>
+</div>
+<div class="frow" id="jf-monthly">
+  <div class="fg"><div class="fl" id="jl-monthly">月額（円）</div><input type="number" id="j-monthly" value="${j?.monthlyFee||''}" placeholder="0"></div>
+  <div class="fg"></div>
 </div>
 <div class="frow">
   <div class="fg"><div class="fl">請求書提出日 <span style="color:var(--red)">*</span></div><input type="date" id="j-invoice" value="${j?.invoiceDate||''}"></div>
@@ -10630,7 +10726,7 @@ function openJobModal(id,preStatus,preClientId){
 </div>
 <div id="jf-subs">
 <div style="font-size:12px;font-weight:700;color:var(--t2);margin:10px 0 4px">✅ サブタスク <span style="font-weight:400;color:var(--t3)">（単価・支払はサブタスクごとに入力すると案件全体の金額が自動計算されます）</span></div>
-<div id="j-sub-cont">${subs.map((s,i)=>mkSubRow(s,`サブタスク ${i+1}`)).join('')}</div>
+<div id="j-sub-cont">${subs.map((s,i)=>mkSubRow(s,`サブタスク ${i+1}`,jbiz)).join('')}</div>
 <div style="display:flex;gap:6px;align-items:center;margin-bottom:5px">
   <button class="btn btn-g btn-xs" onclick="addJobSubField()">＋ サブタスク追加</button>
   <span style="font-size:11px;color:var(--t3)">単価・支払を入力すると案件全体が自動計算</span>
@@ -10643,7 +10739,7 @@ function openJobModal(id,preStatus,preClientId){
   <button class="btn btn-p" onclick="saveJob()">保存</button>
 </div>`);
   document.getElementById('j-ttl')?.focus();
-  setJobType(document.getElementById('j-type')?.value||'edit');
+  setJobBiz(jbiz,true);
   updPaidBtn();
 }
 // 入金状態(入金済み=paidAt)のトグル。入金予定日(j-payin)とは別物。保存はj-paid-valの値を保存ボタンで確定。
@@ -10666,16 +10762,29 @@ function togglePaid(){
   val.value=val.value?'':today();
   updPaidBtn();
 }
-function setJobType(t){
-  const el=document.getElementById('j-type');if(el)el.value=t;
-  const isConsul=t==='consul';
-  ['jf-scope','jf-editdates','jf-wpay','jf-profit','jf-subs'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display=isConsul?'none':'';});
-  const lu=document.getElementById('jl-unit');if(lu&&lu.childNodes[0])lu.childNodes[0].nodeValue=isConsul?'報酬（円）':'単価（円）';
-  const ls=document.getElementById('jl-shared');if(ls)ls.textContent=isConsul?'開始日':'共有日';
-  const ld=document.getElementById('jl-deliver');if(ld)ld.textContent=isConsul?'完了予定日':'納品日';
-  const be=document.getElementById('jt-edit'),bc=document.getElementById('jt-consul');
-  if(be)be.className='btn btn-sm '+(isConsul?'btn-g':'btn-p');
-  if(bc)bc.className='btn btn-sm '+(isConsul?'btn-p':'btn-g');
+function _curJobBiz(){return document.getElementById('j-biz')?.value||PBIZ||'edit';}
+function setJobBiz(k,init){
+  const cfg=bizCfgOf(k);
+  const el=document.getElementById('j-biz');if(el)el.value=k;
+  const tel=document.getElementById('j-type');if(tel)tel.value=(k==='consult'?'consul':'edit');
+  BIZ_DEFS.forEach(b=>{const btn=document.getElementById('jb-'+b.k);if(btn)btn.className='btn btn-sm '+(b.k===k?'btn-p':'btn-g');});
+  const setTxt=(id,t)=>{const e=document.getElementById(id);if(!e)return;if(e.childNodes[0]&&e.childNodes[0].nodeType===3)e.childNodes[0].nodeValue=t;else e.insertBefore(document.createTextNode(t),e.firstChild);};
+  setTxt('jl-scope',cfg.lbl.scope);setTxt('jl-shared',cfg.lbl.shared);setTxt('jl-deliver',cfg.lbl.deliver);
+  setTxt('jl-d1',cfg.lbl.d1||'初稿(社内)');setTxt('jl-d2',cfg.lbl.d2||'クライアント提出');
+  setTxt('jl-unit',cfg.lbl.unit);setTxt('jl-wpay',cfg.lbl.wpay);setTxt('jl-profit',cfg.lbl.profit);
+  setTxt('jl-monthly',cfg.lbl.monthly||'月額（円）');
+  const shw=(id,v)=>{const e=document.getElementById(id);if(e)e.style.display=v?'':'none';};
+  shw('jf-scope',cfg.show.scope);shw('jf-drafts',cfg.show.d1||cfg.show.d2);shw('jf-thumb',cfg.show.thumb);
+  shw('jf-wpay',cfg.show.wpay);shw('jf-profit',cfg.show.wpay);shw('jf-subs',cfg.show.subs);shw('jf-monthly',cfg.show.monthly);
+  if(!init){
+    const st=document.getElementById('j-stat');
+    if(st){const cur=st.value;st.innerHTML=bizStatOpts(k,cfg.statuses.indexOf(cur)>=0?cur:'');}
+    const sc=document.getElementById('j-scope');
+    if(sc){const cur=sc.value;sc.innerHTML=bizScopeOpts(k,cfg.scopes.indexOf(cur)>=0?cur:'');}
+    document.querySelectorAll('#j-sub-cont .j-sub-status').forEach(sel=>{const cur=sel.value;sel.innerHTML=bizStatOpts(k,cfg.statuses.indexOf(cur)>=0?cur:'');});
+    document.querySelectorAll('#j-sub-cont .j-sub-d1-lbl').forEach(e=>{e.textContent=cfg.lbl.d1||'初稿(社内)';});
+    document.querySelectorAll('#j-sub-cont .j-sub-d2-lbl').forEach(e=>{e.textContent=cfg.lbl.d2||'クライアント提出';});
+  }
   if(typeof updJobProfit==='function')updJobProfit();
 }
 function toggleJobTrial(){
@@ -10718,12 +10827,14 @@ function updJobProfit(){
 function addJobSubField(){
   const c=document.getElementById('j-sub-cont');
   const d=document.createElement('div');
-  d.innerHTML=mkSubRow({},'サブタスク');
+  d.innerHTML=mkSubRow({},'サブタスク',_curJobBiz());
   const row=d.firstElementChild;
   c.appendChild(row);row.querySelector('.j-sub-inp').focus();
 }
-function mkSubRow(s,ph){
-  const st=s.status||'未着手';
+function mkSubRow(s,ph,bk){
+  const _bk=bk||_curJobBiz();
+  const _bc=bizCfgOf(_bk);
+  const st=s.status||_bc.statuses[0];
   return`<div class="j-sub-row" style="background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);padding:10px;margin-bottom:8px">
   <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
     <div class="chk${s.done?' done':''}" onclick="this.classList.toggle('done');updSubPrices()" style="flex-shrink:0"></div>
@@ -10732,9 +10843,7 @@ function mkSubRow(s,ph){
   </div>
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:5px">
     <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">ステータス</div>
-      <select class="j-sub-status" style="font-size:12px;padding:4px 6px">
-        ${PSTATUS.map(opt=>`<option${opt===st?' selected':''}>${opt}</option>`).join('')}
-      </select>
+      <select class="j-sub-status" style="font-size:12px;padding:4px 6px">${bizStatOpts(_bk,st)}</select>
     </div>
     <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">担当者</div>
       <select class="j-sub-worker" style="font-size:12px;padding:4px 6px">
@@ -10758,10 +10867,10 @@ function mkSubRow(s,ph){
     <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">共有日</div>
       <input class="j-sub-shared" type="date" value="${s.sharedDate||''}" style="font-size:12px;padding:4px 6px">
     </div>
-    <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">編集者 初稿</div>
+    <div><div class="j-sub-d1-lbl" style="font-size:10px;color:var(--t3);margin-bottom:2px">${_bc.lbl.d1||'初稿(社内)'}</div>
       <input class="j-sub-editor" type="date" value="${s.editorDraftDate||''}" style="font-size:12px;padding:4px 6px">
     </div>
-    <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">クライアント提出 初稿</div>
+    <div><div class="j-sub-d2-lbl" style="font-size:10px;color:var(--t3);margin-bottom:2px">${_bc.lbl.d2||'クライアント提出'}</div>
       <input class="j-sub-client" type="date" value="${s.clientDraftDate||''}" style="font-size:12px;padding:4px 6px">
     </div>
     <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">納品日</div>
@@ -10845,7 +10954,7 @@ function saveJob(){
   const onlySelf=selWorkerIds.length===0||selWorkerIds.every(id=>id===SELF_WID);
   const workerPay=hasPricedSubs?subtasks.filter(s=>s.workerId!==SELF_WID).reduce((s,sub)=>s+(sub.workerPay||0),0):(onlySelf?0:parseInt(document.getElementById('j-wpay')?.value)||0);
   const isTrial=document.getElementById('j-trial-val')?.value==='1';
-  const data={title,jobType:document.getElementById('j-type')?.value||'edit',clientId:document.getElementById('j-cl').value||null,workerIds:selWorkerIds,workerId:selWorkerIds[0]||null,scope:document.getElementById('j-scope').value||null,status:document.getElementById('j-stat').value,isTrial,unitPrice,profit:unitPrice,workerPay,sharedDate:document.getElementById('j-shared').value||null,editorDraftDate:document.getElementById('j-editor-draft').value||null,clientDraftDate:document.getElementById('j-client-draft').value||null,thumbnailDate:document.getElementById('j-thumbnail')?.value||null,deliveryDate:document.getElementById('j-deliver').value||null,invoiceDate:document.getElementById('j-invoice').value||null,dueDate:document.getElementById('j-due')?.value||null,paymentDate:document.getElementById('j-payin').value||null,paidAt:document.getElementById('j-paid-val')?.value||null,payoutDate:document.getElementById('j-payout').value||null,notes:document.getElementById('j-notes').value.trim(),subtasks};
+  const data={title,biz:document.getElementById('j-biz')?.value||'edit',monthlyFee:parseInt(document.getElementById('j-monthly')?.value)||0,jobType:document.getElementById('j-type')?.value||'edit',clientId:document.getElementById('j-cl').value||null,workerIds:selWorkerIds,workerId:selWorkerIds[0]||null,scope:document.getElementById('j-scope').value||null,status:document.getElementById('j-stat').value,isTrial,unitPrice,profit:unitPrice,workerPay,sharedDate:document.getElementById('j-shared').value||null,editorDraftDate:document.getElementById('j-editor-draft').value||null,clientDraftDate:document.getElementById('j-client-draft').value||null,thumbnailDate:document.getElementById('j-thumbnail')?.value||null,deliveryDate:document.getElementById('j-deliver').value||null,invoiceDate:document.getElementById('j-invoice').value||null,dueDate:document.getElementById('j-due')?.value||null,paymentDate:document.getElementById('j-payin').value||null,paidAt:document.getElementById('j-paid-val')?.value||null,payoutDate:document.getElementById('j-payout').value||null,notes:document.getElementById('j-notes').value.trim(),subtasks};
   if(EID){
     const j=S.jobs.find(j=>j.id===EID);
     const prevStatus=j?.status;
@@ -13693,7 +13802,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260726-05';
+const APP_VERSION='20260726-06';
 
 render();
 try{renderAuthGate();}catch(e){console.warn('authGate init',e);}  // 認証確定まではログイン/読込画面で画面を覆う
