@@ -6334,7 +6334,7 @@ function rProjPriority(){
   const activeJobs=S.jobs.filter(j=>!j.deleted&&j.status!=='完了'&&j.status!=='キャンセル');
   const rows=[];
   activeJobs.forEach(j=>rows.push({type:'job',job:j,date:j[field]||''}));
-  activeJobs.forEach(j=>(j.subtasks||[]).filter(s=>!s.done).forEach(s=>rows.push({type:'sub',job:j,sub:s,date:s[field]||''})));
+  activeJobs.forEach(j=>(j.subtasks||[]).filter(s=>!s.done&&s.status!=='完了'&&s.status!=='キャンセル').forEach(s=>rows.push({type:'sub',job:j,sub:s,date:s[field]||''})));
   const dayKeys=[td,tmr,dat];
   const others=rows.filter(r=>!dayKeys.includes(r.date)).sort((a,b)=>((a.date||'9999')>(b.date||'9999')?1:-1));
   const groups=[
@@ -13693,7 +13693,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260726-04';
+const APP_VERSION='20260726-05';
 
 render();
 try{renderAuthGate();}catch(e){console.warn('authGate init',e);}  // 認証確定まではログイン/読込画面で画面を覆う
