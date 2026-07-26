@@ -7772,6 +7772,23 @@ function rInquiries(){
   const F=(r,i)=>esc((r[i]!=null?String(r[i]):'').trim());
   const body=!total?`<div class="empty"><div class="empty-icon">📮</div><div class="empty-title">お問い合わせはまだありません</div></div>`:items.map(x=>{
     const r=x.r;const cur=(r[8]||'').trim()||'未対応';
+    // ヒアリング(J..O列=r[9]..r[14])。GASが唯一の正でFirestoreには保存しない。
+    const hStatus=(r[10]!=null?String(r[10]):'').trim()||'未送信';
+    const hTokenRaw=(r[9]!=null?String(r[9]):'').trim();
+    const hFolderRaw=(r[13]!=null?String(r[13]):'').trim();
+    const hChipCls=hStatus==='送信済'?'bb':hStatus==='回答中'?'ba':hStatus==='回答完了'?'bg':'bk';
+    const hBtns=[];
+    if(!hTokenRaw||hStatus==='未送信'){
+      hBtns.push(`<button class="btn btn-g btn-xs" onclick="inqHearingSend(${x.sheetRow},this)" title="ヒアリング案内メールを送信">📮 ヒアリングを送る</button>`);
+    }else{
+      hBtns.push(`<button class="btn btn-g btn-xs" onclick="inqHearingCopyUrl(${JSON.stringify(hTokenRaw)})" title="ヒアリングURLをコピー">🔗 URLをコピー</button>`);
+      if(hStatus==='送信済'||hStatus==='回答中'){
+        hBtns.push(`<button class="btn btn-g btn-xs" onclick="inqHearingRemind(${x.sheetRow},this)" title="残項目を明記してリマインド送信">⏰ リマインド</button>`);
+      }
+      if(hStatus==='回答中'||hStatus==='回答完了'){
+        hBtns.push(`<button class="btn btn-g btn-xs" onclick="inqHearingToggleDetail(${x.sheetRow})">${INQ_HEARING_OPEN[x.sheetRow]?'▲ 回答を閉じる':'👀 回答を見る'}</button>`);
+      }
+    }
     return`<div class="card" style="margin-bottom:10px">
   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
     <div style="min-width:0">
@@ -7784,10 +7801,15 @@ function rInquiries(){
     <span>✉️ ${F(r,3)||'-'}</span><span>📞 ${F(r,4)||'-'}</span><span>🏷 ${F(r,5)||'-'}</span><span>種別 ${F(r,6)||'-'}</span>
   </div>
   <div style="font-size:13px;color:var(--t2);margin-top:8px;white-space:pre-wrap;line-height:1.75">${F(r,7)||'(相談内容なし)'}</div>
+  <div style="margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <span class="badge ${hChipCls}">📋 ヒアリング ${esc(hStatus)}</span>${F(r,12)?`<span style="font-size:11px;color:var(--t3)">${F(r,12)}更新</span>`:''}
+  </div>
   <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
   ${cur==='成約'?`<button class="btn btn-g btn-xs" onclick="crmFromInquiry(${JSON.stringify(String(r[1]||'')).replace(/"/g,'&quot;')},${JSON.stringify(String(r[2]||'')).replace(/"/g,'&quot;')},${JSON.stringify(String(r[3]||'')).replace(/"/g,'&quot;')},${JSON.stringify(String(r[4]||'')).replace(/"/g,'&quot;')})" title="このお問い合わせをクライアント台帳に登録">🤝 クライアント登録</button>`:''}
+    ${hBtns.join('')}
     <button class="btn btn-g btn-red btn-xs" onclick="inqDelete(${x.sheetRow},${JSON.stringify(String(r[1]||'')+' / '+String(r[2]||'')).replace(/"/g,'&quot;')})" title="このお問い合わせを削除(削除済みシートへ退避)">🗑 削除</button>
   </div>
+  ${INQ_HEARING_OPEN[x.sheetRow]?_hearingDetailHtml(x.sheetRow,hFolderRaw):''}
 </div>`;
   }).join('');
   return`${head}
@@ -7877,6 +7899,80 @@ async function inqDelete(sheetRow,label){
     if(INQ_TRASH_OPEN)inqTrashLoad();
     inqReload();  // 行番号がずれるため必ずGASから取り直す
   }catch(e){toast('削除に失敗しました','err');}
+}
+// ===ぽいっとHP 自動ヒアリング(GASが唯一の正。Firestore/Sには何も保存しない)===
+// 列: J(10)=r[9]token K(11)=r[10]status L(12)=r[11]json M(13)=r[12]updated N(14)=r[13]folderUrl O(15)=r[14]reminderLog
+let INQ_HEARING_OPEN={};
+async function inqHearingSend(sheetRow,btn){
+  if(btn)btn.disabled=true;
+  const key=await _poittoKey();
+  if(!key){if(btn)btn.disabled=false;toast('設定未完了: 管理キーがありません','warn');return;}
+  try{
+    const res=await fetch(`${POITTO_EXEC}?key=${encodeURIComponent(key)}&action=hearing_send&row=${encodeURIComponent(sheetRow)}`);
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||!data.success)throw new Error((data&&data.error)||'HTTP '+res.status);
+    toast('ヒアリングを送信しました 📮');
+    inqReload();
+  }catch(e){toast('送信に失敗しました: '+String(e&&e.message||e),'err');}
+  if(btn)btn.disabled=false;
+}
+function inqHearingCopyUrl(token){
+  if(!token){toast('トークンがありません','warn');return;}
+  const url=`https://mono-create-group.github.io/lp/sample-hp/showcase/hearing.html#t=${encodeURIComponent(token)}`;
+  const done=()=>toast('ヒアリングURLをコピーしました 🔗');
+  const fail=()=>toast('コピーに失敗しました','err');
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(url).then(done).catch(fail);}
+  else{try{const ta=document.createElement('textarea');ta.value=url;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);done();}catch(e){fail();}}
+}
+async function inqHearingRemind(sheetRow,btn){
+  if(btn)btn.disabled=true;
+  const key=await _poittoKey();
+  if(!key){if(btn)btn.disabled=false;toast('設定未完了: 管理キーがありません','warn');return;}
+  try{
+    const res=await fetch(`${POITTO_EXEC}?key=${encodeURIComponent(key)}&action=hearing_remind&row=${encodeURIComponent(sheetRow)}`);
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||!data.success)throw new Error((data&&data.error)||'HTTP '+res.status);
+    toast('リマインドを送信しました ⏰');
+    inqReload();
+  }catch(e){toast('リマインドに失敗しました: '+String(e&&e.message||e),'err');}
+  if(btn)btn.disabled=false;
+}
+async function inqHearingToggleDetail(sheetRow){
+  if(INQ_HEARING_OPEN[sheetRow]){INQ_HEARING_OPEN[sheetRow]=false;render();return;}
+  INQ_HEARING_OPEN[sheetRow]=true;
+  window.__poittoHearingDetail=window.__poittoHearingDetail||{};
+  render();
+  const key=await _poittoKey();
+  if(!key){window.__poittoHearingDetail[sheetRow]={error:'管理キーがありません'};render();return;}
+  window.__poittoHearingDetail[sheetRow]={loading:true};render();
+  try{
+    const res=await fetch(`${POITTO_EXEC}?key=${encodeURIComponent(key)}&action=hearing_detail&row=${encodeURIComponent(sheetRow)}`);
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||!data.success)throw new Error((data&&data.error)||'HTTP '+res.status);
+    window.__poittoHearingDetail[sheetRow]=data;
+  }catch(e){
+    window.__poittoHearingDetail[sheetRow]={error:String(e&&e.message||e)};
+  }
+  render();
+}
+function _hearingDetailHtml(sheetRow,folderUrlFallback){
+  const d=(window.__poittoHearingDetail||{})[sheetRow];
+  if(!d)return'';
+  if(d.loading)return`<div style="margin-top:10px;padding:10px;background:var(--card2);border-radius:10px;font-size:12px;color:var(--t2)">読み込み中…</div>`;
+  if(d.error)return`<div style="margin-top:10px;padding:10px;background:var(--card2);border-radius:10px;font-size:12px;color:var(--red)">回答の取得に失敗しました: ${esc(d.error)}</div>`;
+  const answers=(d&&d.answers)||{};
+  const keys=Object.keys(answers);
+  const folderUrl=(d&&d.folderUrl)||folderUrlFallback||'';
+  const rows=keys.length?keys.map(k=>{
+    const v=answers[k];
+    const disp=v==null?'':(typeof v==='object'?JSON.stringify(v):String(v));
+    return`<div style="padding:6px 0;border-top:1px solid var(--border)"><div style="font-size:11px;color:var(--t3);font-weight:700">${esc(k)}</div><div style="font-size:13px;color:var(--t2);white-space:pre-wrap;line-height:1.6">${esc(disp)||'-'}</div></div>`;
+  }).join(''):`<div style="font-size:12px;color:var(--t3)">まだ回答はありません</div>`;
+  return`<div style="margin-top:10px;padding:10px;background:var(--card2);border-radius:10px">
+  <div style="font-weight:800;font-size:12px;margin-bottom:4px">回答内容${d.status?`（${esc(d.status)}）`:''}</div>
+  ${rows}
+  ${folderUrl?`<div style="margin-top:8px"><a href="${esc(folderUrl)}" target="_blank" rel="noopener" style="font-size:12px;color:var(--blue);font-weight:700">📁 写真フォルダを開く</a></div>`:''}
+</div>`;
 }
 // ===チームKGI/KPI（全アカウント共有・個人目標とは別）===
 function _pct(cur,tgt){tgt=+tgt||0;if(!tgt)return 0;return Math.max(0,Math.min(100,Math.round((+cur||0)/tgt*100)));}
@@ -14065,7 +14161,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260726-10';
+const APP_VERSION='20260726-11';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
