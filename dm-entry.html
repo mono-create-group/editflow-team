@@ -65,7 +65,7 @@ a{color:var(--pl)}
     <label>電話番号 <small>（任意）</small></label>
     <input id="phone" maxlength="20" placeholder="例: 090-1234-5678">
     <input class="hp" id="hp" tabindex="-1" autocomplete="off">
-    <div class="agree">営業用Instagramアカウントは、会社発行のメールアドレスと初期パスワードで作成します。会社の営業用アカウントのため、運営（中村）もログインして管理します。この運用に同意のうえ送信してください。</div>
+    <div class="agree">営業用Instagramアカウントは、ご自身で新しく作成したメールアドレスとパスワードで登録します（作成後、完了報告で会社に共有します）。会社の営業用アカウントのため、運営もログインして管理します。この運用に同意のうえ送信してください。</div>
     <button class="btn" id="sbtn" type="submit">登録する</button>
   </form>
   <div class="msg" id="msg"></div>
@@ -93,7 +93,6 @@ document.getElementById('f').addEventListener('submit',function(ev){
     if(d.success){
       msg.className='msg ok';
       msg.innerHTML='<b>登録が完了しました。</b><br>'+esc(email)+' 宛てに開始手順のメールを送りました。<br>'
-        +(d.igmail?'あなたのInstagram登録用メール: <b>'+esc(d.igmail)+'</b><br>':'')
         +'メールが5分以内に届かない場合は、迷惑メールフォルダも確認してください。';
       document.getElementById('f').style.display='none';
     }else{
