@@ -121,6 +121,22 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 .check li:last-child{border-bottom:none}
 .check li::before{content:"";position:absolute;left:2px;top:12px;width:18px;height:18px;border:2px solid var(--pl);border-radius:5px}
 
+/* 支払いタイムライン(モバイルで縦積み) */
+.paytl{display:flex;align-items:stretch;gap:10px;flex-wrap:wrap;margin:14px 0 4px}
+.paytl-step{flex:1;min-width:150px;border-radius:12px;padding:14px 12px;text-align:center;border:1.5px solid var(--border);background:var(--card)}
+.paytl-step.ok{border-color:var(--pl);background:var(--pldim)}
+.paytl-step.pay{border-color:var(--green);background:var(--greendim)}
+.paytl-when{font-size:16px;font-weight:800;line-height:1.4}
+.paytl-step.ok .paytl-when{color:var(--pldeep)}
+.paytl-step.pay .paytl-when{color:var(--green)}
+.paytl-what{font-size:12.5px;color:var(--t2);margin-top:2px}
+.paytl-arrow{align-self:center;font-size:20px;color:var(--t3);font-weight:700}
+.paytl-note{flex-basis:100%;background:var(--amberdim);color:#8a5a10;border-radius:10px;padding:10px 14px;font-size:12.5px;line-height:1.9;text-align:center}
+@media(max-width:560px){
+  .paytl{flex-direction:column;gap:8px}
+  .paytl-arrow{transform:rotate(90deg);align-self:center}
+}
+
 /* 図版 */
 .fig{margin:16px auto 4px;text-align:center}
 .fig svg{max-width:100%;height:auto}
@@ -153,17 +169,34 @@ a{color:var(--pl)}
   <p class="sec-lead">初めての方は、作業に入る前にここだけ読んでください。全体像が分かると、DMの1通1通の意味が変わります。</p>
 
   <div class="card">
-    <h3><span class="mini">1</span>何を売っているのか</h3>
-    <p>mono.create（旭川の会社）の<b>お店向けホームページ制作「ぽいっとHP」</b>です。制作49,800円＋月額3,000円の一律価格。文章も写真も更新も全部こちらで行うので、お店側は完成品を見るだけです。</p>
+    <h3><span class="mini">1</span>ホームページ制作「ぽいっとHP」</h3>
+    <p><b>何を:</b> 制作49,800円＋月額3,000円の一律価格でホームページを制作します。文章も写真も更新も全部こちらで行うので、お店側は完成品を見るだけです。</p>
+    <p><b>誰に:</b> Instagramは更新しているのに、<b>ホームページがないお店</b>（美容室・サロン・整体・小売・教室など）。</p>
+    <p><b>なぜ刺さるか:</b> 名前で検索しても古いポータルサイトしか出てこず、新しいお客さんを逃しているからです。「先に無料でデモサイトを作って見せる」提案なので、相手はリスクゼロで判断できます。</p>
   </div>
   <div class="card">
-    <h3><span class="mini">2</span>誰に売るのか</h3>
-    <p><b>Instagramは更新しているのに、ホームページがないお店</b>（美容室・整体・小売・教室など）です。こういうお店は、名前で検索しても古いポータルサイトしか出てこず、新しいお客さんを逃しています。ここに「先に無料でデモサイトを作って見せる」提案が刺さります。</p>
+    <h3><span class="mini">2</span>AI顧問</h3>
+    <p><b>何を:</b> 現場に実際に入り込み、無駄を徹底的に省きます。AIによって業務の効率化・自動化を実現する顧問サービスです。</p>
+    <p><b>誰に:</b> 人手が足りない、社長や現場が作業に追われている中小企業・店舗。</p>
+    <p><b>なぜ刺さるか:</b> 「AIを使いたいが何から手をつければいいか分からない」という会社がほとんどだからです。外から指示を出すのではなく<b>現場に入る</b>点が他社と決定的に違います。</p>
   </div>
   <div class="card">
-    <h3><span class="mini">3</span>あなたの役割</h3>
+    <h3><span class="mini">3</span>自動化ツール制作</h3>
+    <p><b>何を:</b> その会社に合わせた専用の自動化ツールを制作します。業務フローを細かく確認し、労力を徹底的に省きます。</p>
+    <p><b>誰に:</b> 毎日・毎月きまった手作業（集計・転記・シフト作成・請求など）が発生している会社。</p>
+    <p><b>なぜ刺さるか:</b> 既製のソフトでは自社のやり方に合わず、結局手作業が残っているからです。専用に作るので<b>その会社の作業だけが消えます</b>。</p>
+  </div>
+
+  <div class="card" style="border:1.5px solid var(--pl)">
+    <h3><span class="mini">4</span>あなたが担当する事業は「営業指示」で決まります</h3>
+    <p>3事業のどれを担当していただくかは、日によって変わります。<b>社内アプリの営業リストを開くと、いちばん上に「営業指示」が表示されます</b>。そこに、あなた宛の「事業 × ジャンル（業種）」が出ているので、<b>毎回それを読んでから送付を始めてください</b>。</p>
+    <p>指示は運営が随時更新します。あなた宛の指示と「全員」宛の指示だけが表示されるので、自分に関係のあるものだけを見れば大丈夫です。</p>
+  </div>
+
+  <div class="card">
+    <h3><span class="mini">5</span>あなたの役割</h3>
     <p>営業用Instagramアカウントから、<b>テンプレートのDMを送ること</b>です。返信が来たらその日のうちに一次対応し、興味を持った方は運営につなぎます。<b>商談・制作・納品はすべて運営が行う</b>ので、あなたが売り込みトークや値段交渉をする必要はありません。</p>
-    <p>1日の作業は「営業リストを開く→上から順にDMを送る→その場で記録する」の繰り返しです。送った件数と返信は自動で集計され、あなたの実績として残ります。</p>
+    <p>1日の作業は「営業指示を確認する→営業リストを上から順にDMを送る→その場で記録する」の繰り返しです。送った件数と返信は自動で集計され、あなたの実績として残ります。</p>
   </div>
 </section>
 
@@ -351,7 +384,7 @@ AI導入支援・コンサル
     <h3><span class="mini">B</span>今日の送信先を絞り込む</h3>
     <p>画面上部の絞り込みボタンを、毎回この組み合わせにします。</p>
     <ol>
-      <li>事業タブ: <b>HP制作</b>（AI事業担当の人は指示された事業タブ）</li>
+      <li>事業タブ: <b>営業指示で指定された事業</b>（HP制作／AI顧問／自動化ツール）を選ぶ</li>
       <li>ジャンル: 営業リスト最上部の<b>「営業指示」</b>に表示される、自分宛の指示（事業×ジャンル）に合わせる（指示がない日は絞り込みなしでOK）</li>
       <li>ステータス: <b>未接触</b></li>
       <li>連絡先: <b>IGあり</b>（Instagramが登録されている店だけに絞る）</li>
@@ -436,6 +469,66 @@ AI導入支援・コンサル
     <div class="rule"><b>価格は言い切る</b><span>「49,800円のみ」。値引きの相談をされたら自分で判断せず中村へ。</span></div>
     <div class="rule"><b>文面を勝手に変えない</b><span>テンプレートの文章はそのまま使う。変えたい案があれば中村へ提案。</span></div>
     <div class="rule"><b>誇大表現の禁止</b><span>「絶対に売上が上がります」等は言わない。無料デモと実物で伝える。</span></div>
+  </div>
+</section>
+
+<!-- ═══════════ お支払い ═══════════ -->
+<section class="sec" id="payment">
+  <div class="sec-head"><div class="num" style="background:var(--green);box-shadow:0 6px 16px rgba(22,163,74,.3)">報酬</div><h2>お支払いについて</h2></div>
+  <p class="sec-lead">報酬は請求書でのお支払いです。提出が1日でも遅れると支払いが1か月後ろにずれるので、ここだけは必ず守ってください。</p>
+
+  <div class="card">
+    <h3><span class="mini">1</span>締日と振込日</h3>
+    <p><b>毎月25日締め・翌月末払い</b>です。25日を過ぎた分は次の締めに回ります。</p>
+    <div class="paytl">
+      <div class="paytl-step ok">
+        <div class="paytl-when">7/25まで</div>
+        <div class="paytl-what">に成約＋請求書を提出</div>
+      </div>
+      <div class="paytl-arrow" aria-hidden="true">→</div>
+      <div class="paytl-step pay">
+        <div class="paytl-when">8月末</div>
+        <div class="paytl-what">お振込み</div>
+      </div>
+      <div class="paytl-note">
+        <b>7/26以降</b>の提出になると<br>→ <b>9月末</b>のお支払い（1か月後ろ）
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3><span class="mini">2</span>請求書の作り方</h3>
+    <p>下のサイトで作成してください（使えない場合は、お手持ちの他の雛形でも構いません）。</p>
+    <div class="copybox">
+      <pre id="misocaUrl">https://app.misoca.jp/invoices/38665469</pre>
+      <button class="copybtn" onclick="copyEl('misocaUrl','請求書作成URL')">コピー</button>
+    </div>
+    <p style="margin-top:14px"><b>請求書に必ず入れる項目</b></p>
+    <ul class="check" style="margin-top:2px">
+      <li>取引先: <b>mono.create</b></li>
+      <li>名前: <b>チャットワークで使っている名前</b>にする</li>
+      <li>案件名: <b>クライアント名＋成約日</b>（営業・採用スタッフはこの形式。編集スタッフは案件タイトル）</li>
+      <li>件数: <b>成約件数のみ</b>を記入（編集スタッフは1本あたりの金額。まだ納品・成約が完了していないものは入れない）</li>
+      <li>合計請求金額</li>
+      <li>請求日（提出した日）</li>
+      <li>支払い期限（25日までの提出なら翌月末、26日以降なら翌々月末）</li>
+    </ul>
+    <div class="note">1件あたりの報酬額は、担当する事業ごとに中村からご案内します。分からないまま金額を書かず、必ず確認してください。</div>
+  </div>
+
+  <div class="card">
+    <h3><span class="mini">3</span>提出のしかた</h3>
+    <p>作成した請求書は<b>必ずPDFで保存</b>し、ファイル名を下の形式にしてください。</p>
+    <div class="copybox">
+      <pre id="invoiceName">名前（チャットワークの名前）_提出月_請求書</pre>
+      <button class="copybtn" onclick="copyEl('invoiceName','ファイル名の形式')">コピー</button>
+    </div>
+    <p style="margin-top:14px">下のフォームからアップロードして提出完了です。</p>
+    <div class="copybox">
+      <pre id="invoiceForm">https://docs.google.com/forms/d/e/1FAIpQLScEI9VtNh8ZtGsU54vxfqpRnA6l_BTtCkdRHcu2RoDPdzER7A/viewform</pre>
+      <button class="copybtn" onclick="copyEl('invoiceForm','提出フォームURL')">コピー</button>
+    </div>
+    <div class="okbox">提出は<b>毎月25日まで</b>。月末にまとめて出すのではなく、25日を過ぎないように余裕をもって提出してください。</div>
   </div>
 </section>
 
