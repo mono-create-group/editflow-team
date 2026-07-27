@@ -13258,7 +13258,7 @@ function rSalesSites(){
   }).join('');
   return`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px">
       <h2 style="font-size:18px;font-weight:800;margin:0">🌐 営業用サイト</h2>
-      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-g" onclick="salesSiteImport10()">7/9生成の10件を一括登録</button><button class="btn btn-p" onclick="salesSiteAdd()">＋追加</button></div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-p" onclick="salesSiteAdd()">＋追加</button></div></div>
     <div style="font-size:12px;color:var(--t2);margin-bottom:12px">制作した営業用HPの一覧です。公開状況・紐づく見込み客を管理します。</div>
     ${summary}${rows}`;
 }
@@ -14322,7 +14322,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260727-02';
+const APP_VERSION='20260727-03';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
