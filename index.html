@@ -6179,6 +6179,8 @@ function rJobItem(j){
   ${ti?`<span style="font-size:12px;color:var(--blue)">単価 ¥${ti.toLocaleString()}</span>`:''}
   ${to?`<span style="font-size:12px;color:var(--amber)">支払 ¥${to.toLocaleString()}</span>`:''}
   ${ti?`<span style="font-size:12px;font-weight:700;color:${pr>=0?'var(--green)':'var(--red)'}">利益 ¥${pr.toLocaleString()}</span>`:''}
+  ${j.salesRep?`<span style="font-size:11px;color:var(--t2)">🤝 ${esc(j.salesRep)}</span>`:''}
+  ${j.salesPay?`<span style="font-size:12px;color:var(--pink)">営業支払 ¥${(+j.salesPay).toLocaleString()}</span>`:''}
   ${subTot?`<span class="badge bb">☑ ${subDone}/${subTot}</span>`:''}
   ${isJobPaid(j)
     ?`<span class="badge bg" onclick="event.stopPropagation();unmarkJobPaid('${j.id}')" style="cursor:pointer" title="クリックで取り消し">💰 入金済 ${j.paidAt}</span>`
@@ -11048,6 +11050,17 @@ function openJobModal(id,preStatus,preClientId){
   <div class="fg"><div class="fl" id="jl-monthly">月額（円）</div><input type="number" id="j-monthly" value="${j?.monthlyFee||''}" placeholder="0"></div>
   <div class="fg"></div>
 </div>
+<div style="font-size:12px;font-weight:700;color:var(--t2);margin:10px 0 6px">🤝 営業</div>
+<div class="frow">
+  <div class="fg"><div class="fl">担当営業マン</div>
+    <select id="j-sales-rep">
+      <option value="">未設定</option>
+      ${(()=>{const reps=_slAssignees();if(j?.salesRep&&!reps.includes(j.salesRep))reps.push(j.salesRep);return reps.map(n=>`<option value="${esc(n)}" ${j?.salesRep===n?'selected':''}>${esc(n)}</option>`).join('');})()}
+    </select>
+    <div style="font-size:10px;color:var(--t3);margin-top:3px">営業リストの担当者と連動しています。</div>
+  </div>
+  <div class="fg"><div class="fl">営業へのお支払い額（円）</div><input type="number" id="j-sales-pay" value="${j?.salesPay||''}" placeholder="0"></div>
+</div>
 <div class="frow">
   <div class="fg"><div class="fl">請求書提出日 <span style="color:var(--red)">*</span></div><input type="date" id="j-invoice" value="${j?.invoiceDate||''}"></div>
   <div class="fg"><div class="fl">支払期日</div><input type="date" id="j-due" value="${j?.dueDate||''}"></div>
@@ -11297,7 +11310,7 @@ function saveJob(){
   const onlySelf=selWorkerIds.length===0||selWorkerIds.every(id=>id===SELF_WID);
   const workerPay=hasPricedSubs?subtasks.filter(s=>s.workerId!==SELF_WID).reduce((s,sub)=>s+(sub.workerPay||0),0):(onlySelf?0:parseInt(document.getElementById('j-wpay')?.value)||0);
   const isTrial=document.getElementById('j-trial-val')?.value==='1';
-  const data={title,biz:document.getElementById('j-biz')?.value||'edit',monthlyFee:parseInt(document.getElementById('j-monthly')?.value)||0,jobType:document.getElementById('j-type')?.value||'edit',clientId:document.getElementById('j-cl').value||null,workerIds:selWorkerIds,workerId:selWorkerIds[0]||null,scope:document.getElementById('j-scope').value||null,status:document.getElementById('j-stat').value,isTrial,unitPrice,profit:unitPrice,workerPay,sharedDate:document.getElementById('j-shared').value||null,editorDraftDate:document.getElementById('j-editor-draft').value||null,clientDraftDate:document.getElementById('j-client-draft').value||null,thumbnailDate:document.getElementById('j-thumbnail')?.value||null,deliveryDate:document.getElementById('j-deliver').value||null,invoiceDate:document.getElementById('j-invoice').value||null,dueDate:document.getElementById('j-due')?.value||null,paymentDate:document.getElementById('j-payin').value||null,paidAt:document.getElementById('j-paid-val')?.value||null,payoutDate:document.getElementById('j-payout').value||null,notes:document.getElementById('j-notes').value.trim(),subtasks};
+  const data={title,biz:document.getElementById('j-biz')?.value||'edit',monthlyFee:parseInt(document.getElementById('j-monthly')?.value)||0,jobType:document.getElementById('j-type')?.value||'edit',clientId:document.getElementById('j-cl').value||null,workerIds:selWorkerIds,workerId:selWorkerIds[0]||null,scope:document.getElementById('j-scope').value||null,status:document.getElementById('j-stat').value,isTrial,unitPrice,profit:unitPrice,workerPay,sharedDate:document.getElementById('j-shared').value||null,editorDraftDate:document.getElementById('j-editor-draft').value||null,clientDraftDate:document.getElementById('j-client-draft').value||null,thumbnailDate:document.getElementById('j-thumbnail')?.value||null,deliveryDate:document.getElementById('j-deliver').value||null,invoiceDate:document.getElementById('j-invoice').value||null,dueDate:document.getElementById('j-due')?.value||null,paymentDate:document.getElementById('j-payin').value||null,paidAt:document.getElementById('j-paid-val')?.value||null,payoutDate:document.getElementById('j-payout').value||null,salesRep:document.getElementById('j-sales-rep')?.value||null,salesPay:parseInt(document.getElementById('j-sales-pay')?.value)||0,notes:document.getElementById('j-notes').value.trim(),subtasks};
   if(EID){
     const j=S.jobs.find(j=>j.id===EID);
     const prevStatus=j?.status;
@@ -14337,7 +14350,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260728-01';
+const APP_VERSION='20260728-02';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
