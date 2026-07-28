@@ -577,6 +577,19 @@ a{color:inherit;text-decoration:none}
   .sl-appr-btn{padding:10px 14px;font-size:13px}
   .fbtn{padding:9px 14px;font-size:13px}
   .sl-inline-input{font-size:16px;padding:8px 10px}
+  /* ── 営業リスト スマホ最適化(2026-07-28): 行を縦積みカード化＋アクションを下部バーへ ── */
+  .sl-lead-row{flex-direction:column;align-items:stretch;gap:10px;padding:14px}
+  .sl-lead-row .sl-row-body{width:100%;min-width:0}
+  .sl-lead-row .sl-row-side{flex-direction:row!important;flex-wrap:wrap;align-items:center!important;justify-content:flex-start!important;width:100%;gap:8px;padding-top:10px;border-top:1px dashed var(--border)}
+  .sl-lead-row .sl-name{font-size:16px}
+  .sl-lead-row .sl-meta{font-size:12px;gap:8px}
+  /* 連絡先・次アクションの入力欄はフル幅で押しやすく(16pxでiOSズーム防止) */
+  .sl-lead-row .sl-inline-input{width:100%!important;max-width:none!important;min-width:0!important;box-sizing:border-box;padding:10px 12px}
+  /* 多数のフィルタは横スクロール1行に圧縮し、リストまで早く到達させる */
+  .sl-filters .filter-bar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px;scrollbar-width:none}
+  .sl-filters .filter-bar::-webkit-scrollbar{display:none}
+  .sl-filters .filter-bar .fbtn{flex-shrink:0}
+  #sl-search{width:100%!important;max-width:none!important}
   #sidebar{display:none}
   #main{
     padding:14px;
@@ -13916,8 +13929,8 @@ function rSalesLeads(){
             <input type="text" class="sl-inline-input" placeholder="📷 Instagram URL/@id" value="${esc(l.instagram||'')}" onchange="slUpdate('${sid}','instagram',this.value)" style="width:180px">
             ${slIgOpenBtn(l.instagram)}
             <input type="email" class="sl-inline-input" placeholder="✉️ メールアドレス" value="${esc(l.email||'')}" onchange="slUpdate('${sid}','email',this.value)" style="width:180px">`;
-      return`<div class="sl-row"${oc?' style="border-color:rgba(180,83,9,.35)"':''}>
-        <div style="flex:1;min-width:0">
+      return`<div class="sl-row sl-lead-row"${oc?' style="border-color:rgba(180,83,9,.35)"':''}>
+        <div class="sl-row-body" style="flex:1;min-width:0">
           <div class="sl-name">${esc(l.name||'')}</div>
           ${metaHtml}
           ${overlapBadge}
@@ -13937,7 +13950,7 @@ function rSalesLeads(){
           </div>
           <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">${statusBtns}</div>
         </div>
-        <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <div class="sl-row-side" style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
           ${slChip(curStatus)}
           ${isTh?slThPostBtn(l.postUrl,true):''}
           ${!isTh&&l.rating?`<span style="font-size:11px;color:var(--amber)">★${esc(String(l.rating))}</span>`:''}
@@ -13986,6 +13999,7 @@ function rSalesLeads(){
   ${summaryHtml}
   ${isThV?'':regionSummaryHtml}
   ${importHtml}
+  <div class="sl-filters">
   ${statusFilterHtml}
   ${isThV?'':genreFilterHtml}
   ${isThV?'':regionFilterHtml}
@@ -13993,6 +14007,7 @@ function rSalesLeads(){
   ${isThV?'':approachFilterHtml}
   ${assigneeFilterHtml}
   ${overlapFilterHtml}
+  </div>
   ${searchHtml}
   ${rowsHtml}
   ${filtered.length>SL_PAGE_SIZE?pagerHtml:''}`;
@@ -14322,7 +14337,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260727-03';
+const APP_VERSION='20260728-01';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
