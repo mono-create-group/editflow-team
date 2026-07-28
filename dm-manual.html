@@ -63,6 +63,17 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 .note b{color:#7c4a00}
 .okbox{background:var(--greendim);border-radius:10px;padding:10px 14px;font-size:12.5px;color:#0f6b33;margin-top:10px}
 
+/* 現在設定されている振込先口座 */
+.acctnow{margin:2px 0 14px;border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;background:#fafafe}
+.acctnow.set{border-color:#c9c4f5;background:var(--pldim)}
+.acctnow .acctnow-h{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:800;color:var(--pldeep);margin-bottom:6px}
+.acctnow .acctnow-h .dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
+.acctnow.empty .acctnow-h{color:var(--t3)}
+.acctnow.empty .acctnow-h .dot{background:var(--t3)}
+.acctnow .acctnow-main{font-size:15px;font-weight:800;color:var(--ink);line-height:1.6;word-break:break-word}
+.acctnow .acctnow-name{font-size:13px;font-weight:700;color:var(--t2);margin-top:2px}
+.acctnow .acctnow-empty{font-size:12.5px;color:var(--t3);line-height:1.7}
+
 /* コピー枠 */
 .copybox{position:relative;background:#f7f7fa;border:1.5px dashed #c9c4f5;border-radius:12px;padding:16px 16px 52px;margin:12px 0 4px}
 .copybox pre{margin:0;font-family:inherit;font-size:13.5px;white-space:pre-wrap;word-break:break-word;color:var(--text);line-height:1.9}
@@ -191,6 +202,18 @@ a{color:var(--pl)}
 .scRow.on .scPick{background:#fff;color:var(--pl)}
 .scUrl{flex:1 1 auto;min-width:0;font-size:12px;color:var(--t2,#555);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .scEmpty{font-size:13px;color:var(--t3);padding:10px 4px}
+.scDel{flex:0 0 auto;border:1px solid var(--red,#d33);background:#fff;color:var(--red,#d33);font-size:12px;font-weight:700;border-radius:100px;padding:5px 12px;cursor:pointer;white-space:nowrap}
+.scAdmin{margin-top:16px;border:1px dashed var(--border);border-radius:12px;background:var(--card2,#fafafa)}
+.scAdmin>summary{cursor:pointer;padding:11px 14px;font-size:13px;font-weight:700;color:var(--t2,#555);list-style:none}
+.scAdmin>summary::-webkit-details-marker{display:none}
+.scAdmin>summary::before{content:'＋ ';color:var(--pl)}
+.scAdmin[open]>summary::before{content:'－ '}
+.scAdminBody{padding:2px 14px 14px}
+.scAdminBody input{width:100%;box-sizing:border-box}
+.scAddBtn{margin-top:12px;border:none;background:var(--pl);color:#fff;font-weight:700;font-size:14px;border-radius:100px;padding:11px 20px;cursor:pointer}
+.scMsg{font-size:13px;font-weight:700;margin-top:10px;min-height:1px}
+.scMsg.ok{color:var(--gr,#0a0)}
+.scMsg.ng{color:var(--red,#d33)}
 </style>
 </head>
 <body>
@@ -407,6 +430,22 @@ AI導入支援・コンサル
     </div>
     <div class="okbox">コピーしたら<b>自分のメモアプリに貼り付けて保存</b>してください。毎日ここから貼るのではなく、メモアプリから貼るのが基本動作です。</div>
     <div class="note"><b>完成イメージについて:</b> 送付相手のジャンル（美容室・整体など）に近い完成イメージを上の一覧から選ぶと、DMに差し込まれます。該当がないジャンルは選ばずに送ってOK（「完成イメージ」の段落は自動で省かれます）。一覧は中村が随時追加します。</div>
+
+    <details class="scAdmin" id="scAdmin">
+      <summary>会長用：完成イメージ一覧を追加・削除する</summary>
+      <div class="scAdminBody">
+        <p class="scHint" style="margin-top:2px">ここで足したものは<b>すぐ全スタッフの一覧に反映</b>されます。コードを触る必要はありません。</p>
+        <label>管理キー <small>（初回だけ入力。この端末に保存されます）</small></label>
+        <input id="scKey" type="password" placeholder="管理キーを入力" autocomplete="off">
+        <label>ジャンル名 <small>（例：ネイルサロン／整体院）</small></label>
+        <input id="scGenre" placeholder="例: ネイルサロン" maxlength="40">
+        <label>完成イメージのURL</label>
+        <input id="scUrlIn" placeholder="https://…" inputmode="url">
+        <button type="button" class="scAddBtn" id="scAddBtn" onclick="scAdd()">一覧に追加する</button>
+        <div class="scMsg" id="scMsg"></div>
+        <div class="scHint" style="margin-top:6px">削除するときは、上の一覧の各行に出る「削除」を押します（管理キー入力後に表示されます）。</div>
+      </div>
+    </details>
   </div>
 </section>
 
@@ -570,6 +609,8 @@ AI導入支援・コンサル
 
     <p style="margin-top:18px"><b>振込先（ご自身の口座）</b></p>
     <p style="font-size:12.5px;color:var(--t2);margin:2px 0 8px">1つでも欠けると振込ができません。通帳やアプリの画面を見ながら、そのまま入力してください（次回からは自動で復元されます）。</p>
+
+    <div class="acctnow" id="acctNow"></div>
 
     <div class="inv-row2">
       <div><label>1. 金融機関名</label><input id="invBank" placeholder="例: 北洋銀行"></div>
@@ -754,27 +795,33 @@ function reportIg(){
 }
 
 /* ══════════════════════════════════════════════════════════════
-   完成イメージ URL一覧　★中村がここに手動で追加する★
-   追加のしかた：下の [ ] の中に1行コピーして、
-   ジャンル名（g）とURLを自分のものに書き換えるだけ。
-   例：  {g:'ネイルサロン', url:'https://example.com/nail/'},
-   ・新しい行の末尾にも カンマ , を付ける（付けてOK）
-   ・削除したい行は行ごと消す
+   完成イメージ URL一覧
+   一覧の中身は中村（会長）が、この手順書ページの
+   「会長用：完成イメージ一覧を追加・削除する」ボックスから足す。
+   保存先はぽいっとGAS（Script Property）。全スタッフの画面に即反映される。
+   ここ（コード）を触る必要はない。
    ══════════════════════════════════════════════════════════════ */
-var SHOWCASE=[
-  /* ▼▼▼ ここに1行ずつ足す（この下・[ ]の中に貼る）▼▼▼
-     見本（この行は説明。実際はコメント記号 // を外して使う）:
-     {g:'美容室・サロン', url:'https://mono-create-group.github.io/lp/sample-hp/salon/'},
-     {g:'飲食店・居酒屋', url:'https://mono-create-group.github.io/lp/sample-hp/restaurant/'},
-     ▲▲▲ ここまでが見本 ▲▲▲ */
-];
+var SHOWCASE=[];                         /* GASの showcase_list から読み込む */
+function scAdminKey(){ try{return localStorage.getItem('dmm_admin')||'';}catch(e){return '';} }
+/* GASのGETは稀に一時HTML(リダイレクト)を返すので、JSONが取れるまで数回リトライする */
+function scFetchList(cb,tries){
+  tries=tries||0;
+  fetch(API+'?action=showcase_list',{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
+    var d=null; try{d=JSON.parse(t);}catch(e){}
+    if(d&&d.success&&Array.isArray(d.list)){SHOWCASE=d.list;renderShowcase();if(cb)cb(SHOWCASE);return;}
+    if(tries<3){setTimeout(function(){scFetchList(cb,tries+1);},1200);}else if(cb){cb(null);}
+  }).catch(function(){if(tries<3){setTimeout(function(){scFetchList(cb,tries+1);},1200);}else if(cb){cb(null);}});
+}
+function loadShowcase(){ scFetchList(null,0); }
 function renderShowcase(){
   var box=$('scList'); if(!box)return;
   if(!SHOWCASE.length){box.innerHTML='<div class="scEmpty">完成イメージはまだ登録がありません。このまま送付してOKです。</div>';return;}
   var cur=($('genUrl').value||'').trim();
+  var admin=!!scAdminKey();
   box.innerHTML=SHOWCASE.map(function(s,i){
     var on=cur&&cur===String(s.url).trim()?' on':'';
-    return '<div class="scRow'+on+'"><button type="button" class="scPick" data-i="'+i+'">'+esc(s.g)+'</button><span class="scUrl">'+esc(s.url)+'</span></div>';
+    var del=admin?'<button type="button" class="scDel" data-del="'+esc(s.id)+'">削除</button>':'';
+    return '<div class="scRow'+on+'"><button type="button" class="scPick" data-i="'+i+'">'+esc(s.g)+'</button><span class="scUrl">'+esc(s.url)+'</span>'+del+'</div>';
   }).join('');
 }
 function pickShowcase(i){
@@ -783,6 +830,50 @@ function pickShowcase(i){
   /* 同じものを再度押したら解除（差し込みなしに戻す）*/
   if((g.value||'').trim()===String(s.url).trim()){g.value='';}else{g.value=s.url;}
   buildDm(); renderShowcase();
+}
+function scMsg_(t,ok){var m=$('scMsg');if(!m)return;m.textContent=t;m.className='scMsg '+(ok?'ok':'ng');}
+function scAdd(){
+  var key=($('scKey').value||'').trim();
+  var g  =($('scGenre').value||'').trim();
+  var url=($('scUrlIn').value||'').trim();
+  if(!key){scMsg_('管理キーを入力してください',false);return;}
+  if(!g){scMsg_('ジャンル名を入力してください',false);return;}
+  if(!/^https?:\/\//i.test(url)){scMsg_('URLは https:// から始まる形で入力してください',false);return;}
+  try{localStorage.setItem('dmm_admin',key);}catch(e){}
+  var btn=$('scAddBtn');btn.disabled=true;scMsg_('追加中…',true);
+  fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'showcase_add',key:key,g:g,url:url})})
+    .then(function(r){return r.text();}).then(function(t){
+      var d=null; try{d=JSON.parse(t);}catch(e){}
+      /* キー誤り等はPOSTのJSONで即判定。HTMLが返る場合(GASの一時リダイレクト)でも
+         書込自体は成功しているので、GET再取得で実状態を確認してから反映する。 */
+      if(d&&d.error==='unauthorized'){btn.disabled=false;scMsg_('管理キーが違います。もう一度確認してください。',false);return;}
+      if(d&&d.success===false){btn.disabled=false;scMsg_('追加できませんでした（'+String(d.error||'不明')+'）',false);return;}
+      setTimeout(function(){
+        scFetchList(function(list){
+          btn.disabled=false;
+          var ok=(list||[]).some(function(x){return x.g===g && String(x.url).trim()===url;});
+          if(ok){$('scGenre').value='';$('scUrlIn').value='';scMsg_('「'+g+'」を追加しました。一覧に反映済みです。',true);}
+          else{scMsg_('追加できたか確認できませんでした。上の一覧をご確認ください。',false);}
+        },0);
+      },1000);
+    }).catch(function(){btn.disabled=false;scMsg_('通信に失敗しました。電波の良い場所で再度お試しください。',false);});
+}
+function scDel(id){
+  var key=scAdminKey()||($('scKey').value||'').trim();
+  if(!key){scMsg_('先に管理キーを入力してください',false);return;}
+  if(!confirm('この完成イメージを一覧から削除しますか？'))return;
+  scMsg_('削除中…',true);
+  fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'showcase_del',key:key,id:id})})
+    .then(function(r){return r.text();}).then(function(t){
+      var d=null; try{d=JSON.parse(t);}catch(e){}
+      if(d&&d.error==='unauthorized'){scMsg_('管理キーが違います。',false);return;}
+      setTimeout(function(){
+        scFetchList(function(list){
+          var gone=!(list||[]).some(function(x){return x.id===id;});
+          if(gone){scMsg_('削除しました。',true);}else{scMsg_('削除できたか確認できませんでした。上の一覧をご確認ください。',false);}
+        },0);
+      },1000);
+    }).catch(function(){scMsg_('通信に失敗しました。',false);});
 }
 
 /* ── DM文章ジェネレーター ── */
@@ -898,6 +989,26 @@ function invBuildHTML(){
   '</div>';
 }
 
+function invRenderAcctNow(){
+  var box=$('acctNow');if(!box)return;
+  var bank=($('invBank').value||'').trim();
+  var branch=($('invBranch').value||'').trim();
+  var acctType=$('invAcctType').value||'普通';
+  var acctNo=($('invAcctNo').value||'').trim();
+  var acctName=($('invAcctName').value||'').trim();
+  if(!bank&&!branch&&!acctNo&&!acctName){
+    box.className='acctnow empty';
+    box.innerHTML='<div class="acctnow-h"><span class="dot"></span>現在設定されている振込先口座</div>'+
+      '<div class="acctnow-empty">まだ登録がありません。下のフォームに入力すると、ここに常に表示されます。</div>';
+    return;
+  }
+  box.className='acctnow set';
+  var main=[esc(bank||'（金融機関未入力）'),esc(branch||'（支店未入力）'),esc(acctType)+' '+esc(acctNo||'（口座番号未入力）')].join('　');
+  box.innerHTML='<div class="acctnow-h"><span class="dot"></span>現在設定されている振込先口座</div>'+
+    '<div class="acctnow-main">'+main+'</div>'+
+    '<div class="acctnow-name">名義: '+esc(acctName||'（未入力）')+'</div>';
+}
+
 function invRender(){
   var html=invBuildHTML();
   $('invPreview').innerHTML=html;
@@ -905,6 +1016,7 @@ function invRender(){
   var ym=$('invMonth').value||invDefaultMonth();
   var name=($('invName').value||'').trim()||'名前';
   $('invFileName').textContent=name+'_'+ym+'_請求書';
+  invRenderAcctNow();
   invSaveDraft();
 }
 
@@ -919,7 +1031,13 @@ $('invName').addEventListener('input',function(){this.dataset.auto='0';});
 $('staffName').addEventListener('input',function(){renderNames();var g=$('genName');if(!g.value||g.dataset.auto!=='0'){g.value=this.value;buildDm();}var iv=$('invName');if(!iv.value||iv.dataset.auto!=='0'){iv.value=this.value;invRender();}});
 $('genName').addEventListener('input',function(){this.dataset.auto='0';buildDm();});
 $('genUrl').addEventListener('input',function(){buildDm();renderShowcase();});
-$('scList').addEventListener('click',function(e){var b=e.target.closest?e.target.closest('.scPick'):null;if(!b)return;pickShowcase(+b.dataset.i);});
+$('scList').addEventListener('click',function(e){
+  if(!e.target.closest)return;
+  var del=e.target.closest('.scDel'); if(del){scDel(del.dataset.del);return;}
+  var b=e.target.closest('.scPick'); if(b){pickShowcase(+b.dataset.i);}
+});
+try{var sk=localStorage.getItem('dmm_admin');if(sk)$('scKey').value=sk;}catch(e){}
+$('scKey').addEventListener('input',function(){try{localStorage.setItem('dmm_admin',(this.value||'').trim());}catch(e){}renderShowcase();});
 $('aiOk').addEventListener('change',updateClaimUI);
 try{
   var savedStaff=localStorage.getItem('dmm_staff');
@@ -927,6 +1045,7 @@ try{
 }catch(e){}
 buildDm();
 renderShowcase();
+loadShowcase();
 loadNames();
 
 $('invMonth').value=invDefaultMonth();
