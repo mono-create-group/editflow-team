@@ -182,6 +182,15 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
 .toast.show{opacity:1}
 .footer{margin-top:60px;text-align:center;font-size:12px;color:var(--t3);line-height:2}
 a{color:var(--pl)}
+/* 完成イメージ URL一覧 */
+.scHint{font-size:12px;color:var(--t3);margin:6px 0 8px}
+.scList{display:flex;flex-direction:column;gap:8px;margin:4px 0 2px}
+.scRow{display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:12px;padding:9px 11px;background:var(--card2,#fff)}
+.scRow.on{border-color:var(--pl);box-shadow:0 0 0 2px var(--pl) inset}
+.scPick{flex:0 0 auto;border:1px solid var(--pl);background:var(--pl);color:#fff;font-weight:700;font-size:13px;border-radius:100px;padding:6px 14px;cursor:pointer;white-space:nowrap}
+.scRow.on .scPick{background:#fff;color:var(--pl)}
+.scUrl{flex:1 1 auto;min-width:0;font-size:12px;color:var(--t2,#555);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scEmpty{font-size:13px;color:var(--t3);padding:10px 4px}
 </style>
 </head>
 <body>
@@ -388,14 +397,16 @@ AI導入支援・コンサル
     <h3><span class="mini">A</span>文章を自動生成する</h3>
     <label>自分の名前（手順1で入力した本名が自動で入ります）</label>
     <input id="genName" placeholder="例: 山田太郎" maxlength="30">
-    <label>完成イメージのURL <small>（任意。担当ジャンルの完成イメージは中村からその都度共有されます。空欄なら「完成イメージ」の段落ごと省かれます）</small></label>
-    <input id="genUrl" placeholder="https://…（共有されたらここに貼る）">
+    <label>完成イメージのURL <small>（任意。下の一覧から担当ジャンルを選ぶと自動で入ります。空欄なら「完成イメージ」の段落ごと省かれます）</small></label>
+    <input id="genUrl" placeholder="下の一覧から選ぶ／直接貼り付け">
+    <div class="scHint">▼ 送付相手のジャンルに近いものを選ぶと、そのURLがDMに差し込まれます</div>
+    <div class="scList" id="scList"></div>
     <div class="copybox" style="margin-top:16px">
       <pre id="dmText"></pre>
       <button class="copybtn" onclick="copyEl('dmText','DM文章')">コピー</button>
     </div>
     <div class="okbox">コピーしたら<b>自分のメモアプリに貼り付けて保存</b>してください。毎日ここから貼るのではなく、メモアプリから貼るのが基本動作です。</div>
-    <div class="note"><b>完成イメージについて:</b> 送付相手のジャンル（美容室・整体など）の完成イメージURLがある場合だけ添付します。担当ジャンルと完成イメージは中村から都度共有されるので、共有されたら上の欄に貼って作り直してください。</div>
+    <div class="note"><b>完成イメージについて:</b> 送付相手のジャンル（美容室・整体など）に近い完成イメージを上の一覧から選ぶと、DMに差し込まれます。該当がないジャンルは選ばずに送ってOK（「完成イメージ」の段落は自動で省かれます）。一覧は中村が随時追加します。</div>
   </div>
 </section>
 
@@ -742,6 +753,38 @@ function reportIg(){
   });
 }
 
+/* ══════════════════════════════════════════════════════════════
+   完成イメージ URL一覧　★中村がここに手動で追加する★
+   追加のしかた：下の [ ] の中に1行コピーして、
+   ジャンル名（g）とURLを自分のものに書き換えるだけ。
+   例：  {g:'ネイルサロン', url:'https://example.com/nail/'},
+   ・新しい行の末尾にも カンマ , を付ける（付けてOK）
+   ・削除したい行は行ごと消す
+   ══════════════════════════════════════════════════════════════ */
+var SHOWCASE=[
+  /* ▼▼▼ ここに1行ずつ足す（この下・[ ]の中に貼る）▼▼▼
+     見本（この行は説明。実際はコメント記号 // を外して使う）:
+     {g:'美容室・サロン', url:'https://mono-create-group.github.io/lp/sample-hp/salon/'},
+     {g:'飲食店・居酒屋', url:'https://mono-create-group.github.io/lp/sample-hp/restaurant/'},
+     ▲▲▲ ここまでが見本 ▲▲▲ */
+];
+function renderShowcase(){
+  var box=$('scList'); if(!box)return;
+  if(!SHOWCASE.length){box.innerHTML='<div class="scEmpty">完成イメージはまだ登録がありません。このまま送付してOKです。</div>';return;}
+  var cur=($('genUrl').value||'').trim();
+  box.innerHTML=SHOWCASE.map(function(s,i){
+    var on=cur&&cur===String(s.url).trim()?' on':'';
+    return '<div class="scRow'+on+'"><button type="button" class="scPick" data-i="'+i+'">'+esc(s.g)+'</button><span class="scUrl">'+esc(s.url)+'</span></div>';
+  }).join('');
+}
+function pickShowcase(i){
+  var s=SHOWCASE[i]; if(!s)return;
+  var g=$('genUrl');
+  /* 同じものを再度押したら解除（差し込みなしに戻す）*/
+  if((g.value||'').trim()===String(s.url).trim()){g.value='';}else{g.value=s.url;}
+  buildDm(); renderShowcase();
+}
+
 /* ── DM文章ジェネレーター ── */
 function buildDm(){
   var name=($('genName').value||'').trim()||'【名前】';
@@ -875,13 +918,15 @@ $('invName').addEventListener('input',function(){this.dataset.auto='0';});
 
 $('staffName').addEventListener('input',function(){renderNames();var g=$('genName');if(!g.value||g.dataset.auto!=='0'){g.value=this.value;buildDm();}var iv=$('invName');if(!iv.value||iv.dataset.auto!=='0'){iv.value=this.value;invRender();}});
 $('genName').addEventListener('input',function(){this.dataset.auto='0';buildDm();});
-$('genUrl').addEventListener('input',buildDm);
+$('genUrl').addEventListener('input',function(){buildDm();renderShowcase();});
+$('scList').addEventListener('click',function(e){var b=e.target.closest?e.target.closest('.scPick'):null;if(!b)return;pickShowcase(+b.dataset.i);});
 $('aiOk').addEventListener('change',updateClaimUI);
 try{
   var savedStaff=localStorage.getItem('dmm_staff');
   if(savedStaff){$('staffName').value=savedStaff;$('genName').value=savedStaff;}
 }catch(e){}
 buildDm();
+renderShowcase();
 loadNames();
 
 $('invMonth').value=invDefaultMonth();
