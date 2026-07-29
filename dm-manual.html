@@ -197,6 +197,13 @@ a{color:var(--pl)}
 .scHint{font-size:12px;color:var(--t3);margin:6px 0 8px}
 .scGuide{display:flex;align-items:center;gap:8px;font-size:14.5px;font-weight:700;color:var(--pldeep);background:var(--pldim);border-left:4px solid var(--pl);border-radius:10px;padding:11px 14px;margin:10px 0 10px;line-height:1.6}
 .scGuide .scGuideMark{flex:0 0 auto;font-size:16px}
+.salesGuide{margin:12px 0 14px;border:1.5px solid #c9c4f5;border-radius:14px;padding:14px;background:#faf9ff}
+.salesGuideTitle{font-size:14px;font-weight:800;color:var(--pldeep);margin-bottom:4px}
+.salesGuideText{font-size:12.5px;color:var(--t2);line-height:1.8;margin:0 0 10px}
+.salesGuideText b{color:var(--text)}
+.salesGuide a{display:block;border-radius:10px;overflow:hidden;border:1px solid var(--border);background:#fff}
+.salesGuide img{display:block;width:100%;height:auto}
+.salesGuideCap{font-size:11.5px;color:var(--t3);line-height:1.7;margin-top:7px}
 .scList{display:flex;flex-direction:column;gap:8px;margin:4px 0 2px}
 .scRow{display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:12px;padding:9px 11px;background:var(--card2,#fff)}
 .scRow.on{border-color:var(--pl);box-shadow:0 0 0 2px var(--pl) inset}
@@ -425,6 +432,14 @@ AI導入支援・コンサル
     <label>完成イメージのURL <small>（任意。下の一覧から担当ジャンルを選ぶと自動で入ります。空欄なら「完成イメージ」の段落ごと省かれます）</small></label>
     <input id="genUrl" placeholder="下の一覧から選ぶ／直接貼り付け">
     <div class="scGuide"><span class="scGuideMark">▼</span><span>送る相手の業種に近いボタンをタップ　→　URLがDM本文に自動で入ります</span></div>
+    <div class="salesGuide">
+      <div class="salesGuideTitle">営業をかけるジャンルは、ここを確認</div>
+      <p class="salesGuideText">社内アプリの<b>「営業リスト」最上部</b>にある、<b>「営業指示（誰が・どの事業・どのジャンル）」</b>に書かれています。自分宛または「全員」の指示を確認し、指定されたジャンルに近いボタンを下から選んでください。</p>
+      <a href="assets/sales-instruction-guide.png" target="_blank" rel="noopener" aria-label="営業指示の場所を拡大して見る">
+        <img src="assets/sales-instruction-guide.png" alt="社内アプリの営業リスト最上部にある営業指示欄" loading="lazy">
+      </a>
+      <div class="salesGuideCap">紫枠の「営業指示」欄を確認します。画像をタップすると拡大できます。</div>
+    </div>
     <div class="scList" id="scList"></div>
     <div class="copybox" style="margin-top:16px">
       <pre id="dmText"></pre>
