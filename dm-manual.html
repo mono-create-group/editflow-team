@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow, noarchive">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>DM営業 業務手順書 — mono.create</title>
 <style>
 :root{
@@ -1071,6 +1074,24 @@ if(!$('invName').value){
   try{var sn=localStorage.getItem('dmm_staff');if(sn)$('invName').value=sn;}catch(e){}
 }
 invRender();
+
+/* ── 古いタブを自動で最新版へ切り替える ── */
+var MANUAL_VERSION='20260729-01';
+var manualVersionLastCheck=0;
+function checkManualVersion(){
+  var now=Date.now();
+  if(now-manualVersionLastCheck<60000)return;
+  manualVersionLastCheck=now;
+  fetch(location.pathname+'?version_check='+now,{cache:'no-store'})
+    .then(function(r){return r.ok?r.text():'';})
+    .then(function(t){
+      var m=t.match(/MANUAL_VERSION='([^']+)'/);
+      if(!m||m[1]===MANUAL_VERSION)return;
+      location.replace(location.pathname+'?v='+encodeURIComponent(m[1]));
+    }).catch(function(){});
+}
+document.addEventListener('visibilitychange',function(){if(!document.hidden)checkManualVersion();});
+window.addEventListener('pageshow',function(e){if(e.persisted)checkManualVersion();});
 </script>
 </body>
 </html>
