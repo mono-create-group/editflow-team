@@ -3535,6 +3535,79 @@ function bizKgiCard(n){
 function bizKgiMap(){const nodes=bizKgi().nodes;if(!nodes.length)return`<div style="color:var(--t3);font-size:12px">ノードがありません。「＋ ルートを追加」で作成できます。</div>`;
   return bizTreeRender(nodes,{dir:'right',NW:162,NH:64,HGAP:56,VGAP:16,cardFn:bizKgiCard,toggleFn:'kgiToggle',zoomKey:'kgi'});}
 function kgiToggle(id){const n=bizKgi().nodes.find(x=>x.id===id);if(!n)return;n.collapsed=!n.collapsed;bizTouch();}
+// --- 7年後から逆算するバックキャスト ---
+const BIZ_BACKCAST_STAGES=[
+  ['y7','7年後','最終到達点'],
+  ['y5','5年後','勝ち筋が完成'],
+  ['y3','3年後','拡大できる状態'],
+  ['y1','1年後','今年の到達点'],
+  ['d90','90日後','次の四半期'],
+  ['month','今月','最初の一歩'],
+];
+function _bizBackcast(){const d=bizD();if(!d.backcast||typeof d.backcast!=='object')d.backcast={vision:'',metric:'',constraint:'',steps:{}};if(!d.backcast.steps)d.backcast.steps={};return d.backcast;}
+function _bizBackcastDue(key){
+  const n=new Date(),y=n.getFullYear(),m=n.getMonth();
+  if(key==='y7'||key==='y5'||key==='y3'||key==='y1')return`${y+Number(key.slice(1))}-12-31`;
+  if(key==='d90'){const d=new Date(n);d.setDate(d.getDate()+90);return d.toLocalYmd();}
+  return new Date(y,m+1,0).toLocalYmd();
+}
+function bizBackcastForm(){
+  const bc=_bizBackcast();
+  const rows=BIZ_BACKCAST_STAGES.map(([key,label,hint])=>{const s=bc.steps[key]||{};return`
+    <div style="border-top:1px solid var(--card2);padding:10px 0">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-weight:800;color:var(--purple);min-width:48px">${label}</span><span style="font-size:11px;color:var(--t3)">${hint}・期限 ${_bizBackcastDue(key)}</span></div>
+      <input id="biz-bc-${key}-goal" value="${esc(s.goal||'')}" placeholder="この時点で何を実現しているか" style="width:100%;margin-bottom:6px">
+      <textarea id="biz-bc-${key}-condition" rows="2" placeholder="達成したと言える数字・状態">${esc(s.condition||'')}</textarea>
+    </div>`;}).join('');
+  openModal(`<div style="font-weight:800;font-size:17px;margin-bottom:4px">7年後から逆算する</div>
+    <div style="font-size:11.5px;color:var(--t3);line-height:1.6;margin-bottom:12px">最終地点を先に決め、手前の達成条件を順番に置きます。保存後、ロードマップへ一括反映できます。</div>
+    <div class="fg"><div class="fl">7年後のビジョン</div><textarea id="biz-bc-vision" rows="3" placeholder="例: 既存事業が自走し、次の主力事業を創業">${esc(bc.vision||'')}</textarea></div>
+    <div class="fg"><div class="fl">最重要KGI</div><input id="biz-bc-metric" value="${esc(bc.metric||'')}" placeholder="例: 年商30億 / 営業利益率30%"></div>
+    <div class="fg"><div class="fl">守る条件・やらないこと</div><textarea id="biz-bc-constraint" rows="2" placeholder="例: 会長の実務を増やさない / 既存事業を薄めない">${esc(bc.constraint||'')}</textarea></div>
+    ${rows}
+    ${_bizFormActions('bizSaveBackcast()')}`);
+}
+function bizSaveBackcast(){
+  const bc=_bizBackcast();
+  bc.vision=document.getElementById('biz-bc-vision').value.trim();
+  bc.metric=document.getElementById('biz-bc-metric').value.trim();
+  bc.constraint=document.getElementById('biz-bc-constraint').value.trim();
+  BIZ_BACKCAST_STAGES.forEach(([key])=>{bc.steps[key]={goal:document.getElementById(`biz-bc-${key}-goal`).value.trim(),condition:document.getElementById(`biz-bc-${key}-condition`).value.trim()};});
+  closeModal();bizTouch();toast('7年逆算プランを保存しました','ok');
+}
+function bizBackcastToRoadmap(){
+  const d=bizD(),bc=_bizBackcast();
+  const filled=BIZ_BACKCAST_STAGES.filter(([key])=>bc.steps[key]&&bc.steps[key].goal);
+  if(!filled.length){toast('先に逆算プランを入力してください','warn');return;}
+  bizBackup('before-backcast-roadmap');
+  filled.forEach(([key,label])=>{
+    const step=bc.steps[key],title=`【${label}】${step.goal}`;
+    let r=(d.roadmap||[]).find(x=>x.backcastKey===key);
+    if(r){r.title=title;r.note=step.condition||'';r.due=_bizBackcastDue(key);}
+    else d.roadmap.push({id:uid(),title,note:step.condition||'',st:'todo',due:_bizBackcastDue(key),subs:[],backcastKey:key});
+  });
+  bizTouch();toast('逆算プランをロードマップへ反映しました','ok');
+}
+function bizBackcastView(){
+  const bc=_bizBackcast(),filled=BIZ_BACKCAST_STAGES.filter(([key])=>bc.steps[key]&&bc.steps[key].goal);
+  if(!bc.vision&&!bc.metric&&!filled.length)return`<div class="card" style="border-left:3px solid var(--purple);display:flex;justify-content:space-between;gap:12px;align-items:center">
+    <div><div style="font-weight:800;font-size:14px">7年後から逆算して決める</div><div style="font-size:11.5px;color:var(--t3);margin-top:3px">2033年のゴールから、5年・3年・1年・90日・今月へ落とし込みます。</div></div>
+    <button class="btn btn-p btn-sm" onclick="bizBackcastForm()">逆算を始める</button>
+  </div>`;
+  const chain=BIZ_BACKCAST_STAGES.map(([key,label])=>{const s=bc.steps[key]||{};return`<div style="min-width:128px;flex:1;border:1px solid var(--card2);border-radius:9px;padding:8px 10px;background:var(--bg)">
+    <div style="font-size:10.5px;font-weight:800;color:var(--purple)">${label}</div>
+    <div style="font-size:12px;font-weight:700;line-height:1.45;margin-top:3px">${esc(s.goal||'未設定')}</div>
+    ${s.condition?`<div style="font-size:10px;color:var(--t3);margin-top:3px;line-height:1.4">${esc(s.condition)}</div>`:''}
+  </div>`;}).join('<div style="color:var(--t3);font-weight:800;align-self:center">←</div>');
+  return`<div class="card" style="border-left:3px solid var(--purple)">
+    <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
+      <div><div style="font-size:10.5px;color:var(--t3);font-weight:800">7年後のビジョン</div><div style="font-weight:800;font-size:14px;margin-top:2px">${esc(bc.vision||'未設定')}</div>${bc.metric?`<div style="font-size:12px;color:var(--green);font-weight:800;margin-top:3px">KGI: ${esc(bc.metric)}</div>`:''}</div>
+      <div style="display:flex;gap:6px"><button class="btn btn-g btn-xs" onclick="bizBackcastForm()">✎ 編集</button><button class="btn btn-p btn-xs" onclick="bizBackcastToRoadmap()">ロードマップへ反映</button></div>
+    </div>
+    ${bc.constraint?`<div style="font-size:11px;color:var(--t2);margin-top:7px">守る条件: ${esc(bc.constraint)}</div>`:''}
+    <div style="display:flex;gap:7px;overflow-x:auto;margin-top:10px;padding-bottom:4px">${chain}</div>
+  </div>`;
+}
 function bizNumify(s){if(s===undefined||s===null||String(s).trim()==='')return NaN;return parseFloat(String(s).replace(/[^0-9.\-]/g,''));}
 const BIZ_RMAP={todo:['予定','var(--t3)'],doing:['進行中','var(--amber)'],ready:['実行待ち','var(--amber)'],wait:['審査待ち','var(--t3)'],done:['完了','var(--green)']};
 function rBizBoard(){
@@ -3609,6 +3682,7 @@ function rBizBoard(){
     <div style="background:var(--card2);border-radius:6px;height:8px;margin-top:12px;overflow:hidden"><div style="height:100%;width:${totalPct}%;background:var(--purple)"></div></div>
     <div style="font-size:11px;color:var(--t3);margin-top:4px">${esc(activeName)}のタスク進捗: ${doneCount}/${allT.length}(${totalPct}%)</div>
   </div>
+  ${bizBackcastView()}
   <div style="font-weight:800;font-size:15px;color:var(--purple);margin:14px 0 8px">🎯 目標・KPI（${esc(activeName)}） <button class="btn btn-g btn-xs" onclick="bizAddGoal()">＋ 目標・KPIを追加</button></div>
   ${d.goals.length?`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px">${d.goals.map(goalRow).join('')}</div>`:`<div class="card" style="color:var(--t3);font-size:12px">目標はまだありません。「＋ 目標を追加」で登録できます。</div>`}
   <div style="font-weight:800;font-size:15px;color:var(--purple);margin:18px 0 8px">🗺 ロードマップ <button class="btn btn-g btn-xs" onclick="bizAddRoad()">＋ 項目を追加</button></div>
@@ -14417,7 +14491,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260730-01';
+const APP_VERSION='20260730-02';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
