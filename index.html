@@ -3267,22 +3267,78 @@ function bizDelUnit(id){
   b.units=b.units.filter(x=>x.id!==id);delete b.data[id];b.active='all';bizTouch();
 }
 function bizEditNorth(){const b=biz2();const v=prompt('North Star(会社の目的)',b.north);if(v===null)return;b.north=v.trim()||b.north;bizTouch();}
+// 経営ボードの日付はすべてカレンダー選択に統一する。
+function _bizDateValue(v){return /^\d{4}-\d{2}-\d{2}$/.test(String(v||''))?String(v):'';}
+function _bizSortedByDue(items){
+  return (items||[]).map((item,index)=>({item,index})).sort((a,b)=>{
+    const ad=_bizDateValue(a.item.due),bd=_bizDateValue(b.item.due);
+    if(ad&&bd)return ad.localeCompare(bd)||a.index-b.index;
+    if(ad)return-1;if(bd)return 1;return a.index-b.index;
+  }).map(x=>x.item);
+}
+function _bizFormActions(saveFn){
+  return`<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px"><button class="btn btn-g btn-sm" onclick="closeModal()">キャンセル</button><button class="btn btn-p btn-sm" onclick="${saveFn}">保存</button></div>`;
+}
 // --- 目標 ---
 function bizNormKind(s){const v=(s||'').trim().toUpperCase();if(v==='KGI')return'KGI';if(v==='KPI')return'KPI';return'目標';}
-function bizAddGoal(){const label=(prompt('項目名(例: 商談数・8月売上)')||'').trim();if(!label)return;const kind=bizNormKind(prompt('種別: KGI / KPI / 目標','目標'));const target=(prompt('目標値(例: 30件・¥50万・省略可)')||'').trim();const current=(prompt('現在値(数値・省略可。目標値と両方数値なら進捗バー表示)')||'').trim();const due=(prompt('期限 例:2026-08-31(省略可)')||'').trim();const detail=(prompt('詳細(省略可)')||'').trim();bizD().goals.push({id:uid(),kind,label,target,current,due,detail});bizTouch();}
-function bizEditGoal(gid){const g=bizD().goals.find(x=>x.id===gid);if(!g)return;const label=prompt('項目名',g.label);if(label===null)return;const kind=prompt('種別(KGI / KPI / 目標)',g.kind||'目標');if(kind===null)return;const target=prompt('目標値(省略可)',g.target);if(target===null)return;const current=prompt('現在値(数値・省略可)',g.current||'');if(current===null)return;const due=prompt('期限 例:2026-08-31(省略可)',g.due||'');if(due===null)return;const detail=prompt('詳細(省略可)',g.detail);if(detail===null)return;g.label=label.trim()||g.label;g.kind=bizNormKind(kind);g.target=target.trim();g.current=current.trim();g.due=(due||'').trim();g.detail=(detail||'').trim();bizTouch();}
+function bizGoalForm(gid){
+  const g=gid?bizD().goals.find(x=>x.id===gid):null;if(gid&&!g)return;
+  openModal(`<div style="font-weight:800;font-size:16px;margin-bottom:12px">${g?'目標・KPIを編集':'目標・KPIを追加'}</div>
+    <div class="fg"><div class="fl">項目名</div><input id="biz-g-label" value="${esc(g?.label||'')}" placeholder="例: 商談数・8月売上"></div>
+    <div class="fg"><div class="fl">種別</div><select id="biz-g-kind"><option ${(!g||g.kind==='目標')?'selected':''}>目標</option><option ${g?.kind==='KGI'?'selected':''}>KGI</option><option ${g?.kind==='KPI'?'selected':''}>KPI</option></select></div>
+    <div class="fg"><div class="fl">目標値</div><input id="biz-g-target" value="${esc(g?.target||'')}" placeholder="例: 30件・¥50万"></div>
+    <div class="fg"><div class="fl">現在値</div><input id="biz-g-current" value="${esc(g?.current||'')}" placeholder="目標値と両方数値なら進捗バーを表示"></div>
+    <div class="fg"><div class="fl">期限</div><input id="biz-g-due" type="date" value="${_bizDateValue(g?.due)}"></div>
+    <div class="fg"><div class="fl">詳細</div><textarea id="biz-g-detail" rows="3">${esc(g?.detail||'')}</textarea></div>
+    ${_bizFormActions(`bizSaveGoal('${gid||''}')`)}`);
+}
+function bizAddGoal(){bizGoalForm('');}
+function bizEditGoal(gid){bizGoalForm(gid);}
+function bizSaveGoal(gid){
+  const label=document.getElementById('biz-g-label').value.trim();if(!label){toast('項目名を入力してください','warn');return;}
+  const data={label,kind:bizNormKind(document.getElementById('biz-g-kind').value),target:document.getElementById('biz-g-target').value.trim(),current:document.getElementById('biz-g-current').value.trim(),due:document.getElementById('biz-g-due').value||'',detail:document.getElementById('biz-g-detail').value.trim()};
+  if(gid){const g=bizD().goals.find(x=>x.id===gid);if(!g)return;Object.assign(g,data);}else bizD().goals.push({id:uid(),...data});
+  closeModal();bizTouch();
+}
 function bizDelGoal(gid){if(!confirm('この目標を削除しますか?'))return;const d=bizD();d.goals=d.goals.filter(x=>x.id!==gid);bizTouch();}
 // --- ロードマップ ---
-function bizAddRoad(){const t=(prompt('ロードマップ項目')||'').trim();if(!t)return;const due=(prompt('期限 例:2026-08-31(省略可)')||'').trim();bizD().roadmap.push({id:uid(),title:t,note:'',st:'todo',due});bizTouch();}
-function bizEditRoad(rid){const r=bizD().roadmap.find(x=>x.id===rid);if(!r)return;const title=prompt('項目名',r.title);if(title===null)return;const note=prompt('メモ(省略可)',r.note);if(note===null)return;const due=prompt('期限 例:2026-08-31(省略可)',r.due||'');if(due===null)return;r.title=title.trim()||r.title;r.note=(note||'').trim();r.due=(due||'').trim();bizTouch();}
+function bizRoadForm(rid){
+  const r=rid?bizD().roadmap.find(x=>x.id===rid):null;if(rid&&!r)return;
+  openModal(`<div style="font-weight:800;font-size:16px;margin-bottom:12px">${r?'ロードマップ項目を編集':'ロードマップ項目を追加'}</div>
+    <div class="fg"><div class="fl">項目名</div><input id="biz-r-title" value="${esc(r?.title||'')}"></div>
+    <div class="fg"><div class="fl">期限</div><input id="biz-r-due" type="date" value="${_bizDateValue(r?.due)}"></div>
+    <div class="fg"><div class="fl">メモ</div><textarea id="biz-r-note" rows="3">${esc(r?.note||'')}</textarea></div>
+    ${_bizFormActions(`bizSaveRoad('${rid||''}')`)}`);
+}
+function bizAddRoad(){bizRoadForm('');}
+function bizEditRoad(rid){bizRoadForm(rid);}
+function bizSaveRoad(rid){
+  const title=document.getElementById('biz-r-title').value.trim();if(!title){toast('項目名を入力してください','warn');return;}
+  const data={title,due:document.getElementById('biz-r-due').value||'',note:document.getElementById('biz-r-note').value.trim()};
+  if(rid){const r=bizD().roadmap.find(x=>x.id===rid);if(!r)return;Object.assign(r,data);}else bizD().roadmap.push({id:uid(),st:'todo',subs:[],...data});
+  closeModal();bizTouch();
+}
 function bizCycleRoad(rid){const r=bizD().roadmap.find(x=>x.id===rid);if(!r)return;const o=['todo','doing','ready','wait','done'];r.st=o[(o.indexOf(r.st)+1+o.length)%o.length];bizTouch();}
 function bizDelRoad(rid){if(!confirm('この項目を削除しますか?'))return;const d=bizD();d.roadmap=d.roadmap.filter(x=>x.id!==rid);bizTouch();}
 // --- ロードマップ 並べ替え + サブタスク ---
 function _arrMove(arr,idx,dir){const j=idx+dir;if(j<0||j>=arr.length)return false;const t=arr[idx];arr[idx]=arr[j];arr[j]=t;return true;}
 function bizMoveRoad(rid,dir){const d=bizD();const i=d.roadmap.findIndex(x=>x.id===rid);if(i<0)return;if(_arrMove(d.roadmap,i,dir))bizTouch();}
 function _roadFind(rid){const r=bizD().roadmap.find(x=>x.id===rid);if(r&&!Array.isArray(r.subs))r.subs=[];return r;}
-function bizAddSub(rid){const r=_roadFind(rid);if(!r)return;const t=(prompt('サブタスク')||'').trim();if(!t)return;const due=(prompt('期限 例:2026-08-31(省略可)')||'').trim();r.subs.push({id:uid(),title:t,st:'todo',due});bizTouch();}
-function bizEditSub(rid,sid){const r=_roadFind(rid);if(!r)return;const s=r.subs.find(x=>x.id===sid);if(!s)return;const title=prompt('サブタスク名',s.title);if(title===null)return;const due=prompt('期限 例:2026-08-31(省略可)',s.due||'');if(due===null)return;s.title=title.trim()||s.title;s.due=(due||'').trim();bizTouch();}
+function bizSubForm(rid,sid){
+  const r=_roadFind(rid);if(!r)return;const s=sid?r.subs.find(x=>x.id===sid):null;if(sid&&!s)return;
+  openModal(`<div style="font-weight:800;font-size:16px;margin-bottom:12px">${s?'サブタスクを編集':'サブタスクを追加'}</div>
+    <div class="fg"><div class="fl">サブタスク名</div><input id="biz-s-title" value="${esc(s?.title||'')}"></div>
+    <div class="fg"><div class="fl">期限</div><input id="biz-s-due" type="date" value="${_bizDateValue(s?.due)}"></div>
+    ${_bizFormActions(`bizSaveSub('${rid}','${sid||''}')`)}`);
+}
+function bizAddSub(rid){bizSubForm(rid,'');}
+function bizEditSub(rid,sid){bizSubForm(rid,sid);}
+function bizSaveSub(rid,sid){
+  const r=_roadFind(rid);if(!r)return;const title=document.getElementById('biz-s-title').value.trim();if(!title){toast('サブタスク名を入力してください','warn');return;}
+  const data={title,due:document.getElementById('biz-s-due').value||''};
+  if(sid){const s=r.subs.find(x=>x.id===sid);if(!s)return;Object.assign(s,data);}else r.subs.push({id:uid(),st:'todo',...data});
+  closeModal();bizTouch();
+}
 function bizCycleSub(rid,sid){const r=_roadFind(rid);if(!r)return;const s=r.subs.find(x=>x.id===sid);if(!s)return;const o=['todo','doing','ready','wait','done'];s.st=o[(o.indexOf(s.st)+1+o.length)%o.length];bizTouch();}
 function bizDelSub(rid,sid){const r=_roadFind(rid);if(!r)return;r.subs=r.subs.filter(x=>x.id!==sid);bizTouch();}
 function bizMoveSub(rid,sid,dir){const r=_roadFind(rid);if(!r)return;const i=r.subs.findIndex(x=>x.id===sid);if(i<0)return;if(_arrMove(r.subs,i,dir))bizTouch();}
@@ -3290,8 +3346,22 @@ function bizMoveSub(rid,sid,dir){const r=_roadFind(rid);if(!r)return;const i=r.s
 function bizAddIssue(){const t=(prompt('イシュー(課題)のタイトル')||'').trim();if(!t)return;const why=(prompt('なぜ重要か(省略可)')||'').trim();bizD().issues.push({id:uid(),title:t,why,tasks:[]});bizTouch();}
 function bizEditIssue(iid){const i=bizD().issues.find(x=>x.id===iid);if(!i)return;const t=prompt('タイトル',i.title);if(t===null)return;const why=prompt('なぜ重要か(省略可)',i.why);if(why===null)return;i.title=t.trim()||i.title;i.why=(why||'').trim();bizTouch();}
 function bizDelIssue(iid){const i=bizD().issues.find(x=>x.id===iid);if(!i)return;if(!confirm('このイシューを削除しますか?(中のタスクも消えます)'))return;const d=bizD();d.issues=d.issues.filter(x=>x.id!==iid);bizTouch();}
-function bizAddTask(iid){const i=bizD().issues.find(x=>x.id===iid);if(!i)return;const text=(prompt('タスク内容')||'').trim();if(!text)return;const owner=(prompt('担当(省略可)')||'').trim();const due=(prompt('期限(省略可)')||'').trim();i.tasks.push({id:uid(),text,owner,due,done:false});bizTouch();}
-function bizEditTask(iid,tid){const i=bizD().issues.find(x=>x.id===iid);if(!i)return;const t=i.tasks.find(x=>x.id===tid);if(!t)return;const text=prompt('タスク内容',t.text);if(text===null)return;const owner=prompt('担当(省略可)',t.owner);if(owner===null)return;const due=prompt('期限(省略可)',t.due);if(due===null)return;t.text=text.trim()||t.text;t.owner=(owner||'').trim();t.due=(due||'').trim();bizTouch();}
+function bizTaskForm(iid,tid){
+  const i=bizD().issues.find(x=>x.id===iid);if(!i)return;const t=tid?i.tasks.find(x=>x.id===tid):null;if(tid&&!t)return;
+  openModal(`<div style="font-weight:800;font-size:16px;margin-bottom:12px">${t?'タスクを編集':'タスクを追加'}</div>
+    <div class="fg"><div class="fl">タスク内容</div><input id="biz-t-text" value="${esc(t?.text||'')}"></div>
+    <div class="fg"><div class="fl">担当</div><input id="biz-t-owner" value="${esc(t?.owner||'')}"></div>
+    <div class="fg"><div class="fl">期限</div><input id="biz-t-due" type="date" value="${_bizDateValue(t?.due)}"></div>
+    ${_bizFormActions(`bizSaveTask('${iid}','${tid||''}')`)}`);
+}
+function bizAddTask(iid){bizTaskForm(iid,'');}
+function bizEditTask(iid,tid){bizTaskForm(iid,tid);}
+function bizSaveTask(iid,tid){
+  const i=bizD().issues.find(x=>x.id===iid);if(!i)return;const text=document.getElementById('biz-t-text').value.trim();if(!text){toast('タスク内容を入力してください','warn');return;}
+  const data={text,owner:document.getElementById('biz-t-owner').value.trim(),due:document.getElementById('biz-t-due').value||''};
+  if(tid){const t=i.tasks.find(x=>x.id===tid);if(!t)return;Object.assign(t,data);}else i.tasks.push({id:uid(),done:false,...data});
+  closeModal();bizTouch();
+}
 function bizDelTask(iid,tid){const i=bizD().issues.find(x=>x.id===iid);if(!i)return;i.tasks=i.tasks.filter(x=>x.id!==tid);bizTouch();}
 function bizToggleTask(iid,tid){const i=bizD().issues.find(x=>x.id===iid);if(!i)return;const t=i.tasks.find(x=>x.id===tid);if(!t)return;t.done=!t.done;bizTouch();}
 // --- 定例サイクル(全社共通) ---
@@ -3492,18 +3562,14 @@ function rBizBoard(){
     <div style="display:flex;gap:4px;align-items:center;padding:5px 0 5px 18px;border-top:1px solid var(--card2)">
       <span style="color:var(--t3);font-size:12px;flex-shrink:0">└</span>
       <div style="min-width:0;flex:1"><div style="font-size:12.5px;line-height:1.5;${s.st==='done'?'color:var(--t3);text-decoration:line-through':''}">${esc(s.title)}</div>${s.due?`<div style="font-size:10px;color:var(--t3);margin-top:1px">📅 ${esc(s.due)}</div>`:''}</div>
-      <button class="btn btn-g btn-xs" onclick="bizMoveSub('${rid}','${s.id}',-1)" title="上へ">▲</button>
-      <button class="btn btn-g btn-xs" onclick="bizMoveSub('${rid}','${s.id}',1)" title="下へ">▼</button>
       <button class="btn btn-g btn-xs" style="color:${color};font-weight:700;white-space:nowrap" onclick="bizCycleSub('${rid}','${s.id}')" title="タップで状態切替">${label}</button>
       <button class="btn btn-g btn-xs" onclick="bizEditSub('${rid}','${s.id}')">✎</button>
       <button class="btn btn-g btn-xs" onclick="bizDelSub('${rid}','${s.id}')">✕</button>
     </div>`;};
-  const roadRow=(r)=>{const[label,color]=BIZ_RMAP[r.st]||BIZ_RMAP.todo;const subs=Array.isArray(r.subs)?r.subs:[];const sdone=subs.filter(s=>s.st==='done').length;return`
+  const roadRow=(r)=>{const[label,color]=BIZ_RMAP[r.st]||BIZ_RMAP.todo;const subs=_bizSortedByDue(Array.isArray(r.subs)?r.subs:[]);const sdone=subs.filter(s=>s.st==='done').length;return`
     <div style="padding:7px 0;border-top:1px solid var(--card2)">
       <div style="display:flex;gap:4px;align-items:center">
         <div style="min-width:0;flex:1"><div style="font-size:13px;font-weight:600;line-height:1.5;${r.st==='done'?'color:var(--t3);text-decoration:line-through':''}">${esc(r.title)}${subs.length?` <span style="font-size:10.5px;color:var(--t3);font-weight:700">${sdone}/${subs.length}</span>`:''}</div>${r.due?`<div style="font-size:10.5px;color:var(--t3);margin-top:1px">📅 ${esc(r.due)}</div>`:''}${r.note?`<div style="font-size:10.5px;color:var(--t3)">${esc(r.note)}</div>`:''}</div>
-        <button class="btn btn-g btn-xs" onclick="bizMoveRoad('${r.id}',-1)" title="上へ">▲</button>
-        <button class="btn btn-g btn-xs" onclick="bizMoveRoad('${r.id}',1)" title="下へ">▼</button>
         <button class="btn btn-g btn-xs" style="color:${color};font-weight:700;white-space:nowrap" onclick="bizCycleRoad('${r.id}')" title="タップで状態切替">${label}</button>
         <button class="btn btn-g btn-xs" onclick="bizEditRoad('${r.id}')">✎</button>
         <button class="btn btn-g btn-xs" onclick="bizDelRoad('${r.id}')">✕</button>
@@ -3547,7 +3613,8 @@ function rBizBoard(){
   ${d.goals.length?`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px">${d.goals.map(goalRow).join('')}</div>`:`<div class="card" style="color:var(--t3);font-size:12px">目標はまだありません。「＋ 目標を追加」で登録できます。</div>`}
   <div style="font-weight:800;font-size:15px;color:var(--purple);margin:18px 0 8px">🗺 ロードマップ <button class="btn btn-g btn-xs" onclick="bizAddRoad()">＋ 項目を追加</button></div>
   <div class="card">
-    ${d.roadmap.length?d.roadmap.map(roadRow).join(''):`<div style="color:var(--t3);font-size:12px">項目はまだありません。</div>`}
+    ${d.roadmap.length?_bizSortedByDue(d.roadmap).map(roadRow).join(''):`<div style="color:var(--t3);font-size:12px">項目はまだありません。</div>`}
+    ${d.roadmap.length?`<div style="font-size:10.5px;color:var(--t3);margin-top:8px">期限が早い順に自動表示（日付未設定は末尾）</div>`:''}
   </div>
   <div style="font-weight:800;font-size:15px;color:var(--purple);margin:18px 0 8px">🔥 イシュー × タスク <button class="btn btn-g btn-xs" onclick="bizAddIssue()">＋ イシューを追加</button></div>
   ${d.issues.length?d.issues.map(issueCard).join(''):`<div class="card" style="color:var(--t3);font-size:12px">イシューはまだありません。「＋ イシューを追加」で登録できます。</div>`}
@@ -14350,7 +14417,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260729-01';
+const APP_VERSION='20260730-01';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
