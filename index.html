@@ -14514,7 +14514,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260730-02';
+const APP_VERSION='20260730-03';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
