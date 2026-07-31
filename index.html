@@ -2157,6 +2157,67 @@ async function hakenEnsureAllWorkerTabs(){
   return false;
 }
 
+// 2026-07-31 一時修復: 旧GASが作った「編集者名#連番」の派遣取込案件だけを論理削除する。
+// 手入力案件(hakenIdなし)・他事業・削除済み案件は対象外。物理削除はしない。
+function hakenLegacyCleanupCandidates(jobs){
+  return (jobs||[]).filter(function(j){
+    return j&&!j.deleted&&j.biz==='haken'&&/^[^#\r\n]+#\d+$/.test(String(j.hakenId||'').trim());
+  });
+}
+function hakenLegacyCleanupPreview(){
+  if(typeof _isOwner!=='function'||!_isOwner()){toast('管理者のみ実行できます','warn');return;}
+  var targets=hakenLegacyCleanupCandidates(S.jobs);
+  var ids=targets.map(function(j){return j.id;});
+  window.__hakenLegacyCleanupIds=ids;
+  var rows=targets.map(function(j){
+    return '<div style="padding:7px 0;border-bottom:1px solid var(--border);font-size:12px">'
+      +'<strong>'+esc(j.hakenId||'')+'</strong>　'+esc(j.title||'(無題)')
+      +'<div style="color:var(--t3);margin-top:2px">'+esc(j.clientName||'クライアント未設定')+'</div></div>';
+  }).join('');
+  openModal('<div class="mhdr"><div class="mtitle">派遣の誤取込案件を修復</div><button class="mclose" onclick="closeModal()">✕</button></div>'
+    +'<div style="font-size:13px;line-height:1.7;margin-bottom:12px">対象は、派遣シート由来の「編集者名#連番」案件だけです。手入力案件は含みません。</div>'
+    +'<div style="font-size:18px;font-weight:800;margin-bottom:10px">対象 '+targets.length+'件</div>'
+    +'<div style="max-height:340px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:0 10px">'+(rows||'<div style="padding:12px;color:var(--t3)">対象はありません</div>')+'</div>'
+    +'<div class="mfooter"><button class="btn btn-g" onclick="closeModal()">閉じる</button>'
+    +(targets.length?'<button class="btn btn-red" onclick="hakenLegacyCleanupRun()">表示した '+targets.length+'件を修復</button>':'')+'</div>');
+}
+function hakenLegacyCleanupRun(){
+  if(typeof _isOwner!=='function'||!_isOwner()){toast('管理者のみ実行できます','warn');return;}
+  var fixedIds=(window.__hakenLegacyCleanupIds||[]).slice();
+  var currentById={};(S.jobs||[]).forEach(function(j){if(j&&j.id)currentById[j.id]=j;});
+  // プレビュー後に対象条件から外れた案件は触らない。新しく増えた候補も次回プレビューまで触らない。
+  var targets=fixedIds.map(function(id){return currentById[id];}).filter(function(j){
+    return hakenLegacyCleanupCandidates([j]).length===1;
+  });
+  if(!targets.length){closeModal();toast('対象はありません');return;}
+  if(!confirm('表示した派遣誤取込案件 '+targets.length+'件を修復しますか？\n案件は復元可能な論理削除として保存します。'))return;
+  var targetSet={};targets.forEach(function(j){targetSet[j.id]=true;});
+  var targetBefore={};targets.forEach(function(j){targetBefore[j.id]={deleted:j.deleted,updatedAt:j.updatedAt};});
+  var untouchedBefore={};(S.jobs||[]).forEach(function(j){if(j&&j.id&&!targetSet[j.id])untouchedBefore[j.id]=_entSig(j);});
+  var now=Date.now();
+  targets.forEach(function(j){
+    j.deleted=true;
+    j.updatedAt=now;
+    window._teamSnap[j.id]=_entSig(j);
+  });
+  // 非対象が変化していないことを保存前に検証する。
+  var changedOther=(S.jobs||[]).some(function(j){
+    return j&&j.id&&!targetSet[j.id]&&untouchedBefore[j.id]!==_entSig(j);
+  });
+  if(changedOther){
+    targets.forEach(function(j){j.deleted=targetBefore[j.id].deleted;j.updatedAt=targetBefore[j.id].updatedAt;});
+    toast('非対象データの変更を検知したため中止しました','err');
+    return;
+  }
+  S._savedAt=now;
+  _lsSaveState(S);
+  _teamSave();
+  window.__hakenLegacyCleanupIds=[];
+  var remaining=targets.filter(function(j){return !j.deleted;}).length;
+  closeModal();render();
+  toast(remaining===0?'派遣の誤取込案件 '+targets.length+'件を修復しました':'修復後の検証に失敗しました',remaining===0?'':'err');
+}
+
 const LOG_TYPE_LBL={revenue:'💰 収益',sales:'📞 営業',hire:'👤 採用'};
 const GOAL_CATS=[{v:'revenue',l:'💰 収益'},{v:'skill',l:'📚 スキル'},{v:'habit',l:'🔥 習慣'},{v:'project',l:'🎬 案件'},{v:'sales',l:'📞 営業'},{v:'hire',l:'👤 採用'}];
 const GOAL_HORIZONS=[{v:'this_month',l:'今月の目標',icon:'📅'},{v:'next_month',l:'来月の目標',icon:'🗓'},{v:'monthly',l:'月毎の目標',icon:'📆'},{v:'year1',l:'1年間の目標',icon:'🌱'},{v:'year5',l:'5年後の目標',icon:'🚀'},{v:'year10',l:'10年後の目標',icon:'🌟'},{v:'tree',l:'ツリー表示',icon:'🌳'}];
@@ -10232,6 +10293,7 @@ ${_isOwner()?`${secTitle('🔑 サインインしたメンバー・権限')}
 ${secTitle('📊 Googleスプレッドシート連携')}
 <div class="card" style="margin-bottom:16px">
   <div style="font-size:12px;color:var(--t2)">安全のため読み取り専用です。社内アプリからシートへの自動記帳・一括同期は行いません。編集者派遣の案件は、案件管理画面の「派遣シート取込」から読み込めます。</div>
+  ${_isOwner()?`<button class="btn btn-red btn-sm" style="margin-top:12px" onclick="hakenLegacyCleanupPreview()">派遣の誤取込案件を確認・修復</button>`:''}
 </div>
 
 ${secTitle('👤 担当者管理')}
@@ -14409,7 +14471,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260731-02';
+const APP_VERSION='20260731-03';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
