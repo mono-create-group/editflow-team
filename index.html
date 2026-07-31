@@ -2044,11 +2044,39 @@ function sheetsDoImport(allJobs){
 // ===派遣管理シート → 案件 取込（追加/更新のみ・削除しない・既存同期に非干渉）===
 const HAKEN_SHEET_ID = "1neGp2QYhiYqQoGqNIacc-SDndq_okhmZ4ZNMpWcJLh4";
 const HAKEN_TAB = "案件管理";
+const HAKEN_COLS = {biz:0,id:1,orderDate:2,client:3,worker:4,title:5,type:6,duration:7,price:8,fee:9,workerPay:10,delivery:11,invoice:12,payment:13,payoutStatus:14,payoutDue:15,note:16};
+function _hkCell(row,key){var i=HAKEN_COLS[key];return String(row&&row[i]!=null?row[i]:'').trim();}
+function _hkIsDataRow(row){
+  // 確定した納品案件だけを扱う。数式だけの予約行や書込テストを取り込まない。
+  var id=_hkCell(row,'id'), client=_hkCell(row,'client'), worker=_hkCell(row,'worker'), title=_hkCell(row,'title');
+  if(!id||!client||!worker||!title||!_hkDate(_hkCell(row,'delivery')))return false;
+  if(/^(案件\s*ID|ID)$/i.test(id)||/^(タイトル|案件タイトル)$/i.test(title))return false;
+  if(/記入例|入力例|サンプル|テンプレート|編集者書込|クライアントテス(?:ト)?/.test(_hkCell(row,'note')+' '+id+' '+client+' '+worker+' '+title))return false;
+  return true;
+}
+function _hkPrepareRows(rows){
+  // 同じ案件IDがシート内に複数あっても1件にまとめる（後にある行を正とする）。
+  var byId=new Map();
+  (rows||[]).forEach(function(row){if(_hkIsDataRow(row))byId.set(_hkCell(row,'id'),row);});
+  return Array.from(byId.values());
+}
 function _hkDate(s){ s=String(s==null?'':s).trim().replace(/\s/g,''); if(!s)return'';
   var m=s.match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})$/); if(m)return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');
   var m2=s.match(/^(\d{1,2})[\/\-.](\d{1,2})$/); if(m2){var y=new Date().getFullYear();return y+'-'+m2[1].padStart(2,'0')+'-'+m2[2].padStart(2,'0');}
   var m3=s.match(/^(\d{1,2})月(\d{1,2})日?$/); if(m3){var y=new Date().getFullYear();return y+'-'+m3[1].padStart(2,'0')+'-'+m3[2].padStart(2,'0');}
   return''; }
+function _hkMonthEnd(iso,addMonths){
+  var m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); if(!m)return'';
+  var d=new Date(Number(m[1]),Number(m[2])-1+addMonths+1,0);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function _hkBillingDates(deliveryDate){
+  var m=String(deliveryDate||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); if(!m)return{invoiceDate:null,paymentDate:null,payoutDate:null,dueDate:null};
+  var invoiceDate=_hkMonthEnd(deliveryDate,0);
+  var paymentDate=_hkMonthEnd(deliveryDate,1);
+  var payoutDate=_hkMonthEnd(deliveryDate,Number(m[3])<=25?1:2);
+  return{invoiceDate:invoiceDate,paymentDate:paymentDate,payoutDate:payoutDate,dueDate:paymentDate};
+}
 function _hkNum(s){ if(s==null)return 0; var n=parseInt(String(s).replace(/[¥,￥\s円]/g,'')); return isNaN(n)?0:n; }
 function _hkFindByName(list,name){ name=String(name||'').trim(); if(!name)return null;
   var arr=list||[]; return arr.find(function(x){return x.name===name;}) ||
@@ -2061,6 +2089,7 @@ function hakenRowToJob(row, existing){
   var worker=_hkFindByName(S.workers, g(4));
   var unitPrice=_hkNum(g(8)), workerPay=_hkNum(g(10));
   var seibetsu=g(6), noukiDate=_hkDate(g(11)), seikyu=g(12), payin=_hkDate(g(13)), shiharai=g(14);
+  var billing=_hkBillingDates(noukiDate);
   var scope = seibetsu==='ショート'?'ショート動画' : (seibetsu==='長尺'?'長尺動画':'');
   var status = (seikyu==='入金済') ? '完了' : (noukiDate ? '初稿完成' : (g(4) ? '進行中' : '受注済み'));
   var noteParts=[];
@@ -2073,6 +2102,7 @@ function hakenRowToJob(row, existing){
     title: g(5)||(g(3)?g(3)+(seibetsu?' '+seibetsu:''):'')||g(1)||'(無題)',
     biz: (existing&&existing.biz)||'haken',
     jobType: (existing&&existing.jobType)||'edit',
+    clientName: g(3)||((existing&&existing.clientName)||null),
     clientId: client?client.id:((existing&&existing.clientId)||null),
     workerId: worker?worker.id:((existing&&existing.workerId)||null),
     workerIds: worker?[worker.id]:((existing&&existing.workerIds)||[]),
@@ -2080,9 +2110,11 @@ function hakenRowToJob(row, existing){
     status: status,
     unitPrice: unitPrice, profit: unitPrice, workerPay: workerPay,
     deliveryDate: noukiDate||null,
-    paymentDate: payin||null,
-    payoutDate: (shiharai==='支払済') ? (_hkDate(g(15))||payin||today()) : ((existing&&existing.payoutDate)||null),
-    invoiceDate: (seikyu==='請求済'||seikyu==='入金済') ? ((existing&&existing.invoiceDate)||noukiDate||null) : ((existing&&existing.invoiceDate)||null),
+    paymentDate: billing.paymentDate,
+    paidAt: payin||((existing&&existing.paidAt)||null),
+    payoutDate: billing.payoutDate,
+    invoiceDate: billing.invoiceDate,
+    dueDate: billing.dueDate,
     notes: noteParts.join(' / '),
     hakenId: hakenId
   };
@@ -2091,6 +2123,7 @@ function hakenRowToJob(row, existing){
     // 会長がアプリで手入力する項目(ステータスの進行・支払額)を絶対に潰さない。
     // シートに値がある項目だけ更新し、空欄のときは既存値を維持する。
     if(mapped.title) existing.title=mapped.title;
+    if(mapped.clientName) existing.clientName=mapped.clientName;
     if(client) existing.clientId=mapped.clientId;
     if(worker){ existing.workerId=mapped.workerId; existing.workerIds=mapped.workerIds; }
     if(scope) existing.scope=mapped.scope;
@@ -2098,9 +2131,11 @@ function hakenRowToJob(row, existing){
     if(unitPrice>0 && !(existing.profit>0)) existing.profit=unitPrice;
     if(workerPay>0) existing.workerPay=workerPay;
     if(noukiDate) existing.deliveryDate=noukiDate;
-    if(payin) existing.paymentDate=payin;
-    if(shiharai==='支払済' && !existing.payoutDate) existing.payoutDate=mapped.payoutDate;
-    if((seikyu==='請求済'||seikyu==='入金済') && !existing.invoiceDate) existing.invoiceDate=mapped.invoiceDate;
+    if(!existing.invoiceDate&&mapped.invoiceDate) existing.invoiceDate=mapped.invoiceDate;
+    if(!existing.dueDate&&mapped.dueDate) existing.dueDate=mapped.dueDate;
+    if(!existing.paymentDate&&mapped.paymentDate) existing.paymentDate=mapped.paymentDate;
+    if(!existing.paidAt&&mapped.paidAt) existing.paidAt=mapped.paidAt;
+    if(!existing.payoutDate&&mapped.payoutDate) existing.payoutDate=mapped.payoutDate;
     if(mapped.notes) existing.notes=mapped.notes;
     existing.hakenId=hakenId;
     // ステータスは後退させない。入金済(シートで完了確定)のときだけ「完了」へ前進させる。
@@ -2117,12 +2152,12 @@ async function hakenImportModal(){
   toast('派遣管理シートを読み込み中…');
   var rows=null;
   try{
-    var range=encodeURIComponent("'"+HAKEN_TAB+"'!A2:Q");
+    var range=encodeURIComponent("'"+HAKEN_TAB+"'!A:Q");
     var res=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+HAKEN_SHEET_ID+'/values/'+range,{headers:{'Authorization':'Bearer '+_gcalToken}});
     if(!res.ok){var e=await res.json().catch(function(){return{};});toast('シート読み込み失敗: '+((e.error&&e.error.message)||res.status),'err');return;}
     var d=await res.json(); rows=d.values||[];
   }catch(err){toast('シート読み込みエラー','err');console.error(err);return;}
-  var data=rows.filter(function(r){return r&&(String(r[1]||'').trim()||String(r[5]||'').trim()||String(r[3]||'').trim())&&!/記入例/.test(String(r[16]||''));});
+  var data=_hkPrepareRows(rows);
   if(!data.length){toast('取り込める案件がありません（記入例のみ、または未入力）','warn');return;}
   var byId={}; (S.jobs||[]).forEach(function(j){ if(j.hakenId&&!j.deleted)byId[j.hakenId]=j; });
   var items=data.map(function(r){
@@ -5920,12 +5955,13 @@ function markJobPayout(id){
 function rProjCard(j){
   const cbz=bizCfgOf(jobBiz(j));
   const cl=S.clients.find(c=>c.id===j.clientId);
+  const clName=cl?cl.name:(j.clientName||'');
   const wNames=getJobWorkerNames(j);
   const uc=urgCls(j.deliveryDate);
   const pr=jobProfit(j),ti=jobTotalIn(j),to=jobTotalOut(j);
   return`<div class="proj-card" onclick="openJobModal('${j.id}')">
   <div class="proj-card-title">${esc(j.title)}</div>
-  ${cl?`<div class="proj-card-client">👤 ${esc(cl.name)}</div>`:''}
+  ${clName?`<div class="proj-card-client">👤 ${esc(clName)}</div>`:''}
   ${wNames?`<div style="font-size:11px;color:var(--t2);margin-top:2px">🛠 ${esc(wNames)}</div>`:''}
   ${j.scope?`<div style="font-size:11px;color:var(--t2);margin-top:2px">📌 ${esc(j.scope)}</div>`:''}
   ${ti?`<div class="proj-profit" style="font-size:13px">
@@ -14514,7 +14550,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260730-03';
+const APP_VERSION='20260731-01';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
