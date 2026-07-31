@@ -1674,7 +1674,6 @@ function _gcalInitAndAuth(clientId,silent=false){
       if(!silent)toast('📅 Googleカレンダーと連携しました！');
       gcalFetchCalendarList();
       gcalFetchUpcoming();
-      startSheetsAutoSync();
       render();
       // トークンは1時間で失効→自動リフレッシュ
       setTimeout(()=>_gcalRefreshToken(clientId), 55*60*1000);
@@ -1791,94 +1790,14 @@ async function sheetsRead(range){
   }catch(e){console.error('sheetsRead error',e);toast('スプレッドシート読み込みエラー','err');return null;}
 }
 
-// スプレッドシートへの書き込み（1案件）
-async function sheetsWriteJob(job){
-  if(!_gcalToken)return;
-  const sid=(S.settings.sheetsId||'').trim();
-  if(!sid)return;
-  const tab=(S.settings.sheetsTab||'').trim();
-  const pfx=tab?`'${tab}'!`:'';
-
-  // ワーカー名・クライアント名を解決
-  const workerNames=getJobWorkerNames(job)||'';
-  const client=job.clientId?(S.clients||[]).find(c=>c.id===job.clientId):null;
-  const clientName=client?client.name:'';
-
-  // 既存行を検索（タイトル一致）
-  let targetRow=-1;
-  try{
-    const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sid)}/values/${encodeURIComponent(pfx+'A:A')}`,{headers:{'Authorization':'Bearer '+_gcalToken}});
-    if(res.ok){
-      const d=await res.json();
-      const rows=d.values||[];
-      for(let i=1;i<rows.length;i++){
-        if((rows[i][0]||'').trim()===(job.title||'').trim()){targetRow=i+1;break;}
-      }
-    }
-  }catch(e){console.error('sheetsWriteJob find error',e);return;}
-
-  // 書き込む値（I,Jは既存値を保持）
-  let matLink='',refLink='';
-  if(targetRow>0){
-    try{
-      const r2=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sid)}/values/${encodeURIComponent(pfx+'I'+targetRow+':J'+targetRow)}`,{headers:{'Authorization':'Bearer '+_gcalToken}});
-      if(r2.ok){const d2=await r2.json();const v=d2.values?.[0]||[];matLink=v[0]||'';refLink=v[1]||'';}
-    }catch(e){}
-  }
-
-  const rowVals=[
-    job.title||'',
-    job.status||'',
-    workerNames,
-    job.sharedDate||'',
-    job.editorDraftDate||'',
-    job.clientDraftDate||'',
-    job.deliveryDate||'',
-    job.unitPrice!=null?String(job.unitPrice):'',
-    matLink,
-    refLink,
-    clientName,
-    job.notes||''
-  ];
-
-  try{
-    if(targetRow>0){
-      // 既存行を更新
-      await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sid)}/values/${encodeURIComponent(pfx+'A'+targetRow+':L'+targetRow)}?valueInputOption=USER_ENTERED`,{
-        method:'PUT',
-        headers:{'Authorization':'Bearer '+_gcalToken,'Content-Type':'application/json'},
-        body:JSON.stringify({values:[rowVals]})
-      });
-    }else{
-      // 新規行を追加
-      await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sid)}/values/${encodeURIComponent(pfx+'A:L')}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,{
-        method:'POST',
-        headers:{'Authorization':'Bearer '+_gcalToken,'Content-Type':'application/json'},
-        body:JSON.stringify({values:[rowVals]})
-      });
-    }
-    console.log('[Sheets] synced:',job.title);
-  }catch(e){console.error('sheetsWriteJob write error',e);}
-}
-
-// 全案件を一括同期
+// 社内アプリからGoogle Sheetsへの汎用書き込みは停止済み。
+// 派遣シートの個人タブへ別案件を書き込む事故を防ぐため、読み取り専用で運用する。
+async function sheetsWriteJob(){ return false; }
 async function sheetsSyncAll(silent=false){
-  if(!_gcalToken||!(S.settings?.sheetsId))return;
-  const jobs=(S.jobs||[]).filter(j=>!j.deleted);
-  if(!jobs.length)return;
-  if(!silent)toast('📊 スプレッドシートを同期中…');
-  for(const job of jobs)await sheetsWriteJob(job);
-  if(!silent)toast(`📊 ${jobs.length}件をスプレッドシートに同期しました`);
+  if(!silent)toast('スプレッドシート連携は読み取り専用です','warn');
+  return false;
 }
-
-// 30分ごとの自動同期
-let _sheetsAutoTimer=null;
-function startSheetsAutoSync(){
-  if(_sheetsAutoTimer)clearInterval(_sheetsAutoTimer);
-  _sheetsAutoTimer=setInterval(()=>{
-    if(_gcalToken&&S.settings?.sheetsId)sheetsSyncAll(true);
-  },30*60*1000);
-}
+function startSheetsAutoSync(){ return false; }
 function gcalSilentReconnect(){
   // ページロード時のauto-popup はブラウザにブロックされるため
   // サイドバーに「再接続」ボタンを表示するだけにする
@@ -2225,37 +2144,17 @@ async function _hakenSheetsMeta(){
   return (d.sheets||[]).map(function(s){return s.properties;});
 }
 async function _hakenBatch(requests){
-  var res=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+HAKEN_SHEET_ID+':batchUpdate',{method:'POST',headers:{'Authorization':'Bearer '+_gcalToken,'Content-Type':'application/json'},body:JSON.stringify({requests:requests})});
-  if(!res.ok){var t=await res.text();throw new Error('batch '+res.status+' '+t.slice(0,160));}
-  return res.json();
+  throw new Error('派遣シートは読み取り専用です');
 }
 async function hakenEnsureWorkerTab(rawName, meta){
-  if(typeof _gcalToken==='undefined'||!_gcalToken)return {noauth:true};
-  var name=_hakenSanitize(rawName); if(!name)return {skip:true};
-  if(!meta)meta=await _hakenSheetsMeta();
-  if(meta.some(function(p){return _hakenSanitize(p.title)===name;}))return {exists:true};
-  var tpl=meta.find(function(p){return p.title===HAKEN_TEMPLATE;});
-  if(!tpl)throw new Error('編集者テンプレが見つかりません');
-  var _d=meta.find(function(p){return p.title==='編集者台帳';}); var _ins=_d?_d.index:meta.length; var r1=await _hakenBatch([{duplicateSheet:{sourceSheetId:tpl.sheetId,newSheetName:name,insertSheetIndex:_ins}}]);
-  var newId=r1.replies[0].duplicateSheet.properties.sheetId;
-  try{ await _hakenBatch([{addProtectedRange:{protectedRange:{range:{sheetId:newId,startColumnIndex:5,endColumnIndex:7},description:'自動計算(編集不可)',warningOnly:false}}}]); }catch(e){}
-  return {created:true};
+  return {readOnly:true};
 }
 // 追加時のfire&forget（未連携なら黙ってスキップ／作成時のみトースト）
-function _hakenAutoTab(n){ try{ hakenEnsureWorkerTab(n).then(function(r){ if(r&&r.created)toast('派遣シートにタブ作成: '+_hakenSanitize(n)); }).catch(function(){}); }catch(e){} }
+function _hakenAutoTab(){ return false; }
 // 既存ワーカーぶんを一括生成
 async function hakenEnsureAllWorkerTabs(){
-  if(typeof _gcalToken==='undefined'||!_gcalToken){toast('先に設定でGoogle連携してください（シート書き込みに必要）','warn');return;}
-  toast('派遣シートにワーカータブを作成中…');
-  var meta; try{ meta=await _hakenSheetsMeta(); }catch(e){ toast('シート読込失敗: '+e.message,'err'); return; }
-  var seen={},names=[];
-  (S.workers||[]).forEach(function(w){ var nm=_hakenSanitize(w&&w.name); if(nm&&!seen[nm]){seen[nm]=1;names.push(nm);} });
-  var created=0,exists=0,fail=0;
-  for(var i=0;i<names.length;i++){
-    try{ var r=await hakenEnsureWorkerTab(names[i],meta); if(r.created){created++;meta.push({title:names[i],sheetId:0});} else if(r.exists){exists++;} }
-    catch(e){ fail++; console.error(names[i],e); }
-  }
-  toast('ワーカータブ: 新規'+created+' / 既存'+exists+(fail?' / 失敗'+fail:''));
+  toast('派遣シートは読み取り専用です','warn');
+  return false;
 }
 
 const LOG_TYPE_LBL={revenue:'💰 収益',sales:'📞 営業',hire:'👤 採用'};
@@ -2470,7 +2369,6 @@ let _lsPending=false;
 function save(){
   S._savedAt=Date.now();
   fbSave();
-  scheduleSheetSync();
   if(!_lsPending){
     _lsPending=true;
     requestAnimationFrame(()=>{
@@ -2479,34 +2377,11 @@ function save(){
     });
   }
 }
-// ===スプレッドシート同期（Apps Script Web App 経由・Firebase不要）===
-let _sheetSyncTimer=null;
-function scheduleSheetSync(){
-  if(!S.settings||!S.settings.sheetsSyncUrl)return;
-  clearTimeout(_sheetSyncTimer);
-  _sheetSyncTimer=setTimeout(()=>syncToSheet(false),5000);
-}
+// ===スプレッドシート連携（読み取り専用）===
+function scheduleSheetSync(){ return false; }
 function syncToSheet(manual){
-  if(!S.settings)S.settings={};
-  let url=S.settings.sheetsSyncUrl;
-  if(!url){
-    if(!manual)return;
-    url=(prompt('スプレッドシート同期用URL（Apps ScriptのウェブアプリURL）を貼り付けてください。\n※一度設定すれば、次回以降は保存のたびに自動同期します。')||'').trim();
-    if(!url)return;
-    S.settings.sheetsSyncUrl=url;
-    save();
-  }
-  const payload={
-    jobs:(S.jobs||[]).filter(j=>!j.deleted),
-    clients:(S.clients||[]).filter(c=>!c.deleted),
-    workers:S.workers||[]
-  };
-  try{
-    fetch(url,{method:'POST',mode:'no-cors',body:JSON.stringify(payload)});
-    if(manual)toast('📊 スプレッドシートへ同期しました（反映まで数秒）');
-  }catch(e){
-    if(manual)toast('同期に失敗しました: '+e,'warn');
-  }
+  if(manual)toast('スプレッドシートへの書き込みは停止しています','warn');
+  return false;
 }
 // ページを閉じる直前に必ずフラッシュ
 window.addEventListener('beforeunload',()=>{
@@ -5576,7 +5451,6 @@ function rProjects(){
     ${tabs.map(([k,l])=>`<button class="btn btn-g btn-sm ${PVMT===k?'btn-p':''}" onclick="PVMT='${k}';render()">${l}</button>`).join('')}
     <button class="btn btn-p btn-sm" onclick="openClientModal()">＋ クライアント追加</button>
     <button class="btn btn-g btn-sm" onclick="openJobModal()">＋ 案件追加</button>
-    <button class="btn btn-g btn-sm" onclick="syncToSheet(true)" title="案件をスプレッドシートに送信">📊 シート同期</button>
     ${PBIZ==='haken'?`<button class="btn btn-g btn-sm" style="border:1px solid var(--green);color:var(--green)" onclick="hakenImportModal()" title="派遣管理シートから案件を取り込む（追加/更新のみ）">📥 派遣シート取込</button>`:''}
     <select style="font-size:12px;padding:4px 8px;border-radius:6px" onchange="JOB_SORT=this.value;render()">
       <option value="deadline" ${JOB_SORT==='deadline'?'selected':''}>納期順（優先度）</option>
@@ -10357,20 +10231,7 @@ ${_isOwner()?`${secTitle('🔑 サインインしたメンバー・権限')}
 
 ${secTitle('📊 Googleスプレッドシート連携')}
 <div class="card" style="margin-bottom:16px">
-  <div style="font-size:12px;color:var(--t2);margin-bottom:10px">案件の追加・変更時に自動でスプレッドシートに書き込みます。30分ごとに自動同期。GoogleカレンダーのGoogle連携が必要です。</div>
-  <div class="fg" style="margin-bottom:10px">
-    <div class="fl">スプレッドシートID</div>
-    <input id="set-sheets-id" value="${esc(S.settings.sheetsId||'')}" placeholder="スプレッドシートIDを入力">
-    <div style="font-size:11px;color:var(--t3);margin-top:4px">URLの /spreadsheets/d/<strong>ここの部分</strong>/edit から取得できます</div>
-  </div>
-  <div class="fg" style="margin-bottom:10px">
-    <div class="fl">シートタブ名（省略可）</div>
-    <input id="set-sheets-tab" value="${esc(S.settings.sheetsTab||'')}" placeholder="例: 大塚周平様（空欄で1枚目のシート）">
-  </div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap">
-    <button class="btn btn-p btn-sm" onclick="saveSheetsId()">保存</button>
-    <button class="btn btn-g btn-sm" onclick="sheetsSyncAll()">📊 今すぐ全件同期</button>
-  </div>
+  <div style="font-size:12px;color:var(--t2)">安全のため読み取り専用です。社内アプリからシートへの自動記帳・一括同期は行いません。編集者派遣の案件は、案件管理画面の「派遣シート取込」から読み込めます。</div>
 </div>
 
 ${secTitle('👤 担当者管理')}
@@ -10386,7 +10247,6 @@ ${secTitle('👤 担当者管理')}
     <input id="new-worker-name" placeholder="担当者名を入力" style="flex:1">
     <button class="btn btn-p btn-sm" onclick="addWorker()">追加</button>
   </div>
-  <button class="btn btn-g btn-sm" style="margin-top:8px;width:100%;border:1px solid var(--green);color:var(--green)" onclick="hakenEnsureAllWorkerTabs()" title="社内アプリのワーカー全員ぶんの記入タブを派遣シートに作成（既存はスキップ）">派遣シートにワーカータブを一括生成</button>
 </div>
 
 ${secTitle('🔄 アプリのアップデート')}
@@ -11528,7 +11388,6 @@ function saveJob(){
   }
   else S.jobs.unshift({id:uid(),...data,createdAt:new Date().toISOString()});
   save();closeModal();render();toast('案件を保存しました');
-  if(_gcalToken&&S.settings?.sheetsId){const _sj=EID?S.jobs.find(j=>j.id===EID):S.jobs[0];if(_sj)sheetsWriteJob(_sj).then(()=>toast('📊 スプレッドシートを更新しました'));}
   // ※ GcalへのアプリデータWriteは行わない（読み戻し重複防止）
 }
 
@@ -14550,7 +14409,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260731-01';
+const APP_VERSION='20260731-02';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
