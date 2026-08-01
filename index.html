@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="社内連絡">
 <meta name="theme-color" content="#000000">
+<meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
 <title>mono.create 社内連絡アプリ</title>
 <style>
@@ -934,6 +935,7 @@ a{color:inherit;text-decoration:none}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="./ai-bridge-client.js"></script>
 <script>/* lz-string 1.5.0 (MIT) — CDN非依存でオフライン/圧縮チーム同期を保証するためインライン化 */
 var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",e={};function t(r,o){if(!e[r]){e[r]={};for(var n=0;n<r.length;n++)e[r][r.charAt(n)]=n}return e[r][o]}var i={compressToBase64:function(r){if(null==r)return"";var n=i._compress(r,6,function(r){return o.charAt(r)});switch(n.length%4){default:case 0:return n;case 1:return n+"===";case 2:return n+"==";case 3:return n+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(n){return t(o,r.charAt(n))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(r){return null==r?"":""==r?null:i._decompress(r.length,16384,function(o){return r.charCodeAt(o)-32})},compressToUint8Array:function(r){for(var o=i.compress(r),n=new Uint8Array(2*o.length),e=0,t=o.length;e<t;e++){var s=o.charCodeAt(e);n[2*e]=s>>>8,n[2*e+1]=s%256}return n},decompressFromUint8Array:function(o){if(null==o)return i.decompress(o);for(var n=new Array(o.length/2),e=0,t=n.length;e<t;e++)n[e]=256*o[2*e]+o[2*e+1];var s=[];return n.forEach(function(o){s.push(r(o))}),i.decompress(s.join(""))},compressToEncodedURIComponent:function(r){return null==r?"":i._compress(r,6,function(r){return n.charAt(r)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),i._decompress(r.length,32,function(o){return t(n,r.charAt(o))}))},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(r,o,n){if(null==r)return"";var e,t,i,s={},u={},a="",p="",c="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<r.length;i+=1)if(a=r.charAt(i),Object.prototype.hasOwnProperty.call(s,a)||(s[a]=f++,u[a]=!0),p=c+a,Object.prototype.hasOwnProperty.call(s,p))c=p;else{if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++),s[p]=f++,c=String(a)}if(""!==c){if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++)}for(t=2,e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;for(;;){if(m<<=1,v==o-1){d.push(n(m));break}v++}return d.join("")},decompress:function(r){return null==r?"":""==r?null:i._decompress(r.length,32768,function(o){return r.charCodeAt(o)})},_decompress:function(o,n,e){var t,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:e(0),position:n,index:1};for(t=0;t<3;t+=1)l[t]=t;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return i}();"function"==typeof define&&define.amd?define(function(){return LZString}):"undefined"!=typeof module&&null!=module?module.exports=LZString:"undefined"!=typeof angular&&null!=angular&&angular.module("LZString",[]).factory("LZString",function(){return LZString});
 </script>
@@ -1061,6 +1063,7 @@ const fbDb=firebase.firestore();
 let FB_USER=null;
 let _fbSaveTimer=null;
 let _fbUnsubscribe=null;
+let _personalTaskBaseline=new Map();
 
 function fbSave(){
   if(!FB_USER)return;
@@ -1068,10 +1071,24 @@ function fbSave(){
   _stampTeamChanges();
   clearTimeout(_fbSaveTimer);
   _fbSaveTimer=setTimeout(()=>{
-    fbDb.collection('users').doc(FB_USER.uid).set({
-      json_mcapp:_packState(),
-      ts_mcapp:firebase.firestore.FieldValue.serverTimestamp()
-    },{merge:true}).catch(e=>console.error('Firestore save error:',e));
+    const mergeBaseline=_personalTaskBaseline;
+    if(window.AIBridge)AIBridge.stampChangedTasks(S.tasks||[],_personalTaskBaseline);
+    const ref=fbDb.collection('users').doc(FB_USER.uid);
+    const local=_decodePersonalState(_packState());
+    const saveBaseline=window.AIBridge?AIBridge.taskBaseline(local.tasks||[]):new Map();
+    let committedTasks=local.tasks||[];
+    fbDb.runTransaction(async tx=>{
+      const snap=await tx.get(ref),remote=_decodePersonalState(snap.exists?(snap.data()||{}).json_mcapp:null);
+      if(window.AIBridge&&remote&&Array.isArray(remote.tasks))local.tasks=AIBridge.mergeTaskChanges(local.tasks||[],remote.tasks,mergeBaseline);
+      committedTasks=local.tasks||[];
+      tx.set(ref,{json_mcapp:_packPersonalState(local),ts_mcapp:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    }).then(()=>{
+      if(!window.AIBridge)return;
+      AIBridge.stampChangedTasks(S.tasks||[],saveBaseline);
+      S.tasks=AIBridge.mergeTaskChanges(S.tasks||[],committedTasks,saveBaseline);
+      _personalTaskBaseline=AIBridge.taskBaseline(committedTasks);
+      _lsSaveState(S);
+    }).catch(e=>console.error('Firestore save error:',e));
     _teamSave();
   },2000);
 }
@@ -1082,11 +1099,19 @@ function fbSave(){
 function _packState(){
   const EXCL={bizBoard:1};TEAM_KEYS.forEach(k=>EXCL[k]=1);
   const personal={};for(const k in S){if(!EXCL[k])personal[k]=S[k];}
-  const json=JSON.stringify(personal);
+  return _packPersonalState(personal);
+}
+function _packPersonalState(personal){
+  const json=JSON.stringify(personal||{});
   if(window.LZString&&json.length>500000){
     try{return 'LZ:'+LZString.compressToBase64(json);}catch(_){return json;}
   }
   return json;
+}
+function _decodePersonalState(raw){
+  if(typeof raw!=='string'||!raw)return{};
+  if(raw.slice(0,3)==='LZ:'){if(!window.LZString)return{};raw=LZString.decompressFromBase64(raw.slice(3));}
+  try{const parsed=JSON.parse(raw);return parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?parsed:{};}catch(_){return{};}
 }
 function _applyCloudData(json){
   if(typeof json==='string'&&json.slice(0,3)==='LZ:'){
@@ -1096,9 +1121,12 @@ function _applyCloudData(json){
   }
   const cloud=JSON.parse(json);
   const def=defState();
+  const localTasks=Array.isArray(S.tasks)?S.tasks:[];
+  if(window.AIBridge)AIBridge.stampChangedTasks(localTasks,_personalTaskBaseline);
   // チームデータは shared/mcapp が唯一の真実。個人docで上書きせず現在のメモリ内容を保持する。
   const keepTeam={};TEAM_KEYS.forEach(k=>keepTeam[k]=S[k]);const keepBiz=S.bizBoard;
   S=migrate(Object.assign(def,cloud));
+  if(window.AIBridge){const remoteTasks=Array.isArray(S.tasks)?S.tasks:[];S.tasks=AIBridge.mergeTaskChanges(localTasks,remoteTasks,_personalTaskBaseline);_personalTaskBaseline=AIBridge.taskBaseline(remoteTasks);}
   TEAM_KEYS.forEach(k=>{if(keepTeam[k]!==undefined)S[k]=keepTeam[k];});
   if(keepBiz!==undefined)S.bizBoard=keepBiz;
   ['tasks','habits','jobs','logs','journals','goals','clients','workers','checkIns','customPages','customEx','navConfig','meals','workouts','pipeline','teamKgis','teamKpis','teamPosts','teamDocs','teamPages','bizUnits','teamMeetings','salesLeads','hpFees','salesSites','templates','bizInfo','crmClients','memberRoles','signins','salesDirectives'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=def[k]||[];});
@@ -1456,6 +1484,7 @@ fbAuth.onAuthStateChanged(user=>{
   }
   try{renderAuthGate();}catch(e){console.warn('authGate',e);}
   renderAuthUI();
+  if(window.AIBridge){if(user)window.AIBridge.connect(user,'internal');else window.AIBridge.disconnect();}
   renderGcalUI();
   // Gcal連携済みならサイレント再認証
   setTimeout(gcalSilentReconnect,1500);
@@ -2275,6 +2304,7 @@ const DEFAULT_FS=[
 
 // ===STATE===
 let S=load(), V=sessionStorage.getItem('ef_team_view')||'projects', TV='today', HV='weekly', WO=0, MO=0, EID=null, PVM='board', JD=today();
+if(window.AIBridge)_personalTaskBaseline=AIBridge.taskBaseline(S.tasks||[]);
 let KV=null; // 現在の事業部ID
 let KT='1w'; // KPIページ内タブ
 let SD=0; // schedule day offset (0=today,1=tomorrow,...)
@@ -10961,10 +10991,10 @@ function saveTask(){
   const dueTime=dueDate?(document.getElementById('t-due-time')?.value||null):null;
   if(EID){
     const t=S.tasks.find(t=>t.id===EID);
-    if(t){Object.assign(t,{title,description:document.getElementById('t-desc').value.trim(),dueDate,dueTime,priority:document.getElementById('t-pri').value||null,startTime:document.getElementById('t-start').value||null,endTime:document.getElementById('t-end').value||null,timeSlots,estimatedMinutes:mins,subtasks:subs.map((s,i)=>({...s,done:t.subtasks?.[i]?.done||false}))});}
+    if(t){Object.assign(t,{title,description:document.getElementById('t-desc').value.trim(),dueDate,dueTime,priority:document.getElementById('t-pri').value||null,startTime:document.getElementById('t-start').value||null,endTime:document.getElementById('t-end').value||null,timeSlots,estimatedMinutes:mins,subtasks:subs.map((s,i)=>({...s,done:t.subtasks?.[i]?.done||false})),updatedAt:Date.now()});}
     toast('タスクを更新しました');
   }else{
-    const t={id:uid(),title,description:document.getElementById('t-desc').value.trim(),dueDate,dueTime,priority:document.getElementById('t-pri').value||null,startTime:document.getElementById('t-start').value||null,endTime:document.getElementById('t-end').value||null,timeSlots,estimatedMinutes:mins,subtasks:subs,done:false,procCount:0,createdAt:new Date().toISOString()};
+    const t={id:uid(),title,description:document.getElementById('t-desc').value.trim(),dueDate,dueTime,priority:document.getElementById('t-pri').value||null,startTime:document.getElementById('t-start').value||null,endTime:document.getElementById('t-end').value||null,timeSlots,estimatedMinutes:mins,subtasks:subs,done:false,procCount:0,createdAt:new Date().toISOString(),updatedAt:Date.now()};
     // 固定スケジュール内挿入の場合: fsBlockId/fsSlotをセット
     if(window._fsPendingBlockId!==undefined){
       t.fsBlockId=window._fsPendingBlockId;
@@ -11699,7 +11729,7 @@ function saveLog(){
 // ===ACTIONS===
 function toggleDone(id){
   const t=S.tasks.find(t=>t.id===id);if(!t)return;
-  t.done=!t.done;t.doneDate=t.done?today():null;
+  t.done=!t.done;t.doneDate=t.done?today():null;t.updatedAt=Date.now();
   playCheckSound(t.done);
   if(t.done&&id===S.frogId){S.frogId=null;toast('🐸 カエルを食べました！お疲れ様！');}
   else toast(t.done?'✅ 完了！':'↩ 未完了に戻しました');
@@ -11753,7 +11783,7 @@ function confirmSplitTask(id){
   save();closeModal();render();toast('タスクを分割しました ✂');
 }
 function delTask(id){
-  const t=S.tasks.find(t=>t.id===id);if(t)t.deleted=true;
+  const t=S.tasks.find(t=>t.id===id);if(t){t.deleted=true;t.updatedAt=Date.now();}
   if(S.frogId===id)S.frogId=null;save();render();toast('タスクを削除しました');
 }
 function procrastinate(id){
@@ -14471,7 +14501,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260731-03';
+const APP_VERSION='20260801-02';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
