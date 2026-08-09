@@ -10320,6 +10320,16 @@ ${_isOwner()?`${secTitle('🔑 サインインしたメンバー・権限')}
   </div>`:`<div style="font-size:12px;color:var(--t3)">まだ登録がありません。営業スタッフのGoogleメールを追加してください。</div>`}
 </div>`:''}
 
+${_isOwner()?`${secTitle('💴 DM営業の報酬設定')}
+${(()=>{const c=slCompensation();return`<div class="card" style="margin-bottom:16px">
+  <div style="font-size:12px;color:var(--t2);line-height:1.7;margin-bottom:12px">DM営業スタッフの成果報酬・固定給・ボーナス条件です。保存後、社内アプリを利用する全メンバーへ共有されます。</div>
+  <div class="frow"><div class="fg"><div class="fl">成果報酬（1成約あたり・円）</div><input id="slc-commission" type="number" min="0" step="100" value="${c.commissionRate}"></div><div class="fg"><div class="fl">固定給（月額・円）</div><input id="slc-fixed" type="number" min="0" step="100" value="${c.fixedMonthly}"></div></div>
+  <div class="frow"><div class="fg"><div class="fl">ボーナス開始件数</div><input id="slc-threshold" type="number" min="0" step="1" value="${c.bonusThreshold}"></div><div class="fg"><div class="fl">追加ボーナス（1成約あたり・円）</div><input id="slc-bonus" type="number" min="0" step="100" value="${c.bonusPerConversion}"></div></div>
+  <div class="fg"><div class="fl">キャンペーン表示名</div><input id="slc-label" maxlength="40" value="${esc(c.campaignLabel)}" placeholder="例：8月キャンペーン"></div>
+  <div style="font-size:11px;color:var(--t3);margin:0 0 12px">固定給スタッフのボーナスは、開始件数以上なら全成約分に適用します。</div>
+  <button class="btn btn-p btn-sm" onclick="slSaveCompensation()">💾 報酬設定を保存</button>
+</div>`})()}`:''}
+
 ${secTitle('📊 Googleスプレッドシート連携')}
 <div class="card" style="margin-bottom:16px">
   <div style="font-size:12px;color:var(--t2)">安全のため読み取り専用です。社内アプリからシートへの自動記帳・一括同期は行いません。編集者派遣の案件は、案件管理画面の「派遣シート取込」から読み込めます。</div>
@@ -13554,7 +13564,25 @@ function templateDelete(id){
 }
 
 // ═══ 営業指示(誰が・どの事業・どのジャンルへ営業するか)・2026-07-26 会長指示 ═══
-// S.salesDirectives(チーム同期): {id,assignee('全員'or担当名),biz,genre,note,updatedAt,updatedBy,deleted}
+// S.salesDirectives(チーム同期): 営業指示とDM営業の共有報酬設定を保持する。
+const SL_COMP_DEFAULT={commissionRate:15000,fixedMonthly:50000,bonusThreshold:5,bonusPerConversion:10000,campaignLabel:'8月キャンペーン'};
+function slCompensation(){
+  const row=(S.salesDirectives||[]).find(d=>d&&d.kind==='compensation'&&!d.deleted);
+  const n=(v,f)=>{v=Number(v);return Number.isFinite(v)&&v>=0?Math.round(v):f;};
+  return {commissionRate:n(row?.commissionRate,SL_COMP_DEFAULT.commissionRate),fixedMonthly:n(row?.fixedMonthly,SL_COMP_DEFAULT.fixedMonthly),bonusThreshold:n(row?.bonusThreshold,SL_COMP_DEFAULT.bonusThreshold),bonusPerConversion:n(row?.bonusPerConversion,SL_COMP_DEFAULT.bonusPerConversion),campaignLabel:String(row?.campaignLabel||SL_COMP_DEFAULT.campaignLabel).slice(0,40)};
+}
+function slSaveCompensation(){
+  if(!_isOwner()){toast('オーナーのみ変更できます','err');return;}
+  const read=(id)=>{const v=Number(document.getElementById(id)?.value);return Number.isFinite(v)&&v>=0?Math.round(v):null;};
+  const commissionRate=read('slc-commission'),fixedMonthly=read('slc-fixed'),bonusThreshold=read('slc-threshold'),bonusPerConversion=read('slc-bonus');
+  const campaignLabel=(document.getElementById('slc-label')?.value||'').trim().slice(0,40);
+  if([commissionRate,fixedMonthly,bonusThreshold,bonusPerConversion].includes(null)||!campaignLabel){toast('報酬額・件数・表示名を正しく入力してください','warn');return;}
+  if(!Array.isArray(S.salesDirectives))S.salesDirectives=[];
+  const data={kind:'compensation',commissionRate,fixedMonthly,bonusThreshold,bonusPerConversion,campaignLabel,updatedAt:Date.now(),updatedBy:_myDisplayName()||_myEmail()};
+  const existing=S.salesDirectives.find(d=>d&&d.kind==='compensation'&&!d.deleted);
+  if(existing)Object.assign(existing,data);else S.salesDirectives.push(Object.assign({id:uid(),createdAt:today()},data));
+  save();render();toast('DM営業の報酬設定を保存しました。全メンバーへ同期します');
+}
 // フル権限=作成/編集/削除。salesロールは自分宛+全員宛だけが営業リスト最上部に表示される(読み取り専用)。
 function _myDisplayName(){
   try{
@@ -13564,7 +13592,7 @@ function _myDisplayName(){
     return u?String(u.name||'').trim():'';
   }catch(_){return'';}
 }
-function _slDirs(){return (S.salesDirectives||[]).filter(d=>d&&!d.deleted);}
+function _slDirs(){return (S.salesDirectives||[]).filter(d=>d&&!d.deleted&&d.kind!=='compensation');}
 function slDirectivesHtml(){
   const full=myRole()==='full';
   const me=_myDisplayName();
@@ -13663,7 +13691,6 @@ function slDirDel(id){
 // ═══ 営業ランキング(2026-07-26 会長指示) ═══
 // 全員が見られる成績表。接触履歴(contacts)を担当者×期間で集計する。
 // 成約=contactsのs==='成約'を1件として数える(同日同事業は1件に丸められるので水増しなし)。
-const SR_REWARD=10000;                       // DM営業スタッフの成約1件あたり報酬
 let _srRange='month';                        // today / week / month / all
 function _srRangeStart(r){
   const d=new Date();d.setHours(0,0,0,0);
@@ -13832,7 +13859,7 @@ function rSalesRank(){
       <div><span style="font-size:26px;font-weight:800;color:var(--purple)">${rows.indexOf(myRow)+1}</span><span style="font-size:12px;color:var(--t3)"> 位 / ${rows.length}人中</span></div>
       <div><span style="font-size:22px;font-weight:800;color:var(--green)">${myRow.won}</span><span style="font-size:12px;color:var(--t3)"> 成約</span></div>
       <div><span style="font-size:22px;font-weight:800">${myRow.sent}</span><span style="font-size:12px;color:var(--t3)"> 送信</span></div>
-      <div><span style="font-size:18px;font-weight:800;color:var(--amber)">¥${(myRow.won*SR_REWARD).toLocaleString()}</span><span style="font-size:11px;color:var(--t3)"> 成果報酬の目安</span></div>
+      <div><span style="font-size:18px;font-weight:800;color:var(--amber)">¥${(myRow.won*slCompensation().commissionRate).toLocaleString()}</span><span style="font-size:11px;color:var(--t3)"> 成果報酬の目安</span></div>
     </div>
   </div>`:'';
   return`<div class="ph"><div class="ph-title">🏆 営業ランキング</div></div>
