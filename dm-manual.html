@@ -631,7 +631,7 @@ AI導入支援・コンサル
     <label>案件名の補足 <small>（任意。例: クライアント名＋成約日）</small></label>
     <input id="invNote" placeholder="例: ○○整体院 7/20成約" maxlength="60">
 
-    <div class="okbox"><b>8月の成果報酬は1件15,000円です。</b>固定給スタッフは月50,000円で、成約が5件以上なら全成約分に1件10,000円の追加ボーナスが付きます。フォームの報酬形態を選ぶだけで請求額を自動計算します。</div>
+    <div class="okbox" id="invCompNotice"><b>8月の成果報酬は1件15,000円です。</b>固定給スタッフは月50,000円で、成約が5件以上なら全成約分に1件10,000円の追加ボーナスが付きます。フォームの報酬形態を選ぶだけで請求額を自動計算します。</div>
 
     <p style="margin-top:18px"><b>振込先（ご自身の口座）</b></p>
     <p style="font-size:12.5px;color:var(--t2);margin:2px 0 8px">1つでも欠けると振込ができません。通帳やアプリの画面を見ながら、そのまま入力してください（次回からは自動で復元されます）。</p>
@@ -705,6 +705,9 @@ AI導入支援・コンサル
 <div id="invoicePrintRoot"></div>
 <div class="toast" id="toast"></div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
 "use strict";
 var API='https://script.google.com/macros/s/AKfycbzftG_O0GsR_8_TYwUwSGfSFPMCjXscWfw0jmTIB54H8NrH0SnjgH445IDDOKoHnNt8XA/exec';
@@ -930,6 +933,23 @@ function buildDm(){
 
 /* ── 請求書作成ツール ── */
 var INV_DRAFT_KEY='dm_invoice_draft';
+var INV_COMP={commissionRate:15000,fixedMonthly:50000,bonusThreshold:5,bonusPerConversion:10000,campaignLabel:'8月キャンペーン'};
+function invCompNum(v,f){v=Number(v);return Number.isFinite(v)&&v>=0?Math.round(v):f;}
+function invApplyCompensation(raw){
+  raw=raw||{};
+  INV_COMP={commissionRate:invCompNum(raw.commissionRate,15000),fixedMonthly:invCompNum(raw.fixedMonthly,50000),bonusThreshold:invCompNum(raw.bonusThreshold,5),bonusPerConversion:invCompNum(raw.bonusPerConversion,10000),campaignLabel:String(raw.campaignLabel||'8月キャンペーン').slice(0,40)};
+  var sel=$('invPayPlan'),notice=$('invCompNotice');
+  if(sel){sel.options[0].textContent='成果報酬（'+INV_COMP.campaignLabel+'：1件'+invYen(INV_COMP.commissionRate)+'）';sel.options[1].textContent='固定給（月'+invYen(INV_COMP.fixedMonthly)+'＋'+INV_COMP.bonusThreshold+'件以上で1件'+invYen(INV_COMP.bonusPerConversion)+'ボーナス）';}
+  if(notice)notice.textContent=INV_COMP.campaignLabel+'の成果報酬は1件'+invYen(INV_COMP.commissionRate)+'です。固定給スタッフは月'+invYen(INV_COMP.fixedMonthly)+'で、成約が'+INV_COMP.bonusThreshold+'件以上なら全成約分に1件'+invYen(INV_COMP.bonusPerConversion)+'の追加ボーナスが付きます。';
+  if($('invPreview'))invRender();
+}
+function invLoadSharedCompensation(){
+  if(!window.firebase)return;
+  try{
+    if(!firebase.apps.length)firebase.initializeApp({apiKey:'AIzaSyA8kjyY8xF4usk5K7TyBfab_wW3EIFr9Z4',authDomain:'editflow-mono-create.firebaseapp.com',projectId:'editflow-mono-create',storageBucket:'editflow-mono-create.firebasestorage.app',messagingSenderId:'280142126082',appId:'1:280142126082:web:3defcc1b0d370b14781b1b'});
+    firebase.auth().onAuthStateChanged(function(user){if(!user)return;firebase.firestore().collection('shared').doc('mcapp').get().then(function(doc){var raw=doc.exists?(doc.data()||{}).salesDirectives:'';var list=typeof raw==='string'?JSON.parse(raw):[];var c=(list||[]).find(function(d){return d&&d.kind==='compensation'&&!d.deleted;});if(c)invApplyCompensation(c);}).catch(function(){});});
+  }catch(e){}
+}
 function invPad2(n){return (n<10?'0':'')+n;}
 function invDefaultMonth(){var d=new Date();return d.getFullYear()+'-'+invPad2(d.getMonth()+1);}
 function invMonthLabel(ym){
@@ -985,14 +1005,14 @@ function invBuildHTML(){
   var acctNo=($('invAcctNo').value||'').trim();
   var acctName=($('invAcctName').value||'').trim();
 
-  var unit=plan==='commission'?15000:10000;
+  var unit=plan==='commission'?INV_COMP.commissionRate:INV_COMP.bonusPerConversion;
   var commission=plan==='commission'?count*unit:0;
-  var fixed=plan==='fixed'?50000:0;
-  var bonus=plan==='fixed'&&count>=5?count*unit:0;
+  var fixed=plan==='fixed'?INV_COMP.fixedMonthly:0;
+  var bonus=plan==='fixed'&&count>=INV_COMP.bonusThreshold?count*unit:0;
   var total=commission+fixed+bonus;
   var today=new Date();
   var due=invDueDate(today);
-  var itemLabel=plan==='commission'?'8月キャンペーン成約報酬（'+esc(invMonthLabel(ym)||ym)+'）':'固定給スタッフ 成約ボーナス（'+esc(invMonthLabel(ym)||ym)+'）';
+  var itemLabel=plan==='commission'?esc(INV_COMP.campaignLabel)+'成約報酬（'+esc(invMonthLabel(ym)||ym)+'）':'固定給スタッフ 成約ボーナス（'+esc(invMonthLabel(ym)||ym)+'）';
   if(note)itemLabel+='<span class="invoice-note">'+esc(note)+'</span>';
 
   return ''+
@@ -1086,9 +1106,10 @@ if(!$('invName').value){
   try{var sn=localStorage.getItem('dmm_staff');if(sn)$('invName').value=sn;}catch(e){}
 }
 invRender();
+invLoadSharedCompensation();
 
 /* ── 古いタブを自動で最新版へ切り替える ── */
-var MANUAL_VERSION='20260809-02';
+var MANUAL_VERSION='20260809-03';
 var manualVersionLastCheck=0;
 function checkManualVersion(){
   var now=Date.now();

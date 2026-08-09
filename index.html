@@ -7354,7 +7354,7 @@ const DOC_SEEDS=[{"id": "gdocseed_teleapo", "title": "テレアポマニュア�
 // リンク集(teamDocs)へのシード(2026-07-26)。DOC_SEEDS同様にseedVerで冪等・手動削除は復活させない
 const DOCLINK_SEEDS=[
   {id:'doclink_dm_staff_manual',title:'DM営業スタッフ 業務手順書（IGアカウント作成〜送付）',
-   url:'https://mono-create-group.github.io/editflow-team/dm-manual.html?v=20260809-02',
+   url:'https://mono-create-group.github.io/editflow-team/dm-manual.html?v=20260809-03',
    category:'マニュアル',notes:'新メンバー向け。アイコン・アカウント名の予約(早い者勝ち)・DM文章の作成・営業リストでの送付と記録まで1ページで完結',ver:2},
   {id:'doclink_dm_entry_form',title:'DM営業スタッフ 登録フォーム（応募者に送るURL）',
    url:'https://mono-create-group.github.io/editflow-team/dm-entry.html',
@@ -14611,7 +14611,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260809-02';
+const APP_VERSION='20260809-03';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
