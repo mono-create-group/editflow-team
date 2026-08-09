@@ -1088,7 +1088,7 @@ if(!$('invName').value){
 invRender();
 
 /* ── 古いタブを自動で最新版へ切り替える ── */
-var MANUAL_VERSION='20260729-01';
+var MANUAL_VERSION='20260809-02';
 var manualVersionLastCheck=0;
 function checkManualVersion(){
   var now=Date.now();
@@ -1104,6 +1104,7 @@ function checkManualVersion(){
 }
 document.addEventListener('visibilitychange',function(){if(!document.hidden)checkManualVersion();});
 window.addEventListener('pageshow',function(e){if(e.persisted)checkManualVersion();});
+setInterval(checkManualVersion,5*60*1000);
 </script>
 </body>
 </html>
