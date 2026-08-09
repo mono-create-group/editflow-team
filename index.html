@@ -14014,10 +14014,13 @@ function rSalesLeads(){
     ${['all',...SL_STATUSES].map(s=>`<button class="fbtn${_slFilterStatus===s?' act':''}" onclick="_slFilterStatus='${s}';_slPage=0;render()">${s==='all'?'すべて':s} <span style="opacity:.65;font-size:10px">${s==='all'?statusBase:(counts[s]||0)}</span></button>`).join('')}
   </div>`;
 
-  const genreFilterHtml=`<div class="filter-bar" style="margin-bottom:8px">
-    <button class="fbtn${_slFilterGenre==='all'?' act':''}" onclick="_slFilterGenre='all';_slPage=0;render()">全ジャンル <span style="opacity:.65;font-size:10px">${genreBase}</span></button>
-    ${SL_GENRE_GROUPS.map(g=>`<button class="fbtn${_slFilterGenre===g?' act':''}" onclick="_slFilterGenre='${esc(g)}';_slPage=0;render()">${esc(g)} <span style="opacity:.65;font-size:10px">${genreCounts[g]||0}</span></button>`).join('')}
-  </div>`;
+  const genreFilterHtml=`<details style="margin-bottom:8px"${_slFilterGenre!=='all'?' open':''}>
+    <summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--t2);padding:7px 2px;user-select:none">ジャンル${_slFilterGenre!=='all'?`：${esc(_slFilterGenre)}`:'を絞り込む'}</summary>
+    <div class="filter-bar" style="margin:6px 0 0">
+      <button class="fbtn${_slFilterGenre==='all'?' act':''}" onclick="_slFilterGenre='all';_slPage=0;render()">全ジャンル <span style="opacity:.65;font-size:10px">${genreBase}</span></button>
+      ${SL_GENRE_GROUPS.map(g=>`<button class="fbtn${_slFilterGenre===g?' act':''}" onclick="_slFilterGenre='${esc(g)}';_slPage=0;render()">${esc(g)} <span style="opacity:.65;font-size:10px">${genreCounts[g]||0}</span></button>`).join('')}
+    </div>
+  </details>`;
 
   const regionFilterHtml=`<div class="filter-bar" style="margin-bottom:8px">
     <button class="fbtn${_slFilterRegion==='all'?' act':''}" onclick="_slFilterRegion='all';_slPage=0;render()">全地域 <span style="opacity:.65;font-size:10px">${regionBase}</span></button>
