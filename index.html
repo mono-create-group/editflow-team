@@ -7354,7 +7354,7 @@ const DOC_SEEDS=[{"id": "gdocseed_teleapo", "title": "テレアポマニュア�
 // リンク集(teamDocs)へのシード(2026-07-26)。DOC_SEEDS同様にseedVerで冪等・手動削除は復活させない
 const DOCLINK_SEEDS=[
   {id:'doclink_dm_staff_manual',title:'DM営業スタッフ 業務手順書（IGアカウント作成〜送付）',
-   url:'https://mono-create-group.github.io/editflow-team/dm-manual.html?v=20260809-03',
+   url:'https://mono-create-group.github.io/editflow-team/dm-manual.html?v=20260809-04',
    category:'マニュアル',notes:'新メンバー向け。アイコン・アカウント名の予約(早い者勝ち)・DM文章の作成・営業リストでの送付と記録まで1ページで完結',ver:2},
   {id:'doclink_dm_entry_form',title:'DM営業スタッフ 登録フォーム（応募者に送るURL）',
    url:'https://mono-create-group.github.io/editflow-team/dm-entry.html',
@@ -10329,6 +10329,9 @@ ${(()=>{const c=slCompensation();return`<div class="card" style="margin-bottom:1
   <div style="font-size:11px;color:var(--t3);margin:0 0 12px">固定給スタッフのボーナスは、開始件数以上なら全成約分に適用します。</div>
   <button class="btn btn-p btn-sm" onclick="slSaveCompensation()">💾 報酬設定を保存</button>
 </div>`})()}`:''}
+
+${_isOwner()?`${secTitle('👤 スタッフ別の報酬設定')}
+${slStaffCompensationHtml()}`:''}
 
 ${secTitle('📊 Googleスプレッドシート連携')}
 <div class="card" style="margin-bottom:16px">
@@ -13571,6 +13574,43 @@ function slCompensation(){
   const n=(v,f)=>{v=Number(v);return Number.isFinite(v)&&v>=0?Math.round(v):f;};
   return {commissionRate:n(row?.commissionRate,SL_COMP_DEFAULT.commissionRate),fixedMonthly:n(row?.fixedMonthly,SL_COMP_DEFAULT.fixedMonthly),bonusThreshold:n(row?.bonusThreshold,SL_COMP_DEFAULT.bonusThreshold),bonusPerConversion:n(row?.bonusPerConversion,SL_COMP_DEFAULT.bonusPerConversion),campaignLabel:String(row?.campaignLabel||SL_COMP_DEFAULT.campaignLabel).slice(0,40)};
 }
+function slStaffCompensations(){return (S.salesDirectives||[]).filter(d=>d&&d.kind==='compensation_staff'&&!d.deleted);}
+function slCompensationFor(staffName){
+  const norm=s=>String(s||'').replace(/[\s　]/g,'').toLowerCase();
+  const row=slStaffCompensations().find(d=>norm(d.staffName)===norm(staffName));
+  if(!row)return slCompensation();
+  const base=slCompensation(),n=(v,f)=>{v=Number(v);return Number.isFinite(v)&&v>=0?Math.round(v):f;};
+  return {commissionRate:n(row.commissionRate,base.commissionRate),fixedMonthly:n(row.fixedMonthly,base.fixedMonthly),bonusThreshold:n(row.bonusThreshold,base.bonusThreshold),bonusPerConversion:n(row.bonusPerConversion,base.bonusPerConversion),campaignLabel:String(row.campaignLabel||base.campaignLabel).slice(0,40)};
+}
+function slStaffCompensationHtml(){
+  const rows=slStaffCompensations().slice().sort((a,b)=>String(a.staffName||'').localeCompare(String(b.staffName||'')));
+  return `<div class="card" style="margin-bottom:16px"><div style="font-size:12px;color:var(--t2);line-height:1.7;margin-bottom:10px">スタッフ名ごとに報酬形態・金額を上書きできます。設定のないスタッフには、上の共通設定が適用されます。</div>
+  ${rows.length?`<div style="display:flex;flex-direction:column;gap:7px;margin-bottom:12px">${rows.map(r=>{const c=slCompensationFor(r.staffName);return`<div style="display:flex;align-items:center;gap:8px;padding:9px 10px;background:var(--card2);border-radius:8px"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700">${esc(r.staffName)}</div><div style="font-size:11px;color:var(--t3)">${esc(c.campaignLabel)}: ¥${c.commissionRate.toLocaleString()}/件 ・ 固定給 ¥${c.fixedMonthly.toLocaleString()} ・ ${c.bonusThreshold}件〜 ¥${c.bonusPerConversion.toLocaleString()}/件</div></div><button class="btn btn-g btn-xs" onclick="slStaffCompOpen('${r.id}')">編集</button><button class="btn btn-red btn-xs" onclick="slStaffCompDelete('${r.id}')">削除</button></div>`;}).join('')}</div>`:`<div style="font-size:12px;color:var(--t3);margin-bottom:12px">個別設定はまだありません。</div>`}
+  <button class="btn btn-p btn-sm" onclick="slStaffCompOpen()">＋ スタッフ別設定を追加</button></div>`;
+}
+function slStaffCompOpen(id){
+  if(!_isOwner()){toast('オーナーのみ変更できます','err');return;}
+  const row=id?slStaffCompensations().find(d=>d.id===id):null,c=row?slCompensationFor(row.staffName):slCompensation();
+  const names=[...new Set([...(S.workers||[]).map(w=>w.name),...(S.signins||[]).map(s=>s.name),...slStaffCompensations().map(s=>s.staffName)].filter(Boolean))];
+  openModal(`<div class="mhdr"><div class="mtitle">${row?'スタッフ別報酬を編集':'スタッフ別報酬を追加'}</div><button class="mclose" onclick="closeModal()">✕</button></div>
+  <div class="fg"><div class="fl">スタッフ名</div><input id="slsc-name" list="slsc-names" maxlength="40" value="${esc(row?.staffName||'')}" placeholder="手順書・請求書に入力する名前と一致させてください"><datalist id="slsc-names">${names.map(n=>`<option value="${esc(n)}">`).join('')}</datalist></div>
+  <div class="frow"><div class="fg"><div class="fl">成果報酬（円/件）</div><input id="slsc-commission" type="number" min="0" step="100" value="${c.commissionRate}"></div><div class="fg"><div class="fl">固定給（月額・円）</div><input id="slsc-fixed" type="number" min="0" step="100" value="${c.fixedMonthly}"></div></div>
+  <div class="frow"><div class="fg"><div class="fl">ボーナス開始件数</div><input id="slsc-threshold" type="number" min="0" step="1" value="${c.bonusThreshold}"></div><div class="fg"><div class="fl">追加ボーナス（円/件）</div><input id="slsc-bonus" type="number" min="0" step="100" value="${c.bonusPerConversion}"></div></div>
+  <div class="fg"><div class="fl">キャンペーン表示名</div><input id="slsc-label" maxlength="40" value="${esc(c.campaignLabel)}"></div>
+  <div class="mfooter"><button class="btn btn-g" onclick="closeModal()">キャンセル</button><button class="btn btn-p" onclick="slStaffCompSave('${row?.id||''}')">保存</button></div>`);
+}
+function slStaffCompSave(id){
+  if(!_isOwner()){toast('オーナーのみ変更できます','err');return;}
+  const name=(document.getElementById('slsc-name')?.value||'').trim().slice(0,40),read=x=>{const v=Number(document.getElementById(x)?.value);return Number.isFinite(v)&&v>=0?Math.round(v):null;};
+  const commissionRate=read('slsc-commission'),fixedMonthly=read('slsc-fixed'),bonusThreshold=read('slsc-threshold'),bonusPerConversion=read('slsc-bonus'),campaignLabel=(document.getElementById('slsc-label')?.value||'').trim().slice(0,40);
+  if(!name||[commissionRate,fixedMonthly,bonusThreshold,bonusPerConversion].includes(null)||!campaignLabel){toast('すべての項目を正しく入力してください','warn');return;}
+  const norm=s=>String(s||'').replace(/[\s　]/g,'').toLowerCase();
+  const duplicate=slStaffCompensations().find(d=>norm(d.staffName)===norm(name)&&d.id!==id);if(duplicate){toast('同じスタッフ名の設定がすでにあります','warn');return;}
+  const data={kind:'compensation_staff',staffName:name,commissionRate,fixedMonthly,bonusThreshold,bonusPerConversion,campaignLabel,updatedAt:Date.now(),updatedBy:_myDisplayName()||_myEmail()};
+  const existing=id&&slStaffCompensations().find(d=>d.id===id);if(existing)Object.assign(existing,data);else S.salesDirectives.push(Object.assign({id:uid(),createdAt:today()},data));
+  save();closeModal();render();toast(name+' の個別報酬設定を保存しました');
+}
+function slStaffCompDelete(id){if(!_isOwner())return;const row=slStaffCompensations().find(d=>d.id===id);if(!row)return;if(!confirm(row.staffName+' の個別報酬設定を削除しますか？'))return;row.deleted=true;row.updatedAt=Date.now();save();render();toast('個別報酬設定を削除しました');}
 function slSaveCompensation(){
   if(!_isOwner()){toast('オーナーのみ変更できます','err');return;}
   const read=(id)=>{const v=Number(document.getElementById(id)?.value);return Number.isFinite(v)&&v>=0?Math.round(v):null;};
@@ -14611,7 +14651,7 @@ slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260809-03';
+const APP_VERSION='20260809-04';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)

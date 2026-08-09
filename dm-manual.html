@@ -933,21 +933,31 @@ function buildDm(){
 
 /* ── 請求書作成ツール ── */
 var INV_DRAFT_KEY='dm_invoice_draft';
-var INV_COMP={commissionRate:15000,fixedMonthly:50000,bonusThreshold:5,bonusPerConversion:10000,campaignLabel:'8月キャンペーン'};
+var INV_COMP_GLOBAL={commissionRate:15000,fixedMonthly:50000,bonusThreshold:5,bonusPerConversion:10000,campaignLabel:'8月キャンペーン'};
+var INV_COMP=INV_COMP_GLOBAL,INV_COMP_ROWS=[];
 function invCompNum(v,f){v=Number(v);return Number.isFinite(v)&&v>=0?Math.round(v):f;}
-function invApplyCompensation(raw){
+function invCompFromRaw(raw,fallback){
   raw=raw||{};
-  INV_COMP={commissionRate:invCompNum(raw.commissionRate,15000),fixedMonthly:invCompNum(raw.fixedMonthly,50000),bonusThreshold:invCompNum(raw.bonusThreshold,5),bonusPerConversion:invCompNum(raw.bonusPerConversion,10000),campaignLabel:String(raw.campaignLabel||'8月キャンペーン').slice(0,40)};
+  fallback=fallback||INV_COMP_GLOBAL;
+  return {commissionRate:invCompNum(raw.commissionRate,fallback.commissionRate),fixedMonthly:invCompNum(raw.fixedMonthly,fallback.fixedMonthly),bonusThreshold:invCompNum(raw.bonusThreshold,fallback.bonusThreshold),bonusPerConversion:invCompNum(raw.bonusPerConversion,fallback.bonusPerConversion),campaignLabel:String(raw.campaignLabel||fallback.campaignLabel).slice(0,40)};
+}
+function invApplyCompensation(raw){
+  INV_COMP=invCompFromRaw(raw,INV_COMP_GLOBAL);
   var sel=$('invPayPlan'),notice=$('invCompNotice');
   if(sel){sel.options[0].textContent='成果報酬（'+INV_COMP.campaignLabel+'：1件'+invYen(INV_COMP.commissionRate)+'）';sel.options[1].textContent='固定給（月'+invYen(INV_COMP.fixedMonthly)+'＋'+INV_COMP.bonusThreshold+'件以上で1件'+invYen(INV_COMP.bonusPerConversion)+'ボーナス）';}
   if(notice)notice.textContent=INV_COMP.campaignLabel+'の成果報酬は1件'+invYen(INV_COMP.commissionRate)+'です。固定給スタッフは月'+invYen(INV_COMP.fixedMonthly)+'で、成約が'+INV_COMP.bonusThreshold+'件以上なら全成約分に1件'+invYen(INV_COMP.bonusPerConversion)+'の追加ボーナスが付きます。';
   if($('invPreview'))invRender();
 }
+function invSelectCompensation(staffName){
+  var norm=function(s){return String(s||'').replace(/[\s　]/g,'').toLowerCase();};
+  var row=(INV_COMP_ROWS||[]).find(function(r){return r&&r.kind==='compensation_staff'&&!r.deleted&&norm(r.staffName)===norm(staffName);});
+  invApplyCompensation(row||INV_COMP_GLOBAL);
+}
 function invLoadSharedCompensation(){
   if(!window.firebase)return;
   try{
     if(!firebase.apps.length)firebase.initializeApp({apiKey:'AIzaSyA8kjyY8xF4usk5K7TyBfab_wW3EIFr9Z4',authDomain:'editflow-mono-create.firebaseapp.com',projectId:'editflow-mono-create',storageBucket:'editflow-mono-create.firebasestorage.app',messagingSenderId:'280142126082',appId:'1:280142126082:web:3defcc1b0d370b14781b1b'});
-    firebase.auth().onAuthStateChanged(function(user){if(!user)return;firebase.firestore().collection('shared').doc('mcapp').get().then(function(doc){var raw=doc.exists?(doc.data()||{}).salesDirectives:'';var list=typeof raw==='string'?JSON.parse(raw):[];var c=(list||[]).find(function(d){return d&&d.kind==='compensation'&&!d.deleted;});if(c)invApplyCompensation(c);}).catch(function(){});});
+    firebase.auth().onAuthStateChanged(function(user){if(!user)return;firebase.firestore().collection('shared').doc('mcapp').get().then(function(doc){var raw=doc.exists?(doc.data()||{}).salesDirectives:'';var list=typeof raw==='string'?JSON.parse(raw):[];var c=(list||[]).find(function(d){return d&&d.kind==='compensation'&&!d.deleted;});INV_COMP_GLOBAL=invCompFromRaw(c||{},INV_COMP_GLOBAL);INV_COMP_ROWS=(list||[]).filter(function(d){return d&&d.kind==='compensation_staff'&&!d.deleted;});invSelectCompensation($('invName').value||$('staffName').value);}).catch(function(){});});
   }catch(e){}
 }
 function invPad2(n){return (n<10?'0':'')+n;}
@@ -1079,8 +1089,9 @@ function invRender(){
   el.addEventListener('change',invRender);
 });
 $('invName').addEventListener('input',function(){this.dataset.auto='0';});
+$('invName').addEventListener('input',function(){invSelectCompensation(this.value);});
 
-$('staffName').addEventListener('input',function(){renderNames();var g=$('genName');if(!g.value||g.dataset.auto!=='0'){g.value=this.value;buildDm();}var iv=$('invName');if(!iv.value||iv.dataset.auto!=='0'){iv.value=this.value;invRender();}});
+$('staffName').addEventListener('input',function(){renderNames();var g=$('genName');if(!g.value||g.dataset.auto!=='0'){g.value=this.value;buildDm();}var iv=$('invName');if(!iv.value||iv.dataset.auto!=='0'){iv.value=this.value;invSelectCompensation(iv.value);invRender();}});
 $('genName').addEventListener('input',function(){this.dataset.auto='0';buildDm();});
 $('genUrl').addEventListener('input',function(){buildDm();renderShowcase();});
 $('scList').addEventListener('click',function(e){
@@ -1109,7 +1120,7 @@ invRender();
 invLoadSharedCompensation();
 
 /* ── 古いタブを自動で最新版へ切り替える ── */
-var MANUAL_VERSION='20260809-03';
+var MANUAL_VERSION='20260809-04';
 var manualVersionLastCheck=0;
 function checkManualVersion(){
   var now=Date.now();
