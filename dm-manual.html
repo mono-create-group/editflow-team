@@ -622,17 +622,16 @@ AI導入支援・コンサル
       </div>
     </div>
 
-    <div class="inv-row2">
-      <div><label>固定給 <small>（適用者のみ・円）</small></label><input id="invFixedPay" type="number" min="0" step="1" inputmode="numeric" placeholder="0"></div>
-      <div><label>キャンペーン調整額 <small>（加算／減額・円）</small></label><input id="invCampaignAdj" type="number" step="1" inputmode="numeric" placeholder="0"></div>
-    </div>
-    <label>キャンペーン名 <small>（適用時のみ。例: 8月新規開拓キャンペーン）</small></label>
-    <input id="invCampaignName" placeholder="適用がなければ空欄" maxlength="60">
+    <label>報酬形態</label>
+    <select id="invPayPlan">
+      <option value="commission">成果報酬（8月キャンペーン：1件15,000円）</option>
+      <option value="fixed">固定給（月50,000円＋5件以上で1件10,000円ボーナス）</option>
+    </select>
 
     <label>案件名の補足 <small>（任意。例: クライアント名＋成約日）</small></label>
     <input id="invNote" placeholder="例: ○○整体院 7/20成約" maxlength="60">
 
-    <div class="okbox"><b>成約報酬の単価は1件10,000円です。</b>合計請求金額は「成約報酬＋固定給＋キャンペーン調整額」で自動計算されます。固定給・キャンペーンは運営から適用通知がある場合のみ入力してください。取引先は<b>mono.create</b>で固定です。</div>
+    <div class="okbox"><b>8月の成果報酬は1件15,000円です。</b>固定給スタッフは月50,000円で、成約が5件以上なら全成約分に1件10,000円の追加ボーナスが付きます。フォームの報酬形態を選ぶだけで請求額を自動計算します。</div>
 
     <p style="margin-top:18px"><b>振込先（ご自身の口座）</b></p>
     <p style="font-size:12.5px;color:var(--t2);margin:2px 0 8px">1つでも欠けると振込ができません。通帳やアプリの画面を見ながら、そのまま入力してください（次回からは自動で復元されます）。</p>
@@ -978,9 +977,7 @@ function invBuildHTML(){
   var name=($('invName').value||'').trim()||'（名前未入力）';
   var ym=$('invMonth').value||invDefaultMonth();
   var count=parseInt($('invCount').value,10);if(isNaN(count)||count<0)count=0;
-  var fixed=parseInt($('invFixedPay').value,10);if(isNaN(fixed)||fixed<0)fixed=0;
-  var campaign=parseInt($('invCampaignAdj').value,10);if(isNaN(campaign))campaign=0;
-  var campaignName=($('invCampaignName').value||'').trim();
+  var plan=$('invPayPlan').value||'commission';
   var note=($('invNote').value||'').trim();
   var bank=($('invBank').value||'').trim();
   var branch=($('invBranch').value||'').trim();
@@ -988,12 +985,14 @@ function invBuildHTML(){
   var acctNo=($('invAcctNo').value||'').trim();
   var acctName=($('invAcctName').value||'').trim();
 
-  var unit=10000;
-  var commission=count*unit;
-  var total=commission+fixed+campaign;
+  var unit=plan==='commission'?15000:10000;
+  var commission=plan==='commission'?count*unit:0;
+  var fixed=plan==='fixed'?50000:0;
+  var bonus=plan==='fixed'&&count>=5?count*unit:0;
+  var total=commission+fixed+bonus;
   var today=new Date();
   var due=invDueDate(today);
-  var itemLabel='成約報酬（'+esc(invMonthLabel(ym)||ym)+'）';
+  var itemLabel=plan==='commission'?'8月キャンペーン成約報酬（'+esc(invMonthLabel(ym)||ym)+'）':'固定給スタッフ 成約ボーナス（'+esc(invMonthLabel(ym)||ym)+'）';
   if(note)itemLabel+='<span class="invoice-note">'+esc(note)+'</span>';
 
   return ''+
@@ -1003,9 +1002,9 @@ function invBuildHTML(){
     '<div class="invoice-from">請求元: '+esc(name)+'</div>'+
     '<div class="invoice-items-wrap"><table class="invoice-items">'+
       '<thead><tr><th>項目</th><th>数量</th><th>単価</th><th>金額</th></tr></thead>'+
-      '<tbody><tr><td>'+itemLabel+'</td><td>'+count+'件</td><td>'+invYen(unit)+'</td><td>'+invYen(commission)+'</td></tr>'+
+      '<tbody>'+(plan==='commission'?'<tr><td>'+itemLabel+'</td><td>'+count+'件</td><td>'+invYen(unit)+'</td><td>'+invYen(commission)+'</td></tr>':'')+
       (fixed?'<tr><td>固定給（'+esc(invMonthLabel(ym)||ym)+'）</td><td>1式</td><td>'+invYen(fixed)+'</td><td>'+invYen(fixed)+'</td></tr>':'')+
-      (campaign?'<tr><td>キャンペーン調整'+(campaignName?'（'+esc(campaignName)+'）':'')+'</td><td>1式</td><td>'+invYen(campaign)+'</td><td>'+invYen(campaign)+'</td></tr>':'')+'</tbody>'+
+      (bonus?'<tr><td>'+itemLabel+'</td><td>'+count+'件</td><td>'+invYen(unit)+'</td><td>'+invYen(bonus)+'</td></tr>':'')+'</tbody>'+
       '<tfoot><tr><th colspan="3">合計金額</th><th>'+invYen(total)+'</th></tr></tfoot>'+
     '</table></div>'+
     '<div class="invoice-due">支払期限: '+invDueLabel(due)+'</div>'+
@@ -1053,7 +1052,7 @@ function invRender(){
   invSaveDraft();
 }
 
-['invName','invMonth','invCount','invFixedPay','invCampaignAdj','invCampaignName','invNote','invBank','invBranch','invAcctType','invAcctNo','invAcctName'].forEach(function(id){
+['invName','invMonth','invCount','invPayPlan','invNote','invBank','invBranch','invAcctType','invAcctNo','invAcctName'].forEach(function(id){
   var el=$(id);
   if(!el)return;
   el.addEventListener('input',invRender);
