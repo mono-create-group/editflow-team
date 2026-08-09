@@ -11964,6 +11964,7 @@ const NAV_CATS=[
 // 会長メールは常にfull。未登録アカウントはfull(既存メンバー=佐々木等を締め出さない安全既定)。
 // 注意: これはUI制限。チームデータはサインインで同期されるため技術的な完全遮断ではない(信頼済みスタッフ向け)。
 const ADMIN_EMAILS=['nakamurakouta512@gmail.com','mono.create.group@gmail.com'];
+const OWNER_NAME='中村航汰';
 function _myEmail(){try{return((typeof FB_USER!=='undefined'&&FB_USER&&FB_USER.email)||'').toLowerCase();}catch(_){return'';}}
 function _isOwner(){return ADMIN_EMAILS.includes(_myEmail());}  // オーナー=会長。設定はオーナーのみ閲覧可
 function myRole(){
@@ -13010,6 +13011,16 @@ function slIsThreadsView(){return _slBiz==='hp'&&_slSrc==='threads';}
 // 飲食業種(シフトさん営業の対象。HP等の営業リストからは除外)
 // 2026-07-13 会長指示「食べ物関連は全てシフトさんへ」: 飲食店だけでなく食品物販(パン/洋菓子/和菓子/鮮魚/精肉/青果/酒屋)も含める
 const SL_FOOD_GENRES=new Set(['飲食','ラーメン','居酒屋','焼肉','寿司','カフェ','スナック','バー','焼き鳥','食堂','そば','うどん','洋食','中華','イタリアン','ジンギスカン','海鮮','弁当・惣菜','喫茶','定食','ダイニング','ビストロ','バル','焼き鳥・串','鉄板焼き','パン','洋菓子','和菓子','鮮魚','精肉','青果','酒屋']);
+// 営業リストのジャンルは、細かい元データを保持したまま画面では大分類に集約する。
+const SL_GENRE_GROUPS=['美容・健康','飲食・食品','暮らし・サービス','小売・教室','その他'];
+function slGenreGroup(genre){
+  const g=String(genre||'').trim();
+  if(SL_FOOD_GENRES.has(g)||/飲食|レストラン|料理|菓子|パン|食品|カフェ|バー/.test(g))return '飲食・食品';
+  if(/美容|理容|ヘア|サロン|エステ|ネイル|まつ|脱毛|整体|接骨|整骨|鍼灸|医療|歯科|クリニック|ジム|フィット|ヨガ|ピラティス|健康/.test(g))return '美容・健康';
+  if(/不動産|建設|工務店|清掃|士業|自動車|葬祭|便利|写真|ペット|旅行|宿泊|ホテル|介護/.test(g))return '暮らし・サービス';
+  if(/小売|販売|雑貨|アパレル|教室|学習|塾|スクール|保育|幼稚園|児童/.test(g))return '小売・教室';
+  return 'その他';
+}
 // この店がこの事業タブのプールに属するか。シフトさん=飲食のみ／他事業=非飲食のみ
 // srcKey: 'store'/'threads'/'any'(区分を問わない・タブ件数用)。省略時は現在のビューに従う。
 function slInPool(l,bizKey,srcKey){
@@ -13102,6 +13113,11 @@ function slIgHandle(v){
 function slIgUrl(v){
   const h=slIgHandle(v);
   return h?('https://www.instagram.com/'+h+'/'):'#';
+}
+function slIgDmComposeUrl(v){
+  // Instagramの標準Web導線。ログイン状態に応じてDM作成画面またはログイン画面へ遷移する。
+  const h=slIgHandle(v);
+  return h?('https://www.instagram.com/direct/new/?username='+encodeURIComponent(h)):'#';
 }
 function slIgLink(v){
   // 一覧/カード共通: リンク化できれば📷 @handleのタップ可能リンク、できなければ元値のプレーン表示。
@@ -13240,7 +13256,7 @@ function slFilteredLeads(){
     if(l.deleted)return false;
     if(!slInPool(l,_slBiz))return false;  // 事業プール(シフトさん=飲食のみ/他=非飲食)
     if(_slFilterStatus!=='all'&&slStatusOf(l)!==_slFilterStatus)return false;
-    if(_slFilterGenre!=='all'&&l.genre!==_slFilterGenre)return false;
+    if(_slFilterGenre!=='all'&&slGenreGroup(l.genre)!==_slFilterGenre)return false;
     if(_slFilterRegion!=='all'&&slRegionOf(l)!==_slFilterRegion)return false;
     const hasIG=!!(l.instagram&&l.instagram.trim());
     const hasEmail=!!(l.email&&l.email.trim());
@@ -13845,16 +13861,14 @@ function rSalesLeads(){
   // これにより業種や地域を選ぶと、他のフィルタの数字がその絞り込みに追従してリアルタイムに変わる。
   // 実装: 1パスで各次元の合否を出し、「全次元通過」or「当該次元だけ不通過」の店のみ、その次元の内訳へ寄与。
   const counts={};SL_STATUSES.forEach(s=>{counts[s]=0;});
-  const genreCounts={};
+  const genreCounts={};SL_GENRE_GROUPS.forEach(g=>{genreCounts[g]=0;});
   const regionCounts={};SL_REGIONS.forEach(r=>{regionCounts[r]={total:0,未接触:0,アポ:0,成約:0};});
   const assigneeCounts={};_slAssignees().forEach(a=>{assigneeCounts[a]=0;});
   const approachCounts={};SL_APPROACHES.forEach(a=>{approachCounts[a]=0;});
   let wonThisMonth=0,overlapCount=0,igCount=0,emailCount=0,bothCount=0;
   let statusBase=0,genreBase=0,regionBase=0,contactBase=0,assigneeBase=0,approachBase=0,overlapBase=0;
   let unassignedCount=0,approachNoneCount=0;
-  const genreSet=new Set();
   for(const l of all){
-    if(l.genre)genreSet.add(l.genre);                 // 業種チップは常に全業種を出す(件数は下でファセット)
     const st=slStatusOf(l);
     if(st==='成約'&&(l.wonAt||'').startsWith(thisMonth))wonThisMonth++;  // 今月成約=月次目標(絞り込み非依存)
     if(!_searchHit(l))continue;                        // 検索は全次元共通のゲート
@@ -13863,7 +13877,8 @@ function rSalesLeads(){
     const isOverlap=slRecentOtherContact(l);
     // 各次元の合否(all=通過)
     const pStatus=_slFilterStatus==='all'||st===_slFilterStatus;
-    const pGenre=_slFilterGenre==='all'||l.genre===_slFilterGenre;
+    const genreGroup=slGenreGroup(l.genre);
+    const pGenre=_slFilterGenre==='all'||genreGroup===_slFilterGenre;
     const pRegion=_slFilterRegion==='all'||slRegionOf(l)===_slFilterRegion;
     const pContact=_slFilterContact==='all'||(_slFilterContact==='ig'&&hasIg)||(_slFilterContact==='email'&&hasMail)||(_slFilterContact==='both'&&hasIg&&hasMail);
     const pAssignee=_slFilterAssignee==='all'||(_slFilterAssignee==='未割当'?!l.assignee:l.assignee===_slFilterAssignee);
@@ -13873,7 +13888,7 @@ function rSalesLeads(){
     // only(d): 当該次元を除いた全次元が通過しているか。d=当該次元のpass値
     const only=d=>fail===0||(fail===1&&!d);
     if(only(pStatus)){if(counts[st]!==undefined)counts[st]++;statusBase++;}
-    if(only(pGenre)){genreBase++;if(l.genre)genreCounts[l.genre]=(genreCounts[l.genre]||0)+1;}
+    if(only(pGenre)){genreBase++;genreCounts[genreGroup]=(genreCounts[genreGroup]||0)+1;}
     if(only(pRegion)){regionBase++;const rc=regionCounts[slRegionOf(l)];if(rc){rc.total++;if(rc[st]!==undefined)rc[st]++;}}
     if(only(pContact)){contactBase++;if(hasIg)igCount++;if(hasMail)emailCount++;if(hasIg&&hasMail)bothCount++;}
     if(only(pAssignee)){assigneeBase++;if(l.assignee){if(assigneeCounts[l.assignee]!==undefined)assigneeCounts[l.assignee]++;}else unassignedCount++;}
@@ -13910,9 +13925,6 @@ function rSalesLeads(){
       return`<button class="sl-biz-tab${_slSrc===s.k?' act':''}" onclick="slSetSrc('${s.k}')" title="${esc(s.hint)}">${s.k==='threads'?'🧵 ':''}${s.label}<span class="sl-biz-count">${c}</span></button>`;
     }).join('')}
   </div>`;
-
-  // genres for filter(集計は上の1パスで済ませてある)
-  const genres=[...genreSet].sort();
 
   const filtered=slFilteredLeads();
   const totalPages=Math.max(1,Math.ceil(filtered.length/SL_PAGE_SIZE));
@@ -14002,10 +14014,10 @@ function rSalesLeads(){
     ${['all',...SL_STATUSES].map(s=>`<button class="fbtn${_slFilterStatus===s?' act':''}" onclick="_slFilterStatus='${s}';_slPage=0;render()">${s==='all'?'すべて':s} <span style="opacity:.65;font-size:10px">${s==='all'?statusBase:(counts[s]||0)}</span></button>`).join('')}
   </div>`;
 
-  const genreFilterHtml=genres.length?`<div class="filter-bar" style="margin-bottom:8px">
-    <button class="fbtn${_slFilterGenre==='all'?' act':''}" onclick="_slFilterGenre='all';_slPage=0;render()">全業種 <span style="opacity:.65;font-size:10px">${genreBase}</span></button>
-    ${genres.map(g=>`<button class="fbtn${_slFilterGenre===g?' act':''}" onclick="_slFilterGenre='${esc(g)}';_slPage=0;render()">${esc(g)} <span style="opacity:.65;font-size:10px">${genreCounts[g]||0}</span></button>`).join('')}
-  </div>`:'';
+  const genreFilterHtml=`<div class="filter-bar" style="margin-bottom:8px">
+    <button class="fbtn${_slFilterGenre==='all'?' act':''}" onclick="_slFilterGenre='all';_slPage=0;render()">全ジャンル <span style="opacity:.65;font-size:10px">${genreBase}</span></button>
+    ${SL_GENRE_GROUPS.map(g=>`<button class="fbtn${_slFilterGenre===g?' act':''}" onclick="_slFilterGenre='${esc(g)}';_slPage=0;render()">${esc(g)} <span style="opacity:.65;font-size:10px">${genreCounts[g]||0}</span></button>`).join('')}
+  </div>`;
 
   const regionFilterHtml=`<div class="filter-bar" style="margin-bottom:8px">
     <button class="fbtn${_slFilterRegion==='all'?' act':''}" onclick="_slFilterRegion='all';_slPage=0;render()">全地域 <span style="opacity:.65;font-size:10px">${regionBase}</span></button>
@@ -14118,6 +14130,7 @@ function rSalesLeads(){
           ${slChip(curStatus)}
           ${isTh?slThPostBtn(l.postUrl,true):''}
           ${!isTh&&l.rating?`<span style="font-size:11px;color:var(--amber)">★${esc(String(l.rating))}</span>`:''}
+          ${!isTh&&_isOwner()&&slIgHandle(l.instagram)&&curStatus==='未接触'?`<button class="btn btn-p btn-xs" onclick="slPrepareOwnerDm('${sid}')" title="本人がInstagramで送信するDMを準備">✉️ DMを準備</button>`:''}
           <button class="btn btn-g btn-xs" onclick="crmFromLead('${sid}')" title="このリードをクライアント台帳に登録">🤝 クライアント化</button>
           <button class="tact del" onclick="slDelete('${sid}')" title="削除">🗑</button>
         </div>
@@ -14204,6 +14217,73 @@ function slSetBizField(id,field,val){
   if(!l)return;
   slBizObj(l,_slBiz)[field]=val;  // field: 'n'(次アクション) or 'm'(メモ)
   save();
+}
+
+// オーナー専用のDM補助フロー。Instagramへの最終送信は自動化せず、本人がInstagram上で行う。
+function slPrepareOwnerDm(id){
+  if(!_isOwner()){toast('この操作はオーナー専用です','err');return;}
+  const l=(S.salesLeads||[]).find(x=>x.id===id&&!x.deleted);
+  if(!l||slStatusOf(l)!=='未接触'||!slIgHandle(l.instagram)){toast('未接触かつInstagram登録済みのリードのみ準備できます','warn');return;}
+  const existing=String(l.dmDraft||'');
+  openModal(`<div class="mhdr"><div class="mtitle">✉️ DMを準備</div><button class="mclose" onclick="closeModal()">✕</button></div>
+    <div style="font-size:13px;color:var(--t2);line-height:1.75;margin-bottom:10px"><b>${esc(l.name)}</b> 宛て。本文を確認・編集してコピーしてください。Instagramでの最終「送信」はオーナー本人が行います。</div>
+    <textarea id="sl-owner-dm-text" placeholder="承認済みの個別DM本文を入力…" style="width:100%;min-height:160px;resize:vertical">${esc(existing)}</textarea>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
+      <button class="btn btn-p btn-sm" onclick="slCopyOwnerDm('${id}')">① 本文をコピー</button>
+    </div>
+    <div id="sl-owner-dm-aftercopy" style="display:none;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+      <div style="font-size:12px;color:var(--t2);line-height:1.7;margin-bottom:8px">② DM作成画面を開き、貼り付け後に宛先・本文を確認してオーナー本人が送信します。</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <button class="btn btn-p btn-sm" onclick="slOpenOwnerDm('${id}')">② DM送信画面を開く</button>
+        <button class="btn btn-g btn-sm" onclick="slConfirmOwnerDmSent('${id}')">③ 本人送信済みとして記録</button>
+        <button class="btn btn-sm" style="color:var(--red);border-color:rgba(220,38,38,.35)" onclick="slExcludeOwnerDm('${id}','Instagramアカウントなし')">Instagramなし→削除</button>
+        <button class="btn btn-sm" style="color:var(--red);border-color:rgba(220,38,38,.35)" onclick="slExcludeOwnerDm('${id}','公式サイトあり')">公式サイトあり→削除</button>
+      </div>
+    </div>`);
+}
+function slCopyOwnerDm(id){
+  if(!_isOwner())return;
+  const l=(S.salesLeads||[]).find(x=>x.id===id&&!x.deleted);
+  const txt=(document.getElementById('sl-owner-dm-text')?.value||'').trim();
+  if(!l||!txt){toast('DM本文を入力してください','warn');return;}
+  l.dmDraft=txt;save();
+  const done=()=>{const after=document.getElementById('sl-owner-dm-aftercopy');if(after)after.style.display='block';toast('本文をコピーしました。Instagramで宛先と内容を確認してください');};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done).catch(()=>{toast('コピーできませんでした。本文を選択してコピーしてください','warn');});}
+  else{toast('このブラウザでは自動コピーできません。本文を選択してコピーしてください','warn');}
+}
+function slConfirmOwnerDmSent(id){
+  if(!_isOwner()){toast('この操作はオーナー専用です','err');return;}
+  const l=(S.salesLeads||[]).find(x=>x.id===id&&!x.deleted);
+  if(!l||slStatusOf(l)!=='未接触')return;
+  if(!confirm(`「${l.name}」へ、Instagram上でオーナー本人が送信済みであることを確認しましたか？`))return;
+  l.approach='DM営業';
+  slSetStatus(id,'DM済み');
+  closeModal();
+}
+// DM作成画面へ移るタイミングで担当と「送信準備」を自動記録する。
+// 実際の送信成否はInstagram側でのみ分かるため、DM済みへの確定は別ボタンに残す。
+function slOpenOwnerDm(id){
+  if(!_isOwner()){toast('この操作はオーナー専用です','err');return;}
+  const l=(S.salesLeads||[]).find(x=>x.id===id&&!x.deleted);
+  if(!l||!slIgHandle(l.instagram))return;
+  l.assignee=OWNER_NAME;
+  l.dmPreparedAt=new Date().toISOString();
+  l.dmPreparedBy=l.assignee;
+  save();
+  window.open(slIgDmComposeUrl(l.instagram),'_blank','noopener');
+  toast('担当をオーナーに設定し、送信準備を記録しました');
+}
+function slExcludeOwnerDm(id,reason){
+  if(!_isOwner()){toast('この操作はオーナー専用です','err');return;}
+  const l=(S.salesLeads||[]).find(x=>x.id===id&&!x.deleted);
+  if(!l)return;
+  if(!['Instagramアカウントなし','公式サイトあり'].includes(reason)){toast('対象外理由が不正です','err');return;}
+  // 監査には理由だけを残し、店名・Instagram等の対象情報は保持しない。
+  if(!Array.isArray(S.salesLeadExclusions))S.salesLeadExclusions=[];
+  S.salesLeadExclusions.push({id:uid(),reason,excludedAt:new Date().toISOString(),excludedBy:OWNER_NAME});
+  S.salesLeads=S.salesLeads.filter(x=>x.id!==id);
+  save();closeModal();render();
+  toast(`${reason}として対象情報を削除しました`);
 }
 
 function slSetStatus(id,status){

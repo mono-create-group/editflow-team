@@ -117,7 +117,13 @@ document.getElementById('f').addEventListener('submit',function(ev){
   btn.disabled=true;btn.textContent='送信中…';msg.className='msg';
   fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({
     action:'dmstaff_apply',name:name,email:email,phone:phone,_hp:document.getElementById('hp').value||''
-  })}).then(function(r){return r.json();}).then(function(d){
+  })}).then(function(r){
+    var ct=r.headers.get('content-type')||'';
+    if(!r.ok||ct.indexOf('application/json')<0){
+      var e=new Error('登録サービスの権限設定が完了していません');e.code='AUTH_REQUIRED';throw e;
+    }
+    return r.json();
+  }).then(function(d){
     if(d.success){
       msg.className='msg ok';
       msg.innerHTML='<b>登録が完了しました。</b><br>'+esc(email)+' 宛てに開始手順のメールを送りました。<br>'
@@ -128,9 +134,11 @@ document.getElementById('f').addEventListener('submit',function(ev){
       msg.textContent='送信に失敗しました。時間をおいて再度お試しください。（'+String(d.error||'不明なエラー')+'）';
       btn.disabled=false;btn.textContent='登録する';
     }
-  }).catch(function(){
+  }).catch(function(err){
     msg.className='msg ng';
-    msg.textContent='通信に失敗しました。電波の良い場所で再度お試しください。';
+    msg.textContent=err&&err.code==='AUTH_REQUIRED'
+      ?'登録サービスの権限設定を確認中です。運営側で復旧後に再度お試しください。'
+      :'通信に失敗しました。時間をおいて再度お試しください。';
     btn.disabled=false;btn.textContent='登録する';
   });
 });
