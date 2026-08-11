@@ -226,6 +226,22 @@ a{color:var(--pl)}
 .scMsg{font-size:13px;font-weight:700;margin-top:10px;min-height:1px}
 .scMsg.ok{color:var(--gr,#0a0)}
 .scMsg.ng{color:var(--red,#d33)}
+/* FAQ AI */
+.faqChips{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 4px}
+.faqChip{border:1.5px solid #c9c4f5;background:var(--pldim);color:var(--pldeep);font-weight:700;font-size:12.5px;border-radius:100px;padding:8px 16px;cursor:pointer;font-family:inherit}
+.faqChip:active{transform:scale(.97)}
+.faqBar{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.faqBar input{flex:1;min-width:200px;border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;font-size:14px;font-family:inherit}
+.faqBar input:focus{outline:none;border-color:var(--pl)}
+.faqAns{display:none;margin-top:14px;border-radius:12px;padding:14px 16px;font-size:13.5px;line-height:1.95;background:var(--pldim);color:var(--text)}
+.faqAns.show{display:block}
+.faqAns .faqQline{font-size:12px;font-weight:700;color:var(--pldeep);margin-bottom:6px}
+.faqAns .faqRelay{margin-top:10px;background:var(--amberdim);color:#8a5a10;border-radius:8px;padding:8px 12px;font-size:12.5px}
+.faqName{margin-top:2px}
+.faqName input{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;font-size:14px;font-family:inherit;margin-top:4px}
+.faqName input:focus{outline:none;border-color:var(--pl)}
+.faqName label{font-size:12.5px;font-weight:700;color:var(--t2);display:block}
+.faqName label small{font-weight:400;color:var(--t3)}
 </style>
 </head>
 <body>
@@ -277,7 +293,7 @@ a{color:var(--pl)}
     <h3><span class="mini">5</span>あなたの役割</h3>
     <p>営業用Instagramアカウントから、<b>テンプレートのDMを送ること</b>です。返信が来たらその日のうちに一次対応し、興味を持った方は運営につなぎます。<b>商談・制作・納品はすべて運営が行う</b>ので、あなたが売り込みトークや値段交渉をする必要はありません。</p>
     <p>1日の作業は「営業指示を確認する→営業リストを上から順にDMを送る→その場で記録する」の繰り返しです。送った件数と返信は自動で集計され、あなたの実績として残ります。</p>
-    <p><b>報酬は1件の成約につき10,000円</b>の成果報酬です（毎月25日締め・翌月末払い）。詳しくは<a href="#payment">お支払いについて</a>をご覧ください。</p>
+    <p><b>報酬は1件の成約につき15,000円（8月キャンペーン・通常10,000円）</b>の成果報酬です（毎月25日締め・翌月末払い）。詳しくは<a href="#payment">お支払いについて</a>をご覧ください。</p>
   </div>
 </section>
 
@@ -671,10 +687,17 @@ AI導入支援・コンサル
     <div class="okbox">保存するファイル名: <b class="inv-filename" id="invFileName">名前_対象月_請求書</b></div>
 
     <div class="inv-actions">
-      <button class="btn-claim" onclick="window.print()">PDFで保存する</button>
-      <a class="btn-dl" href="https://docs.google.com/forms/d/e/1FAIpQLScEI9VtNh8ZtGsU54vxfqpRnA6l_BTtCkdRHcu2RoDPdzER7A/viewform" target="_blank" rel="noopener">提出フォームを開く</a>
+      <button class="btn-claim" id="invSendBtn" onclick="invSend()">請求書を送信する</button>
     </div>
-    <p style="font-size:12.5px;color:var(--t2);margin-top:10px">「PDFで保存する」を押すと印刷画面が開きます。<b>PDFに保存</b>を選んでから、「提出フォームを開く」でそのPDFをアップロードして提出完了です。</p>
+    <p style="font-size:12.5px;color:var(--t2);margin-top:10px">「請求書を送信する」を押すと、上のプレビューの請求書が<b>そのまま運営に提出されます</b>。PDF保存やフォームへのアップロード作業はありません。送信後、運営のGoogleドライブに自動保存され、通知が届きます。</p>
+    <div class="claimResult" id="invSendResult"></div>
+    <div id="invFallback" style="display:none;margin-top:12px">
+      <div class="note"><b>予備手段:</b> 送信がうまくいかない場合だけ、従来どおりPDFで保存して提出フォームからアップロードしてください。</div>
+      <div class="inv-actions">
+        <button class="btn-ghost" onclick="window.print()">PDFで保存する</button>
+        <a class="btn-sub" href="https://docs.google.com/forms/d/e/1FAIpQLScEI9VtNh8ZtGsU54vxfqpRnA6l_BTtCkdRHcu2RoDPdzER7A/viewform" target="_blank" rel="noopener">提出フォームを開く（予備）</a>
+      </div>
+    </div>
     <div class="okbox">提出は<b>毎月25日まで</b>。月末にまとめて出すのではなく、25日を過ぎないように余裕をもって提出してください。</div>
   </div>
 </section>
@@ -693,6 +716,31 @@ AI導入支援・コンサル
       <li>社内アプリにサインインでき、営業リストを絞り込めた</li>
       <li>送信→記録（担当・営業方法・DM済み）の3タップを1回やってみた</li>
     </ul>
+  </div>
+</section>
+
+<!-- ═══════════ FAQ AI ═══════════ -->
+<section class="sec" id="faq-ai">
+  <div class="sec-head"><div class="num" style="background:var(--ink);box-shadow:none">FAQ<br>AI</div><h2>困ったときは、まずここで質問</h2></div>
+  <p class="sec-lead">報酬・支払い・ルールなどのよくある質問は、その場で自動回答します。FAQにない質問は運営へ自動で連携されるので、送りっぱなしで大丈夫です。</p>
+
+  <div class="card">
+    <div class="faqName">
+      <label>名前 <small>（任意。入れておくと未回答時の返信が届きやすくなります）</small></label>
+      <input id="faqName" placeholder="例: 山田太郎" maxlength="30">
+    </div>
+    <p style="margin-top:14px;margin-bottom:0"><b>よくある質問（タップでそのまま質問できます）</b></p>
+    <div class="faqChips">
+      <button type="button" class="faqChip" onclick="faqChip('報酬はいくらですか？')">報酬はいくら？</button>
+      <button type="button" class="faqChip" onclick="faqChip('報酬の支払日はいつですか？')">支払日はいつ？</button>
+      <button type="button" class="faqChip" onclick="faqChip('DMは1日何通まで送っていいですか？')">1日の送信上限は？</button>
+      <button type="button" class="faqChip" onclick="faqChip('請求書はどうやって提出しますか？')">請求書の出し方は？</button>
+    </div>
+    <div class="faqBar">
+      <input id="faqQ" placeholder="質問を入力（例: フォローDMはいつ送る？）" maxlength="300" onkeydown="if(event.key==='Enter')faqAsk()">
+      <button type="button" class="btn-claim" id="faqBtn" onclick="faqAsk()" style="padding:12px 26px">質問する</button>
+    </div>
+    <div class="faqAns" id="faqAns"></div>
   </div>
 </section>
 
@@ -1003,11 +1051,18 @@ function invLoadDraft(){
   }catch(e){}
 }
 
+function invCalc(){
+  var count=parseInt($('invCount').value,10);if(isNaN(count)||count<0)count=0;
+  var plan=$('invPayPlan').value||'commission';
+  var unit=plan==='commission'?INV_COMP.commissionRate:INV_COMP.bonusPerConversion;
+  var commission=plan==='commission'?count*unit:0;
+  var fixed=plan==='fixed'?INV_COMP.fixedMonthly:0;
+  var bonus=plan==='fixed'&&count>=INV_COMP.bonusThreshold?count*unit:0;
+  return {count:count,plan:plan,unit:unit,commission:commission,fixed:fixed,bonus:bonus,total:commission+fixed+bonus};
+}
 function invBuildHTML(){
   var name=($('invName').value||'').trim()||'（名前未入力）';
   var ym=$('invMonth').value||invDefaultMonth();
-  var count=parseInt($('invCount').value,10);if(isNaN(count)||count<0)count=0;
-  var plan=$('invPayPlan').value||'commission';
   var note=($('invNote').value||'').trim();
   var bank=($('invBank').value||'').trim();
   var branch=($('invBranch').value||'').trim();
@@ -1015,11 +1070,8 @@ function invBuildHTML(){
   var acctNo=($('invAcctNo').value||'').trim();
   var acctName=($('invAcctName').value||'').trim();
 
-  var unit=plan==='commission'?INV_COMP.commissionRate:INV_COMP.bonusPerConversion;
-  var commission=plan==='commission'?count*unit:0;
-  var fixed=plan==='fixed'?INV_COMP.fixedMonthly:0;
-  var bonus=plan==='fixed'&&count>=INV_COMP.bonusThreshold?count*unit:0;
-  var total=commission+fixed+bonus;
+  var c=invCalc();
+  var count=c.count,plan=c.plan,unit=c.unit,commission=c.commission,fixed=c.fixed,bonus=c.bonus,total=c.total;
   var today=new Date();
   var due=invDueDate(today);
   var itemLabel=plan==='commission'?esc(INV_COMP.campaignLabel)+'成約報酬（'+esc(invMonthLabel(ym)||ym)+'）':'固定給スタッフ 成約ボーナス（'+esc(invMonthLabel(ym)||ym)+'）';
@@ -1082,6 +1134,102 @@ function invRender(){
   invSaveDraft();
 }
 
+/* ── 請求書の直接送信(2026-08-11) ──
+   生成済みの請求書HTMLをそのままbase64にして、請求書受付GAS(Drive自動保存)へPOSTする。
+   PDF保存→Googleフォームの旧手順は、送信失敗時の予備手段としてだけ表示する。 */
+var INVOICE_URL='https://script.google.com/macros/s/AKfycbzdPQa24h5Ly1diKnjVwyjFl3Qn_vKGsyDVHD5hhlesG-IEBMpXKYlU4Lz2aDAKJkYwLw/exec';
+var INV_CSS='body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;color:#151822;margin:24px;line-height:1.8}'
+ +'.invoice-doc{border:1.5px solid #e5e7eb;border-radius:14px;padding:26px 22px;background:#fff;max-width:720px;margin:0 auto}'
+ +'.invoice-head{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;border-bottom:2px solid #111318;padding-bottom:14px;margin-bottom:16px}'
+ +'.invoice-title{font-size:20px;font-weight:800;letter-spacing:.14em}.invoice-date{font-size:12.5px;color:#4b5563}'
+ +'.invoice-to{font-size:15px;font-weight:700;margin-bottom:4px}.invoice-from{font-size:13px;color:#4b5563;margin-bottom:18px}'
+ +'.invoice-items{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px}'
+ +'.invoice-items th,.invoice-items td{border:1px solid #e5e7eb;padding:9px 10px;text-align:left}'
+ +'.invoice-items thead th{background:#f4f5f8}.invoice-items tfoot th{background:#f4f5f8;text-align:right}'
+ +'.invoice-note{font-size:11.5px;color:#9ca3af;display:block;margin-top:3px}.invoice-due{font-size:13.5px;font-weight:700;margin-bottom:18px}'
+ +'.invoice-bank-title{font-size:13px;font-weight:800;margin-bottom:6px}.invoice-bank table{width:100%;border-collapse:collapse;font-size:12.5px}'
+ +'.invoice-bank th,.invoice-bank td{border:1px solid #e5e7eb;padding:7px 10px;text-align:left}'
+ +'.invoice-bank th{width:110px;background:#f4f5f8;font-weight:700;white-space:nowrap}';
+function invStandaloneHTML(){
+  return '<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>請求書</title><style>'+INV_CSS+'</style></head><body>'+invBuildHTML()+'</body></html>';
+}
+function invSend(){
+  var box=$('invSendResult');
+  var name=($('invName').value||'').trim();
+  var ym=$('invMonth').value||invDefaultMonth();
+  if(!name){box.className='claimResult ng';box.textContent='名前を入力してください（請求書の請求元になります）。';return;}
+  var c=invCalc();
+  var html=invStandaloneHTML();
+  var b64;
+  try{b64=btoa(unescape(encodeURIComponent(html)));}catch(e){
+    box.className='claimResult ng';box.textContent='請求書データの生成に失敗しました。下の予備手段から提出してください。';
+    $('invFallback').style.display='block';return;
+  }
+  if(b64.length>15*1024*1024){
+    box.className='claimResult ng';box.textContent='請求書データが大きすぎます（15MBまで）。下の予備手段から提出してください。';
+    $('invFallback').style.display='block';return;
+  }
+  if(!confirm((invMonthLabel(ym)||ym)+'の請求書（合計 '+invYen(c.total)+'）を運営に送信します。よろしいですか？'))return;
+  var btn=$('invSendBtn');btn.disabled=true;btn.textContent='送信中…';box.className='claimResult';box.textContent='';
+  fetch(INVOICE_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({
+    action:'invoice_upload',
+    editor:'営業_'+name,
+    month:ym,
+    amount:c.total,
+    note:'DM営業スタッフ請求書',
+    filename:'請求書_営業_'+name+'_'+ym+'.html',
+    mime_type:'text/html',
+    file_base64:b64
+  })}).then(function(r){
+    /* GAS応答が読めない場合も実行は成功している(echo障害対策) */
+    return r.json().then(function(j){return !!j.ok;}).catch(function(){return true;});
+  }).then(function(ok){
+    if(ok){
+      box.className='claimResult ok';
+      box.innerHTML='<b>請求書を送信しました。</b>運営のドライブに保存され、通知済みです。25日締め・翌月末にお振込みします。';
+      btn.textContent='送信済み';
+      return;
+    }
+    throw new Error('ng');
+  }).catch(function(){
+    box.className='claimResult ng';
+    box.textContent='送信に失敗しました。通信環境を確認して再度お試しください。何度も失敗する場合は、下の予備手段から提出してください。';
+    $('invFallback').style.display='block';
+    btn.disabled=false;btn.textContent='請求書を送信する';
+  });
+}
+
+/* ── FAQ AI(2026-08-11) ──
+   dmfaq_ask(GET・キー不要)へ質問を投げる。FAQ未マッチの質問はGAS側で運営へ自動通知される。 */
+function faqChip(q){$('faqQ').value=q;faqAsk();}
+function faqAsk(){
+  var q=($('faqQ').value||'').trim();
+  var name=($('faqName').value||'').trim();
+  var box=$('faqAns');
+  if(!q){box.className='faqAns show';box.textContent='質問を入力してください。';return;}
+  var btn=$('faqBtn');btn.disabled=true;btn.textContent='回答中…';
+  box.className='faqAns show';box.textContent='回答を確認しています…';
+  faqFetch(q,name,0,function(d){
+    btn.disabled=false;btn.textContent='質問する';
+    if(!d||!d.ok){
+      box.innerHTML='<div class="faqQline">Q. '+esc(q)+'</div>'
+        +(d&&d.error==='rate_limited'?'質問が集中しています。1分ほど待ってから再度お試しください。':'通信に失敗しました。電波の良い場所で再度お試しください。');
+      return;
+    }
+    var out='<div class="faqQline">Q. '+esc(q)+'</div>'+esc(d.answer).replace(/\n/g,'<br>');
+    if(!d.matched){out+='<div class="faqRelay">この質問は運営に自動連携済みです。1営業日以内に返信します（このまま作業を続けてOKです）。</div>';}
+    box.innerHTML=out;
+  });
+}
+function faqFetch(q,name,tries,cb){
+  fetch(API+'?action=dmfaq_ask&q='+encodeURIComponent(q)+'&name='+encodeURIComponent(name),{cache:'no-store'})
+  .then(function(r){return r.text();}).then(function(t){
+    var d=null;try{d=JSON.parse(t);}catch(e){}
+    if(d){cb(d);return;}
+    if(tries<1){setTimeout(function(){faqFetch(q,name,tries+1,cb);},1200);}else cb(null);
+  }).catch(function(){if(tries<1){setTimeout(function(){faqFetch(q,name,tries+1,cb);},1200);}else cb(null);});
+}
+
 ['invName','invMonth','invCount','invPayPlan','invNote','invBank','invBranch','invAcctType','invAcctNo','invAcctName'].forEach(function(id){
   var el=$(id);
   if(!el)return;
@@ -1111,6 +1259,10 @@ renderShowcase();
 loadShowcase();
 loadNames();
 
+/* FAQ AIの名前欄: 前回入力を復元し、次回のため保存する */
+try{var fn=localStorage.getItem('dmm_faqname')||localStorage.getItem('dmm_staff');if(fn)$('faqName').value=fn;}catch(e){}
+$('faqName').addEventListener('input',function(){try{localStorage.setItem('dmm_faqname',(this.value||'').trim());}catch(e){}});
+
 $('invMonth').value=invDefaultMonth();
 invLoadDraft();
 if(!$('invName').value){
@@ -1120,7 +1272,7 @@ invRender();
 invLoadSharedCompensation();
 
 /* ── 古いタブを自動で最新版へ切り替える ── */
-var MANUAL_VERSION='20260809-04';
+var MANUAL_VERSION='20260811-01';
 var manualVersionLastCheck=0;
 function checkManualVersion(){
   var now=Date.now();
