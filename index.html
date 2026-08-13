@@ -13233,6 +13233,7 @@ let _slFilterStatus='all';
 let _slFilterGenre='all';
 let _slFilterBeautyAudience='all';
 let _slFilterBeautyService='all';
+let _slFilterSubgenre='all';
 let _slFilterRegion='all';
 let _slFilterContact='all';  // all / ig / email / both
 let _slFilterAssignee='all';  // all / 会長 / 佐々木 / アオイ / 未割当
@@ -13295,6 +13296,7 @@ function slFilteredLeads(){
     if(_slFilterStatus!=='all'&&slStatusOf(l)!==_slFilterStatus)return false;
     const genreGroup=slGenreGroup(l.genre);
     if(_slFilterGenre!=='all'&&genreGroup!==_slFilterGenre)return false;
+    if(_slFilterSubgenre!=='all'&&l.genre!==_slFilterSubgenre)return false;
     if(_slFilterBeautyAudience!=='all'&&(genreGroup!=='美容・健康'||slBeautyAudience(l.genre)!==_slFilterBeautyAudience))return false;
     if(_slFilterBeautyService!=='all'&&(genreGroup!=='美容・健康'||slBeautyService(l.genre)!==_slFilterBeautyService))return false;
     if(_slFilterRegion!=='all'&&slRegionOf(l)!==_slFilterRegion)return false;
@@ -13325,6 +13327,7 @@ function slSetGenreFilter(genre){
     _slFilterBeautyAudience='all';
     _slFilterBeautyService='all';
   }
+  _slFilterSubgenre='all';
   _slPage=0;
   render();
 }
@@ -14158,6 +14161,19 @@ function rSalesLeads(){
     </div>
     ${beautyFilterActive?`<div style="margin-top:8px;font-size:11px;color:var(--purple)">▼ 美容の詳細条件でフィルタ中 — <button class="btn btn-g btn-xs" onclick="_slFilterBeautyAudience='all';_slFilterBeautyService='all';_slPage=0;render()">詳細条件を解除</button></div>`:''}
   </details>`;
+  // 大分類を選んだ後だけ、二段目の絞り込みを表示する。美容は対象・業態、他は実データの業種で絞る。
+  const selectedSubgenres=_slFilterGenre==='all'?[]:[...new Set(all.filter(l=>slGenreGroup(l.genre)===_slFilterGenre).map(l=>String(l.genre||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ja'));
+  const detailFilterHtml=_slFilterGenre==='all'?'':(_slFilterGenre==='美容・健康'
+    ?`<details style="margin:6px 0 8px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rs);background:var(--card2)"${beautyFilterActive?' open':''}>
+        <summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--t2);user-select:none">さらに絞り込む（美容）</summary>${beautyFilterHtml.replace(/^<details[^>]*>|<\/details>$/g,'')}
+      </details>`
+    :`<details style="margin:6px 0 8px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rs);background:var(--card2)"${_slFilterSubgenre!=='all'?' open':''}>
+        <summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--t2);user-select:none">さらに絞り込む（${esc(_slFilterGenre)}）</summary>
+        <div class="filter-bar" style="margin:8px 0 0">
+          <button class="fbtn${_slFilterSubgenre==='all'?' act':''}" onclick="_slFilterSubgenre='all';_slPage=0;render()">すべて</button>
+          ${selectedSubgenres.map(g=>`<button class="fbtn${_slFilterSubgenre===g?' act':''}" onclick="_slFilterSubgenre='${esc(g)}';_slPage=0;render()">${esc(g)}</button>`).join('')}
+        </div>
+      </details>`);
   const genreFilterHtml=`<details style="margin-bottom:8px"${_slFilterGenre!=='all'?' open':''}>
     <summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--t2);padding:7px 2px;user-select:none">ジャンル${_slFilterGenre!=='all'?`：${esc(_slFilterGenre)}`:'を絞り込む'}</summary>
     <div class="filter-bar" style="margin:6px 0 0">
@@ -14326,7 +14342,7 @@ function rSalesLeads(){
   <div class="sl-filters">
   ${statusFilterHtml}
   ${isThV?'':genreFilterHtml}
-  ${isThV?'':beautyFilterHtml}
+  ${isThV?'':detailFilterHtml}
   ${isThV?'':regionFilterHtml}
   ${isThV?'':contactFilterHtml}
   ${isThV?'':approachFilterHtml}
@@ -14356,7 +14372,7 @@ function slSetSrc(src){
   if(!SL_SRC.some(s=>s.k===src))return;
   _slSrc=src;_slPage=0;
   // 店舗専用フィルタはスレッズ区分では非表示になるため、残したままだと解除できず0件に見える
-  _slFilterGenre='all';_slFilterBeautyAudience='all';_slFilterBeautyService='all';_slFilterRegion='all';_slFilterContact='all';_slFilterApproach='all';
+  _slFilterGenre='all';_slFilterBeautyAudience='all';_slFilterBeautyService='all';_slFilterSubgenre='all';_slFilterRegion='all';_slFilterContact='all';_slFilterApproach='all';
   render();
 }
 
@@ -14730,7 +14746,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260813-01';
+const APP_VERSION='20260813-02';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
