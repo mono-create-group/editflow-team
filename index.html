@@ -13026,6 +13026,13 @@ function slIsThreadsView(){return _slBiz==='hp'&&_slSrc==='threads';}
 const SL_FOOD_GENRES=new Set(['飲食','ラーメン','居酒屋','焼肉','寿司','カフェ','スナック','バー','焼き鳥','食堂','そば','うどん','洋食','中華','イタリアン','ジンギスカン','海鮮','弁当・惣菜','喫茶','定食','ダイニング','ビストロ','バル','焼き鳥・串','鉄板焼き','パン','洋菓子','和菓子','鮮魚','精肉','青果','酒屋']);
 // 営業リストのジャンルは、細かい元データを保持したまま画面では大分類に集約する。
 const SL_GENRE_GROUPS=['美容・健康','飲食・食品','暮らし・サービス','小売・教室','その他'];
+// 美容・健康の中は、保存済みの業種ラベルを変えずに「主な対象」と「業態」で二段階に絞り込む。
+// 未分類・兼用店も除外事故を起こさないよう、判定できない店は「共通・不明」に残す。
+const SL_BEAUTY_AUDIENCES=['女性向け','男性向け','共通・不明'];
+const SL_BEAUTY_SERVICES=['エステ・脱毛','ネイル・まつげ','美容室','理容室・メンズヘア','リラク・ボディケア','その他美容'];
+// 営業指示の新規作成時は、会長方針どおり女性向け店舗を既定にする。
+// 業種名はCSV/既存リードで使っている値をそのまま採用し、取込や既存指示との互換を保つ。
+const SL_WOMEN_BEAUTY_GENRES=['エステ','脱毛','ネイル','マツエク','アイブロウ','フェイシャル','痩身','ブライダルエステ','ハーブピーリング','よもぎ蒸し','アロマ','リンパ'];
 function slGenreGroup(genre){
   const g=String(genre||'').trim();
   if(SL_FOOD_GENRES.has(g)||/飲食|レストラン|料理|菓子|パン|食品|カフェ|バー/.test(g))return '飲食・食品';
@@ -13033,6 +13040,21 @@ function slGenreGroup(genre){
   if(/不動産|建設|工務店|清掃|士業|自動車|葬祭|便利|写真|ペット|旅行|宿泊|ホテル|介護/.test(g))return '暮らし・サービス';
   if(/小売|販売|雑貨|アパレル|教室|学習|塾|スクール|保育|幼稚園|児童/.test(g))return '小売・教室';
   return 'その他';
+}
+function slBeautyAudience(genre){
+  const g=String(genre||'').trim();
+  if(/メンズ|男性|理容|バーバー|育毛/.test(g))return '男性向け';
+  if(/女性|レディース|ネイル|まつ|アイブロウ|エステ|脱毛|フェイシャル|痩身|ブライダル|よもぎ|アロマ|リンパ/.test(g))return '女性向け';
+  return '共通・不明';
+}
+function slBeautyService(genre){
+  const g=String(genre||'').trim();
+  if(/エステ|脱毛|フェイシャル|痩身|ブライダル|ハーブピーリング|ホワイトニング|よもぎ/.test(g))return 'エステ・脱毛';
+  if(/ネイル|まつ|アイブロウ/.test(g))return 'ネイル・まつげ';
+  if(/理容|バーバー|メンズヘア/.test(g))return '理容室・メンズヘア';
+  if(/美容室|ヘアサロン|ヘアセット/.test(g))return '美容室';
+  if(/整体|整骨|接骨|鍼灸|リラク|アロマ|リンパ|ヘッドスパ|リフレ|タイ古式|カイロ|ストレッチ|フットケア/.test(g))return 'リラク・ボディケア';
+  return 'その他美容';
 }
 // この店がこの事業タブのプールに属するか。シフトさん=飲食のみ／他事業=非飲食のみ
 // srcKey: 'store'/'threads'/'any'(区分を問わない・タブ件数用)。省略時は現在のビューに従う。
@@ -13209,6 +13231,8 @@ const SL_REGIONS=['旭川','札幌','全道','全国'];
 let _slPage=0;
 let _slFilterStatus='all';
 let _slFilterGenre='all';
+let _slFilterBeautyAudience='all';
+let _slFilterBeautyService='all';
 let _slFilterRegion='all';
 let _slFilterContact='all';  // all / ig / email / both
 let _slFilterAssignee='all';  // all / 会長 / 佐々木 / アオイ / 未割当
@@ -13269,7 +13293,10 @@ function slFilteredLeads(){
     if(l.deleted)return false;
     if(!slInPool(l,_slBiz))return false;  // 事業プール(シフトさん=飲食のみ/他=非飲食)
     if(_slFilterStatus!=='all'&&slStatusOf(l)!==_slFilterStatus)return false;
-    if(_slFilterGenre!=='all'&&slGenreGroup(l.genre)!==_slFilterGenre)return false;
+    const genreGroup=slGenreGroup(l.genre);
+    if(_slFilterGenre!=='all'&&genreGroup!==_slFilterGenre)return false;
+    if(_slFilterBeautyAudience!=='all'&&(genreGroup!=='美容・健康'||slBeautyAudience(l.genre)!==_slFilterBeautyAudience))return false;
+    if(_slFilterBeautyService!=='all'&&(genreGroup!=='美容・健康'||slBeautyService(l.genre)!==_slFilterBeautyService))return false;
     if(_slFilterRegion!=='all'&&slRegionOf(l)!==_slFilterRegion)return false;
     const hasIG=!!(l.instagram&&l.instagram.trim());
     const hasEmail=!!(l.email&&l.email.trim());
@@ -13290,6 +13317,16 @@ function slFilteredLeads(){
     }
     return true;
   });
+}
+function slSetGenreFilter(genre){
+  _slFilterGenre=genre;
+  // 美容以外の大分類へ切り替える時、隠れた美容条件で0件になるのを防ぐ。
+  if(genre!=='美容・健康'){
+    _slFilterBeautyAudience='all';
+    _slFilterBeautyService='all';
+  }
+  _slPage=0;
+  render();
 }
 
 // ═══ 営業件数カウンター(担当者別・日次) ═══
@@ -13642,7 +13679,7 @@ function slDirectivesHtml(){
   const rows=mine.map(d=>`<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
       <span style="background:${d.assignee==='全員'?'var(--adim)':'var(--pldim)'};color:${d.assignee==='全員'?'var(--amber)':'var(--purple)'};font-size:10.5px;font-weight:800;padding:3px 10px;border-radius:100px;flex-shrink:0;margin-top:2px">${esc(d.assignee)}</span>
       <div style="flex:1;min-width:0;font-size:13px;line-height:1.6">
-        <b>${slBizLabel(d.biz||'hp')}</b> × <b>${esc(_slDirGenres(d).join('・')||'全ジャンル')}</b>
+        <b>${slBizLabel(d.biz||'hp')}</b> × <b>${esc(d.audience||'全店舗')}</b> × <b>${esc(_slDirGenres(d).join('・')||'全ジャンル')}</b>
         ${d.note?`<div style="font-size:12px;color:var(--t2);margin-top:2px;white-space:pre-wrap">${esc(d.note)}</div>`:''}
         <div style="font-size:10px;color:var(--t3);margin-top:2px">${d.updatedAt?tpFmtDate(d.updatedAt):''}${d.updatedBy?` ・ ${esc(d.updatedBy)}`:''}</div>
       </div>
@@ -13699,10 +13736,11 @@ function slDirGenreAdd(){
 function slDirOpen(id){
   const d=id?_slDirs().find(x=>x.id===id):null;
   const people=['全員',..._slAssignees()];
-  _dirGenreSel=_slDirGenres(d);
+  _dirGenreSel=d?_slDirGenres(d):[...SL_WOMEN_BEAUTY_GENRES];
   openModal(`<div class="mhdr"><div class="mtitle">${d?'営業指示を編集':'営業指示を追加'}</div><button class="mclose" onclick="closeModal()">✕</button></div>
 <div class="fg"><div class="fl">対象者</div><select id="dir-assignee">${people.map(p=>`<option value="${esc(p)}"${d&&d.assignee===p?' selected':''}>${esc(p)}</option>`).join('')}</select></div>
 <div class="fg"><div class="fl">事業</div><select id="dir-biz">${SL_BIZ.map(b=>`<option value="${b.k}"${d&&d.biz===b.k?' selected':''}>${b.label}</option>`).join('')}</select></div>
+<div class="fg"><div class="fl">対象店舗</div><select id="dir-audience">${['女性向け','男性向け','共通・不明','全店舗'].map(a=>`<option value="${a}"${(d?.audience||'女性向け')===a?' selected':''}>${a}</option>`).join('')}</select><div style="font-size:11px;color:var(--t3);margin-top:5px">新規指示は女性向けの美容業態を初期選択しています。必要なら業種を追加・解除できます。</div></div>
 <div class="fg"><div class="fl">ジャンル(業種)・複数選択可</div>
   <div id="dir-genre-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px">${_slDirGenreChips()}</div>
   <div style="display:flex;gap:6px">
@@ -13717,7 +13755,7 @@ function slDirOpen(id){
 function slDirSave(id){
   if(!Array.isArray(S.salesDirectives))S.salesDirectives=[];
   const data={assignee:document.getElementById('dir-assignee').value,biz:document.getElementById('dir-biz').value,
-    genres:[..._dirGenreSel],genre:_dirGenreSel.join('・'),note:document.getElementById('dir-note').value.trim(),
+    audience:document.getElementById('dir-audience').value,genres:[..._dirGenreSel],genre:_dirGenreSel.join('・'),note:document.getElementById('dir-note').value.trim(),
     updatedAt:Date.now(),updatedBy:_myDisplayName()||_myEmail()};
   if(id){const d=S.salesDirectives.find(x=>x.id===id);if(d)Object.assign(d,data);}
   else S.salesDirectives.push(Object.assign({id:uid(),createdAt:today()},data));
@@ -13727,6 +13765,21 @@ function slDirDel(id){
   const d=(S.salesDirectives||[]).find(x=>x.id===id);if(!d)return;
   d.deleted=true;d.updatedAt=Date.now();
   save();closeModal();render();toast('営業指示を削除しました');
+}
+// 2026-08-12 会長指示: 既存の営業指示も女性向け店舗へ統一する。
+// 報酬設定(kind)や削除済みデータ、スタッフ/事業/メモは一切変更しない。冪等。
+function slMigrateDirectivesToWomen(){
+  if(!Array.isArray(S.salesDirectives))return;
+  let changed=0;
+  S.salesDirectives.forEach(d=>{
+    if(!d||d.deleted||d.kind==='compensation'||d.audience==='女性向け')return;
+    d.audience='女性向け';
+    d.genres=[...SL_WOMEN_BEAUTY_GENRES];
+    d.genre=d.genres.join('・');
+    d.updatedAt=Date.now();
+    changed++;
+  });
+  if(changed){save();console.log(`[slMigrateDirectivesToWomen] 女性向け店舗へ統一: ${changed}件`);}
 }
 // ═══ 営業ランキング(2026-07-26 会長指示) ═══
 // 全員が見られる成績表。接触履歴(contacts)を担当者×期間で集計する。
@@ -13929,11 +13982,13 @@ function rSalesLeads(){
   // 実装: 1パスで各次元の合否を出し、「全次元通過」or「当該次元だけ不通過」の店のみ、その次元の内訳へ寄与。
   const counts={};SL_STATUSES.forEach(s=>{counts[s]=0;});
   const genreCounts={};SL_GENRE_GROUPS.forEach(g=>{genreCounts[g]=0;});
+  const beautyAudienceCounts={};SL_BEAUTY_AUDIENCES.forEach(g=>{beautyAudienceCounts[g]=0;});
+  const beautyServiceCounts={};SL_BEAUTY_SERVICES.forEach(g=>{beautyServiceCounts[g]=0;});
   const regionCounts={};SL_REGIONS.forEach(r=>{regionCounts[r]={total:0,未接触:0,アポ:0,成約:0};});
   const assigneeCounts={};_slAssignees().forEach(a=>{assigneeCounts[a]=0;});
   const approachCounts={};SL_APPROACHES.forEach(a=>{approachCounts[a]=0;});
   let wonThisMonth=0,overlapCount=0,igCount=0,emailCount=0,bothCount=0;
-  let statusBase=0,genreBase=0,regionBase=0,contactBase=0,assigneeBase=0,approachBase=0,overlapBase=0;
+  let statusBase=0,genreBase=0,beautyAudienceBase=0,beautyServiceBase=0,regionBase=0,contactBase=0,assigneeBase=0,approachBase=0,overlapBase=0;
   let unassignedCount=0,approachNoneCount=0;
   for(const l of all){
     const st=slStatusOf(l);
@@ -13946,16 +14001,23 @@ function rSalesLeads(){
     const pStatus=_slFilterStatus==='all'||st===_slFilterStatus;
     const genreGroup=slGenreGroup(l.genre);
     const pGenre=_slFilterGenre==='all'||genreGroup===_slFilterGenre;
+    const beautyAudience=slBeautyAudience(l.genre);
+    const beautyService=slBeautyService(l.genre);
+    // 美容外はサブ分類の対象外。美容を選んだ時だけその分類で絞り込む。
+    const pBeautyAudience=_slFilterBeautyAudience==='all'||(genreGroup==='美容・健康'&&beautyAudience===_slFilterBeautyAudience);
+    const pBeautyService=_slFilterBeautyService==='all'||(genreGroup==='美容・健康'&&beautyService===_slFilterBeautyService);
     const pRegion=_slFilterRegion==='all'||slRegionOf(l)===_slFilterRegion;
     const pContact=_slFilterContact==='all'||(_slFilterContact==='ig'&&hasIg)||(_slFilterContact==='email'&&hasMail)||(_slFilterContact==='both'&&hasIg&&hasMail);
     const pAssignee=_slFilterAssignee==='all'||(_slFilterAssignee==='未割当'?!l.assignee:l.assignee===_slFilterAssignee);
     const pApproach=_slFilterApproach==='all'||(_slFilterApproach==='__none__'?!l.approach:l.approach===_slFilterApproach);
     const pOverlap=!_slFilterOverlap||!isOverlap;
-    const fail=(pStatus?0:1)+(pGenre?0:1)+(pRegion?0:1)+(pContact?0:1)+(pAssignee?0:1)+(pApproach?0:1)+(pOverlap?0:1);
+    const fail=(pStatus?0:1)+(pGenre?0:1)+(pBeautyAudience?0:1)+(pBeautyService?0:1)+(pRegion?0:1)+(pContact?0:1)+(pAssignee?0:1)+(pApproach?0:1)+(pOverlap?0:1);
     // only(d): 当該次元を除いた全次元が通過しているか。d=当該次元のpass値
     const only=d=>fail===0||(fail===1&&!d);
     if(only(pStatus)){if(counts[st]!==undefined)counts[st]++;statusBase++;}
     if(only(pGenre)){genreBase++;genreCounts[genreGroup]=(genreCounts[genreGroup]||0)+1;}
+    if(only(pBeautyAudience)&&genreGroup==='美容・健康'){beautyAudienceBase++;beautyAudienceCounts[beautyAudience]=(beautyAudienceCounts[beautyAudience]||0)+1;}
+    if(only(pBeautyService)&&genreGroup==='美容・健康'){beautyServiceBase++;beautyServiceCounts[beautyService]=(beautyServiceCounts[beautyService]||0)+1;}
     if(only(pRegion)){regionBase++;const rc=regionCounts[slRegionOf(l)];if(rc){rc.total++;if(rc[st]!==undefined)rc[st]++;}}
     if(only(pContact)){contactBase++;if(hasIg)igCount++;if(hasMail)emailCount++;if(hasIg&&hasMail)bothCount++;}
     if(only(pAssignee)){assigneeBase++;if(l.assignee){if(assigneeCounts[l.assignee]!==undefined)assigneeCounts[l.assignee]++;}else unassignedCount++;}
@@ -14081,11 +14143,26 @@ function rSalesLeads(){
     ${['all',...SL_STATUSES].map(s=>`<button class="fbtn${_slFilterStatus===s?' act':''}" onclick="_slFilterStatus='${s}';_slPage=0;render()">${s==='all'?'すべて':s} <span style="opacity:.65;font-size:10px">${s==='all'?statusBase:(counts[s]||0)}</span></button>`).join('')}
   </div>`;
 
+  const beautyFilterActive=_slFilterBeautyAudience!=='all'||_slFilterBeautyService!=='all';
+  const beautyFilterHtml=`<details style="margin:6px 0 8px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rs);background:var(--card2)"${beautyFilterActive?' open':''}>
+    <summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--t2);user-select:none">美容を細かく絞り込む${beautyFilterActive?'：選択中':''}</summary>
+    <div style="font-size:11px;color:var(--t3);margin-top:8px">主な対象</div>
+    <div class="filter-bar" style="margin:5px 0 8px">
+      <button class="fbtn${_slFilterBeautyAudience==='all'?' act':''}" onclick="_slFilterBeautyAudience='all';_slPage=0;render()">すべて <span style="opacity:.65;font-size:10px">${beautyAudienceBase}</span></button>
+      ${SL_BEAUTY_AUDIENCES.map(g=>`<button class="fbtn${_slFilterBeautyAudience===g?' act':''}" onclick="_slFilterBeautyAudience='${esc(g)}';_slPage=0;render()">${esc(g)} <span style="opacity:.65;font-size:10px">${beautyAudienceCounts[g]||0}</span></button>`).join('')}
+    </div>
+    <div style="font-size:11px;color:var(--t3);margin-top:4px">業態</div>
+    <div class="filter-bar" style="margin:5px 0 0">
+      <button class="fbtn${_slFilterBeautyService==='all'?' act':''}" onclick="_slFilterBeautyService='all';_slPage=0;render()">すべて <span style="opacity:.65;font-size:10px">${beautyServiceBase}</span></button>
+      ${SL_BEAUTY_SERVICES.map(g=>`<button class="fbtn${_slFilterBeautyService===g?' act':''}" onclick="_slFilterBeautyService='${esc(g)}';_slPage=0;render()">${esc(g)} <span style="opacity:.65;font-size:10px">${beautyServiceCounts[g]||0}</span></button>`).join('')}
+    </div>
+    ${beautyFilterActive?`<div style="margin-top:8px;font-size:11px;color:var(--purple)">▼ 美容の詳細条件でフィルタ中 — <button class="btn btn-g btn-xs" onclick="_slFilterBeautyAudience='all';_slFilterBeautyService='all';_slPage=0;render()">詳細条件を解除</button></div>`:''}
+  </details>`;
   const genreFilterHtml=`<details style="margin-bottom:8px"${_slFilterGenre!=='all'?' open':''}>
     <summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--t2);padding:7px 2px;user-select:none">ジャンル${_slFilterGenre!=='all'?`：${esc(_slFilterGenre)}`:'を絞り込む'}</summary>
     <div class="filter-bar" style="margin:6px 0 0">
-      <button class="fbtn${_slFilterGenre==='all'?' act':''}" onclick="_slFilterGenre='all';_slPage=0;render()">全ジャンル <span style="opacity:.65;font-size:10px">${genreBase}</span></button>
-      ${SL_GENRE_GROUPS.map(g=>`<button class="fbtn${_slFilterGenre===g?' act':''}" onclick="_slFilterGenre='${esc(g)}';_slPage=0;render()">${esc(g)} <span style="opacity:.65;font-size:10px">${genreCounts[g]||0}</span></button>`).join('')}
+      <button class="fbtn${_slFilterGenre==='all'?' act':''}" onclick="slSetGenreFilter('all')">全ジャンル <span style="opacity:.65;font-size:10px">${genreBase}</span></button>
+      ${SL_GENRE_GROUPS.map(g=>`<button class="fbtn${_slFilterGenre===g?' act':''}" onclick="slSetGenreFilter('${esc(g)}')">${esc(g)} <span style="opacity:.65;font-size:10px">${genreCounts[g]||0}</span></button>`).join('')}
     </div>
   </details>`;
 
@@ -14249,6 +14326,7 @@ function rSalesLeads(){
   <div class="sl-filters">
   ${statusFilterHtml}
   ${isThV?'':genreFilterHtml}
+  ${isThV?'':beautyFilterHtml}
   ${isThV?'':regionFilterHtml}
   ${isThV?'':contactFilterHtml}
   ${isThV?'':approachFilterHtml}
@@ -14278,7 +14356,7 @@ function slSetSrc(src){
   if(!SL_SRC.some(s=>s.k===src))return;
   _slSrc=src;_slPage=0;
   // 店舗専用フィルタはスレッズ区分では非表示になるため、残したままだと解除できず0件に見える
-  _slFilterGenre='all';_slFilterRegion='all';_slFilterContact='all';_slFilterApproach='all';
+  _slFilterGenre='all';_slFilterBeautyAudience='all';_slFilterBeautyService='all';_slFilterRegion='all';_slFilterContact='all';_slFilterApproach='all';
   render();
 }
 
@@ -14650,8 +14728,9 @@ slMigrateRegions();
 slMigrateBiz();
 slMigrateFoodToShift();
 slMigrateAssignee();
+slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260809-04';
+const APP_VERSION='20260812-02';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
