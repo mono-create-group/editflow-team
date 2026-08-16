@@ -853,9 +853,11 @@ function reportIg(){
   var box=$('igReportResult');
   if(!me){box.className='claimResult ng';box.textContent='上の「B」で自分の本名を入力してから報告してください。';return;}
   if(!ig||!igemail||!igpw){box.className='claimResult ng';box.textContent='ユーザーネーム・メールアドレス・パスワードの3つすべてを入力してください。';return;}
+  if(!/^[A-Za-z0-9._]{1,30}$/.test(ig)){box.className='claimResult ng';box.textContent='Instagramのユーザーネームは、英数字・ピリオド・アンダーバーの30文字以内で入力してください。';return;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(igemail)){box.className='claimResult ng';box.textContent='Instagram登録に使ったメールアドレスを正しく入力してください。';return;}
   var btn=$('igReportBtn');btn.disabled=true;
   fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'dmstaff_igreport',name:me,ig:ig,igemail:igemail,igpw:igpw})})
-  .then(function(r){return r.json();}).then(function(d){
+  .then(function(r){if(!r.ok)throw new Error('http_'+r.status);return r.json();}).then(function(d){
     if(d.success){
       box.className='claimResult ok';
       box.innerHTML='<b>報告を受け付けました。</b>運営に通知済みです。このまま手順2へ進んでください。';
@@ -1182,8 +1184,9 @@ function invSend(){
     mime_type:'text/html',
     file_base64:b64
   })}).then(function(r){
-    /* GAS応答が読めない場合も実行は成功している(echo障害対策) */
-    return r.json().then(function(j){return !!j.ok;}).catch(function(){return true;});
+    /* HTMLの権限エラー等を成功扱いにしない。JSONで ok:true を確認できた時だけ完了とする。 */
+    if(!r.ok)throw new Error('http_'+r.status);
+    return r.json().then(function(j){return !!(j&&j.ok===true);});
   }).then(function(ok){
     if(ok){
       box.className='claimResult ok';
@@ -1273,7 +1276,7 @@ invRender();
 invLoadSharedCompensation();
 
 /* ── 古いタブを自動で最新版へ切り替える ── */
-var MANUAL_VERSION='20260811-01';
+var MANUAL_VERSION='20260816-01';
 var manualVersionLastCheck=0;
 function checkManualVersion(){
   var now=Date.now();
