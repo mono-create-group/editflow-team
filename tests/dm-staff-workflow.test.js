@@ -141,9 +141,12 @@ function backendIgValidation() {
     _rateLimitOk_: () => true,
     json_: value => value
   });
-  vm.runInContext(extractFunction(backend, 'dmStaffIgReport_'), ctx);
+  ['_dmIgHandle_', '_dmIgViewFields_', 'dmStaffIgReport_']
+    .forEach(name => vm.runInContext(extractFunction(backend, name), ctx));
   assert.equal(ctx.dmStaffIgReport_({name:'山田',ig:'mono yamada',igemail:'ig@example.com',igpw:'safe-pass'}).error, 'invalid_ig_handle');
   assert.equal(ctx.dmStaffIgReport_({name:'山田',ig:'mono_yamada',igemail:'invalid-email',igpw:'safe-pass'}).error, 'invalid_ig_email');
+  assert.deepEqual(JSON.parse(JSON.stringify(ctx._dmIgViewFields_('@mono_yamada', 'IG作成済'))), {ig:'@mono_yamada',state:'IG作成済'});
+  assert.deepEqual(JSON.parse(JSON.stringify(ctx._dmIgViewFields_('@mono yamada', 'IG作成済'))), {ig:'',state:'IGユーザー名要再報告'});
 }
 async function ownerDmWorkflow() {
   const index = fs.readFileSync(root + '/index.html', 'utf8');
