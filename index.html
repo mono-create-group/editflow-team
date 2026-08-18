@@ -3038,9 +3038,10 @@ function rLockScreen(){
 </div>`;
 }
 function companyGateRecord(){const td=today();let shared=null;try{shared=JSON.parse(localStorage.getItem('mono_daily_open_gate_'+td)||'null');}catch(_){}return(S.dailyOpenReviews||{})[td]||shared;}
-function companyGatePassed(){const r=companyGateRecord();return!!(r&&r.goalConfirmed&&Number.isFinite(Number(r.achievementRate)));}
-function submitCompanyGate(){const rate=Number(document.getElementById('company-achievement-rate')?.value),confirmed=!!document.getElementById('company-goal-confirm')?.checked;if(!confirmed)return toast('社内目標を確認してチェックしてください','warn');if(!Number.isFinite(rate)||rate<0||rate>100)return toast('達成率を0〜100%で入力してください','warn');const td=today(),record={date:td,goalConfirmed:true,achievementRate:rate,confirmedAt:Date.now()};if(!S.dailyOpenReviews)S.dailyOpenReviews={};S.dailyOpenReviews[td]=record;try{localStorage.setItem('mono_daily_open_gate_'+td,JSON.stringify(record));}catch(_){}save();render();toast('本日の目標確認を記録しました');}
-function rCompanyGate(){const r=companyGateRecord(),target=Number(S.settings?.target||0),rev=thisMonthRev();return`<section class="company-gate" role="dialog" aria-labelledby="company-gate-title"><div class="company-gate-kicker">MONO.CREATE DAILY GOAL</div><h1 id="company-gate-title">社内目標を確認してください</h1><div style="font-size:12px;color:var(--t2);line-height:1.6">目標の確認と現在の達成率入力が完了するまで、社内アプリは開きません。</div><div class="company-gate-goal"><b>本日の社内目標</b><br>利益につながる最重要業務を優先し、今月の目標達成へ前進する。${target?`<br>今月の収益目標 ¥${target.toLocaleString()} / 現在 ¥${rev.toLocaleString()}`:''}</div><div class="company-gate-form"><label class="company-gate-check"><input id="company-goal-confirm" type="checkbox" ${r?.goalConfirmed?'checked':''}>社内目標を確認しました</label><label>現在の達成率（0〜100%）<input id="company-achievement-rate" type="number" min="0" max="100" inputmode="decimal" value="${r?.achievementRate??''}" placeholder="例：45"></label><button class="btn btn-p" onclick="submitCompanyGate()">達成率を記録して社内アプリを開く</button></div></section>`;}
+function companyTaskPerformance(){const tasks=(S.tasks||[]).filter(t=>!t.deleted&&t.dueDate===today()),done=tasks.filter(t=>t.done).length;return{done,total:tasks.length,rate:tasks.length?Math.round(done/tasks.length*100):0};}
+function companyGatePassed(){const r=companyGateRecord();return!!(r&&r.goalConfirmed&&r.taskPerformanceRecorded);}
+function submitCompanyGate(){const confirmed=!!document.getElementById('company-goal-confirm')?.checked;if(!confirmed)return toast('社内目標を確認してチェックしてください','warn');const td=today(),p=companyTaskPerformance(),old=companyGateRecord()||{},record={...old,date:td,goalConfirmed:true,taskPerformanceRecorded:true,taskPerformanceRate:p.rate,taskPerformanceRecordedAt:new Date().toISOString(),confirmedAt:Date.now()};if(!S.dailyOpenReviews)S.dailyOpenReviews={};S.dailyOpenReviews[td]=record;try{localStorage.setItem('mono_daily_open_gate_'+td,JSON.stringify(record));}catch(_){}save();render();toast('本日のタスク達成率を記録しました');}
+function rCompanyGate(){const r=companyGateRecord(),p=companyTaskPerformance(),target=Number(S.settings?.target||0),rev=thisMonthRev();return`<section class="company-gate" role="dialog" aria-labelledby="company-gate-title"><div class="company-gate-kicker">MONO.CREATE DAILY GOAL</div><h1 id="company-gate-title">社内目標とタスク達成率を確認</h1><div style="font-size:12px;color:var(--t2);line-height:1.6">社内目標の確認と、既存タスクから自動計算した達成率の記録が完了するまで社内アプリは開きません。</div><div class="company-gate-goal"><b>本日の社内目標</b><br>利益につながる最重要業務を優先し、今月の目標達成へ前進する。${target?`<br>今月の収益目標 ¥${target.toLocaleString()} / 現在 ¥${rev.toLocaleString()}`:''}</div><div class="company-gate-goal"><b>今日のタスク達成率 ${p.rate}%</b><br>完了 ${p.done}件 / 対象 ${p.total}件</div><div class="company-gate-form"><label class="company-gate-check"><input id="company-goal-confirm" type="checkbox" ${r?.goalConfirmed?'checked':''}>社内目標を確認しました</label><button class="btn btn-p" onclick="submitCompanyGate()">タスク達成率を記録して社内アプリを開く</button></div></section>`;}
 function render(){
   try{
     if(FB_USER&&!companyGatePassed()){
@@ -14761,7 +14762,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260818-04';
+const APP_VERSION='20260818-06';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
