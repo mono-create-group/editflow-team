@@ -877,6 +877,9 @@ a{color:inherit;text-decoration:none}
 .gdoc-swatch{width:20px;height:20px;border-radius:50%;border:1px solid #dadce0;cursor:pointer;padding:0;flex-shrink:0}
 @media(max-width:600px){.gdoc-page{padding:34px 18px;min-height:60vh}.gdoc-canvas{padding:14px 4px 60px}}
 
+/* ─── DAILY COMPANY GOAL GATE ─── */
+.company-gate{max-width:600px;margin:8vh auto;background:var(--card);border:1.5px solid var(--border);border-radius:18px;padding:24px;box-shadow:var(--shadow-lg)}.company-gate h1{font-size:23px;margin:0 0 8px}.company-gate-kicker{font-size:11px;font-weight:800;letter-spacing:.08em;color:var(--purple);margin-bottom:5px}.company-gate-goal{padding:15px;background:var(--pdim);border-left:4px solid var(--purple);border-radius:10px;font-size:13px;line-height:1.65;margin:16px 0}.company-gate-form{display:grid;gap:12px}.company-gate-form label{font-size:12px;font-weight:700;color:var(--t2)}.company-gate-form input[type=number]{width:100%;min-height:48px;margin-top:5px;font-size:19px;font-variant-numeric:tabular-nums}.company-gate-check{display:flex;align-items:center;gap:9px;min-height:44px}.company-gate-check input{width:22px;height:22px}.company-gate .btn{min-height:48px}@media(max-width:700px){.company-gate{margin:12px;padding:18px}.company-gate h1{font-size:20px}}
+
 </style>
 </head>
 <body>
@@ -2333,6 +2336,7 @@ function defState(){return{
   bizBoard:{done:{},extra:[]},
   bizUnits:[],
   teamMeetings:[],
+  dailyOpenReviews:{},
 };}
 function migrate(d){
   // migrate ef_v4 → ef_v5
@@ -2376,6 +2380,7 @@ function migrate(d){
   }
   // migrate v8→v9: 進行中 + 外注担当者あり → 編集者進行中
   if(!d.settings)d.settings={};
+  if(!d.dailyOpenReviews||typeof d.dailyOpenReviews!=='object')d.dailyOpenReviews={};
   if(!d.settings._editorStatusMigrated){
     const workers=d.workers||[];
     let n=0;
@@ -3032,8 +3037,18 @@ function rLockScreen(){
   <div style="font-size:12px;color:var(--t3);margin-top:24px">記録完了後、自動的にアプリが開きます</div>
 </div>`;
 }
+function companyGateRecord(){const td=today();let shared=null;try{shared=JSON.parse(localStorage.getItem('mono_daily_open_gate_'+td)||'null');}catch(_){}return(S.dailyOpenReviews||{})[td]||shared;}
+function companyGatePassed(){const r=companyGateRecord();return!!(r&&r.goalConfirmed&&Number.isFinite(Number(r.achievementRate)));}
+function submitCompanyGate(){const rate=Number(document.getElementById('company-achievement-rate')?.value),confirmed=!!document.getElementById('company-goal-confirm')?.checked;if(!confirmed)return toast('社内目標を確認してチェックしてください','warn');if(!Number.isFinite(rate)||rate<0||rate>100)return toast('達成率を0〜100%で入力してください','warn');const td=today(),record={date:td,goalConfirmed:true,achievementRate:rate,confirmedAt:Date.now()};if(!S.dailyOpenReviews)S.dailyOpenReviews={};S.dailyOpenReviews[td]=record;try{localStorage.setItem('mono_daily_open_gate_'+td,JSON.stringify(record));}catch(_){}save();render();toast('本日の目標確認を記録しました');}
+function rCompanyGate(){const r=companyGateRecord(),target=Number(S.settings?.target||0),rev=thisMonthRev();return`<section class="company-gate" role="dialog" aria-labelledby="company-gate-title"><div class="company-gate-kicker">MONO.CREATE DAILY GOAL</div><h1 id="company-gate-title">社内目標を確認してください</h1><div style="font-size:12px;color:var(--t2);line-height:1.6">目標の確認と現在の達成率入力が完了するまで、社内アプリは開きません。</div><div class="company-gate-goal"><b>本日の社内目標</b><br>利益につながる最重要業務を優先し、今月の目標達成へ前進する。${target?`<br>今月の収益目標 ¥${target.toLocaleString()} / 現在 ¥${rev.toLocaleString()}`:''}</div><div class="company-gate-form"><label class="company-gate-check"><input id="company-goal-confirm" type="checkbox" ${r?.goalConfirmed?'checked':''}>社内目標を確認しました</label><label>現在の達成率（0〜100%）<input id="company-achievement-rate" type="number" min="0" max="100" inputmode="decimal" value="${r?.achievementRate??''}" placeholder="例：45"></label><button class="btn btn-p" onclick="submitCompanyGate()">達成率を記録して社内アプリを開く</button></div></section>`;}
 function render(){
   try{
+    if(FB_USER&&!companyGatePassed()){
+      document.getElementById('view').innerHTML=rCompanyGate();
+      const side=document.getElementById('sidebar');if(side)side.style.display='none';
+      return;
+    }
+    const side=document.getElementById('sidebar');if(side)side.style.display='';
     // ロックチェック（朝8時以降・朝ジャーナル未完了、または19時以降・夜の記録未完了）
     if(checkDailyLock()){
       const _lh=new Date().getHours();
@@ -14746,7 +14761,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260813-02';
+const APP_VERSION='20260818-04';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
