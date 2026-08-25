@@ -1245,6 +1245,8 @@ function fbSetupRealtimeSync(){
 // Firestoreルールが共有アクセスを許可していれば自動で有効化。許可されない場合は
 // permission-denied を検知して自動で個人モードへフォールバック（現状維持・無害）。
 const TEAM_KEYS=['jobs','clients','workers','pipeline','teamKgis','teamKpis','teamPosts','teamDocs','teamPages','bizUnits','teamMeetings','salesLeads','hpFees','salesSites','templates','bizInfo','crmClients','memberRoles','signins','salesDirectives'];
+const TEAM_LEDGER_KEYS=['jobs','clients','workers'];
+const TEAM_LEDGER_RESTORE_KEY='mc_team_ledger_restore_token';
 let TEAM_SHARE_OK=null;      // null=未判定 / true=共有有効 / false=個人モード
 let _teamUnsub=null;
 let _teamCloudLoaded=false;  // shared/mcapp の初回読込前は共有データを絶対に保存しない
@@ -1419,15 +1421,27 @@ function fbSetupTeamSync(){
     if(TEAM_SHARE_OK!==true){TEAM_SHARE_OK=true;renderAuthUI();}
     if(!doc.exists){_teamCloudLoaded=true;_teamSave();return;}
     const d=doc.data()||{};
+    const restoreToken=typeof d.ledgerRestoreToken==='string'?d.ledgerRestoreToken:'';
+    let appliedRestoreToken='';try{appliedRestoreToken=localStorage.getItem(TEAM_LEDGER_RESTORE_KEY)||'';}catch(_){}
+    const replaceLedgers=!!restoreToken&&restoreToken!==appliedRestoreToken;
+    let replacedLedgerCount=0;
     let changed=false;
     TEAM_KEYS.forEach(k=>{
       if(typeof d[k]!=='string')return;
       const remote=_teamDecode(d[k]);
       if(remote==null)return;
       if(Array.isArray(remote))_teamKnownCounts[k]=remote.length;
+      // 改修前データの完全復元時だけ、古い端末のローカル配列をマージせず正本で置き換える。
+      // 復元トークンは端末ごとに一度だけ適用し、通常運用の追加・更新は従来のマージを維持する。
+      if(replaceLedgers&&TEAM_LEDGER_KEYS.includes(k)&&Array.isArray(remote)){
+        if(JSON.stringify(remote)!==JSON.stringify(S[k]||[])){S[k]=remote;changed=true;}
+        replacedLedgerCount++;
+        return;
+      }
       const merged=mergeTeamArr(S[k]||[],remote,k);
       if(JSON.stringify(merged)!==JSON.stringify(S[k]||[])){S[k]=merged;changed=true;}
     });
+    if(replaceLedgers&&replacedLedgerCount===TEAM_LEDGER_KEYS.length){try{localStorage.setItem(TEAM_LEDGER_RESTORE_KEY,restoreToken);}catch(_){}}
     _teamCloudLoaded=true;
     // 経営ボード(bizBoard): オブジェクト全体を「新しい方優先」で取り込む。
     // 種データ(_seed)は updatedAt=0 なので、実データ(updatedAt>0)が常に勝ち、種で上書きされない。
@@ -12690,28 +12704,44 @@ async function previewOperationsRestoreFile(input){
       clients:Array.isArray(data.clients)?data.clients:[],
       workers:Array.isArray(data.workers)?data.workers:[]
     };
+    const replace=data.restoreMode==='replace'&&typeof data.ledgerRestoreToken==='string'&&!!data.ledgerRestoreToken;
     const missing={
       jobs:_opsRestoreMissing(S.jobs,candidate.jobs),
       clients:_opsRestoreMissing(S.clients,candidate.clients),
       workers:_opsRestoreMissing(S.workers,candidate.workers)
     };
     if(!candidate.jobs.length&&!candidate.clients.length&&!candidate.workers.length)throw new Error('案件・クライアント・編集者がありません');
-    window._opsRestoreCandidate={fileName:file.name,candidate,missing};
+    window._opsRestoreCandidate={fileName:file.name,candidate,missing,replace,restoreToken:replace?data.ledgerRestoreToken:''};
     openModal(`<div class="mhdr"><div class="mtitle">改修前データの復元確認</div><button class="mclose" onclick="closeModal()">✕</button></div>
-      <div style="font-size:12px;color:var(--t2);line-height:1.7;margin-bottom:12px">${esc(file.name)} を確認しました。現在のデータは上書きせず、同じIDが存在しない記録だけを追加します。</div>
+      <div style="font-size:12px;color:var(--t2);line-height:1.7;margin-bottom:12px">${esc(file.name)} を確認しました。${replace?'現在の案件・クライアント・編集者を、改修直前の保存内容でそのまま置き換えます。':'現在のデータは上書きせず、同じIDが存在しない記録だけを追加します。'}</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
         <div class="card card-sm"><div style="font-size:11px;color:var(--t3)">案件</div><b style="font-size:22px">${missing.jobs.length}</b><div style="font-size:10px;color:var(--t3)">不足 / 元${candidate.jobs.length}</div></div>
         <div class="card card-sm"><div style="font-size:11px;color:var(--t3)">クライアント</div><b style="font-size:22px">${missing.clients.length}</b><div style="font-size:10px;color:var(--t3)">不足 / 元${candidate.clients.length}</div></div>
         <div class="card card-sm"><div style="font-size:11px;color:var(--t3)">編集者</div><b style="font-size:22px">${missing.workers.length}</b><div style="font-size:10px;color:var(--t3)">不足 / 元${candidate.workers.length}</div></div>
       </div>
-      <div class="mfooter"><button class="btn btn-g" onclick="closeModal()">キャンセル</button><button class="btn btn-p" onclick="applyOperationsRestore()">不足分だけ復元</button></div>`);
+      <div class="mfooter"><button class="btn btn-g" onclick="closeModal()">キャンセル</button><button class="btn btn-p" onclick="applyOperationsRestore()">${replace?'改修直前へ完全復元':'不足分だけ復元'}</button></div>`);
   }catch(e){console.warn('operations restore preview',e);toast('復元ファイルを確認できませんでした','err');}
   finally{input.value='';}
 }
-function applyOperationsRestore(){
+async function applyOperationsRestore(){
   if(!_isOwner())return toast('オーナーのみ操作できます','err');
   if(!_teamCloudLoaded)return toast('クラウドの読込完了後に復元してください','warn');
   const r=window._opsRestoreCandidate;if(!r)return toast('復元候補がありません','warn');
+  if(r.replace){
+    S.jobs=r.candidate.jobs;S.clients=r.candidate.clients;S.workers=r.candidate.workers;
+    TEAM_LEDGER_KEYS.forEach(k=>_teamKnownCounts[k]=(S[k]||[]).length);
+    _teamSnapRebase();_lsSaveState(S);
+    try{
+      await fbDb.collection('shared').doc('mcapp').set({
+        jobs:_teamEncode('jobs',S.jobs),clients:_teamEncode('clients',S.clients),workers:_teamEncode('workers',S.workers),
+        ledgerRestoreToken:r.restoreToken,ledgerRestoreAt:firebase.firestore.FieldValue.serverTimestamp(),by:FB_USER.uid
+      },{merge:true});
+      try{localStorage.setItem(TEAM_LEDGER_RESTORE_KEY,r.restoreToken);}catch(_){}
+      closeModal();render();toast(`改修直前へ復元しました：案件 ${S.jobs.length}件 / クライアント ${S.clients.length}件 / 編集者 ${S.workers.length}件`);
+      window._opsRestoreCandidate=null;
+    }catch(e){console.warn('operations exact restore',e);toast('完全復元を保存できませんでした','err');}
+    return;
+  }
   const add=(current,missing)=>[...(current||[]),...(missing||[])];
   S.jobs=add(S.jobs,r.missing.jobs);S.clients=add(S.clients,r.missing.clients);S.workers=add(S.workers,r.missing.workers);
   _teamSnapRebase();save();closeModal();render();
@@ -15507,7 +15537,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260826-03';
+const APP_VERSION='20260826-04';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
