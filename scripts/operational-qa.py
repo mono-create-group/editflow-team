@@ -121,8 +121,9 @@ def static_contract_checks() -> None:
         ok("editor job board, schedule, manual, and suggestion features")
 
     manager_feature_markers = [
-        "編集チーム運用設定", "契約区分と担当ディレクター", "クライアント → アカウント登録",
-        "外部編集者の支払い確定", "外部編集者からの請求書", "匿名目安箱",
+        "編集者管理", "契約区分と担当ディレクター", "クライアント → アカウント登録",
+        "編集可能スケジュール", "マニュアル保管庫", "外部編集者の支払い確定",
+        "編集者からの請求書", "匿名目安箱",
     ]
     missing_manager_markers = [marker for marker in manager_feature_markers if marker not in manager_features]
     if missing_manager_markers:

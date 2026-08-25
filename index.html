@@ -987,13 +987,18 @@ const DB='ef_team_v5';
 const BUILTIN_VIEWS=[
   {id:'guide',label:'使い方ガイド',icon:'📘'},
   {id:'projects',label:'動画案件',icon:'🎬'},
+  {id:'videoclients',label:'クライアント・アカウント管理',icon:'🏷️'},
+  {id:'videoschedules',label:'編集可能スケジュール',icon:'🗓️'},
+  {id:'videomanuals',label:'マニュアル保管庫',icon:'📚'},
+  {id:'videoinvoices',label:'請求書',icon:'🧾'},
+  {id:'videosuggestions',label:'匿名目安箱',icon:'📮'},
   {id:'hpprojects',label:'HP案件',icon:'🌐'},
   {id:'pipeline',label:'商談管理',icon:'🤝'},
   {id:'crm',label:'クライアント',icon:'🤝'},
   {id:'inquiries',label:'お問い合わせ',icon:'📮'},
   {id:'posts',label:'投稿管理',icon:'📅'},
   {id:'docs',label:'ドキュメント',icon:'📁'},
-  {id:'workers',label:'ワーカー管理',icon:'👥'},
+  {id:'workers',label:'編集者管理',icon:'👥'},
   {id:'bizboard',label:'経営ボード',icon:'🏢'},
   {id:'minutes',label:'議事録',icon:'📝'},
   {id:'salesleads',label:'営業リスト',icon:'📞'},
@@ -1024,7 +1029,7 @@ const BIZ_CFG={
     scopes:['動画編集','サムネイル制作','動画編集＋サムネイル','ショート動画','VSL','スクール動画','その他'],
     lbl:{scope:'担当範囲',shared:'共有日',deliver:'納品日',d1:'編集者 初稿',d2:'クライアント提出 初稿',unit:'単価（円）',wpay:'ワーカー支払額（円）',profit:'利益（自動計算）',monthly:'',member:'👤 編集者別',d1s:'✏️ 編集者初稿',d2s:'📋 クライアント提出',deliverS:'📅 納品'},
     show:{scope:1,d1:1,d2:1,thumb:1,wpay:1,subs:1,monthly:0},
-    tabs:['board','deadline','listing','list','clients','profit','payment','invoice','completed','worker','priority'],
+    tabs:['board','deadline','listing','list','clients','profit','payment','completed','worker','priority'],
     prio:[['clientDraftDate','クライアント初稿'],['editorDraftDate','編集者初稿']]
   },
   haken:{
@@ -1033,7 +1038,7 @@ const BIZ_CFG={
     scopes:['長尺動画','ショート動画','サムネイル制作','その他'],
     lbl:{scope:'案件種別',shared:'受注日',deliver:'納品日',d1:'編集者 初稿',d2:'クライアント提出 初稿',unit:'クライアント請求額（円）',wpay:'編集者支払額（円）',profit:'手数料（自動計算）',monthly:'',member:'👤 編集者別',d1s:'✏️ 編集者初稿',d2s:'📋 クライアント提出',deliverS:'📅 納品'},
     show:{scope:1,d1:1,d2:1,thumb:1,wpay:1,subs:1,monthly:0},
-    tabs:['board','deadline','listing','list','clients','profit','payment','invoice','completed','worker','priority'],
+    tabs:['board','deadline','listing','list','clients','profit','payment','completed','worker','priority'],
     prio:[['clientDraftDate','クライアント初稿'],['editorDraftDate','編集者初稿']]
   },
   hp:{
@@ -3260,7 +3265,7 @@ function render(){
     // 役割ガード(2026-07-23): 営業スタッフは「営業」「情報」タブ以外を開けない。許可外Vは営業リストへ退避。
     if(!isViewAllowed(V)){V=(BUILTIN_VIEWS.find(x=>isViewAllowed(x.id))?.id)||'projects';sessionStorage.setItem('ef_team_view',V);}
     if(V==='kpi'){V='goals';} // KPI管理は目標・KPI統合ページにリダイレクト
-    const views={dashboard:rDash,tasks:rTasks,guide:rGuide,projects:rProjects,hpprojects:rHpProjects,pipeline:rPipeline,teamgoals:rTeamGoals,posts:rPosts,docs:rDocs,workers:rWorkers,habits:rHabits,goals:rGoals,journal:rJournal,revenue:rRevenue,memo:rMemo,settings:rSettings,customize:rCustomize,aichat:rAIChat,fitness:rFitness,kpi:rKpi,bizboard:rBizBoard,bizunits:rBizUnits,bizinfo:rBizInfo,minutes:rMinutes,salesleads:rSalesLeads,salesrank:rSalesRank,igaccounts:rIgAccounts,hpfee:rHpFee,salessites:rSalesSites,inquiries:rInquiries,templates:rTemplates,crm:rCrm,accounts:rAccounts};
+    const views={dashboard:rDash,tasks:rTasks,guide:rGuide,projects:rProjects,videoclients:rVideoClients,videoschedules:rVideoSchedules,videomanuals:rVideoManuals,videoinvoices:rVideoInvoices,videosuggestions:rVideoSuggestions,hpprojects:rHpProjects,pipeline:rPipeline,teamgoals:rTeamGoals,posts:rPosts,docs:rDocs,workers:rWorkers,habits:rHabits,goals:rGoals,journal:rJournal,revenue:rRevenue,memo:rMemo,settings:rSettings,customize:rCustomize,aichat:rAIChat,fitness:rFitness,kpi:rKpi,bizboard:rBizBoard,bizunits:rBizUnits,bizinfo:rBizInfo,minutes:rMinutes,salesleads:rSalesLeads,salesrank:rSalesRank,igaccounts:rIgAccounts,hpfee:rHpFee,salessites:rSalesSites,inquiries:rInquiries,templates:rTemplates,crm:rCrm,accounts:rAccounts};
     let html;
     if(V.startsWith('doc_')){
       // Googleドキュメント風エディタ(teamPages.htmlを編集)。BUILTIN_VIEWSガードを迂回する。
@@ -5935,7 +5940,7 @@ function _guideRoleLabel(){
   return labels.join(' / ')||'承認済みメンバー';
 }
 function rGuide(){
-  const canVideo=isViewAllowed('projects'),canWorkers=isViewAllowed('workers'),canHp=isViewAllowed('hpprojects'),canHpFee=isViewAllowed('hpfee'),canSales=isViewAllowed('salesleads'),canDocs=isViewAllowed('docs');
+  const canVideo=isViewAllowed('projects'),canWorkers=isViewAllowed('workers'),canVideoClients=isViewAllowed('videoclients'),canVideoSchedules=isViewAllowed('videoschedules'),canVideoManuals=isViewAllowed('videomanuals'),canVideoInvoices=isViewAllowed('videoinvoices'),canHp=isViewAllowed('hpprojects'),canHpFee=isViewAllowed('hpfee'),canSales=isViewAllowed('salesleads'),canDocs=isViewAllowed('docs');
   return`<div class="guide-hero">
     <div class="guide-kicker">MONO.CREATE WORK GUIDE</div>
     <div class="guide-title">このページから始めれば、迷いません</div>
@@ -5952,7 +5957,7 @@ function rGuide(){
   </div>
   <div class="guide-section-title">やりたいことから開く</div>
   <div class="guide-business-grid">
-    ${canVideo?`<section class="guide-business video"><h2>動画編集事業</h2><p>編集代行・編集者派遣の案件と担当者を管理します。</p><ul><li>案件の受託と担当者決定</li><li>ステータス・初稿・納品の管理</li><li>編集者の請求確認</li></ul><button class="btn btn-p btn-sm" onclick="setV('projects')">動画案件を開く</button>${canWorkers?`<button class="btn btn-g btn-sm" style="margin-top:6px" onclick="setV('workers')">編集者を確認する</button>`:''}</section>`:''}
+    ${canVideo?`<section class="guide-business video"><h2>動画編集事業</h2><p>編集代行・編集者派遣の案件と担当者を管理します。</p><ul><li>案件の受託と担当者決定</li><li>ステータス・初稿・納品の管理</li><li>予定・マニュアル・請求の確認</li></ul><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-p btn-sm" onclick="setV('projects')">動画案件</button>${canVideoClients?`<button class="btn btn-g btn-sm" onclick="setV('videoclients')">顧客・アカウント</button>`:''}${canWorkers?`<button class="btn btn-g btn-sm" onclick="setV('workers')">編集者</button>`:''}${canVideoSchedules?`<button class="btn btn-g btn-sm" onclick="setV('videoschedules')">予定</button>`:''}${canVideoManuals?`<button class="btn btn-g btn-sm" onclick="setV('videomanuals')">マニュアル</button>`:''}${canVideoInvoices?`<button class="btn btn-g btn-sm" onclick="setV('videoinvoices')">請求書</button>`:''}</div></section>`:''}
     ${canHp?`<section class="guide-business hp"><h2>ホームページ事業</h2><p>HP制作の案件と、公開後の月額維持費を管理します。</p><ul><li>HP案件の制作工程</li><li>公開・検収・納品の確認</li><li>月額維持費の管理</li></ul><button class="btn btn-p btn-sm" onclick="setV('hpprojects')">HP案件を開く</button>${canHpFee?`<button class="btn btn-g btn-sm" style="margin-top:6px" onclick="setV('hpfee')">維持費を確認する</button>`:''}</section>`:''}
     ${canSales?`<section class="guide-business sales"><h2>営業・顧客</h2><p>見込み客から商談、契約後のクライアント情報まで管理します。</p><ul><li>見込み客の連絡状況</li><li>商談とお問い合わせ</li><li>クライアント情報</li></ul><button class="btn btn-p btn-sm" onclick="setV('salesleads')">営業リストを開く</button></section>`:''}
   </div>
@@ -5961,14 +5966,25 @@ function rGuide(){
     <div class="guide-help"><b>「システム更新」がChatworkに届いた</b><span>入力中の内容を保存し、画面を再読み込みしてください。新しい機能や修正が表示されます。</span></div>
     <div class="guide-help"><b>見たいページが表示されない</b><span>権限により表示が異なります。オーナーへ確認し、権限変更後に再読み込みしてください。</span></div>
     <div class="guide-help"><b>案件の質問や初稿を送りたい</b><span>Chatworkではなく、対象案件を開いて進捗メモと証跡URLを登録します。</span></div>
-    <div class="guide-help"><b>マニュアルを探したい</b><span>${canDocs?`「共通資料 → ドキュメント」を開いてください。`:'権限のある担当者へ確認してください。'}</span></div>
+    <div class="guide-help"><b>動画編集のマニュアルを探したい</b><span>${canVideoManuals?`「動画編集事業 → マニュアル保管庫」を開いてください。`:canDocs?`「共通資料 → ドキュメント」を開いてください。`:'権限のある担当者へ確認してください。'}</span></div>
   </div>`;
 }
+
+function rManagerVideoFeature(globalName,label){
+  const renderer=window[globalName];
+  if(typeof renderer==='function')return renderer();
+  return`<div class="ph"><div><div class="ph-title">${esc(label)}</div><div style="font-size:12px;color:var(--t2)">画面を読み込んでいます。</div></div></div><div class="empty"><div class="empty-icon">⏳</div><div class="empty-title">少しお待ちください</div></div>`;
+}
+function rVideoClients(){return rManagerVideoFeature('managerVideoClientsPage','クライアント・アカウント管理');}
+function rVideoSchedules(){return rManagerVideoFeature('managerVideoSchedulesPage','編集可能スケジュール');}
+function rVideoManuals(){return rManagerVideoFeature('managerVideoManualsPage','マニュアル保管庫');}
+function rVideoInvoices(){return rManagerVideoFeature('managerVideoInvoicesPage','請求書');}
+function rVideoSuggestions(){return rManagerVideoFeature('managerVideoSuggestionsPage','匿名目安箱');}
 
 function rVideoOperations(showBusinessSwitcher=false){
   const all=_videoJobs(),active=all.filter(j=>!['完了','キャンセル'].includes(j.status)),filtered=_videoFiltered(),overdue=active.filter(j=>j.deadline&&j.deadline<today()),unassigned=active.filter(j=>j._source==='legacy'&&j.assignee==='未割当'),blocked=active.filter(j=>j.blocker),review=active.filter(j=>_videoPhase(j.status).id==='review');
   const editorPortalReady=ACCESS_CONTROL.configured===true&&Array.isArray(ACCESS_CONTROL.compatibilityEmails)&&ACCESS_CONTROL.compatibilityEmails.length>0;
-  const tabs=[['overview','ダッシュボード'],['board','工程ボード'],['queue','対応キュー'],...(_isOwner()?[['invoices',`請求書 ${PORTAL_INVOICES.filter(x=>['提出済み','再提出'].includes(x.status)).length}`]]:[]),['legacy','従来の案件管理']];
+  const tabs=[['overview','ダッシュボード'],['board','工程ボード'],['queue','対応キュー'],['legacy','従来の案件管理']];
   const board=`<div style="display:flex;gap:8px;overflow-x:auto;align-items:start">${VIDEO_PHASES.map(p=>`<section class="card" style="min-width:210px;flex:1"><div style="display:flex;justify-content:space-between"><b>${p.label}</b><span class="badge bk">${filtered.filter(j=>p.statuses.includes(j.status)).length}</span></div>${filtered.filter(j=>p.statuses.includes(j.status)).map(_videoCard).join('')||'<div style="font-size:11px;color:var(--t3);padding:12px 0">0件</div>'}</section>`).join('')}</div>`;
   const queue=[['期限超過',overdue,'var(--red)'],['停止中',blocked,'var(--amber)'],['確認・修正待ち',review,'var(--pl)'],['未割当',unassigned,'var(--red)']].map(([label,list,color])=>`<div class="card" style="border-left:3px solid ${color}"><div style="display:flex;justify-content:space-between"><b>${label}</b><span>${list.length}件</span></div>${list.slice(0,20).map(_videoCard).join('')||'<div style="font-size:11px;color:var(--t3);padding-top:8px">該当なし</div>'}</div>`).join('');
   const overview=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px;margin-bottom:10px"><div class="card"><div style="font-size:11px;color:var(--t3)">制作中</div><b style="font-size:24px">${active.length}</b></div><div class="card"><div style="font-size:11px;color:var(--t3)">直接依頼</div><b style="font-size:24px">${PORTAL_JOBS.length}</b></div><div class="card"><div style="font-size:11px;color:var(--t3)">期限超過</div><b style="font-size:24px;color:var(--red)">${overdue.length}</b></div><div class="card"><div style="font-size:11px;color:var(--t3)">確認・修正待ち</div><b style="font-size:24px">${review.length}</b></div></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px">${VIDEO_PHASES.map(p=>`<div class="card"><div style="font-size:11px;color:var(--t3)">${p.label}</div><div style="font-size:20px;font-weight:800">${all.filter(j=>p.statuses.includes(j.status)).length}</div><div style="height:5px;background:var(--card2);border-radius:99px;margin-top:7px"><div style="height:100%;width:${all.length?Math.round(all.filter(j=>p.statuses.includes(j.status)).length/all.length*100):0}%;background:var(--pl);border-radius:99px"></div></div></div>`).join('')}</div><div style="margin-top:10px">${queue}</div>`;
@@ -12527,7 +12543,7 @@ function navMeta(id){
 // ナビのカテゴリー分け(2026-07-10 会長指示)。開閉状態は端末localStorage記憶。設定/カスタマイズは従来どおり下部固定。
 const NAV_CATS=[
   {id:'start',label:'はじめに',views:['guide']},
-  {id:'video',label:'動画編集事業',views:['projects','workers']},
+  {id:'video',label:'動画編集事業',views:['projects','videoclients','workers','videoschedules','videomanuals','videoinvoices','videosuggestions']},
   {id:'hp',label:'ホームページ事業',views:['hpprojects','hpfee']},
   {id:'sales',label:'営業・顧客',views:['salesleads','pipeline','inquiries','crm']},
   {id:'mgmt',label:'経営',views:['bizboard']},
@@ -12593,7 +12609,7 @@ function isViewAllowed(v){
   if(_isOwner())return true;
   const rs=myRoles();
   const allow={
-    '動画編集ディレクター':['guide','projects','workers'],
+    '動画編集ディレクター':['guide','projects','videoclients','workers','videoschedules','videomanuals','videoinvoices'],
     'AIコンサルタント':['guide','projects','docs','minutes','bizinfo'],
     'AIエンジニア':['guide','projects','docs','tasks','bizinfo'],
     'Webデザイナー':['guide','hpprojects','docs','tasks','hpfee'],
@@ -15433,7 +15449,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260825-03';
+const APP_VERSION='20260825-04';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -15507,6 +15523,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-  <script src="./manager-features.js?v=20260825-03"></script>
+  <script src="./manager-features.js?v=20260825-04"></script>
 </body>
 </html>
