@@ -694,6 +694,26 @@ a{color:inherit;text-decoration:none}
 .profit-row:last-child{border-bottom:none}
 .profit-total{font-size:18px;font-weight:700;color:var(--green)}
 .profit-neg{color:var(--red)}
+.profit-group-list{display:grid;gap:10px}
+.profit-group-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.profit-group-card summary{list-style:none;cursor:pointer}
+.profit-group-card summary::-webkit-details-marker{display:none}
+.profit-group-head{display:grid;grid-template-columns:minmax(210px,1fr) repeat(3,minmax(105px,.55fr));gap:14px;align-items:center;padding:14px 16px;background:var(--card2)}
+.profit-group-name{font-size:15px;font-weight:800;min-width:0}
+.profit-group-count{display:block;margin-top:2px;font-size:11px;font-weight:500;color:var(--t2)}
+.profit-group-metric small,.profit-group-item-money small{display:block;font-size:10px;font-weight:500;color:var(--t3);margin-bottom:2px}
+.profit-group-metric b{font-size:16px}
+.profit-group-item{display:grid;grid-template-columns:minmax(220px,1fr) repeat(3,minmax(90px,.45fr)) auto;gap:12px;align-items:center;padding:11px 16px;border-top:1px solid var(--border);font-size:12px}
+.profit-group-item-title{min-width:0;font-weight:700;cursor:pointer}
+.profit-group-item-sub{font-size:10px;font-weight:500;color:var(--t2);margin-top:3px}
+.profit-group-item-money{font-variant-numeric:tabular-nums}
+@media(max-width:700px){
+  .profit-group-head{grid-template-columns:repeat(3,1fr);gap:10px;padding:13px}
+  .profit-group-name{grid-column:1/-1}
+  .profit-group-item{grid-template-columns:repeat(3,1fr);gap:9px;padding:13px}
+  .profit-group-item-title{grid-column:1/-1}
+  .profit-group-item .btn{grid-column:1/-1;width:100%;min-height:38px}
+}
 .payment-row{display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px}
 .pmt-worker{font-weight:600;min-width:80px}
 .pmt-amount{color:var(--amber);font-weight:700}
@@ -6374,6 +6394,88 @@ function rJobItem(j){
 </div>`;
 }
 
+function _profitWorkerLabel(workerId){
+  if(workerId===SELF_WID)return'自社対応';
+  if(!workerId||workerId==='__none')return'担当編集者未設定';
+  return S.workers.find(w=>w.id===workerId)?.name||'担当編集者未設定';
+}
+function _profitWorkerKey(workerId){
+  if(workerId===SELF_WID)return SELF_WID;
+  return workerId&&S.workers.some(w=>w.id===workerId)?workerId:'__none';
+}
+function _profitGroupEntries(jobs,mode){
+  const entries=[];
+  jobs.forEach(j=>{
+    const base={jobId:j.id,jobTitle:j.title,paymentDate:j.paymentDate||'',status:j.status||'',job:j};
+    if(mode==='client'){
+      const cl=S.clients.find(c=>c.id===j.clientId);
+      const label=cl?.name||j.clientName||'クライアント未設定';
+      entries.push({...base,key:j.clientId||`name:${label}`,label,inAmount:jobMainIn(j),outAmount:jobMainOut(j),detail:''});
+      return;
+    }
+    const subs=j.subtasks||[];
+    const hasPricedSubs=subs.some(s=>(+s.unitPrice||0)>0);
+    if(hasPricedSubs){
+      subs.filter(s=>(+s.unitPrice||0)>0||(+s.workerPay||0)>0).forEach((s,i)=>{
+        const wid=_profitWorkerKey(s.workerId);
+        entries.push({...base,key:wid,label:_profitWorkerLabel(wid),inAmount:+s.unitPrice||0,outAmount:wid===SELF_WID?0:(+s.workerPay||0),detail:s.title||`サブタスク${i+1}`});
+      });
+      return;
+    }
+    const paidSubs=subs.filter(s=>(+s.workerPay||0)>0);
+    const paidWorkerIds=[...new Set(paidSubs.map(s=>_profitWorkerKey(s.workerId)))];
+    let key,label;
+    if(paidWorkerIds.length===1){key=paidWorkerIds[0];label=_profitWorkerLabel(key);}
+    else{
+      const wids=[...new Set(getJobWorkerIds(j).map(_profitWorkerKey))];
+      if(wids.length===1){key=wids[0];label=_profitWorkerLabel(key);}
+      else if(wids.length>1||paidWorkerIds.length>1){key='__multiple';label='複数担当（売上配分未設定）';}
+      else{key='__none';label='担当編集者未設定';}
+    }
+    entries.push({...base,key,label,inAmount:jobMainIn(j),outAmount:jobMainOut(j),detail:''});
+  });
+  return entries;
+}
+function _profitGroups(jobs,mode){
+  const groups=new Map();
+  _profitGroupEntries(jobs,mode).forEach(e=>{
+    if(!groups.has(e.key))groups.set(e.key,{key:e.key,label:e.label,entries:[]});
+    groups.get(e.key).entries.push(e);
+  });
+  return[...groups.values()].map(g=>{
+    const byJob=new Map();
+    g.entries.forEach(e=>{
+      if(!byJob.has(e.jobId))byJob.set(e.jobId,{...e,inAmount:0,outAmount:0,details:[]});
+      const row=byJob.get(e.jobId);row.inAmount+=e.inAmount;row.outAmount+=e.outAmount;
+      if(e.detail)row.details.push(e.detail);
+    });
+    g.jobs=[...byJob.values()].sort((a,b)=>String(a.paymentDate||'zzz').localeCompare(String(b.paymentDate||'zzz')));
+    g.totalIn=g.entries.reduce((s,e)=>s+e.inAmount,0);
+    g.totalOut=g.entries.reduce((s,e)=>s+e.outAmount,0);
+    g.totalProfit=g.totalIn-g.totalOut;
+    return g;
+  }).sort((a,b)=>b.totalProfit-a.totalProfit||a.label.localeCompare(b.label,'ja'));
+}
+function _profitGroupedHtml(jobs,mode){
+  const groups=_profitGroups(jobs,mode);
+  if(!groups.length)return'';
+  return`<div class="profit-group-list">${groups.map(g=>`<details class="profit-group-card" open>
+    <summary class="profit-group-head">
+      <div class="profit-group-name">${esc(g.label)}<span class="profit-group-count">${g.jobs.length}件</span></div>
+      <div class="profit-group-metric"><small>売上</small><b style="color:var(--blue)">¥${g.totalIn.toLocaleString()}</b></div>
+      <div class="profit-group-metric"><small>支払</small><b style="color:var(--amber)">¥${g.totalOut.toLocaleString()}</b></div>
+      <div class="profit-group-metric"><small>利益</small><b style="color:${g.totalProfit>=0?'var(--green)':'var(--red)'}">¥${g.totalProfit.toLocaleString()}</b></div>
+    </summary>
+    ${g.jobs.map(e=>{const pr=e.inAmount-e.outAmount;return`<div class="profit-group-item">
+      <div class="profit-group-item-title" onclick="openJobModal('${e.jobId}')">${esc(e.jobTitle)}${e.status!=='完了'?` <span class="badge ba" style="font-size:9px">${esc(e.status)}</span>`:''}<div class="profit-group-item-sub">${e.details.length?esc(e.details.join('・'))+' ｜ ':''}${e.paymentDate?'入金予定 '+esc(e.paymentDate):'入金予定日未設定'}</div></div>
+      <div class="profit-group-item-money"><small>売上</small><b style="color:var(--blue)">¥${e.inAmount.toLocaleString()}</b></div>
+      <div class="profit-group-item-money"><small>支払</small><span style="color:var(--amber)">¥${e.outAmount.toLocaleString()}</span></div>
+      <div class="profit-group-item-money"><small>利益</small><span style="color:${pr>=0?'var(--green)':'var(--red)'}">¥${pr.toLocaleString()}</span></div>
+      <button class="btn btn-xs" onclick="event.stopPropagation();markJobPaid('${e.jobId}')" style="border:1px solid var(--green);color:var(--green);background:transparent;white-space:nowrap">入金済みにする</button>
+    </div>`;}).join('')}
+  </details>`).join('')}</div>`;
+}
+
 function rProjProfit(){
   // 【2026-07-23改定】利益タブ=「入金予定日(paymentDate)」の月でグルーピング。
   // 入金予定日を入れても入金済みにはならない。入金済み(paidAt=ボタンで確定)の案件はこのタブに表示しない。
@@ -6390,6 +6492,8 @@ function rProjProfit(){
   const paidHidden=monthJobs.filter(j=>isJobPaid(j)).length;
   const totalIn=jobs.reduce((s,j)=>s+jobMainIn(j),0);
   const totalPay=jobs.reduce((s,j)=>s+jobMainOut(j),0);
+  const totalProfit=totalIn-totalPay;
+  const groupMode=['job','worker','client'].includes(window._profitGroup)?window._profitGroup:'job';
   return`${secTitle('💰 売上（入金予定月・回収予定）')}
 <div style="font-size:11px;color:var(--t3);margin:-6px 0 12px"><b>入金予定日</b>の月で集計します（入金予定日を入れても入金済みにはなりません）。<b>「入金済みにする」を押した案件はこの一覧から消えます</b>。入金済みを含む累計はダッシュボードで確認できます。</div>
 <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
@@ -6398,14 +6502,20 @@ function rProjProfit(){
   </select>
   <span style="font-size:12px;color:var(--t2)">回収予定 ${jobs.length}件${paidHidden?` ・ 入金済み ${paidHidden}件は非表示`:''}</span>
 </div>
+<div class="rev-tabs" style="margin-bottom:14px" aria-label="利益のまとめ方">
+  <button class="rev-tab ${groupMode==='job'?'act':''}" onclick="window._profitGroup='job';render()">案件別</button>
+  <button class="rev-tab ${groupMode==='worker'?'act':''}" onclick="window._profitGroup='worker';render()">担当編集者別</button>
+  <button class="rev-tab ${groupMode==='client'?'act':''}" onclick="window._profitGroup='client';render()">クライアント別</button>
+</div>
 <div class="card" style="margin-bottom:16px">
   <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">
     <div><div style="font-size:11px;color:var(--t2)">回収予定件数</div><div style="font-size:20px;font-weight:700;color:var(--amber)">${jobs.length}件</div></div>
     <div><div style="font-size:11px;color:var(--t2)">回収予定売上</div><div style="font-size:20px;font-weight:700;color:var(--green)">¥${totalIn.toLocaleString()}</div></div>
     <div><div style="font-size:11px;color:var(--t2)">支払額</div><div style="font-size:20px;font-weight:700;color:var(--amber)">¥${totalPay.toLocaleString()}</div></div>
+    <div><div style="font-size:11px;color:var(--t2)">回収予定利益</div><div style="font-size:20px;font-weight:700;color:${totalProfit>=0?'var(--green)':'var(--red)'}">¥${totalProfit.toLocaleString()}</div></div>
   </div>
 </div>
-${jobs.length?`<div class="card" style="padding:0;overflow:hidden">
+${jobs.length?(groupMode==='job'?`<div class="card" style="padding:0;overflow:hidden">
   <div class="profit-row" style="font-weight:700;font-size:12px;color:var(--t2);background:var(--card2)">
     <span>案件名</span><span>売上</span><span>支払</span><span>利益</span><span>状態</span>
   </div>
@@ -6417,7 +6527,7 @@ ${jobs.length?`<div class="card" style="padding:0;overflow:hidden">
     <span style="${pr>=0?'color:var(--green)':'color:var(--red)'}">¥${pr.toLocaleString()}</span>
     <span><button class="btn btn-xs" onclick="event.stopPropagation();markJobPaid('${j.id}')" style="border:1px solid var(--green);color:var(--green);background:transparent;padding:2px 7px;border-radius:100px;font-size:10px;cursor:pointer;white-space:nowrap">入金済みにする</button></span>
   </div>`;}).join('')}
-</div>`
+</div>`:_profitGroupedHtml(jobs,groupMode))
 :`<div class="empty" style="padding:30px 0"><div class="empty-icon">💰</div><div>${curM} の回収予定案件はありません${paidHidden?`（入金済み ${paidHidden}件は非表示）`:''}</div></div>`}`;
 }
 
@@ -14762,7 +14872,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260818-06';
+const APP_VERSION='20260825-01';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
