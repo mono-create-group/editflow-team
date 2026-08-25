@@ -103,6 +103,19 @@ def static_contract_checks() -> None:
     else:
         ok(f"APP_VERSION/SW cache parity: {app_version.group(1)}")
 
+    expected_version = app_version.group(1) if app_version else None
+    editor_query = re.search(r'editor-features\.js\?v=([^"\']+)', editor)
+    manager_query = re.search(r'manager-features\.js\?v=([^"\']+)', index)
+    query_versions = {
+        "editor feature query": editor_query.group(1) if editor_query else None,
+        "manager feature query": manager_query.group(1) if manager_query else None,
+    }
+    mismatched_queries = [name for name, value in query_versions.items() if value != expected_version]
+    if mismatched_queries:
+        fail(f"feature cache-busting version mismatch: {', '.join(mismatched_queries)}")
+    else:
+        ok(f"feature cache-busting parity: {expected_version}")
+
     release_assets = ["editor-features.js", "manager-features.js"]
     missing_cache_assets = [asset for asset in release_assets if asset not in sw]
     if missing_cache_assets:
