@@ -122,7 +122,7 @@ def static_contract_checks() -> None:
 
     manager_feature_markers = [
         "編集者管理", "契約区分と担当ディレクター", "既存クライアントを編集者へ共有",
-        "legacyClients", "legacyWorkers", "sourceClientId",
+        "legacyClients", "legacyWorkers", "crmClients", "sourceClientId", "_clientSource",
         "編集可能スケジュール", "マニュアル保管庫", "外部編集者の支払い確定",
         "編集者からの請求書", "匿名目安箱",
     ]
