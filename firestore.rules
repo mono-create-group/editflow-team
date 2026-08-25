@@ -1,0 +1,607 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function owner() {
+      return signedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in [
+          'nakamurakouta512@gmail.com',
+          'mono.create.group@gmail.com'
+        ];
+    }
+
+    function accessPath(uid) {
+      return /databases/$(database)/documents/access/$(uid);
+    }
+
+    function accessControlPath() {
+      return /databases/$(database)/documents/system/access_control;
+    }
+
+    function invoiceAuthorizationPath(uid, authorizationId) {
+      return /databases/$(database)/documents/editor_portals/$(uid)/invoice_authorizations/$(authorizationId);
+    }
+
+    function validInvoiceAuthorization(uid, invoiceId) {
+      let path = invoiceAuthorizationPath(uid, request.resource.data.authorizationId);
+      return exists(path)
+        && get(path).data.active == true
+        && get(path).data.editorUid == uid
+        && get(path).data.revision == request.resource.data.authorizationRevision
+        && get(path).data.invoiceVersion == request.resource.data.version
+        && get(path).data.invoiceDocumentId == invoiceId
+        && get(path).data.month == request.resource.data.month
+        && get(path).data.jobIds == request.resource.data.jobIds
+        && get(path).data.lines == request.resource.data.lines
+        && get(path).data.subtotal == request.resource.data.subtotal
+        && get(path).data.taxByRate == request.resource.data.taxByRate
+        && get(path).data.tax == request.resource.data.tax
+        && get(path).data.total == request.resource.data.total;
+    }
+
+    function validCompletedJobEvidence() {
+      return request.resource.data.status != '完了'
+        || (request.resource.data.evidenceUrl is string
+          && request.resource.data.evidenceUrl.matches('^https?://.+')
+          && request.resource.data.blocker is string
+          && request.resource.data.blocker.size() == 0);
+    }
+
+    function validOptionalIsoDate(value) {
+      return value is string
+        && (value == '' || value.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$'));
+    }
+
+    function validJobSchedule() {
+      let delivery = request.resource.data.get('deliveryDate', request.resource.data.get('deadline', ''));
+      return validOptionalIsoDate(request.resource.data.get('sharedDate', ''))
+        && validOptionalIsoDate(request.resource.data.get('editorDraftDate', ''))
+        && validOptionalIsoDate(request.resource.data.get('clientDraftDate', ''))
+        && validOptionalIsoDate(request.resource.data.get('thumbnailDate', ''))
+        && validOptionalIsoDate(delivery)
+        && delivery != ''
+        && request.resource.data.get('deadline', delivery) == delivery;
+    }
+
+    function accessEnforced() {
+      return exists(accessControlPath())
+        && get(accessControlPath()).data.enforced == true;
+    }
+
+    function compatibilityAllowed() {
+      return exists(accessControlPath())
+        && 'compatibilityEmails' in get(accessControlPath()).data
+        && get(accessControlPath()).data.compatibilityEmails is list
+        && ((request.auth.token.email is string
+          && get(accessControlPath()).data.compatibilityEmails is list
+          && request.auth.token.email in get(accessControlPath()).data.compatibilityEmails)
+          || approved(request.auth.uid));
+    }
+
+    function approved(uid) {
+      return signedIn()
+        && exists(accessPath(uid))
+        && get(accessPath(uid)).data.approved == true
+        && get(accessPath(uid)).data.roles is list;
+    }
+
+    function hasRole(uid, role) {
+      return approved(uid) && get(accessPath(uid)).data.roles.hasAny([role]);
+    }
+
+    function self(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function editor(uid) {
+      return self(uid) && hasRole(uid, '動画編集者');
+    }
+
+    function pureEditor(uid) {
+      return signedIn()
+        && exists(accessPath(uid))
+        && get(accessPath(uid)).data.roles is list
+        && get(accessPath(uid)).data.roles.hasAny(['動画編集者']);
+    }
+
+    function coreStaff() {
+      return signedIn()
+        && !pureEditor(request.auth.uid)
+        && (
+          // Compatibility phase preserves the current app while every existing
+          // member is assigned a UID-backed role. Explicitly revoked accounts
+          // never receive this fallback.
+          (!accessEnforced()
+            && compatibilityAllowed()
+            && (!exists(accessPath(request.auth.uid))
+              || get(accessPath(request.auth.uid)).data.approved != false))
+          || (approved(request.auth.uid)
+            && get(accessPath(request.auth.uid)).data.roles.hasAny([
+              '動画編集ディレクター',
+              'AIコンサルタント',
+              'AIエンジニア',
+              'Webデザイナー',
+              '営業',
+              'SNSマーケター'
+            ]))
+        );
+    }
+
+    function videoManager() {
+      return owner() || (approved(request.auth.uid)
+        && !pureEditor(request.auth.uid)
+        && hasRole(request.auth.uid, '動画編集ディレクター'));
+    }
+
+    function editorKind(uid) {
+      return get(accessPath(uid)).data.get('editorKind', 'direct');
+    }
+
+    function directorFor(uid) {
+      return owner() || (videoManager()
+        && exists(accessPath(uid))
+        && get(accessPath(uid)).data.get('directorUid', '') == request.auth.uid);
+    }
+
+    function portalManager(uid) {
+      return owner() || directorFor(uid);
+    }
+
+    function approvedMember() {
+      return signedIn() && approved(request.auth.uid);
+    }
+
+    function canSeeBoard(data) {
+      return approvedMember()
+        && hasRole(request.auth.uid, '動画編集者')
+        && data.status == 'open'
+        && (
+          (data.get('audience', '') == 'direct'
+            && editorKind(request.auth.uid) != 'external')
+          || (data.get('eligibleUids', []) is list
+            && request.auth.uid in data.get('eligibleUids', []))
+          || (editorKind(request.auth.uid) == 'external'
+            && data.get('directorUid', '') != ''
+            && data.get('directorUid', '') == get(accessPath(request.auth.uid)).data.get('directorUid', ''))
+        );
+    }
+
+    function validJobStatus(status) {
+      return status in [
+        '案件掲載中','募集中','編集者決定','受注済み','進行中',
+        '初稿完成','確認待ち','修正中','完了','キャンセル'
+      ];
+    }
+
+    function validInvoiceStatus(status) {
+      return status in [
+        '下書き','提出済み','再提出','差戻し','承認済み',
+        '支払処理中','支払済み','取消'
+      ];
+    }
+
+    function validOwnerInvoiceTransition(from, to) {
+      return from == to
+        || (from in ['提出済み','再提出'] && to in ['差戻し','承認済み','取消'])
+        || (from == '差戻し' && to == '取消')
+        || (from == '承認済み' && to in ['支払処理中','取消'])
+        || (from == '支払処理中' && to == '支払済み');
+    }
+
+    match /access/{uid} {
+      allow read: if owner() || self(uid) || (videoManager()
+        && resource.data.get('directorUid', '') == request.auth.uid);
+      allow create, update: if owner();
+      allow delete: if false;
+    }
+
+    match /system/access_control {
+      allow read: if owner()
+        || (signedIn() && !pureEditor(request.auth.uid)
+          && (approved(request.auth.uid) || compatibilityAllowed()));
+      allow create, update: if owner()
+        && request.resource.data.enforced is bool;
+      allow delete: if false;
+    }
+
+    match /system/releases_current {
+      allow read: if owner() || approvedMember() || coreStaff();
+      allow create, update: if owner();
+      allow delete: if false;
+    }
+
+    match /accessRequests/{uid} {
+      allow create: if self(uid)
+        && request.resource.data.keys().hasOnly([
+          'uid','email','name','photo','status','lastRequestedAt'
+        ])
+        && request.resource.data.uid == uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.status == 'pending';
+      allow update: if owner() || (self(uid)
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.status == 'pending'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name','photo','status','lastRequestedAt'
+        ]));
+      allow read: if owner() || self(uid);
+      allow delete: if false;
+    }
+
+    // Existing monolith data. A video editor is denied even when another role was
+    // accidentally added; the app also prevents that combination at assignment time.
+    match /shared/{document=**} {
+      allow read, write: if owner() || coreStaff();
+    }
+
+    match /users/{uid} {
+      // The dedicated editor portal does not use this legacy personal document.
+      // Denying editors also prevents historical local-state copies from leaking.
+      allow read, write: if owner() || (self(uid) && coreStaff());
+    }
+
+    match /editor_portals/{uid} {
+      allow read: if portalManager(uid) || editor(uid);
+      allow create, update: if owner();
+      allow delete: if false;
+
+      match /editor_jobs/{jobId} {
+        allow read: if portalManager(uid) || editor(uid);
+        allow create: if editor(uid)
+          && request.resource.data.keys().hasOnly([
+            'recordType','businessType','boardJobId','title','caseName',
+            'clientId','clientDisplay','accountId','accountDisplay','deadline','requestUrl','sourceUrl',
+            'sharedDate','editorDraftDate','clientDraftDate','thumbnailDate','deliveryDate',
+            'instructions','urgent','status','progress','evidenceUrl','blocker',
+            'workDate','startTime','endTime','submittedByUid','editorUid',
+            'editorEmail','editorName','directorUid','source','createdAt','updatedAt','history'
+          ])
+          && request.resource.data.recordType == 'editor_portal_job'
+          && request.resource.data.submittedByUid == uid
+          && request.resource.data.editorUid == uid
+          && request.resource.data.editorEmail == request.auth.token.email
+          && request.resource.data.get('businessType', '') in ['dispatch','edit_agency']
+          && request.resource.data.get('source', '') in ['direct_client','job_board']
+          && (request.resource.data.get('source', '') != 'job_board'
+            || (request.resource.data.get('boardJobId', '') is string
+              && exists(/databases/$(database)/documents/editor_job_board/$(request.resource.data.boardJobId))
+              && getAfter(/databases/$(database)/documents/editor_job_board/$(request.resource.data.boardJobId)).data.assignedUid == uid))
+          && request.resource.data.title is string
+          && request.resource.data.title.size() > 0
+          && request.resource.data.title.size() <= 120
+          && request.resource.data.clientDisplay is string
+          && request.resource.data.clientDisplay.size() > 0
+          && request.resource.data.instructions is string
+          && request.resource.data.instructions.size() <= 3000
+          && validJobStatus(request.resource.data.status)
+          && validJobSchedule()
+          && validCompletedJobEvidence()
+          && request.resource.data.history is list
+          && request.resource.data.history.size() == 1;
+        allow update: if editor(uid)
+          && validJobStatus(request.resource.data.status)
+          && validCompletedJobEvidence()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status','deadline','sharedDate','editorDraftDate','clientDraftDate',
+            'thumbnailDate','deliveryDate','progress','evidenceUrl','blocker',
+            'workDate','startTime','endTime','updatedAt'
+          ])
+          && validJobSchedule();
+        allow update: if directorFor(uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'title','clientDisplay','deadline','sharedDate','editorDraftDate',
+            'clientDraftDate','thumbnailDate','deliveryDate','instructions','urgent','status',
+            'correctionReason','updatedAt','updatedBy','history','ownPay',
+            'payableApproved','payableApprovedAt','payableMonth'
+          ])
+          && validJobStatus(request.resource.data.status)
+          && validJobSchedule()
+          && validCompletedJobEvidence()
+          && (!('ownPay' in request.resource.data) || request.resource.data.ownPay >= 0)
+          && (!('payableApproved' in request.resource.data) || request.resource.data.payableApproved != true
+            || (request.resource.data.status == '完了'
+              && request.resource.data.ownPay > 0
+              && request.resource.data.payableMonth is string
+              && validCompletedJobEvidence()));
+        allow update: if owner()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'title','clientDisplay','deadline','sharedDate','editorDraftDate',
+            'clientDraftDate','thumbnailDate','deliveryDate','instructions','urgent','status',
+            'correctionReason','updatedAt','updatedBy','history','ownPay',
+            'payableApproved','payableApprovedAt','payableMonth',
+            'linkedLegacyJobId','integratedAt','integratedBy'
+          ])
+          && validJobStatus(request.resource.data.status)
+          && validJobSchedule()
+          && validCompletedJobEvidence()
+          && (!('ownPay' in request.resource.data) || request.resource.data.ownPay >= 0)
+          && (!('payableApproved' in request.resource.data) || request.resource.data.payableApproved != true
+            || (request.resource.data.status == '完了'
+              && request.resource.data.ownPay > 0
+              && request.resource.data.payableMonth is string
+              && validCompletedJobEvidence()));
+        allow delete: if false;
+
+        match /events/{eventId} {
+          allow read: if portalManager(uid) || editor(uid);
+          allow create: if portalManager(uid)
+            || (editor(uid) && request.resource.data.byUid == uid);
+          allow update, delete: if false;
+        }
+
+        match /messages/{messageId} {
+          allow read: if portalManager(uid) || editor(uid);
+          allow create: if (portalManager(uid)
+              || (editor(uid) && request.resource.data.byUid == uid))
+            && request.resource.data.keys().hasOnly([
+              'body','kind','url','byUid','byName','byRole','createdAt'
+            ])
+            && request.resource.data.body is string
+            && request.resource.data.body.size() > 0
+            && request.resource.data.body.size() <= 2000
+            && request.resource.data.kind in [
+              '質問','回答','初稿提出','修正指示',
+              '修正稿提出','納品','連絡'
+            ]
+            && request.resource.data.url is string
+            && (request.resource.data.url == ''
+              || request.resource.data.url.matches('^https?://.+'));
+          allow update, delete: if false;
+        }
+      }
+
+      match /invoice_authorizations/{authorizationId} {
+        allow read: if portalManager(uid) || editor(uid);
+        allow create, update: if portalManager(uid)
+          && request.resource.data.recordType == 'invoice_authorization'
+          && request.resource.data.editorUid == uid
+          && request.resource.data.month is string
+          && request.resource.data.jobIds is list
+          && request.resource.data.lines is list
+          && request.resource.data.jobIds.size() == request.resource.data.lines.size()
+          && request.resource.data.subtotal >= 0
+          && request.resource.data.tax >= 0
+          && request.resource.data.total == request.resource.data.subtotal + request.resource.data.tax
+          && request.resource.data.revision is int
+          && request.resource.data.revision >= 1
+          && request.resource.data.invoiceVersion is int
+          && request.resource.data.invoiceVersion >= 1
+          && request.resource.data.invoiceDocumentId is string;
+        allow delete: if false;
+
+        match /events/{eventId} {
+          allow read: if portalManager(uid) || editor(uid);
+          allow create: if portalManager(uid);
+          allow update, delete: if false;
+        }
+      }
+
+      match /editor_invoices/{invoiceId} {
+        allow read: if portalManager(uid) || editor(uid);
+        allow create: if editor(uid)
+          && request.resource.data.keys().hasOnly([
+            'recordType','editorUid','editorEmail','editorName','month','jobIds',
+            'lines','issuer','recipientName','documentType','subtotal','taxByRate',
+            'tax','withholding','withholdingStatus','total','status','invoiceNumber',
+            'issueDate','dueDate','retentionUntil','version','idempotencyKey','file',
+            'ownerShareStatus','createdAt','updatedAt','history',
+            'submittedAt','reviewReason','supersedesInvoiceId',
+            'authorizationId','authorizationRevision'
+          ])
+          && request.resource.data.recordType == 'editor_invoice'
+          && request.resource.data.editorUid == uid
+          && request.resource.data.editorEmail == request.auth.token.email
+          && request.resource.data.status == '下書き'
+          && request.resource.data.authorizationId is string
+          && request.resource.data.authorizationRevision is int
+          && validInvoiceAuthorization(uid, invoiceId)
+          && request.resource.data.jobIds is list
+          && request.resource.data.jobIds.size() > 0
+          && request.resource.data.jobIds.size() <= 100
+          && request.resource.data.lines is list
+          && request.resource.data.lines.size() == request.resource.data.jobIds.size()
+          && request.resource.data.version is int
+          && request.resource.data.version >= 1
+          && request.resource.data.retentionUntil is string
+          && request.resource.data.subtotal >= 0
+          && request.resource.data.tax >= 0
+          && request.resource.data.total == request.resource.data.subtotal + request.resource.data.tax;
+        allow update: if editor(uid)
+          && resource.data.status == '下書き'
+          && validInvoiceAuthorization(uid, invoiceId)
+          && validInvoiceStatus(request.resource.data.status)
+          && request.resource.data.status in ['下書き','提出済み']
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'file','ownerShareStatus','status','submittedAt','updatedAt'
+          ])
+          && (request.resource.data.status == '下書き'
+            || (request.resource.data.file.provider == 'google-drive'
+              && request.resource.data.file.id is string
+              && request.resource.data.file.sha256 is string
+              && request.resource.data.ownerShareStatus == 'shared'));
+        allow update: if portalManager(uid)
+          && validInvoiceStatus(request.resource.data.status)
+          && validOwnerInvoiceTransition(resource.data.status, request.resource.data.status)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status','reviewReason','updatedAt','updatedBy','history',
+            'withholding','withholdingStatus','paymentScheduledAt','paidAt'
+          ]);
+        allow delete: if false;
+
+        match /events/{eventId} {
+          allow read: if portalManager(uid) || editor(uid);
+          allow create: if portalManager(uid)
+            || (editor(uid) && request.resource.data.byUid == uid);
+          allow update, delete: if false;
+        }
+      }
+
+      match /submissions/{submissionId} {
+        allow read: if portalManager(uid) || editor(uid);
+        allow create: if portalManager(uid) || editor(uid);
+        allow update, delete: if false;
+      }
+
+      match /editor_profile/{documentId} {
+        allow read: if portalManager(uid) || editor(uid);
+        allow create: if owner() || (editor(uid)
+          && request.resource.data.keys().hasOnly([
+            'issuerName','registrationNumber','registrationVerified','taxRate',
+            'bankName','bankBranch','bankType','bankNumber','bankHolder','updatedAt'
+          ])
+          && request.resource.data.registrationVerified == false);
+        allow update: if owner() || (editor(uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'issuerName','registrationNumber','registrationVerified','taxRate',
+            'bankName','bankBranch','bankType','bankNumber','bankHolder','updatedAt'
+          ])
+          && (request.resource.data.registrationVerified == false
+            || request.resource.data.registrationVerified == resource.data.registrationVerified));
+        allow delete: if false;
+      }
+
+      match /client_catalog/{clientId} {
+        allow read: if portalManager(uid) || editor(uid);
+        allow create, update: if portalManager(uid)
+          && request.resource.data.keys().hasOnly([
+            'name','accounts','active','manualIds','updatedAt','updatedBy'
+          ])
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 100
+          && request.resource.data.accounts is list
+          && request.resource.data.accounts.size() <= 100;
+        allow delete: if false;
+      }
+
+      match /manual_reads/{manualId} {
+        allow read: if portalManager(uid) || editor(uid);
+        allow create, update: if editor(uid)
+          && request.resource.data.keys().hasOnly(['manualId','version','readAt'])
+          && request.resource.data.manualId == manualId
+          && request.resource.data.version is string;
+        allow delete: if false;
+      }
+    }
+
+    match /editor_job_board/{jobId} {
+      allow read: if owner() || coreStaff() || canSeeBoard(resource.data)
+        || (signedIn() && resource.data.get('assignedUid', '') == request.auth.uid);
+      allow create: if videoManager()
+        && request.resource.data.keys().hasOnly([
+          'title','caseName','clientId','clientName','accountId','accountName',
+          'summary','instructions','requestUrl','sourceUrl','editorDraftDate',
+          'clientDraftDate','thumbnailDate','deliveryDate','urgent','status',
+          'audience','eligibleUids','directorUid','createdByUid','createdByName',
+          'createdAt','updatedAt','assignedUid','assignedName','assignedAt'
+        ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.status == 'open'
+        && request.resource.data.eligibleUids is list
+        && request.resource.data.get('assignedUid', '') == ''
+        && (owner() || request.resource.data.directorUid == request.auth.uid);
+      allow update: if videoManager()
+        && (owner() || resource.data.get('directorUid', '') == request.auth.uid);
+      allow update: if canSeeBoard(resource.data)
+        && resource.data.status == 'open'
+        && resource.data.get('assignedUid', '') == ''
+        && request.resource.data.status == 'assigned'
+        && request.resource.data.assignedUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status','assignedUid','assignedName','assignedAt','updatedAt'
+        ]);
+      allow delete: if false;
+    }
+
+    match /editor_schedules/{uid} {
+      allow read: if owner() || approvedMember();
+      allow create, update: if editor(uid)
+        && request.resource.data.keys().hasOnly([
+          'name','fromDate','toDate','hoursPerWeek','capacity','workType',
+          'available','note','updatedAt'
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.fromDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.toDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.toDate >= request.resource.data.fromDate
+        && request.resource.data.hoursPerWeek >= 0
+        && request.resource.data.hoursPerWeek <= 100
+        && request.resource.data.capacity >= 0
+        && request.resource.data.capacity <= 100
+        && request.resource.data.workType in ['short','long','both']
+        && request.resource.data.note is string
+        && request.resource.data.note.size() <= 300;
+      allow delete: if false;
+    }
+
+    match /editor_manuals/{manualId} {
+      allow read: if owner() || coreStaff() || (approvedMember()
+        && (resource.data.get('audience', '') == 'all'
+          || (resource.data.get('allowedUids', []) is list
+            && request.auth.uid in resource.data.get('allowedUids', []))));
+      allow create, update: if videoManager()
+        && request.resource.data.keys().hasOnly([
+          'title','scope','scopeLabel','clientId','accountId','version','body',
+          'url','required','audience','allowedUids','directorUid','updatedAt','updatedBy'
+        ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 160
+        && request.resource.data.body is string
+        && request.resource.data.body.size() <= 10000
+        && request.resource.data.allowedUids is list
+        && (owner() || request.resource.data.directorUid == request.auth.uid);
+      allow delete: if false;
+    }
+
+    match /editor_suggestions/{suggestionId} {
+      allow create: if approvedMember()
+        && request.resource.data.keys().hasOnly([
+          'category','message','replyCode','status','createdAt'
+        ])
+        && request.resource.data.category is string
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0
+        && request.resource.data.message.size() <= 2000
+        && request.resource.data.replyCode is string
+        && request.resource.data.status == '未確認';
+      allow read, update: if owner();
+      allow delete: if false;
+    }
+
+    match /editor_suggestion_replies/{replyCode} {
+      allow read: if approvedMember();
+      allow create, update: if owner()
+        && request.resource.data.keys().hasOnly(['message','createdAt','updatedAt'])
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0
+        && request.resource.data.message.size() <= 2000;
+      allow delete: if false;
+    }
+
+    // Required for collection-group dashboards in the internal manager app.
+    match /{path=**}/editor_jobs/{jobId} {
+      allow read: if owner() || (videoManager()
+        && resource.data.get('directorUid', '') == request.auth.uid);
+    }
+
+    match /{path=**}/editor_invoices/{invoiceId} {
+      allow read: if owner();
+    }
+
+    match /{path=**}/editor_profile/{documentId} {
+      allow read: if owner();
+    }
+
+    match /{path=**}/invoice_authorizations/{authorizationId} {
+      allow read: if owner();
+    }
+  }
+}

@@ -1014,7 +1014,7 @@ const BIZ_CFG={
     board:['案件掲載中','募集中','編集者決定','受注済み','進行中','確認待ち','修正中','初稿完成'],
     scopes:['長尺動画','ショート動画','サムネイル制作','その他'],
     lbl:{scope:'案件種別',shared:'受注日',deliver:'納品日',d1:'編集者 初稿',d2:'クライアント提出 初稿',unit:'クライアント請求額（円）',wpay:'編集者支払額（円）',profit:'手数料（自動計算）',monthly:'',member:'👤 編集者別',d1s:'✏️ 編集者初稿',d2s:'📋 クライアント提出',deliverS:'📅 納品'},
-    show:{scope:1,d1:1,d2:1,thumb:0,wpay:1,subs:1,monthly:0},
+    show:{scope:1,d1:1,d2:1,thumb:1,wpay:1,subs:1,monthly:0},
     tabs:['board','deadline','listing','list','clients','profit','payment','invoice','completed','worker','priority'],
     prio:[['clientDraftDate','クライアント初稿'],['editorDraftDate','編集者初稿']]
   },
@@ -1061,14 +1061,21 @@ function BJOBS(){return (S.jobs||[]).filter(j=>jobBiz(j)===PBIZ);}
 function bizStatOpts(k,cur){const list=bizCfgOf(k).statuses.slice();if(cur&&list.indexOf(cur)<0)list.unshift(cur);const sel=cur||list[0];return list.map(x=>`<option${x===sel?' selected':''}>${esc(x)}</option>`).join('');}
 function bizScopeOpts(k,cur){const list=bizCfgOf(k).scopes.slice();if(cur&&list.indexOf(cur)<0)list.unshift(cur);return'<option value="">選択</option>'+list.map(x=>`<option${x===cur?' selected':''}>${esc(x)}</option>`).join('');}
 function setPBiz(k){PBIZ=k;const t=bizCfgOf(k).tabs;if(t.indexOf(PVMT)<0)PVMT=t[0];PRIO_IDX=0;render();}
-function rBizBar(){
-  return`<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
-  ${BIZ_DEFS.map(b=>{
-    const c=(S.jobs||[]).filter(j=>!j.deleted&&jobBiz(j)===b.k&&j.status!=='完了'&&j.status!=='キャンセル').length;
-    return`<button class="btn btn-sm ${PBIZ===b.k?'btn-p':'btn-g'}" onclick="setPBiz('${b.k}')">${b.icon} ${esc(b.label)}${c?` <span style="opacity:.7">${c}</span>`:''}</button>`;
-  }).join('')}
-</div>`;
+function allowedWorkspaces(){
+  if(_isOwner())return['video','hp','ai'];
+  const rs=myRoles(),out=[];
+  if(rs.some(r=>['動画編集ディレクター','営業','SNSマーケター'].includes(r)))out.push('video');
+  if(rs.some(r=>['Webデザイナー','営業'].includes(r)))out.push('hp');
+  if(rs.some(r=>['AIコンサルタント','AIエンジニア','営業'].includes(r)))out.push('ai');
+  return out;
 }
+function rBizBar(){
+  const spaces=[{id:'video',label:'動画編集事業',icon:'<svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h11a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Zm13 4 5-3v10l-5-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',biz:'edit'},{id:'hp',label:'HP制作事業',icon:'<svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM4 8h16M8 4v4" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>',biz:'hp'},{id:'ai',label:'AI事業',icon:'<svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v3m8-3v3M5 9h14v10H5zM9 13h.01M15 13h.01M9 17h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',biz:'consult'}];
+  const allowed=allowedWorkspaces();
+  return`<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px" aria-label="事業ワークスペース">${spaces.filter(s=>allowed.includes(s.id)).map(s=>{const keys=s.id==='video'?['edit','haken']:s.id==='hp'?['hp']:['consult','tool'];const c=(S.jobs||[]).filter(j=>!j.deleted&&keys.includes(jobBiz(j))&&!['完了','キャンセル'].includes(j.status)).length+(s.id==='video'?PORTAL_JOBS.filter(j=>!['完了','キャンセル'].includes(j.status)).length:0);return`<button class="btn btn-sm ${PWORK===s.id?'btn-p':'btn-g'}" style="min-height:44px;display:inline-flex;align-items:center;gap:6px" onclick="setWorkSpace('${s.id}','${s.biz}')">${s.icon}<span>${s.label}</span>${c?` <span style="opacity:.7">${c}</span>`:''}</button>`;}).join('')}</div>`;
+}
+function setWorkSpace(space,biz){if(!allowedWorkspaces().includes(space))return toast('この事業画面を開く権限がありません','err');PWORK=space;PBIZ=biz;sessionStorage.setItem('mc_work_space',space);PVMT='board';render();}
+function setVideoTab(tab){VIDEO_TAB=tab;sessionStorage.setItem('mc_video_tab',tab);render();}
 const DAYS=['日','月','火','水','木','金','土'];
 const LOG_TYPES=['revenue','sales','hire'];
 
@@ -1491,26 +1498,126 @@ function renderAuthUI(){
 // ここではリダイレクト起因のエラー（例: auth/unauthorized-domain）を握りつぶすだけに留める。
 fbAuth.getRedirectResult().catch(e=>{console.warn('getRedirectResult:',e&&e.code||e);});
 
-fbAuth.onAuthStateChanged(user=>{
+function _stopRoleSubscriptions(){
+  [_fbUnsubscribe,_teamUnsub,_accessReqUnsub,_accessRecordsUnsub,_accessControlUnsub,_portalJobsUnsub,_portalInvoicesUnsub,_portalProfilesUnsub,_portalAuthorizationsUnsub].forEach(u=>{try{if(u)u();}catch(_){}});
+  _fbUnsubscribe=_teamUnsub=_accessReqUnsub=_accessRecordsUnsub=_accessControlUnsub=_portalJobsUnsub=_portalInvoicesUnsub=_portalProfilesUnsub=_portalAuthorizationsUnsub=null;
+}
+function _clearSensitiveLocalState(){
+  const fresh=defState();
+  TEAM_KEYS.forEach(k=>{S[k]=Array.isArray(fresh[k])?[]:fresh[k];});
+  S.bizBoard=JSON.parse(JSON.stringify(fresh.bizBoard||{}));
+  window._teamSnap={};PORTAL_JOBS=[];PORTAL_INVOICES=[];PORTAL_PROFILES=[];PORTAL_AUTHORIZATIONS=[];
+  try{_lsSaveState(S);}catch(_){}
+}
+function _coreAccessAllowed(){
+  if(_isOwner())return true;
+  const rs=(APP_ACCESS&&Array.isArray(APP_ACCESS.roles))?APP_ACCESS.roles:[];
+  // 動画編集者は他役割と併用させず、必ず専用ポータルへ分離する。
+  return APP_ACCESS?.approved===true&&!rs.includes('動画編集者')&&rs.some(r=>APP_ROLES.includes(r));
+}
+async function _requestAccess(){
+  if(!FB_USER)return;
+  try{
+    await fbDb.collection('accessRequests').doc(FB_USER.uid).set({
+      uid:FB_USER.uid,email:_myEmail(),name:FB_USER.displayName||'',photo:FB_USER.photoURL||'',
+      status:'pending',lastRequestedAt:firebase.firestore.FieldValue.serverTimestamp()
+    },{merge:true});
+  }catch(e){console.warn('access request unavailable',e&&e.code||e);}
+}
+async function resolveAppAccess(){
+  APP_ACCESS=null;ACCESS_RESOLVED=false;
+  if(!FB_USER)return null;
+  try{
+    const cfg=await fbDb.collection('system').doc('access_control').get();
+    ACCESS_CONTROL=cfg.exists?{...ACCESS_CONTROL,...cfg.data(),configured:Array.isArray(cfg.data()?.compatibilityEmails)}:{...ACCESS_CONTROL,configured:false,enforced:false,phase:'compatibility',compatibilityEmails:[]};
+  }catch(e){
+    // 権限設定を読めないアカウントは互換扱いにしない。旧画面を動かしたまま、
+    // 許可リスト→rules→static の順に公開するため、正規スタッフはここへ到達しない。
+    ACCESS_CONTROL={...ACCESS_CONTROL,configured:false,enforced:true,phase:'denied',compatibilityEmails:[],readDenied:true};
+  }
+  if(_isOwner()){
+    APP_ACCESS={uid:FB_USER.uid,email:_myEmail(),roles:APP_ROLES.slice(),approved:true,owner:true};
+    ACCESS_RESOLVED=true;return APP_ACCESS;
+  }
+  try{
+    const snap=await fbDb.collection('access').doc(FB_USER.uid).get();
+    const d=snap.exists?snap.data():null;
+    if(d&&d.approved===true&&Array.isArray(d.roles)&&d.roles.some(r=>APP_ROLES.includes(r))){
+      APP_ACCESS={uid:FB_USER.uid,email:_myEmail(),...d,roles:d.roles.filter(r=>APP_ROLES.includes(r))};
+    }else{
+      await _requestAccess();
+      const compatibilityEmails=Array.isArray(ACCESS_CONTROL.compatibilityEmails)?ACCESS_CONTROL.compatibilityEmails.map(x=>String(x).toLowerCase()):[],compatibilityAllowed=ACCESS_CONTROL.configured===true&&compatibilityEmails.includes(_myEmail());
+      if(ACCESS_CONTROL.enforced!==true&&compatibilityAllowed){
+        const legacyRoles=memberRolesOf(_myProfile());
+        APP_ACCESS={uid:FB_USER.uid,email:_myEmail(),roles:legacyRoles.length?legacyRoles:['営業'],approved:true,legacyCompat:true};
+      }
+    }
+  }catch(e){console.warn('access resolution failed',e&&e.code||e);}
+  ACCESS_RESOLVED=true;
+  if(!_coreAccessAllowed())_clearSensitiveLocalState();
+  return APP_ACCESS;
+}
+function fbSetupAccessAdmin(){
+  if(!_isOwner())return;
+  _accessReqUnsub=fbDb.collection('accessRequests').onSnapshot(q=>{
+    ACCESS_REQUESTS=q.docs.map(d=>({id:d.id,...d.data()})).filter(x=>!x.status||x.status==='pending').sort((a,b)=>String(a.email||'').localeCompare(String(b.email||'')));
+    renderSyncSafe();
+  },e=>console.warn('access requests sync',e&&e.code||e));
+  _accessRecordsUnsub=fbDb.collection('access').onSnapshot(q=>{
+    ACCESS_RECORDS=q.docs.map(d=>({id:d.id,...d.data()}));
+    renderSyncSafe();
+  },e=>console.warn('access records sync',e&&e.code||e));
+  _accessControlUnsub=fbDb.collection('system').doc('access_control').onSnapshot(d=>{
+    ACCESS_CONTROL=d.exists?{...ACCESS_CONTROL,...d.data(),configured:Array.isArray(d.data()?.compatibilityEmails)}:{...ACCESS_CONTROL,configured:false,enforced:false,phase:'compatibility',compatibilityEmails:[]};
+    renderSyncSafe();
+  },e=>console.warn('access control sync',e&&e.code||e));
+}
+function fbSetupPortalOpsSync(){
+  if(!(_isOwner()||hasAppRole('動画編集ディレクター')))return;
+  const portalJobsQuery=_isOwner()
+    ?fbDb.collectionGroup('editor_jobs')
+    :fbDb.collectionGroup('editor_jobs').where('directorUid','==',FB_USER.uid);
+  _portalJobsUnsub=portalJobsQuery.onSnapshot(q=>{
+    PORTAL_JOBS=q.docs.filter(d=>d.ref.parent.parent&&d.ref.parent.parent.parent.id==='editor_portals').map(d=>({id:d.id,_portalUid:d.ref.parent.parent.id,_path:d.ref.path,...d.data()}));
+    _autoIntegratePortalJobs();
+    _syncPortalLinkedJobsToLegacy();
+    renderSyncSafe();
+  },e=>console.warn('editor portal jobs sync',e&&e.code||e));
+  if(_isOwner())_portalInvoicesUnsub=fbDb.collectionGroup('editor_invoices').onSnapshot(q=>{
+    PORTAL_INVOICES=q.docs.filter(d=>d.ref.parent.parent&&d.ref.parent.parent.parent.id==='editor_portals').map(d=>({id:d.id,_portalUid:d.ref.parent.parent.id,_path:d.ref.path,...d.data()}));
+    renderSyncSafe();
+  },e=>console.warn('editor portal invoices sync',e&&e.code||e));
+  if(_isOwner())_portalProfilesUnsub=fbDb.collectionGroup('editor_profile').onSnapshot(q=>{
+    PORTAL_PROFILES=q.docs.filter(d=>d.ref.parent.parent&&d.ref.parent.parent.parent.id==='editor_portals').map(d=>({id:d.id,_portalUid:d.ref.parent.parent.id,_path:d.ref.path,...d.data()}));
+    renderSyncSafe();
+  },e=>console.warn('editor portal profiles sync',e&&e.code||e));
+  if(_isOwner())_portalAuthorizationsUnsub=fbDb.collectionGroup('invoice_authorizations').onSnapshot(q=>{
+    PORTAL_AUTHORIZATIONS=q.docs.filter(d=>d.ref.parent.parent&&d.ref.parent.parent.parent.id==='editor_portals').map(d=>({id:d.id,_portalUid:d.ref.parent.parent.id,_path:d.ref.path,...d.data()}));
+    renderSyncSafe();
+  },e=>console.warn('invoice authorizations sync',e&&e.code||e));
+}
+fbAuth.onAuthStateChanged(async user=>{
+  _stopRoleSubscriptions();
   FB_USER=user;
   _authSettled=true;
+  APP_ACCESS=null;ACCESS_RESOLVED=!user;ACCESS_REQUESTS=[];ACCESS_RECORDS=[];PORTAL_JOBS=[];PORTAL_INVOICES=[];PORTAL_PROFILES=[];PORTAL_AUTHORIZATIONS=[];
   if(user){
-    fbSetupRealtimeSync();
-    fbSetupTeamSync();
-    // サインインしたアカウントを「サインイン中アカウント一覧」に自動登録(オーナーのみ閲覧)。
-    // チーム同期の初回スナップショットが載ってから書くと重複/競合が起きにくい。
-    setTimeout(_registerSignin,1500);
+    await resolveAppAccess();
+    if(_coreAccessAllowed()){
+      fbSetupRealtimeSync();fbSetupTeamSync();fbSetupPortalOpsSync();
+      if(_isOwner())fbSetupAccessAdmin();
+      setTimeout(_registerSignin,1500);
+    }
   } else {
-    if(_fbUnsubscribe){_fbUnsubscribe();_fbUnsubscribe=null;}
-    if(_teamUnsub){_teamUnsub();_teamUnsub=null;}
     TEAM_SHARE_OK=null;
   }
   try{renderAuthGate();}catch(e){console.warn('authGate',e);}
   renderAuthUI();
-  if(window.AIBridge){if(user)window.AIBridge.connect(user,'internal');else window.AIBridge.disconnect();}
+  render();
+  if(window.AIBridge){if(user&&_coreAccessAllowed())window.AIBridge.connect(user,'internal');else window.AIBridge.disconnect();}
   renderGcalUI();
   // Gcal連携済みならサイレント再認証
-  setTimeout(gcalSilentReconnect,1500);
+  if(_coreAccessAllowed())setTimeout(gcalSilentReconnect,1500);
 });
 
 // ===GOOGLE CALENDAR===
@@ -2325,6 +2432,18 @@ const DEFAULT_FS=[
   {id:'f14',s:'23:00',e:'24:00',t:'就寝',d:'総崩れ防止のマスタースイッチ。ここだけは非交渉',c:'#6b7280'},
 ];
 
+// ローカルには個人用の軽量キャッシュだけを残し、チーム情報はFirestoreから認証後に読み込む。
+const LS_OMIT_KEYS=[...TEAM_KEYS,'bizBoard'];
+function _lsSanitizeState(obj){
+  const c=Object.assign({},obj||{});LS_OMIT_KEYS.forEach(k=>{delete c[k];});
+  if(c.settings&&typeof c.settings==='object'){c.settings=Object.assign({},c.settings);delete c.settings.issuer;}
+  return c;
+}
+function _lsPutState(obj){
+  const json=JSON.stringify(obj);
+  localStorage.setItem(DB,window.LZString?('LZ1:'+LZString.compressToUTF16(json)):json);
+}
+
 // ===STATE===
 let S=load(), V=sessionStorage.getItem('ef_team_view')||'projects', TV='today', HV='weekly', WO=0, MO=0, EID=null, PVM='board', JD=today();
 if(window.AIBridge)_personalTaskBaseline=AIBridge.taskBaseline(S.tasks||[]);
@@ -2335,6 +2454,10 @@ let RV='revenue'; // revenue sub-tab
 let GV='this_month'; // goals sub-tab (horizon)
 let PVMT='board'; // projects main tab (board/list/profit/payment/worker/priority)
 let PBIZ='edit'; // 案件管理の事業タブ(編集代行/編集者派遣/HP制作/AI顧問/自動化ツール制作)
+let PWORK=sessionStorage.getItem('mc_work_space')||'video'; // top-level workspace; legacy PBIZ remains the data route
+let VIDEO_TAB=sessionStorage.getItem('mc_video_tab')||'overview';
+let VIDEO_QUERY='';
+let VIDEO_STATUS='';
 let PRIO_IDX=0; // 優先度表の基準インデックス(事業ごとに BIZ_CFG.prio で定義)
 let JT='morning'; // journal tab (morning/evening)
 let JCM=today().slice(0,7); // journal calendar month (YYYY-MM)
@@ -2448,22 +2571,18 @@ function migrate(d){
 // ── localStorage保存のLZ圧縮化 + 重量データ除外(QuotaExceededError対策・2026-07-24) ──
 // 全状態Sを生JSONで保存するとsalesLeads等で5MB上限を超え、保存のたびに失敗していた。
 // ①'LZ1:'マーカー付きで圧縮保存(旧形式=生JSONも読める後方互換)
-// ②salesLeadsは恒久的にローカルへ保存しない。shared/mcapp_leads_0..3(クラウドshard)が唯一の真実で、
-//   件数が増え続けるため将来また上限に達する。起動時の空窓は _slShardsSave の消失防止ガードで担保する。
-const LS_OMIT_KEYS=['salesLeads'];
+// ②チーム共有データはすべてFirestoreを正本とし、localStorageに保存しない。
+//   共有端末で編集者・未承認者がindex.htmlを開いても、過去の案件・金額・顧客・他スタッフ情報が残らない。
+//   salesLeadsは従来どおりshard、他キーはshared/mcappから認証後に再読み込みする。
 function _lsSaveState(obj){
-  const strip=(o,keys)=>{const c=Object.assign({},o);keys.forEach(k=>{delete c[k];});return c;};
-  const put=(o)=>{
-    const json=JSON.stringify(o);
-    localStorage.setItem(DB,window.LZString?('LZ1:'+LZString.compressToUTF16(json)):json);
-  };
+  const strip=(o,keys)=>{const c=_lsSanitizeState(o);keys.forEach(k=>{delete c[k];});return c;};
   try{
-    put(strip(obj,LS_OMIT_KEYS));
+    _lsPutState(strip(obj,LS_OMIT_KEYS));
     return true;
   }catch(e){
-    // まだ超過する場合は増え続ける従属データも落としてコア(案件/クライアント/設定)を確実に残す
+    // まだ超過する場合は、Firestoreに同期済みの従属データも落とす。
     try{
-      put(strip(obj,LS_OMIT_KEYS.concat(['logs','signins','teamPosts','salesSites','crmClients'])));
+      _lsPutState(strip(obj,LS_OMIT_KEYS.concat(['logs'])));
       console.warn('save: 従属データを除外してローカル保存(容量超過回避・クラウドが正)');
       return true;
     }catch(e2){console.warn('save error',e2);return false;}
@@ -2472,11 +2591,17 @@ function _lsSaveState(obj){
 function _lsReadState(){
   let raw;try{raw=localStorage.getItem(DB);}catch(_){return null;}
   if(raw==null)return null;
+  let decoded=null;
   if(raw.slice(0,4)==='LZ1:'){
     if(!window.LZString)return null;
-    try{const d=LZString.decompressFromUTF16(raw.slice(4));return d==null?null:JSON.parse(d);}catch(_){return null;}
+    try{const d=LZString.decompressFromUTF16(raw.slice(4));decoded=d==null?null:JSON.parse(d);}catch(_){return null;}
+  }else{
+    try{decoded=JSON.parse(raw);}catch(_){return null;}
   }
-  try{return JSON.parse(raw);}catch(_){return null;}
+  if(!decoded||typeof decoded!=='object')return null;
+  const hadSensitive=LS_OMIT_KEYS.some(k=>Object.prototype.hasOwnProperty.call(decoded,k))||!!decoded.settings?.issuer,clean=_lsSanitizeState(decoded);
+  if(hadSensitive){try{_lsPutState(clean);}catch(e){console.warn('legacy local cache sanitize',e);}}
+  return clean;
 }
 function load(){try{const d=Object.assign(defState(),_lsReadState()||{});return migrate(d);}catch{return defState();}}
 // ─── パフォーマンス最適化 ───────────────────────────────────────────
@@ -3064,12 +3189,29 @@ function submitCompanyGate(){const confirmed=!!document.getElementById('company-
 function rCompanyGate(){const r=companyGateRecord(),p=companyTaskPerformance(),target=Number(S.settings?.target||0),rev=thisMonthRev();return`<section class="company-gate" role="dialog" aria-labelledby="company-gate-title"><div class="company-gate-kicker">MONO.CREATE DAILY GOAL</div><h1 id="company-gate-title">社内目標とタスク達成率を確認</h1><div style="font-size:12px;color:var(--t2);line-height:1.6">社内目標の確認と、既存タスクから自動計算した達成率の記録が完了するまで社内アプリは開きません。</div><div class="company-gate-goal"><b>本日の社内目標</b><br>利益につながる最重要業務を優先し、今月の目標達成へ前進する。${target?`<br>今月の収益目標 ¥${target.toLocaleString()} / 現在 ¥${rev.toLocaleString()}`:''}</div><div class="company-gate-goal"><b>今日のタスク達成率 ${p.rate}%</b><br>完了 ${p.done}件 / 対象 ${p.total}件</div><div class="company-gate-form"><label class="company-gate-check"><input id="company-goal-confirm" type="checkbox" ${r?.goalConfirmed?'checked':''}>社内目標を確認しました</label><button class="btn btn-p" onclick="submitCompanyGate()">タスク達成率を記録して社内アプリを開く</button></div></section>`;}
 function render(){
   try{
-    if(FB_USER&&!companyGatePassed()){
-      document.getElementById('view').innerHTML=rCompanyGate();
+    if(FB_USER&&!ACCESS_RESOLVED){
+      document.getElementById('view').innerHTML=`<div class="empty"><div class="empty-title">アクセス権を確認中です</div></div>`;
       const side=document.getElementById('sidebar');if(side)side.style.display='none';
       return;
     }
+    // 未承認ユーザーと編集者には、shared/mcappを読ませず専用導線だけを出す。
+    if(FB_USER&&ACCESS_RESOLVED&&!_coreAccessAllowed()){
+      V='access';sessionStorage.setItem('ef_team_view',V);
+      const isEditor=myRole()==='editor';
+      document.getElementById('view').innerHTML=isEditor
+        ?`<div class="empty"><div class="empty-title">編集者専用ポータルを利用してください</div><div style="font-size:12px;color:var(--t3)">担当案件とご自身の請求情報だけが表示されます。</div><a class="btn btn-p" style="margin-top:14px;display:inline-flex;align-items:center;min-height:44px" href="./editor.html">編集者ポータルを開く</a><button class="btn btn-g" style="margin-top:14px" onclick="fbSignOut()">サインアウト</button></div>`
+        :`<div class="empty"><div class="empty-title">アクセス承認待ちです</div><div style="font-size:12px;color:var(--t3)">管理者に承認申請を送信しました。承認後に再度開いてください。</div><button class="btn btn-g" style="margin-top:14px" onclick="location.reload()">承認状態を再確認</button><button class="btn btn-g" style="margin-top:14px" onclick="fbSignOut()">サインアウト</button></div>`;
+      const side=document.getElementById('sidebar');if(side)side.style.display='none';
+      const main=document.getElementById('main');if(main)main.style.maxWidth='960px';
+      return;
+    }
     const side=document.getElementById('sidebar');if(side)side.style.display='';
+    const main=document.getElementById('main');if(main)main.style.maxWidth='';
+    if(FB_USER&&_coreAccessAllowed()&&!companyGatePassed()){
+      document.getElementById('view').innerHTML=rCompanyGate();
+      if(side)side.style.display='none';
+      return;
+    }
     // ロックチェック（朝8時以降・朝ジャーナル未完了、または19時以降・夜の記録未完了）
     if(checkDailyLock()){
       const _lh=new Date().getHours();
@@ -3098,7 +3240,7 @@ function render(){
     }
     sessionStorage.setItem('ef_team_view',V);
     // 役割ガード(2026-07-23): 営業スタッフは「営業」「情報」タブ以外を開けない。許可外Vは営業リストへ退避。
-    if(!isViewAllowed(V)){V=(myRole()==='sales'?(_salesAllowedViews()[0]||'salesleads'):'projects');sessionStorage.setItem('ef_team_view',V);}
+    if(!isViewAllowed(V)){V=(BUILTIN_VIEWS.find(x=>isViewAllowed(x.id))?.id)||'projects';sessionStorage.setItem('ef_team_view',V);}
     if(V==='kpi'){V='goals';} // KPI管理は目標・KPI統合ページにリダイレクト
     const views={dashboard:rDash,tasks:rTasks,projects:rProjects,pipeline:rPipeline,teamgoals:rTeamGoals,posts:rPosts,docs:rDocs,workers:rWorkers,habits:rHabits,goals:rGoals,journal:rJournal,revenue:rRevenue,memo:rMemo,settings:rSettings,customize:rCustomize,aichat:rAIChat,fitness:rFitness,kpi:rKpi,bizboard:rBizBoard,bizunits:rBizUnits,bizinfo:rBizInfo,minutes:rMinutes,salesleads:rSalesLeads,salesrank:rSalesRank,igaccounts:rIgAccounts,hpfee:rHpFee,salessites:rSalesSites,inquiries:rInquiries,templates:rTemplates,crm:rCrm,accounts:rAccounts};
     let html;
@@ -5554,6 +5696,21 @@ function wdayInnerDrop(e,targetId,date){
   save();render();_wdayDragId=null;
 }
 // ===PROJECTS===
+const OPS_CHECKLISTS={
+  edit:[['brief','依頼内容を確認'],['materials','素材を受領'],['firstDraft','初稿を提出'],['internalReview','社内チェック完了'],['clientApproval','クライアント確認完了'],['deliveryEvidence','納品証跡を登録']],
+  haken:[['brief','依頼内容を確認'],['materials','素材を受領'],['assignee','編集者を確定'],['firstDraft','初稿を提出'],['clientApproval','クライアント確認完了'],['deliveryEvidence','納品証跡を登録']],
+  hp:[['requirements','要件・サイト構成を確定'],['copy','掲載文章を承認'],['design','デザインを承認'],['responsiveQa','PC・スマホ表示を確認'],['clientApproval','クライアント最終確認'],['published','公開・引継ぎ完了']],
+  consult:[['discovery','現状業務を確認'],['goal','KGI・対象業務を合意'],['scope','今月の実装範囲を確定'],['delivery','成果物・議事録を保存'],['clientReview','クライアント確認完了'],['nextAction','次回アクションを確定']],
+  tool:[['requirements','要件・受入条件を承認'],['test','テスト完了'],['security','権限・秘密情報を確認'],['backup','バックアップ・復旧手順を確認'],['clientAcceptance','検収完了'],['handover','引継ぎ・運用手順を保存']]
+};
+function opsChecklistDef(biz){return OPS_CHECKLISTS[biz]||OPS_CHECKLISTS.edit;}
+function opsChecklistValue(job){return Array.isArray(job?.opsChecklist)?job.opsChecklist:[];}
+function opsChecklistHtml(biz,job){const done=opsChecklistValue(job);return`<div style="font-size:12px;font-weight:700;color:var(--t2);margin:10px 0 6px">運用完了チェック</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:6px">${opsChecklistDef(biz).map(([id,label])=>`<label style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--card2);border:1px solid var(--border);border-radius:8px;font-size:12px"><input class="ops-check" type="checkbox" value="${id}" ${done.includes(id)?'checked':''}>${esc(label)}</label>`).join('')}</div>`;}
+function renderJobChecklist(biz,job){const el=document.getElementById('j-ops-checklist');if(el)el.innerHTML=opsChecklistHtml(biz,job||null);}
+function readOpsChecklist(){return[...document.querySelectorAll('#j-ops-checklist .ops-check:checked')].map(x=>x.value);}
+function opsChecklistMissing(job){const done=opsChecklistValue(job),def=opsChecklistDef(jobBiz(job));return def.filter(([id])=>!done.includes(id));}
+function opsRequiresChecklist(biz,status){const terminal={edit:['完了'],haken:['完了'],hp:['公開済み','完了'],consult:['継続中','完了'],tool:['運用保守','完了']};return(terminal[biz]||terminal.edit).includes(status);}
+function opsReadinessBanner(jobs){const target=(jobs||[]).filter(j=>!j.deleted&&!['キャンセル'].includes(j.status)&&(['完了','公開済み','納品済み'].includes(j.status)||jobBiz(j)==='consult'&&j.status==='継続中')).filter(j=>opsChecklistMissing(j).length);return target.length?`<div class="card" style="margin-bottom:10px;border-left:4px solid var(--amber)"><b>完了確認が残っている案件 ${target.length}件</b><div style="font-size:11px;color:var(--t3);margin-top:3px">納品証跡・検収・引継ぎなど、事業別チェックを完了してください。</div></div>`:'';}
 function sortJobs(jobs){
   switch(JOB_SORT){
     case 'deadline': return [...jobs].sort((a,b)=>(a.deliveryDate||'9999')>(b.deliveryDate||'9999')?1:-1);
@@ -5565,14 +5722,220 @@ function sortJobs(jobs){
     default: return jobs;
   }
 }
+const VIDEO_PHASES=[
+  {id:'intake',label:'受付・募集',statuses:['案件掲載中','募集中','未着手']},
+  {id:'assigned',label:'アサイン済み',statuses:['編集者決定','受注済み']},
+  {id:'editing',label:'編集',statuses:['進行中','編集者進行中']},
+  {id:'review',label:'確認・修正',statuses:['初稿完成','確認待ち','FB待ち','修正中']},
+  {id:'done',label:'完了',statuses:['完了','キャンセル']}
+];
+function _videoPhase(status){return VIDEO_PHASES.find(p=>p.statuses.includes(status))||VIDEO_PHASES[0];}
+function _videoJobs(){
+  const legacy=(S.jobs||[]).filter(j=>!j.deleted&&['edit','haken'].includes(jobBiz(j))&&!j.portalJobId).map(j=>({_source:'legacy',_raw:j,id:j.id,title:j.title||'',clientDisplay:(S.clients||[]).find(c=>c.id===j.clientId)?.name||'',deadline:j.deliveryDate||j.clientDraftDate||j.editorDraftDate||'',status:j.status||'未着手',assignee:getJobWorkerNames(j)||'未割当',urgent:!!j.urgent,progress:j.progressNote||j.notes||'',evidenceUrl:j.evidenceUrl||'',blocker:j.blocker||'',history:j.statusHistory||[],updatedAt:j.updatedAt||0}));
+  const portal=(PORTAL_JOBS||[]).map(j=>({_source:'portal',_raw:j,_portalUid:j._portalUid,id:j.id,title:j.title||'',clientDisplay:j.clientDisplay||'',deadline:j.deliveryDate||j.deadline||j.clientDraftDate||j.editorDraftDate||'',status:j.status||'案件掲載中',assignee:j.editorName||j.editorEmail||'編集者直接入力',urgent:!!j.urgent,progress:j.progress||'',evidenceUrl:j.evidenceUrl||'',blocker:j.blocker||'',history:j.history||[],updatedAt:j.updatedAt||0}));
+  return[...legacy,...portal];
+}
+function _videoFiltered(){const q=VIDEO_QUERY.trim().toLowerCase();return _videoJobs().filter(j=>(!VIDEO_STATUS||j.status===VIDEO_STATUS)&&(!q||[j.title,j.clientDisplay,j.assignee,j.status].join(' ').toLowerCase().includes(q)));}
+function _videoCanEdit(){return _isOwner()||hasAppRole('動画編集ディレクター');}
+function _videoSafeUrl(v){try{const u=new URL(v);return['https:','http:'].includes(u.protocol)?u.href:'';}catch(_){return'';}}
+function _jobScheduleError(schedule){
+  const ordered=[schedule.sharedDate,schedule.editorDraftDate,schedule.clientDraftDate,schedule.deliveryDate].filter(Boolean);
+  for(let i=1;i<ordered.length;i++)if(ordered[i]<ordered[i-1])return'日程は「受注日 → 編集者初稿 → クライアント提出初稿 → 納品日」の順で入力してください';
+  if(schedule.thumbnailDate&&schedule.deliveryDate&&schedule.thumbnailDate>schedule.deliveryDate)return'サムネイル納品日は案件の納品日以前に設定してください';
+  return'';
+}
+function _videoCard(j){
+  const overdue=j.deadline&&j.deadline<today()&&!['完了','キャンセル'].includes(j.status),click=j._source==='portal'?`openPortalJobModal('${j._portalUid}','${j.id}')`:_isOwner()?`openJobModal('${j.id}')`:`openVideoLegacySafeModal('${j.id}')`;
+  return`<button class="card card-sm" style="display:block;width:100%;margin:6px 0;text-align:left;cursor:pointer;border-left:3px solid ${overdue?'var(--red)':j.urgent?'var(--amber)':'var(--pl)'}" onclick="${click}"><div style="display:flex;justify-content:space-between;gap:6px"><b style="font-size:12px">${esc(j.title)}</b>${j._source==='portal'?'<span class="badge bk">直接依頼</span>':''}</div><div style="font-size:10.5px;color:var(--t3);margin-top:3px">${esc(j.clientDisplay||'クライアント未設定')} ・ ${esc(j.assignee)}</div><div style="font-size:10.5px;color:${overdue?'var(--red)':'var(--t3)'}">${esc(j.deadline||'期限未設定')} ・ ${esc(j.status)}${j.evidenceUrl?' ・ 証跡あり':''}${j.blocker?' ・ 停止理由あり':''}</div></button>`;
+}
+function openVideoLegacySafeModal(id){
+  const j=(S.jobs||[]).find(x=>x.id===id);if(!j)return;
+  const canEdit=_videoCanEdit();
+  openModal(`<div class="mhdr"><div class="mtitle">${esc(j.title)}</div><button class="mclose" onclick="closeModal()">✕</button></div><div class="fg"><div class="fl">ステータス</div><select id="vls-status" ${canEdit?'':'disabled'}>${bizStatOpts(jobBiz(j),j.status)}</select></div><div class="fg"><div class="fl">進捗メモ</div><textarea id="vls-progress" ${canEdit?'':'disabled'}>${esc(j.progressNote||j.notes||'')}</textarea></div><div class="fg"><div class="fl">証跡URL</div><input id="vls-evidence" type="url" value="${esc(j.evidenceUrl||'')}" ${canEdit?'':'disabled'}></div><div class="fg"><div class="fl">停止理由</div><textarea id="vls-blocker" ${canEdit?'':'disabled'}>${esc(j.blocker||'')}</textarea></div><div class="mfooter"><button class="btn btn-g" onclick="closeModal()">閉じる</button>${canEdit?`<button class="btn btn-p" onclick="saveVideoLegacySafe('${id}')">保存</button>`:''}</div>`);
+}
+function saveVideoLegacySafe(id){const j=(S.jobs||[]).find(x=>x.id===id);if(!j||!_videoCanEdit())return;const at=Date.now();j.status=document.getElementById('vls-status').value;j.progressNote=document.getElementById('vls-progress').value.trim();j.evidenceUrl=document.getElementById('vls-evidence').value.trim();j.blocker=document.getElementById('vls-blocker').value.trim();j.updatedAt=at;j.updatedBy=_myEmail();j.statusHistory=[...(j.statusHistory||[]),{at,by:_myEmail(),status:j.status,note:j.progressNote,evidenceUrl:j.evidenceUrl}];save();closeModal();render();toast('進捗を更新しました');}
+function openPortalJobModal(portalUid,id){
+  const j=(PORTAL_JOBS||[]).find(x=>x._portalUid===portalUid&&x.id===id);if(!j)return;
+  const canEdit=_videoCanEdit(),owner=_isOwner();
+  const deliveryDate=j.deliveryDate||j.deadline||'';
+  openModal(`<div class="mhdr"><div class="mtitle">直接依頼案件</div><button class="mclose" onclick="closeModal()">✕</button></div>
+<div class="fg"><div class="fl">案件名</div><input id="vp-title" value="${esc(j.title||'')}" ${canEdit?'':'disabled'}></div>
+<div class="fg"><div class="fl">クライアント表示名</div><input id="vp-client" value="${esc(j.clientDisplay||'')}" ${canEdit?'':'disabled'}></div>
+<div style="font-size:12px;font-weight:800;color:var(--t2);margin:10px 0 6px">日程</div>
+<div class="frow"><div class="fg"><div class="fl">受注日</div><input id="vp-shared" type="date" value="${esc(j.sharedDate||'')}" ${canEdit?'':'disabled'}></div><div class="fg"><div class="fl">編集者 初稿</div><input id="vp-editor-draft" type="date" value="${esc(j.editorDraftDate||'')}" ${canEdit?'':'disabled'}></div></div>
+<div class="frow"><div class="fg"><div class="fl">クライアント提出 初稿</div><input id="vp-client-draft" type="date" value="${esc(j.clientDraftDate||'')}" ${canEdit?'':'disabled'}></div><div class="fg"><div class="fl">サムネイル納品日</div><input id="vp-thumbnail" type="date" value="${esc(j.thumbnailDate||'')}" ${canEdit?'':'disabled'}></div></div>
+<div class="fg"><div class="fl">納品日</div><input id="vp-deadline" type="date" value="${esc(deliveryDate)}" ${canEdit?'':'disabled'}></div>
+<div class="fg"><div class="fl">ステータス</div><select id="vp-status" ${canEdit?'':'disabled'}>${bizStatOpts('haken',j.status)}</select></div>
+<div class="fg"><div class="fl">指示・確認メモ</div><textarea id="vp-instructions" ${canEdit?'':'disabled'}>${esc(j.instructions||'')}</textarea></div>
+<div class="fg"><div class="fl">差戻し理由</div><textarea id="vp-correction" ${canEdit?'':'disabled'}>${esc(j.correctionReason||'')}</textarea></div>
+${owner?`<div class="card" style="background:var(--card2)"><div style="font-size:11px;font-weight:800;margin-bottom:6px">オーナーのみ・編集者報酬</div><div class="frow"><div class="fg"><div class="fl">請求可能額</div><input id="vp-pay" type="number" min="0" value="${Number(j.ownPay||0)}"></div><div class="fg"><div class="fl">請求対象月</div><input id="vp-pay-month" type="month" value="${esc(j.payableMonth||String(deliveryDate).slice(0,7))}"></div></div><div class="fg"><div class="fl">請求承認</div><select id="vp-payable"><option value="false" ${j.payableApproved?'':'selected'}>未承認</option><option value="true" ${j.payableApproved?'selected':''}>承認済み</option></select></div></div>
+<div class="card" style="margin-top:8px;background:var(--card2)"><div style="font-size:11px;font-weight:800">社内案件台帳</div><div style="font-size:11px;color:var(--t3);margin:4px 0 8px">${j.linkedLegacyJobId?'自動連携済み。編集者の更新は案件台帳にも反映されます。':'自動連携を処理中です。画面を閉じても次回起動時に再実行します。'}</div>${j.linkedLegacyJobId?`<button class="btn btn-g btn-sm" onclick="openJobModal('${esc(j.linkedLegacyJobId)}')">連携先を開く</button>`:''}</div>`:''}
+<div class="mfooter"><button class="btn btn-g" onclick="closeModal()">閉じる</button>${canEdit?`<button class="btn btn-p" onclick="savePortalJobAdmin('${portalUid}','${id}')">保存</button>`:''}</div>`);
+}
+async function savePortalJobAdmin(portalUid,id){
+  if(!_videoCanEdit())return toast('権限がありません','err');
+  const j=(PORTAL_JOBS||[]).find(x=>x._portalUid===portalUid&&x.id===id);if(!j)return;
+  const at=Date.now(),deliveryDate=document.getElementById('vp-deadline').value,schedule={sharedDate:document.getElementById('vp-shared').value,editorDraftDate:document.getElementById('vp-editor-draft').value,clientDraftDate:document.getElementById('vp-client-draft').value,thumbnailDate:document.getElementById('vp-thumbnail').value,deliveryDate};
+  const scheduleError=_jobScheduleError(schedule);if(scheduleError)return toast(scheduleError,'warn');
+  if(!deliveryDate)return toast('納品日を入力してください','warn');
+  const data={title:document.getElementById('vp-title').value.trim(),clientDisplay:document.getElementById('vp-client').value.trim(),deadline:deliveryDate,...schedule,status:document.getElementById('vp-status').value,instructions:document.getElementById('vp-instructions').value.trim(),correctionReason:document.getElementById('vp-correction').value.trim(),updatedAt:at,updatedBy:_myEmail(),history:[...(j.history||[]).slice(-49),{at,by:_myEmail(),type:'manager_update',status:document.getElementById('vp-status').value}]};
+  if(_isOwner()){
+    data.ownPay=Math.max(0,Number(document.getElementById('vp-pay').value)||0);data.payableMonth=document.getElementById('vp-pay-month').value||'';data.payableApproved=document.getElementById('vp-payable').value==='true';data.payableApprovedAt=data.payableApproved?at:null;
+    if(data.payableApproved&&(data.status!=='完了'||!data.ownPay||!data.payableMonth||!_videoSafeUrl(j.evidenceUrl||'')||j.blocker))return toast('完了済み・納品証跡・停止理由・金額・請求対象月を確認してから請求承認してください','warn');
+  }
+  try{
+    const ref=fbDb.collection('editor_portals').doc(portalUid).collection('editor_jobs').doc(id),event=ref.collection('events').doc(),batch=fbDb.batch();
+    batch.set(ref,data,{merge:true});batch.set(event,{at:firebase.firestore.FieldValue.serverTimestamp(),byUid:FB_USER.uid,byEmail:_myEmail(),type:'manager_update',status:data.status,payableApproved:data.payableApproved===true});await batch.commit();
+    if(_applyPortalToLegacy({...j,...data},true))save();
+    if(_isOwner()&&data.payableMonth)await _refreshInvoiceAuthorization(portalUid,data.payableMonth,{...j,...data});
+    closeModal();toast('案件を更新しました');
+  }catch(e){console.warn('portal job update',e);toast('案件の更新に失敗しました','err');}
+}
+function _portalLegacyId(portalUid,id){return('ep_'+String(portalUid).slice(0,10)+'_'+String(id)).replace(/[^A-Za-z0-9_-]/g,'_');}
+function _newPortalLegacyJob(j){
+  const client=(S.clients||[]).find(c=>!c.deleted&&String(c.name||'').trim()===String(j.clientDisplay||'').trim()),access=(ACCESS_RECORDS||[]).find(x=>x.id===j._portalUid),workerId=access?.workerId||null,at=Number(j.updatedAt)||Date.now();
+  return{id:j.linkedLegacyJobId,biz:'haken',jobType:'edit',title:j.title||'編集者直接依頼',clientId:client?.id||null,workerId,workerIds:workerId?[workerId]:[],scope:'その他',status:j.status||'受注済み',sharedDate:j.sharedDate||String(j.createdAt?new Date(j.createdAt).toISOString().slice(0,10):today()),deliveryDate:j.deliveryDate||j.deadline||null,editorDraftDate:j.editorDraftDate||null,clientDraftDate:j.clientDraftDate||null,thumbnailDate:j.thumbnailDate||null,invoiceDate:null,dueDate:null,paymentDate:null,paidAt:null,payoutDate:null,unitPrice:0,workerPay:Number(j.ownPay)||0,profit:0,notes:j.instructions||'',progressNote:j.progress||'',evidenceUrl:j.evidenceUrl||'',blocker:j.blocker||'',portalUid:j._portalUid,portalJobId:j.id,source:'editor_portal',opsChecklist:[],createdAt:new Date().toISOString(),updatedAt:at,updatedBy:j.updatedBy||j.editorEmail||_myEmail()};
+}
+function _portalField(j,key,fallback){return Object.prototype.hasOwnProperty.call(j,key)?(j[key]||null):fallback;}
+function _applyPortalToLegacy(j,createMissing=false){
+  if(!j?.linkedLegacyJobId)return false;
+  let target=(S.jobs||[]).find(x=>x.id===j.linkedLegacyJobId),changed=false;
+  if(!target&&createMissing&&_isOwner()){target=_newPortalLegacyJob(j);S.jobs.unshift(target);changed=true;}
+  if(!target)return false;
+  if(target.portalUid&&target.portalUid!==j._portalUid||target.portalJobId&&target.portalJobId!==j.id)return false;
+  const next={title:j.title||target.title,status:j.status||target.status,sharedDate:_portalField(j,'sharedDate',target.sharedDate),editorDraftDate:_portalField(j,'editorDraftDate',target.editorDraftDate),clientDraftDate:_portalField(j,'clientDraftDate',target.clientDraftDate),thumbnailDate:_portalField(j,'thumbnailDate',target.thumbnailDate),deliveryDate:_portalField(j,'deliveryDate',j.deadline||target.deliveryDate),notes:j.instructions||target.notes,progressNote:j.progress||target.progressNote,evidenceUrl:j.evidenceUrl||target.evidenceUrl,blocker:j.blocker||'',updatedAt:Number(j.updatedAt)||Date.now(),updatedBy:j.updatedBy||j.editorEmail||_myEmail()};
+  if(Object.keys(next).some(k=>JSON.stringify(target[k])!==JSON.stringify(next[k]))){Object.assign(target,next);target.statusHistory=[...(target.statusHistory||[]).slice(-99),{at:next.updatedAt,by:next.updatedBy,status:next.status,note:next.progressNote,evidenceUrl:next.evidenceUrl,source:'editor_portal'}];changed=true;}
+  return changed;
+}
+function _syncPortalLinkedJobsToLegacy(){if(!_isOwner())return;let changed=false;(PORTAL_JOBS||[]).forEach(j=>{if(_applyPortalToLegacy(j,true))changed=true;});if(changed){save();renderSyncSafe();}}
+const _portalAutoLinking=new Set();
+async function _ensurePortalLinkedJob(j){
+  if(!_isOwner()||!j?._portalUid||!j.id||j.linkedLegacyJobId)return;
+  const key=j._portalUid+'/'+j.id;if(_portalAutoLinking.has(key))return;_portalAutoLinking.add(key);
+  try{
+    const ref=fbDb.collection('editor_portals').doc(j._portalUid).collection('editor_jobs').doc(j.id),linkedId=_portalLegacyId(j._portalUid,j.id),event=ref.collection('events').doc();
+    await fbDb.runTransaction(async tx=>{const snap=await tx.get(ref);if(!snap.exists||snap.data().linkedLegacyJobId)return;const at=Date.now();tx.set(ref,{linkedLegacyJobId:linkedId,integratedAt:at,integratedBy:_myEmail()},{merge:true});tx.set(event,{at:firebase.firestore.FieldValue.serverTimestamp(),byUid:FB_USER.uid,byEmail:_myEmail(),type:'integrated_to_legacy',linkedLegacyJobId:linkedId,status:snap.data().status||''});});
+  }catch(e){console.warn('portal auto integration',e&&e.code||e);}finally{_portalAutoLinking.delete(key);}
+}
+function _autoIntegratePortalJobs(){if(!_isOwner())return;(PORTAL_JOBS||[]).filter(j=>!j.linkedLegacyJobId).forEach(j=>void _ensurePortalLinkedJob(j));}
+async function promotePortalJob(portalUid,id){
+  if(!_isOwner())return toast('オーナーのみ操作できます','err');
+  const j=(PORTAL_JOBS||[]).find(x=>x._portalUid===portalUid&&x.id===id);if(!j)return;
+  const linkedId=j.linkedLegacyJobId||_portalLegacyId(portalUid,id);
+  try{
+    const ref=fbDb.collection('editor_portals').doc(portalUid).collection('editor_jobs').doc(id),event=ref.collection('events').doc(),batch=fbDb.batch(),at=Date.now();
+    batch.set(ref,{linkedLegacyJobId:linkedId,integratedAt:at,integratedBy:_myEmail(),updatedAt:at},{merge:true});batch.set(event,{at:firebase.firestore.FieldValue.serverTimestamp(),byUid:FB_USER.uid,byEmail:_myEmail(),type:'integrated_to_legacy',linkedLegacyJobId:linkedId,status:j.status});await batch.commit();
+    _applyPortalToLegacy({...j,_portalUid:portalUid,linkedLegacyJobId:linkedId,integratedAt:at,integratedBy:_myEmail(),updatedAt:at},true);
+    save();closeModal();render();toast('既存の案件管理へ統合しました');
+  }catch(e){console.warn('portal integration',e);toast('案件台帳へ統合できませんでした','err');}
+}
+async function _refreshInvoiceAuthorization(portalUid,month,overrideJob){
+  if(!_isOwner()||!month)return;
+  const all=(PORTAL_JOBS||[]).map(j=>j._portalUid===portalUid&&overrideJob&&j.id===overrideJob.id?{...j,...overrideJob}:j),jobs=all.filter(j=>j._portalUid===portalUid&&j.status==='完了'&&j.payableApproved===true&&Number(j.ownPay)>0&&String(j.payableMonth||'').slice(0,7)===month).sort((a,b)=>String(a.id).localeCompare(String(b.id))),profile=(PORTAL_PROFILES||[]).find(p=>p._portalUid===portalUid),rate=[0,8,10].includes(Number(profile?.taxRate))?Number(profile.taxRate):0,lines=jobs.map(j=>({jobId:j.id,title:j.title||'',serviceDescription:j.title||'',transactionDate:j.deliveryDate||j.deadline||today(),amount:Number(j.ownPay),taxRate:rate})),jobIds=lines.map(x=>x.jobId),subtotal=lines.reduce((n,x)=>n+x.amount,0),taxByRate={[rate]:Math.round(subtotal*rate/100)},tax=Object.values(taxByRate).reduce((a,b)=>a+b,0),total=subtotal+tax,active=jobIds.length>0,authId=month,ref=fbDb.collection('editor_portals').doc(portalUid).collection('invoice_authorizations').doc(authId),event=ref.collection('events').doc();
+  await fbDb.runTransaction(async tx=>{
+    const snap=await tx.get(ref),existing=snap.exists?snap.data():null,unchanged=existing&&existing.active===active&&existing.month===month&&JSON.stringify(existing.jobIds||[])===JSON.stringify(jobIds)&&JSON.stringify(existing.lines||[])===JSON.stringify(lines)&&Number(existing.subtotal)===subtotal&&JSON.stringify(existing.taxByRate||{})===JSON.stringify(taxByRate)&&Number(existing.tax)===tax&&Number(existing.total)===total;
+    if(unchanged)return;
+    const revision=Number(existing?.revision||0)+1,invoiceVersion=1,invoiceDocumentId=`${authId}-r${revision}-v${invoiceVersion}`;
+    tx.set(ref,{recordType:'invoice_authorization',editorUid:portalUid,month,jobIds,lines,subtotal,taxByRate,tax,total,active,revision,invoiceVersion,invoiceDocumentId,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:_myEmail()},{merge:true});tx.set(event,{at:firebase.firestore.FieldValue.serverTimestamp(),byUid:FB_USER.uid,type:'authorization_refreshed',revision,invoiceVersion,invoiceDocumentId,jobCount:jobIds.length,total});
+  });
+}
+function _videoDriveUrl(v){
+  try{const u=new URL(v);return u.protocol==='https:'&&u.hostname==='drive.google.com'?u.href:'';}catch(_){return'';}
+}
+function _portalInvoiceCheck(x){
+  if(!x)return{ok:false,reason:'請求書が見つかりません'};
+  const ids=Array.isArray(x.jobIds)?x.jobIds:[],lines=Array.isArray(x.lines)?x.lines:[];
+  if(!ids.length||new Set(ids).size!==ids.length||lines.length!==ids.length)return{ok:false,reason:'請求対象案件の明細が一致しません'};
+  const authorization=(PORTAL_AUTHORIZATIONS||[]).find(v=>v._portalUid===x._portalUid&&v.id===x.authorizationId);
+  if(!authorization||authorization.active!==true)return{ok:false,reason:'管理者の報酬確定データが見つかりません'};
+  if(Number(authorization.revision)!==Number(x.authorizationRevision))return{ok:false,reason:'報酬確定後に内容が更新されています。請求書を作り直してください'};
+  if(authorization.invoiceDocumentId!==x.id||Number(authorization.invoiceVersion)!==Number(x.version))return{ok:false,reason:'この請求書バージョンは現在の確定枠と一致しません'};
+  const exactAuthorization=String(authorization.month||'')===String(x.month||'')
+    && JSON.stringify(authorization.jobIds||[])===JSON.stringify(ids)
+    && JSON.stringify(authorization.lines||[])===JSON.stringify(lines)
+    && Number(authorization.subtotal)===Number(x.subtotal)
+    && JSON.stringify(authorization.taxByRate||{})===JSON.stringify(x.taxByRate||{})
+    && Number(authorization.tax)===Number(x.tax)
+    && Number(authorization.total)===Number(x.total);
+  if(!exactAuthorization)return{ok:false,reason:'請求内容が管理者の確定報酬と一致しません'};
+  const duplicate=(PORTAL_INVOICES||[]).some(v=>v._portalUid===x._portalUid&&v.id!==x.id&&!['取消','差戻し'].includes(v.status)&&(v.jobIds||[]).some(jobId=>ids.includes(jobId)));
+  if(duplicate)return{ok:false,reason:'同じ案件を含む有効な請求書が既にあります'};
+  let subtotal=0;const taxByRate={};
+  for(const jobId of ids){
+    const j=(PORTAL_JOBS||[]).find(v=>v._portalUid===x._portalUid&&v.id===jobId),line=lines.find(v=>v.jobId===jobId);
+    if(!j||!line)return{ok:false,reason:'元案件または明細が見つかりません'};
+    if(j.payableApproved!==true||Number(j.ownPay)<=0)return{ok:false,reason:'未承認の報酬が含まれています'};
+    if(String(j.payableMonth||j.deadline||'').slice(0,7)!==String(x.month||''))return{ok:false,reason:'請求対象月が承認内容と一致しません'};
+    if(Number(line.amount)!==Number(j.ownPay))return{ok:false,reason:'請求額が承認済み報酬と一致しません'};
+    const rate=Number(line.taxRate||0);if(![0,8,10].includes(rate))return{ok:false,reason:'税率を確認してください'};
+    subtotal+=Number(line.amount);taxByRate[rate]=(taxByRate[rate]||0)+Number(line.amount);
+  }
+  const tax=Object.entries(taxByRate).reduce((n,[rate,amount])=>n+Math.round(amount*Number(rate)/100),0);
+  if(Number(x.subtotal)!==subtotal||Number(x.tax)!==tax||Number(x.total)!==subtotal+tax)return{ok:false,reason:'小計・消費税・合計を再確認してください'};
+  const shared=(x.file?.sharedWith||[]).map(v=>String(v).toLowerCase());
+  if(x.file?.provider!=='google-drive'||!x.file?.id||!x.file?.sha256||x.ownerShareStatus!=='shared'||!_videoDriveUrl(x.file?.webViewLink)||!shared.some(v=>ADMIN_EMAILS.includes(v)))return{ok:false,reason:'Drive原本または管理者共有が確認できません'};
+  return{ok:true,reason:'承認済み案件・報酬額と一致'};
+}
+async function portalRegistrationReview(portalUid,verified){
+  if(!_isOwner())return toast('オーナーのみ操作できます','err');
+  const p=(PORTAL_PROFILES||[]).find(v=>v._portalUid===portalUid);if(!p)return;
+  if(verified&&!/^T\d{13}$/.test(String(p.registrationNumber||'')))return toast('登録番号の形式を確認してください','err');
+  const message=verified?'国税庁の公表サイトで登録番号と氏名を照合しましたか？':'適格請求書の確認済み状態を解除しますか？';
+  if(!confirm(message))return;
+  try{await fbDb.collection('editor_portals').doc(portalUid).collection('editor_profile').doc(p.id||'self').set({registrationVerified:!!verified,registrationVerifiedAt:firebase.firestore.FieldValue.serverTimestamp(),registrationVerifiedBy:_myEmail()},{merge:true});toast(verified?'登録番号を確認済みにしました':'登録番号の確認を解除しました');}catch(e){console.warn('registration review',e);toast('登録番号の確認状態を更新できませんでした','err');}
+}
+function _videoRegistrationHtml(){
+  const list=(PORTAL_PROFILES||[]).filter(p=>/^T\d{13}$/.test(String(p.registrationNumber||''))).sort((a,b)=>String(a.issuerName||'').localeCompare(String(b.issuerName||'')));
+  if(!list.length)return'';
+  return`<div class="card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:7px"><b>適格請求書 登録番号の確認</b><a class="btn btn-g btn-sm" href="https://www.invoice-kohyo.nta.go.jp/" target="_blank" rel="noopener">国税庁で照合</a></div>${list.map(p=>`<div style="display:flex;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--border)"><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700">${esc(p.issuerName||'請求者名未設定')}</div><div style="font-size:11px;color:var(--t3)">${esc(p.registrationNumber)}</div></div><span class="badge ${p.registrationVerified?'bg':'ba'}">${p.registrationVerified?'確認済み':'確認待ち'}</span><button class="btn ${p.registrationVerified?'btn-g':'btn-p'} btn-sm" onclick="portalRegistrationReview('${p._portalUid}',${p.registrationVerified?'false':'true'})">${p.registrationVerified?'確認解除':'確認済みにする'}</button></div>`).join('')}</div>`;
+}
+async function portalInvoiceAction(portalUid,id,next){
+  if(!_isOwner())return toast('オーナーのみ操作できます','err');
+  const x=(PORTAL_INVOICES||[]).find(v=>v._portalUid===portalUid&&v.id===id);if(!x)return;
+  const allowed=['差戻し','承認済み','支払処理中','支払済み','取消'];if(!allowed.includes(next))return;
+  const check=_portalInvoiceCheck(x);
+  if(next==='承認済み'&&!check.ok)return toast(check.reason,'err');
+  if(next==='承認済み'&&!confirm('Drive原本を開き、請求者名・口座・明細を確認しましたか？'))return;
+  const reason=next==='差戻し'?(prompt('差戻し理由を入力してください')||'').trim():'';if(next==='差戻し'&&!reason)return;
+  const at=Date.now(),root=fbDb.collection('editor_portals').doc(portalUid),ref=root.collection('editor_invoices').doc(id),event=ref.collection('events').doc();
+  try{const batch=fbDb.batch();batch.set(ref,{status:next,reviewReason:reason||null,updatedAt:at,updatedBy:_myEmail(),history:[...(x.history||[]).slice(-99),{at,by:_myEmail(),status:next,reason}]},{merge:true});batch.set(event,{at:firebase.firestore.FieldValue.serverTimestamp(),by:_myEmail(),status:next,reason,invoiceId:id});
+    if(next==='差戻し'){
+      const authorization=(PORTAL_AUTHORIZATIONS||[]).find(a=>a._portalUid===portalUid&&a.id===x.authorizationId&&a.active===true&&Number(a.revision)===Number(x.authorizationRevision));
+      if(authorization){const invoiceVersion=Number(x.version||1)+1,invoiceDocumentId=`${authorization.id}-r${authorization.revision}-v${invoiceVersion}`,authRef=root.collection('invoice_authorizations').doc(authorization.id);batch.set(authRef,{invoiceVersion,invoiceDocumentId,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:_myEmail()},{merge:true});batch.set(authRef.collection('events').doc(),{at:firebase.firestore.FieldValue.serverTimestamp(),byUid:FB_USER.uid,type:'invoice_revision_authorized',revision:Number(authorization.revision),invoiceVersion,invoiceDocumentId,supersedesInvoiceId:id});}
+    }
+    await batch.commit();toast(`請求書を「${next}」に更新しました`);}catch(e){console.warn('invoice action',e);toast('請求書の更新に失敗しました','err');}
+}
+function _videoInvoiceHtml(){
+  const list=[...(PORTAL_INVOICES||[])].sort((a,b)=>(b.submittedAt||b.updatedAt||0)-(a.submittedAt||a.updatedAt||0));
+  const registrations=_videoRegistrationHtml();
+  if(!list.length)return`${registrations}<div class="empty"><div class="empty-title">提出された請求書はありません</div></div>`;
+  return registrations+list.map(x=>{const fileUrl=_videoDriveUrl(x.file?.webViewLink||''),check=_portalInvoiceCheck(x);return`<div class="card" style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:start"><div><b>${esc(x.editorName||x.issuer?.name||x.editorEmail||'編集者')}</b><div style="font-size:11px;color:var(--t3)">${esc(x.month||'')} ・ ${esc(x.invoiceNumber||'')} ・ version ${Number(x.version||1)}</div></div><span class="badge bk">${esc(x.status||'下書き')}</span></div><div style="font-size:16px;font-weight:800;margin:8px 0">¥${Number(x.total||0).toLocaleString()}</div><div style="font-size:11px;color:var(--t3)">${esc(x.documentType||'通常の請求書')} ・ 源泉徴収 ${esc(x.withholdingStatus||'未確認')}</div><div style="font-size:11px;color:${check.ok?'var(--green)':'var(--red)'};margin-top:5px">${check.ok?'✓ ': '⚠ '}${esc(check.reason)}</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${fileUrl?`<a class="btn btn-g btn-sm" href="${esc(fileUrl)}" target="_blank" rel="noopener">原本を開く</a>`:'<span style="font-size:11px;color:var(--red)">原本共有未完了</span>'}${['提出済み','再提出'].includes(x.status)?`<button class="btn btn-g btn-sm" onclick="portalInvoiceAction('${x._portalUid}','${x.id}','差戻し')">差戻し</button><button class="btn btn-p btn-sm" ${check.ok?'':'disabled'} onclick="portalInvoiceAction('${x._portalUid}','${x.id}','承認済み')">承認</button>`:''}${x.status==='承認済み'?`<button class="btn btn-p btn-sm" onclick="portalInvoiceAction('${x._portalUid}','${x.id}','支払処理中')">支払処理へ</button>`:''}${x.status==='支払処理中'?`<button class="btn btn-p btn-sm" onclick="portalInvoiceAction('${x._portalUid}','${x.id}','支払済み')">支払済み</button>`:''}</div><div style="font-size:10.5px;color:var(--t3);margin-top:8px">「承認」は社内の支払事務上の確認であり、税務上の有効性を保証するものではありません。</div></div>`;}).join('');
+}
+function rVideoOperations(){
+  const all=_videoJobs(),active=all.filter(j=>!['完了','キャンセル'].includes(j.status)),filtered=_videoFiltered(),overdue=active.filter(j=>j.deadline&&j.deadline<today()),unassigned=active.filter(j=>j._source==='legacy'&&j.assignee==='未割当'),blocked=active.filter(j=>j.blocker),review=active.filter(j=>_videoPhase(j.status).id==='review');
+  const editorPortalReady=ACCESS_CONTROL.configured===true&&Array.isArray(ACCESS_CONTROL.compatibilityEmails)&&ACCESS_CONTROL.compatibilityEmails.length>0;
+  const tabs=[['overview','ダッシュボード'],['board','工程ボード'],['queue','対応キュー'],...(_isOwner()?[['invoices',`請求書 ${PORTAL_INVOICES.filter(x=>['提出済み','再提出'].includes(x.status)).length}`]]:[]),['legacy','従来の案件管理']];
+  const board=`<div style="display:flex;gap:8px;overflow-x:auto;align-items:start">${VIDEO_PHASES.map(p=>`<section class="card" style="min-width:210px;flex:1"><div style="display:flex;justify-content:space-between"><b>${p.label}</b><span class="badge bk">${filtered.filter(j=>p.statuses.includes(j.status)).length}</span></div>${filtered.filter(j=>p.statuses.includes(j.status)).map(_videoCard).join('')||'<div style="font-size:11px;color:var(--t3);padding:12px 0">0件</div>'}</section>`).join('')}</div>`;
+  const queue=[['期限超過',overdue,'var(--red)'],['停止中',blocked,'var(--amber)'],['確認・修正待ち',review,'var(--pl)'],['未割当',unassigned,'var(--red)']].map(([label,list,color])=>`<div class="card" style="border-left:3px solid ${color}"><div style="display:flex;justify-content:space-between"><b>${label}</b><span>${list.length}件</span></div>${list.slice(0,20).map(_videoCard).join('')||'<div style="font-size:11px;color:var(--t3);padding-top:8px">該当なし</div>'}</div>`).join('');
+  const overview=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px;margin-bottom:10px"><div class="card"><div style="font-size:11px;color:var(--t3)">制作中</div><b style="font-size:24px">${active.length}</b></div><div class="card"><div style="font-size:11px;color:var(--t3)">直接依頼</div><b style="font-size:24px">${PORTAL_JOBS.length}</b></div><div class="card"><div style="font-size:11px;color:var(--t3)">期限超過</div><b style="font-size:24px;color:var(--red)">${overdue.length}</b></div><div class="card"><div style="font-size:11px;color:var(--t3)">確認・修正待ち</div><b style="font-size:24px">${review.length}</b></div></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px">${VIDEO_PHASES.map(p=>`<div class="card"><div style="font-size:11px;color:var(--t3)">${p.label}</div><div style="font-size:20px;font-weight:800">${all.filter(j=>p.statuses.includes(j.status)).length}</div><div style="height:5px;background:var(--card2);border-radius:99px;margin-top:7px"><div style="height:100%;width:${all.length?Math.round(all.filter(j=>p.statuses.includes(j.status)).length/all.length*100):0}%;background:var(--pl);border-radius:99px"></div></div></div>`).join('')}</div><div style="margin-top:10px">${queue}</div>`;
+  return`${rBizBar()}<div class="ph"><div><div class="ph-title">動画オペレーション</div><div style="font-size:12px;color:var(--t2)">編集代行・編集者派遣・直接依頼を一元管理</div></div><div style="display:flex;gap:6px;flex-wrap:wrap">${editorPortalReady?'<a class="btn btn-g btn-sm" href="./editor.html" target="_blank" rel="noopener">編集者共有リンク</a>':_isOwner()?'<button class="btn btn-g btn-sm" disabled title="設定で既存スタッフの許可リストを固定してください">編集者共有リンク（権限設定後）</button>':''}${_videoCanEdit()?'<button class="btn btn-p btn-sm" onclick="openJobModal()">＋ 社内案件</button>':''}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px">${tabs.map(([k,l])=>`<button class="btn btn-g btn-sm ${VIDEO_TAB===k?'btn-p':''}" onclick="setVideoTab('${k}')">${l}</button>`).join('')}</div>${VIDEO_TAB==='board'?`<div class="card" style="display:grid;grid-template-columns:minmax(180px,1fr) 180px;gap:8px;margin-bottom:9px"><input aria-label="案件検索" placeholder="案件・クライアント・担当者を検索" value="${esc(VIDEO_QUERY)}" oninput="VIDEO_QUERY=this.value;render()"><select aria-label="ステータス絞り込み" onchange="VIDEO_STATUS=this.value;render()"><option value="">すべてのステータス</option>${[...new Set([...BIZ_CFG.edit.statuses,...BIZ_CFG.haken.statuses])].map(s=>`<option ${VIDEO_STATUS===s?'selected':''}>${s}</option>`).join('')}</select></div>${board}`:VIDEO_TAB==='queue'?`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px">${queue}</div>`:VIDEO_TAB==='invoices'?_videoInvoiceHtml():overview}`;
+}
+
 function rProjects(){
+  const spaces=allowedWorkspaces();if(!spaces.includes(PWORK)){PWORK=spaces[0]||'video';sessionStorage.setItem('mc_work_space',PWORK);}
+  if(PWORK==='video'&&VIDEO_TAB!=='legacy')return rVideoOperations();
+  if(PWORK==='video'&&!['edit','haken'].includes(PBIZ))PBIZ='edit';
+  if(PWORK==='hp')PBIZ='hp';
+  if(PWORK==='ai'&&!['consult','tool'].includes(PBIZ))PBIZ='consult';
   const clients=S.clients.filter(c=>!c.deleted);
   const bc=bizCfg();
   if(bc.tabs.indexOf(PVMT)<0)PVMT=bc.tabs[0];
   if(PRIO_IDX>=bc.prio.length)PRIO_IDX=0;
   const bd=bizDefOf(PBIZ);
-  const tabs=bc.tabs.map(k=>[k,k==='worker'?bc.lbl.member:PTAB_LBL[k]]);
-  return`${rBizBar()}<div class="ph">
+  const tabs=bc.tabs.filter(_canOpenProjectTab).map(k=>[k,k==='worker'?bc.lbl.member:PTAB_LBL[k]]);
+  if(!tabs.some(([k])=>k===PVMT))PVMT=tabs[0]?.[0]||'board';
+  const subBiz=PWORK==='ai'?`<div style="display:flex;gap:6px;margin-bottom:10px"><button class="btn btn-sm ${PBIZ==='consult'?'btn-p':'btn-g'}" onclick="setPBiz('consult')">AIコンサルティング</button><button class="btn btn-sm ${PBIZ==='tool'?'btn-p':'btn-g'}" onclick="setPBiz('tool')">AIアプリ・自動化開発</button></div>`:PWORK==='video'?`<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap"><button class="btn btn-sm ${PBIZ==='edit'?'btn-p':'btn-g'}" onclick="setPBiz('edit')">編集代行</button><button class="btn btn-sm ${PBIZ==='haken'?'btn-p':'btn-g'}" onclick="setPBiz('haken')">編集者派遣</button><button class="btn btn-sm btn-g" onclick="setVideoTab('overview')">新しい動画管理へ戻る</button></div>`:'';
+  return`${rBizBar()}${subBiz}<div class="ph">
   <div class="ph-title">案件管理 <span style="font-size:13px;color:var(--t2)">/ ${bd.icon} ${esc(bd.label)}</span></div>
   <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
     ${tabs.map(([k,l])=>`<button class="btn btn-g btn-sm ${PVMT===k?'btn-p':''}" onclick="PVMT='${k}';render()">${l}</button>`).join('')}
@@ -5590,6 +5953,7 @@ function rProjects(){
     </select>
   </div>
 </div>
+${opsReadinessBanner(BJOBS())}
 ${(()=>{
   const warnings=[];
   const activeJobs=BJOBS().filter(j=>!j.deleted&&j.status!=='完了'&&j.status!=='キャンセル');
@@ -5623,7 +5987,7 @@ ${(()=>{
       </div>`);
     }
     const du_inv=daysUntil(j.invoiceDate);
-    if(j.invoiceDate&&du_inv<=3&&du_inv>=0){
+    if(_canViewFinancials()&&j.invoiceDate&&du_inv<=3&&du_inv>=0){
       const dayLbl=du_inv===0?'今日':du_inv===1?'明日':`あと${du_inv}日`;
       warnings.push(`<div style="background:var(--adim);border:1px solid var(--amber);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer" onclick="openJobModal('${j.id}')">
         <span style="font-size:18px">🧾</span>
@@ -5635,7 +5999,7 @@ ${(()=>{
       </div>`);
     }
     const du_out=daysUntil(j.payoutDate);
-    if(j.payoutDate&&du_out<=3&&du_out>=0){
+    if(_canViewFinancials()&&j.payoutDate&&du_out<=3&&du_out>=0){
       const dayLbl=du_out===0?'今日':du_out===1?'明日':`あと${du_out}日`;
       const workerName=getJobWorkerNames(j)||'担当者';
       warnings.push(`<div style="background:var(--adim);border:1px solid var(--amber);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer" onclick="openJobModal('${j.id}')">
@@ -5655,6 +6019,7 @@ ${{board:rProjBoard,deadline:rProjDeadline,listing:rProjListing,list:()=>rProjLi
 }
 
 function rProjListing(){
+  if(!_canViewFinancials())return _financialAccessDenied('掲載案件の金額情報');
   const ST='案件掲載中';
   // 掲載中の案件（job.status === ST）
   const listingJobs=sortJobs(BJOBS().filter(j=>!j.deleted&&j.status===ST));
@@ -5780,9 +6145,10 @@ function rProjClients(){
   // 全クライアントの集計
   const allActiveJobs=BJOBS().filter(j=>!j.deleted&&j.status!=='完了'&&j.status!=='キャンセル');
   const allDoneJobs=BJOBS().filter(j=>!j.deleted&&j.status==='完了');
-  const totalRevenue=allDoneJobs.reduce((s,j)=>s+jobMainIn(j),0);
-  const totalProfit=allDoneJobs.reduce((s,j)=>s+jobMainProfit(j),0);
-  const totalPending=allDoneJobs.filter(j=>!isJobPaid(j)).reduce((s,j)=>s+jobMainIn(j),0);
+  const canViewFinancials=_canViewFinancials();
+  const totalRevenue=canViewFinancials?allDoneJobs.reduce((s,j)=>s+jobMainIn(j),0):0;
+  const totalProfit=canViewFinancials?allDoneJobs.reduce((s,j)=>s+jobMainProfit(j),0):0;
+  const totalPending=canViewFinancials?allDoneJobs.filter(j=>!isJobPaid(j)).reduce((s,j)=>s+jobMainIn(j),0):0;
   const trialClients=clients.filter(c=>c.isTrial);
   const contractClients=clients.filter(c=>!c.isTrial);
 
@@ -5800,19 +6166,18 @@ function rProjClients(){
   <div><div style="font-size:11px;color:var(--amber)">トライアル</div><div style="font-size:20px;font-weight:700;color:var(--amber)">${trialClients.length}社</div></div>
   <div><div style="font-size:11px;color:var(--green)">成約</div><div style="font-size:20px;font-weight:700;color:var(--green)">${contractClients.length}社</div></div>
   <div><div style="font-size:11px;color:var(--t2)">進行中案件</div><div style="font-size:20px;font-weight:700;color:var(--blue)">${allActiveJobs.length}件</div></div>
-  ${totalRevenue?`<div><div style="font-size:11px;color:var(--t2)">累計売上</div><div style="font-size:20px;font-weight:700;color:var(--blue)">¥${totalRevenue.toLocaleString()}</div></div>`:''}
-  ${totalProfit?`<div><div style="font-size:11px;color:var(--t2)">累計利益</div><div style="font-size:20px;font-weight:700;color:var(--green)">¥${totalProfit.toLocaleString()}</div></div>`:''}
-  ${totalPending?`<div><div style="font-size:11px;color:var(--amber)">入金待ち</div><div style="font-size:20px;font-weight:700;color:var(--amber)">¥${totalPending.toLocaleString()}</div></div>`:''}
+  ${canViewFinancials&&totalRevenue?`<div><div style="font-size:11px;color:var(--t2)">累計売上</div><div style="font-size:20px;font-weight:700;color:var(--blue)">¥${totalRevenue.toLocaleString()}</div></div>`:''}
+  ${canViewFinancials&&totalProfit?`<div><div style="font-size:11px;color:var(--t2)">累計利益</div><div style="font-size:20px;font-weight:700;color:var(--green)">¥${totalProfit.toLocaleString()}</div></div>`:''}
+  ${canViewFinancials&&totalPending?`<div><div style="font-size:11px;color:var(--amber)">入金待ち</div><div style="font-size:20px;font-weight:700;color:var(--amber)">¥${totalPending.toLocaleString()}</div></div>`:''}
 </div>
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
 ${sorted.map(cl=>{
   const activeJobs=BJOBS().filter(j=>!j.deleted&&j.clientId===cl.id&&j.status!=='完了'&&j.status!=='キャンセル');
   const doneJobs=BJOBS().filter(j=>!j.deleted&&j.clientId===cl.id&&j.status==='完了');
   const allJobs=BJOBS().filter(j=>!j.deleted&&j.clientId===cl.id);
-  const revenue=doneJobs.reduce((s,j)=>s+jobMainIn(j),0);
-  const profit=doneJobs.reduce((s,j)=>s+jobMainProfit(j),0);
-  const pending=doneJobs.filter(j=>!isJobPaid(j)).reduce((s,j)=>s+jobMainIn(j),0);
-  const activeTotal=activeJobs.reduce((s,j)=>s+jobMainIn(j),0);
+  const revenue=canViewFinancials?doneJobs.reduce((s,j)=>s+jobMainIn(j),0):0;
+  const profit=canViewFinancials?doneJobs.reduce((s,j)=>s+jobMainProfit(j),0):0;
+  const pending=canViewFinancials?doneJobs.filter(j=>!isJobPaid(j)).reduce((s,j)=>s+jobMainIn(j),0):0;
 
   // ステータス別件数
   const statusCounts={};
@@ -5836,11 +6201,11 @@ ${sorted.map(cl=>{
         <div style="font-size:18px;font-weight:700;color:var(--green)">${doneJobs.length}</div>
         <div style="font-size:10px;color:var(--t2)">完了</div>
       </div>`:''}
-      ${revenue?`<div style="text-align:center;background:var(--card2);border-radius:8px;padding:6px 10px;flex:1;min-width:60px">
+      ${canViewFinancials&&revenue?`<div style="text-align:center;background:var(--card2);border-radius:8px;padding:6px 10px;flex:1;min-width:60px">
         <div style="font-size:13px;font-weight:700;color:var(--blue)">¥${revenue.toLocaleString()}</div>
         <div style="font-size:10px;color:var(--t2)">累計売上</div>
       </div>`:''}
-      ${profit?`<div style="text-align:center;background:var(--card2);border-radius:8px;padding:6px 10px;flex:1;min-width:60px">
+      ${canViewFinancials&&profit?`<div style="text-align:center;background:var(--card2);border-radius:8px;padding:6px 10px;flex:1;min-width:60px">
         <div style="font-size:13px;font-weight:700;color:${profit>=0?'var(--green)':'var(--red)'}">¥${profit.toLocaleString()}</div>
         <div style="font-size:10px;color:var(--t2)">累計利益</div>
       </div>`:''}
@@ -5850,7 +6215,7 @@ ${sorted.map(cl=>{
       ${Object.entries(statusCounts).map(([st,cnt])=>`<span class="badge ${SCOLBG[st]||'bk'}" style="font-size:10px">${st} ${cnt}</span>`).join('')}
     </div>`:''}
 
-    ${pending?`<div style="background:var(--adim);border-radius:6px;padding:6px 10px;font-size:12px;color:var(--amber)">⏳ 入金待ち ¥${pending.toLocaleString()}</div>`:''}
+    ${canViewFinancials&&pending?`<div style="background:var(--adim);border-radius:6px;padding:6px 10px;font-size:12px;color:var(--amber)">⏳ 入金待ち ¥${pending.toLocaleString()}</div>`:''}
 
     ${activeJobs.length?`<div style="border-top:1px solid var(--border);padding-top:8px">
       ${activeJobs.slice(0,3).map(j=>`<div style="display:flex;align-items:center;gap:6px;padding:3px 0;cursor:pointer;font-size:12px" onclick="openJobModal('${j.id}')">
@@ -5864,7 +6229,7 @@ ${sorted.map(cl=>{
     <div style="display:flex;gap:6px;justify-content:flex-end;border-top:1px solid var(--border);padding-top:8px">
       <button class="btn btn-p btn-xs" onclick="openJobModal(null,'進行中','${cl.id}')">＋ 案件</button>
       <button class="btn btn-g btn-xs" onclick="openClientModal('${cl.id}')">✏️ 編集</button>
-      <button class="btn btn-red btn-xs" onclick="delClient('${cl.id}')">🗑</button>
+      ${_isOwner()?`<button class="btn btn-red btn-xs" onclick="delClient('${cl.id}')">🗑</button>`:''}
     </div>
   </div>`;
 }).join('')}
@@ -5924,11 +6289,13 @@ function jobMainProfit(j){return jobTotalIn(j)-jobTotalOut(j);}
 // paymentDate は「入金予定日」であり、記入しても入金済みにはならない。
 function isJobPaid(j){return !!(j&&j.paidAt);}
 function markJobPaid(id){
+  if(!_canViewFinancials())return toast('財務操作の権限がありません','err');
   const j=S.jobs.find(j=>j.id===id);if(!j)return;
   j.paidAt=today();j.updatedAt=Date.now();
   save();render();toast('💰 入金済みにしました');
 }
 function unmarkJobPaid(id){
+  if(!_canViewFinancials())return toast('財務操作の権限がありません','err');
   const j=S.jobs.find(j=>j.id===id);if(!j)return;
   if(!confirm('入金済みを取り消しますか？'))return;
   j.paidAt=null;j.updatedAt=Date.now();
@@ -5939,6 +6306,7 @@ function unmarkJobPaid(id){
 const PAID_CLEANUP_CUTOFF='2026-07-31';
 function _paidFromCutoff(cutoff){return (S.jobs||[]).filter(j=>j&&!j.deleted&&j.paymentDate&&j.paymentDate>=cutoff);}
 function unmarkPaidFrom(cutoff){
+  if(!_canViewFinancials())return toast('財務操作の権限がありません','err');
   cutoff=cutoff||PAID_CLEANUP_CUTOFF;
   const affected=_paidFromCutoff(cutoff);
   if(!affected.length){toast('対象の案件はありません');return;}
@@ -5949,6 +6317,7 @@ function unmarkPaidFrom(cutoff){
   save();render();toast(`✅ ${affected.length}件を未入金に戻しました`);
 }
 function markJobPayout(id){
+  if(!_canViewFinancials())return toast('財務操作の権限がありません','err');
   const j=S.jobs.find(j=>j.id===id);if(!j)return;
   j.payoutDate=today();
   save();render();toast('💳 支払い済みにしました');
@@ -5965,20 +6334,20 @@ function rProjCard(j){
   ${clName?`<div class="proj-card-client">👤 ${esc(clName)}</div>`:''}
   ${wNames?`<div style="font-size:11px;color:var(--t2);margin-top:2px">🛠 ${esc(wNames)}</div>`:''}
   ${j.scope?`<div style="font-size:11px;color:var(--t2);margin-top:2px">📌 ${esc(j.scope)}</div>`:''}
-  ${ti?`<div class="proj-profit" style="font-size:13px">
+  ${_isOwner()&&ti?`<div class="proj-profit" style="font-size:13px">
     ${PBIZ==='hp'?'制作費':PBIZ==='consult'?'顧問料':PBIZ==='tool'?'開発費':'単価'} <span style="color:var(--blue)">¥${ti.toLocaleString()}</span>${to?` 支払 <span style="color:var(--amber)">¥${to.toLocaleString()}</span>`:''}
     → 利益 <span style="color:${pr>=0?'var(--green)':'var(--red)'}">¥${pr.toLocaleString()}</span>
   </div>`:''}
   <div class="proj-card-meta" style="flex-wrap:wrap;gap:4px">
     <span class="badge ${SCOLBG[j.status]||'bk'}">${j.status}</span>
-    ${isJobPaid(j)
+    ${_isOwner()?(isJobPaid(j)
       ?`<span class="badge bg" onclick="event.stopPropagation();unmarkJobPaid('${j.id}')" style="cursor:pointer" title="クリックで取り消し">💰 入金済 ${j.paidAt}</span>`
       :`<button class="btn btn-xs" onclick="event.stopPropagation();markJobPaid('${j.id}')" style="border:1px solid var(--green);color:var(--green);background:transparent;padding:2px 7px;border-radius:100px;font-size:10px;cursor:pointer">💰 入金済みにする</button>`
-    }
+    ):''}
   </div>
   ${j.editorDraftDate&&cbz.lbl.d1s?`<div class="proj-due-label ${urgCls(j.editorDraftDate)}">${cbz.lbl.d1s}: ${j.editorDraftDate} (${fmt(j.editorDraftDate)})</div>`:''}
   ${j.clientDraftDate&&cbz.lbl.d2s?`<div class="proj-due-label ${urgCls(j.clientDraftDate)}">${cbz.lbl.d2s}: ${j.clientDraftDate} (${fmt(j.clientDraftDate)})</div>`:''}
-  ${j.invoiceDate?`<div class="proj-due-label ${urgCls(j.invoiceDate)}">🧾 請求書: ${j.invoiceDate} (${fmt(j.invoiceDate)})</div>`:''}
+  ${_isOwner()&&j.invoiceDate?`<div class="proj-due-label ${urgCls(j.invoiceDate)}">🧾 請求書: ${j.invoiceDate} (${fmt(j.invoiceDate)})</div>`:''}
   ${j.deliveryDate?`<div class="proj-due-label ${uc}">${cbz.lbl.deliverS}: ${j.deliveryDate} (${fmt(j.deliveryDate)})</div>`:''}
   ${(j.subtasks||[]).length?`<div class="subtask-list">${(j.subtasks||[]).map((s,i)=>`<div class="sub-item"><div class="sub-chk ${s.done?'done':''}" onclick="event.stopPropagation();toggleJobSub('${j.id}',${i})"></div><span style="${s.done?'text-decoration:line-through;color:var(--t3)':''}font-size:11px">${esc(s.title)}</span></div>`).join('')}</div>`:''}
 </div>`;
@@ -6039,6 +6408,7 @@ function _invoiceJobs(cid,m){
   return BJOBS().filter(j=>!j.deleted&&j.status!=='キャンセル'&&_invAmt(j)>0&&_invMonthMatch(j,m)&&((j.clientId||'')===(cid||'')));
 }
 function rProjInvoice(){
+  if(!_canViewFinancials())return _financialAccessDenied('請求書');
   const now=new Date();
   const nowM=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const months=[...new Set(BJOBS().filter(j=>!j.deleted&&_invAmt(j)>0).map(j=>_jobInvDate(j)).filter(Boolean).map(d=>d.slice(0,7)))].sort().reverse();
@@ -6272,10 +6642,12 @@ function copyInvoiceText(cid,m){
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(ok).catch(fb);}else{fb();}
 }
 function markClientInvoiced(cid,m,on){
+  if(!_canViewFinancials())return toast('財務操作の権限がありません','err');
   _invoiceJobs(cid,m).forEach(j=>{j.invoicedAt=on?today():null;j.updatedAt=Date.now();});
   save();render();toast(on?'🧾 請求済みにしました':'請求済を取り消しました');
 }
 function openInvoiceInfo(){
+  if(!_canViewFinancials())return toast('財務操作の権限がありません','err');
   if(!S.settings)S.settings={};
   const i=_issuer();
   openModalLg(`<div class="mhdr"><div class="mtitle">✏️ 請求元情報</div><button class="mclose" onclick="closeModal()">✕</button></div>
@@ -6304,6 +6676,7 @@ function openInvoiceInfo(){
 <div class="mfooter"><button class="btn btn-g" onclick="closeModal()">キャンセル</button><button class="btn btn-p" onclick="saveInvoiceInfo()">保存</button></div>`);
 }
 function saveInvoiceInfo(){
+  if(!_canViewFinancials())return toast('財務操作の権限がありません','err');
   if(!S.settings)S.settings={};
   const g=id=>document.getElementById(id);
   S.settings.issuer={
@@ -6338,7 +6711,7 @@ function rProjCompleted(){
 <div class="card" style="margin-bottom:14px;display:flex;gap:20px;flex-wrap:wrap">
   <div><div style="font-size:11px;color:var(--t2)">完了件数</div><div style="font-size:20px;font-weight:700;color:var(--green)">${done.filter(j=>j.status==='完了').length}件</div></div>
   <div><div style="font-size:11px;color:var(--t2)">キャンセル</div><div style="font-size:20px;font-weight:700;color:var(--t2)">${done.filter(j=>j.status==='キャンセル').length}件</div></div>
-  ${totalIn?`<div><div style="font-size:11px;color:var(--t2)">完了案件 総売上</div><div style="font-size:20px;font-weight:700;color:var(--blue)">¥${totalIn.toLocaleString()}</div></div>`:''}
+  ${_isOwner()&&totalIn?`<div><div style="font-size:11px;color:var(--t2)">完了案件 総売上</div><div style="font-size:20px;font-weight:700;color:var(--blue)">¥${totalIn.toLocaleString()}</div></div>`:''}
 </div>
 ${done.length?done.map(j=>rJobItem(j)).join(''):`<div class="empty" style="padding:30px 0"><div class="empty-icon">✅</div><div>${curM==='all'?'':curM+' の'}完了済み案件はありません</div></div>`}`;
 }
@@ -6357,10 +6730,10 @@ ${clients.map(cl=>{
         ${cl.notes?`<div style="font-size:12px;color:var(--t2)">${esc(cl.notes)}</div>`:''}
       </div>
       <div style="display:flex;align-items:center;gap:8px">
-        ${total?`<span style="font-weight:700;color:var(--green)">利益 ¥${total.toLocaleString()}</span>`:''}
+        ${_isOwner()&&total?`<span style="font-weight:700;color:var(--green)">利益 ¥${total.toLocaleString()}</span>`:''}
         <button class="btn btn-p btn-xs" onclick="openJobModal(null,'進行中','${cl.id}')">＋ 案件</button>
         <button class="tact" onclick="event.stopPropagation();openClientModal('${cl.id}')">✏️</button>
-        <button class="tact del" onclick="delClient('${cl.id}')">🗑</button>
+        ${_isOwner()?`<button class="tact del" onclick="delClient('${cl.id}')">🗑</button>`:''}
       </div>
     </div>
     ${jobs.map(j=>rJobItem(j)).join('')}
@@ -6377,16 +6750,16 @@ function rJobItem(j){
   <span class="badge ${SCOLBG[j.status]||'bk'}">${j.status}</span>
   <span class="job-title">${esc(j.title)}</span>
   ${wNames?`<span style="font-size:11px;color:var(--t2)">🛠 ${esc(wNames)}</span>`:''}
-  ${ti?`<span style="font-size:12px;color:var(--blue)">単価 ¥${ti.toLocaleString()}</span>`:''}
-  ${to?`<span style="font-size:12px;color:var(--amber)">支払 ¥${to.toLocaleString()}</span>`:''}
-  ${ti?`<span style="font-size:12px;font-weight:700;color:${pr>=0?'var(--green)':'var(--red)'}">利益 ¥${pr.toLocaleString()}</span>`:''}
+  ${_isOwner()&&ti?`<span style="font-size:12px;color:var(--blue)">単価 ¥${ti.toLocaleString()}</span>`:''}
+  ${_isOwner()&&to?`<span style="font-size:12px;color:var(--amber)">支払 ¥${to.toLocaleString()}</span>`:''}
+  ${_isOwner()&&ti?`<span style="font-size:12px;font-weight:700;color:${pr>=0?'var(--green)':'var(--red)'}">利益 ¥${pr.toLocaleString()}</span>`:''}
   ${j.salesRep?`<span style="font-size:11px;color:var(--t2)">🤝 ${esc(j.salesRep)}</span>`:''}
-  ${j.salesPay?`<span style="font-size:12px;color:var(--pink)">営業支払 ¥${(+j.salesPay).toLocaleString()}</span>`:''}
+  ${_isOwner()&&j.salesPay?`<span style="font-size:12px;color:var(--pink)">営業支払 ¥${(+j.salesPay).toLocaleString()}</span>`:''}
   ${subTot?`<span class="badge bb">☑ ${subDone}/${subTot}</span>`:''}
-  ${isJobPaid(j)
+  ${_isOwner()?(isJobPaid(j)
     ?`<span class="badge bg" onclick="event.stopPropagation();unmarkJobPaid('${j.id}')" style="cursor:pointer" title="クリックで取り消し">💰 入金済 ${j.paidAt}</span>`
     :`<button class="btn btn-xs" onclick="event.stopPropagation();markJobPaid('${j.id}')" style="border:1px solid var(--green);color:var(--green);background:transparent;padding:2px 7px;border-radius:100px;font-size:10px;cursor:pointer">💰 入金済みにする</button>`
-  }
+  ):''}
   <div class="job-dates">
     ${j.editorDraftDate?`編集者初稿 ${j.editorDraftDate}`:''}
     ${j.deliveryDate?` 納品 ${j.deliveryDate}`:''}
@@ -6477,6 +6850,7 @@ function _profitGroupedHtml(jobs,mode){
 }
 
 function rProjProfit(){
+  if(!_canViewFinancials())return _financialAccessDenied('利益');
   // 【2026-07-23改定】利益タブ=「入金予定日(paymentDate)」の月でグルーピング。
   // 入金予定日を入れても入金済みにはならない。入金済み(paidAt=ボタンで確定)の案件はこのタブに表示しない。
   // 対象=「完了案件」または「入金予定日が入っている案件」（＝回収予定）。キャンセルは除外。
@@ -6552,6 +6926,7 @@ function getPayEntries(month){
   return entries;
 }
 function rProjPayment(){
+  if(!_canViewFinancials())return _financialAccessDenied('支払い');
   const now=new Date();
   const selM=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const allDates=[
@@ -6627,6 +7002,7 @@ ${rewardSection('sales','営業報酬','📞')}
 ${rewardSection('hire','採用報酬','👤')}`;
 }
 function openRewardModal(type){
+  if(!_canViewFinancials())return toast('財務操作の権限がありません','err');
   const title=type==='sales'?'営業報酬':'採用報酬';
   openModal(`<div class="mhdr"><div class="mtitle">＋ ${title}の支払い</div><button class="mclose" onclick="closeModal()">✕</button></div>
   <div class="fg"><div class="fl">支払先（名前）*</div><input id="rw-payee" placeholder="例: 田中 太郎"></div>
@@ -6637,6 +7013,7 @@ function openRewardModal(type){
   <div class="mfooter"><button class="btn btn-p" onclick="saveReward()">保存</button></div>`);
 }
 function saveReward(){
+  if(!_canViewFinancials())return toast('財務操作の権限がありません','err');
   const payee=document.getElementById('rw-payee').value.trim();
   const amount=parseInt(document.getElementById('rw-amount').value)||0;
   if(!payee||!amount){toast('支払先と金額を入力してください','warn');return;}
@@ -6648,11 +7025,13 @@ function saveReward(){
   save();closeModal();render();toast('報酬を追加しました');
 }
 function toggleRewardPaid(id){
+  if(!_canViewFinancials())return toast('財務操作の権限がありません','err');
   const r=(S.rewards||[]).find(r=>r.id===id);if(!r)return;
   r.paidDate=r.paidDate?null:today();
   save();render();
 }
 function delReward(id){
+  if(!_canViewFinancials())return toast('財務操作の権限がありません','err');
   if(!confirm('この報酬を削除しますか？'))return;
   S.rewards=(S.rewards||[]).filter(r=>r.id!==id);
   save();render();
@@ -6690,7 +7069,7 @@ function rProjWorker(){
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:3px;font-size:11px;color:var(--t2)">
           ${sub.editorDraftDate?`<span>✏️ 初稿: <span class="${urgCls(sub.editorDraftDate)}">${sub.editorDraftDate}</span></span>`:''}
           ${sub.deliveryDate?`<span>📅 納品: <span class="${uc}">${sub.deliveryDate}</span></span>`:''}
-          ${sub.unitPrice?`<span style="color:var(--blue)">¥${sub.unitPrice.toLocaleString()}</span>`:''}
+          ${_isOwner()&&sub.unitPrice?`<span style="color:var(--blue)">¥${sub.unitPrice.toLocaleString()}</span>`:''}
         </div>
       </div>
     </div>`;
@@ -7480,11 +7859,11 @@ const DOC_SEEDS=[{"id": "gdocseed_teleapo", "title": "テレアポマニュア�
 // リンク集(teamDocs)へのシード(2026-07-26)。DOC_SEEDS同様にseedVerで冪等・手動削除は復活させない
 const DOCLINK_SEEDS=[
   {id:'doclink_dm_staff_manual',title:'DM営業スタッフ 業務手順書（IGアカウント作成〜送付）',
-   url:'https://mono-create-group.github.io/editflow-team/dm-manual.html?v=20260809-04',
-   category:'マニュアル',notes:'新メンバー向け。アイコン・アカウント名の予約(早い者勝ち)・DM文章の作成・営業リストでの送付と記録まで1ページで完結',ver:2},
+   url:'https://mono-create-group.github.io/editflow-team/dm-manual.html?v=20260816-01',
+   category:'マニュアル',notes:'新メンバー向け。アイコン・アカウント名の予約(早い者勝ち)・DM文章の作成・営業リストでの送付と記録まで1ページで完結',ver:3},
   {id:'doclink_dm_entry_form',title:'DM営業スタッフ 登録フォーム（応募者に送るURL）',
    url:'https://mono-create-group.github.io/editflow-team/dm-entry.html',
-   category:'マニュアル',notes:'応募DMが来たらこのURLを返信するだけ。発行IGメール・初期PW・開始手順が自動でメール送付され、台帳(dm_staffシート)に記録される',ver:1}
+   category:'マニュアル',notes:'応募DMが来たらこのURLを返信。登録・業務委託条件への同意・開始手順を台帳へ記録し、案内メールを自動送付する。営業用IGのメールとパスワードは本人が作成し、手順書から完成報告する',ver:2}
 ];
 function docsSeedManuals(){
   if(!Array.isArray(S.teamPages))S.teamPages=[];
@@ -10348,26 +10727,16 @@ function _accRoleOf(email){
   const em=(email||'').toLowerCase();
   if(ADMIN_EMAILS.includes(em))return'owner';
   const r=(S.memberRoles||[]).find(m=>m&&!m.deleted&&(m.email||'').toLowerCase()===em);
-  return (r&&r.role==='full')?'full':'sales';
+  const roles=memberRolesOf(r);
+  return roles.length?roles.join(' / '):'未承認';
 }
 function accSetRole(email,role){
   if(!_isOwner()){toast('権限がありません','err');return;}
-  const em=(email||'').trim().toLowerCase();
-  if(!em)return;
-  if(ADMIN_EMAILS.includes(em)){toast('会長アカウントは常にフル権限です','warn');return;}
-  if(!Array.isArray(S.memberRoles))S.memberRoles=[];
-  const rl=(role==='full')?'full':'sales';
-  const ex=S.memberRoles.find(m=>m&&(m.email||'').toLowerCase()===em);
-  if(ex){ex.role=rl;ex.deleted=false;ex.updatedAt=Date.now();}
-  else{S.memberRoles.push({id:uid(),email:em,role:rl,createdAt:today(),updatedAt:Date.now(),addedBy:_myEmail()});}
-  save();render();
-  toast(`${em} を ${rl==='full'?'フル':'営業・情報のみ'} に設定しました`);
+  VIEW='settings';render();toast('役割は「設定」の権限管理から変更してください');
 }
 function rAccounts(){
   if(!_isOwner())return`<div class="empty"><div class="empty-icon">🔒</div><div class="empty-title">オーナー専用ページです</div><div style="font-size:12px;color:var(--t3);margin-top:4px">このページはオーナー(会長)だけが閲覧できます。</div></div>`;
   const list=(S.signins||[]).filter(x=>x&&x.id).slice().sort((a,b)=>(b.lastSeen||0)-(a.lastSeen||0));
-  const roleLabel={owner:'オーナー',full:'フル',sales:'営業・情報のみ'};
-  const roleColor={owner:'background:#fef3c7;color:#92400e',full:'background:#e7f6ed;color:#16a34a',sales:'background:var(--pldim);color:var(--pl)'};
   const rows=list.map(u=>{
     const rk=_accRoleOf(u.email);
     const isAdmin=rk==='owner';
@@ -10380,11 +10749,8 @@ function rAccounts(){
       <div style="font-size:10.5px;color:var(--t3);margin-top:2px">最終サインイン ${_accAgo(u.lastSeen)}${u.firstSeen?` ・ 初回 ${tpFmtDate(u.firstSeen)}`:''}</div>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
-      <span class="pill" style="${roleColor[rk]};font-size:10px;font-weight:700;padding:2px 9px;border-radius:100px">${roleLabel[rk]}</span>
-      ${isAdmin?'':`<select onchange="accSetRole('${esc(u.email)}',this.value)" style="font-size:11px;padding:3px 4px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text)">
-        <option value="sales" ${rk!=='full'?'selected':''}>営業・情報のみ</option>
-        <option value="full" ${rk==='full'?'selected':''}>フル</option>
-      </select>`}
+      <span class="pill" style="${isAdmin?'background:#fef3c7;color:#92400e':'background:var(--pldim);color:var(--pl)'};font-size:10px;font-weight:700;padding:2px 9px;border-radius:100px;max-width:240px;white-space:normal;text-align:right">${isAdmin?'オーナー':esc(rk)}</span>
+      ${isAdmin?'':'<button class="btn btn-g btn-xs" onclick="accSetRole()">役割を管理</button>'}
     </div>
   </div>`;}).join('');
   return`<div class="ph"><div class="ph-title">👥 サインイン中アカウント</div></div>
@@ -10392,8 +10758,8 @@ ${secTitle('サインインしたアカウント一覧')}
 <div class="card" style="margin-bottom:14px">
   <div style="font-size:12px;color:var(--t2);line-height:1.7">
     このアプリに<b>Googleでサインインしたアカウント</b>が、新しくサインインした順に並びます（サインインすると自動で登録）。<br>
-    権限を「営業・情報のみ／フル」でここから変更できます（設定ページの権限管理と連動）。<br>
-    <span style="color:var(--t3)">※これは表示上の一覧・制限です。厳密なアクセス遮断ではないため、信頼できる相手にのみサインインを共有してください。</span>
+    役割は「設定」の権限管理で変更できます。動画編集者は専用データ領域だけを読み込み、社内の金額・粗利・他編集者情報へアクセスしません。<br>
+    <span style="color:var(--t3)">社内スタッフの閲覧範囲は役割ごとに分かれ、未承認アカウントはデータを読み込みません。</span>
   </div>
 </div>
 <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
@@ -10407,7 +10773,7 @@ function rSettings(){
 ${secTitle('👤 アカウントとデータ管理')}
 <div class="card" style="margin-bottom:16px">
   <div style="font-size:12px;color:var(--t2);line-height:1.7;margin-bottom:10px">
-    <b>データの分かれ方</b>: 案件・クライアント・ワーカー・商談・チームKGI/KPI・投稿・ドキュメントの8種は<b>チーム共有</b>(どのアカウントでも同じ表示が仕様)。
+    <b>データの分かれ方</b>: 案件・クライアント・ワーカー・商談・チームKGI/KPI・投稿・ドキュメントは<b>承認済みの社内メンバー向け共有</b>です。表示範囲は役割ごとに異なります。
     タスク・習慣・目標・ジャーナル等の個人データはアカウント(UID)ごとに分離されます。<br>
     サインイン中: <b>${typeof FB_USER!=='undefined'&&FB_USER?esc(FB_USER.email||FB_USER.uid):'未サインイン'}</b>
   </div>
@@ -10422,29 +10788,35 @@ ${_isOwner()?`${secTitle('🔑 サインインしたメンバー・権限')}
 <div class="card" style="margin-bottom:16px">
   <div style="font-size:12px;color:var(--t2);line-height:1.7;margin-bottom:10px">
     <b>オーナー: ${esc(_myEmail())}</b><br>
-    サインインして初回登録したメンバーが下に一覧表示されます（サインイン後に名前・職種を登録すると反映）。<br>
-    「営業スタッフ」にすると、そのアカウントは<b>「営業」タブと「情報」タブだけ</b>表示（案件・経営・個人ページ・設定は非表示）。「フル」で全タブ表示。<br>
-    <span style="color:var(--t3)">※画面の表示制限です。厳密なアクセス遮断ではないため、信頼できるスタッフにのみ共有してください。メール欄からの事前登録も可能です。</span>
+    メンバーはGoogleログイン後に承認し、役割ごとに閲覧範囲を分けます。<br>
+    <span style="color:var(--t3)">動画編集者は専用ポータルだけを使い、顧客請求額・原価・粗利・他編集者の情報を読み込みません。</span>
   </div>
+  ${ACCESS_REQUESTS.length?`<div style="margin:0 0 14px"><div style="font-size:12px;font-weight:800;margin-bottom:7px">承認待ち ${ACCESS_REQUESTS.length}件</div>${ACCESS_REQUESTS.map(r=>`<div style="padding:10px;background:var(--card2);border:1px solid var(--border);border-radius:9px;margin-bottom:7px"><div style="font-weight:700;font-size:13px">${esc(r.name||'名前未登録')}</div><div style="font-size:11px;color:var(--t3);margin-bottom:7px">${esc(r.email||'')}</div><div style="display:flex;gap:5px;flex-wrap:wrap">${APP_ROLES.map(role=>`<label style="font-size:10.5px"><input class="ar-role" data-uid="${esc(r.id)}" type="checkbox" value="${role}"> ${role}</label>`).join('')}</div><select id="ar-worker-${esc(r.id)}" style="margin-top:7px"><option value="">担当者を紐付け（編集者のみ必須）</option>${(S.workers||[]).filter(w=>!w.deleted).map(w=>`<option value="${w.id}">${esc(w.name)}</option>`).join('')}</select><div style="display:flex;gap:6px;margin-top:7px"><button class="btn btn-p btn-sm" onclick="mrApproveRequest('${esc(r.id)}')">承認</button><button class="btn btn-g btn-sm" onclick="mrRejectRequest('${esc(r.id)}')">却下</button></div></div>`).join('')}</div>`:''}
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
     <input id="mr-email" type="email" placeholder="staff@gmail.com（サインインに使うメール）" style="flex:1;min-width:200px">
-    <select id="mr-role" style="width:170px"><option value="sales">営業スタッフ(営業・情報のみ)</option><option value="full">フル(全タブ)</option></select>
+    <div style="flex:2;min-width:260px;display:flex;gap:6px;flex-wrap:wrap">${APP_ROLES.map(r=>`<label style="font-size:11px;background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:4px 7px"><input class="mr-role" type="checkbox" value="${r}"> ${r}</label>`).join('')}</div>
+    <select id="mr-worker" style="width:160px"><option value="">担当者を紐付け（編集者のみ必須）</option>${(S.workers||[]).filter(w=>!w.deleted).map(w=>`<option value="${w.id}">${esc(w.name)}</option>`).join('')}</select>
     <button class="btn btn-p btn-sm" onclick="mrAddMember()">追加 / 更新</button>
   </div>
   ${(S.memberRoles||[]).filter(m=>m&&!m.deleted).length?`<div style="display:flex;flex-direction:column;gap:6px">
     ${(S.memberRoles||[]).filter(m=>m&&!m.deleted).sort((a,b)=>(a.email||'').localeCompare(b.email||'')).map(m=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--card2);border-radius:8px">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.name||'（名前未登録）')}</div>
-        <div style="font-size:11px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.email||'')}${(m.jobs&&m.jobs.length)?' ・ '+esc(m.jobs.join('/')):''}</div>
+        <div style="font-size:11px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.email||'')} ・ ${esc(memberRolesOf(m).join(' / ')||'未設定')}${m.workerId?` ・ ${(S.workers||[]).find(w=>w.id===m.workerId)?.name||'担当者未登録'}`:''}</div>
       </div>
-      <select onchange="mrSetRole('${m.id}',this.value)" style="font-size:11px;padding:3px 4px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text)">
-        <option value="sales" ${m.role!=='full'?'selected':''}>営業・情報のみ</option>
-        <option value="full" ${m.role==='full'?'selected':''}>フル</option>
-      </select>
       <button class="btn btn-red btn-xs" onclick="mrRemoveMember('${m.id}')">削除</button>
     </div>`).join('')}
   </div>`:`<div style="font-size:12px;color:var(--t3)">まだ登録がありません。営業スタッフのGoogleメールを追加してください。</div>`}
 </div>`:''}
+
+${_isOwner()?`${secTitle('🛡 無停止の権限移行')}
+${(()=>{const rows=accessMigrationRows(),ready=rows.filter(x=>x.ready).length,enforced=ACCESS_CONTROL.enforced===true,configured=ACCESS_CONTROL.configured===true&&Array.isArray(ACCESS_CONTROL.compatibilityEmails)&&ACCESS_CONTROL.compatibilityEmails.length>0;return`<div class="card" style="margin-bottom:16px;border-left:4px solid ${enforced?'var(--green)':'var(--amber)'}">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px"><div><div style="font-size:14px;font-weight:800">${enforced?'新しい役職権限を適用中':'互換モードで運用中'}</div><div style="font-size:11px;color:var(--t3);margin-top:3px">既存メンバー ${ready}/${rows.length}名 移行済み</div></div><span class="badge ${enforced?'bg':'ba'}">${enforced?'保護有効':'既存運用を維持'}</span></div>
+  <div style="font-size:12px;color:var(--t2);line-height:1.7;margin-bottom:10px">互換モード中は現在のスタッフを締め出さず、新しい役割を順番に設定できます。${configured?'許可リスト外の未承認アカウントは共有データを開けません。':'最初に既存スタッフのメールを許可リストへ固定してください。'}全員が移行済みになるまで本番の強制切替ボタンは動作しません。</div>
+  ${!configured&&!enforced?'<div style="padding:9px 10px;background:var(--card2);border:1px solid var(--amber);border-radius:8px;margin-bottom:10px;font-size:11px;color:var(--t2)"><b>初回の安全設定が未完了です。</b><br>既存メンバーを登録後、許可リストを固定すると外部の未承認ログインを遮断できます。</div>':''}
+  ${rows.length?`<div style="display:flex;flex-direction:column;gap:5px;margin-bottom:12px">${rows.map(x=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 9px;background:var(--card2);border-radius:8px"><span style="color:${x.ready?'var(--green)':'var(--amber)'}">${x.ready?'✓':'!'}</span><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis">${esc(x.member.name||x.email)}</div><div style="font-size:10.5px;color:var(--t3)">${esc(x.roles.join(' / ')||'役割未設定')} ・ ${x.uid?'UID確認済み':'初回ログイン待ち'}</div></div></div>`).join('')}</div>`:'<div style="font-size:12px;color:var(--t3);margin-bottom:10px">既存メンバーはまだ登録されていません。</div>'}
+  <div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn btn-g btn-sm" onclick="downloadOperationsBackup()">運用バックアップを書き出す</button>${!configured&&!enforced?'<button class="btn btn-g btn-sm" onclick="accessPrepareCompatibilityAllowlist()">既存スタッフの許可リストを固定</button>':''}${enforced?'<button class="btn btn-g btn-sm" onclick="accessDisableEnforcement()">緊急互換モードへ戻す</button>':`<button class="btn btn-p btn-sm" ${accessMigrationReady()&&configured?'':'disabled'} onclick="accessEnableEnforcement()">全員確認後に役職権限を有効化</button>`}</div>
+</div>`})()}`:''}
 
 ${_isOwner()?`${secTitle('💴 DM営業の報酬設定')}
 ${(()=>{const c=slCompensation();return`<div class="card" style="margin-bottom:16px">
@@ -10459,9 +10831,9 @@ ${(()=>{const c=slCompensation();return`<div class="card" style="margin-bottom:1
 ${_isOwner()?`${secTitle('👤 スタッフ別の報酬設定')}
 ${slStaffCompensationHtml()}`:''}
 
-${secTitle('📊 Googleスプレッドシート連携')}
+${secTitle('📊 旧スプレッドシート案件の照合')}
 <div class="card" style="margin-bottom:16px">
-  <div style="font-size:12px;color:var(--t2)">安全のため読み取り専用です。社内アプリからシートへの自動記帳・一括同期は行いません。編集者派遣の案件は、案件管理画面の「派遣シート取込」から読み込めます。</div>
+  <div style="font-size:12px;color:var(--t2)">新しい編集者派遣案件は、編集者本人が専用ポータルへ直接登録するためスプレッドシート連携は不要です。既存シートとの照合・移行時だけ、読み取り専用の旧取込機能を利用できます。</div>
   ${_isOwner()?`<button class="btn btn-red btn-sm" style="margin-top:12px" onclick="hakenLegacyCleanupPreview()">派遣の誤取込案件を確認・修復</button>`:''}
 </div>
 
@@ -11217,7 +11589,7 @@ function openClientModal(id){
 <div class="fg"><div class="fl">メモ</div><textarea id="cl-notes" rows="2">${esc(c?.notes||'')}</textarea></div>
 <div class="mfooter">
   <button class="btn btn-g" onclick="closeModal()">キャンセル</button>
-  ${c?`<button class="btn btn-red" onclick="delClient('${c.id}')">削除</button>`:''}
+  ${c&&_isOwner()?`<button class="btn btn-red" onclick="delClient('${c.id}')">削除</button>`:''}
   <button class="btn btn-p" onclick="saveClient()">保存</button>
 </div>`);
   document.getElementById('cl-name')?.focus();
@@ -11273,7 +11645,7 @@ function openJobModal(id,preStatus,preClientId){
   openModalLg(`<div class="mhdr"><div class="mtitle">${j?'案件編集':'案件追加'}</div><button class="mclose" onclick="closeModal()">✕</button></div>
 <div class="fg"><div class="fl">事業</div>
   <div style="display:flex;gap:6px;flex-wrap:wrap">
-    ${BIZ_DEFS.map(b=>`<button type="button" id="jb-${b.k}" class="btn btn-sm" onclick="setJobBiz('${b.k}')">${b.icon} ${esc(b.label)}</button>`).join('')}
+    ${BIZ_DEFS.filter(b=>_isOwner()||(allowedWorkspaces().includes('video')&&['edit','haken'].includes(b.k))||(allowedWorkspaces().includes('hp')&&b.k==='hp')||(allowedWorkspaces().includes('ai')&&['consult','tool'].includes(b.k))).map(b=>`<button type="button" id="jb-${b.k}" class="btn btn-sm" onclick="setJobBiz('${b.k}')">${b.icon} ${esc(b.label)}</button>`).join('')}
   </div>
 </div>
 <input type="hidden" id="j-biz" value="${jbiz}">
@@ -11329,7 +11701,7 @@ function openJobModal(id,preStatus,preClientId){
   <div class="fg"><div class="fl">🖼 サムネイル納品日</div><input type="date" id="j-thumbnail" value="${j?.thumbnailDate||''}"></div>
   <div class="fg"></div>
 </div>
-<div style="font-size:12px;font-weight:700;color:var(--t2);margin:10px 0 6px">💰 報酬</div>
+${_isOwner()?`<div style="font-size:12px;font-weight:700;color:var(--t2);margin:10px 0 6px">💰 報酬</div>
 <div class="frow">
   <div class="fg"><div class="fl" id="jl-unit">単価（円）<span id="j-unit-hint" style="font-size:10px;color:var(--t3);font-weight:400">${subs.some(s=>s.unitPrice>0)?' (サブタスクから自動計算)':''}</span></div><input type="number" id="j-unit" value="${j?jobTotalIn(j)||'':''}" placeholder="0" oninput="updJobProfit()" ${subs.some(s=>s.unitPrice>0)?'readonly style="opacity:.6"':''}></div>
   <div class="fg" id="jf-wpay"><div class="fl" id="jl-wpay">ワーカー支払額（円）<span id="j-wpay-hint" style="font-size:10px;color:var(--t3);font-weight:400">${subs.some(s=>s.workerPay>0)?' (自動計算)':''}</span></div><input type="number" id="j-wpay" value="${j?jobTotalOut(j)||'':''}" placeholder="0" oninput="updJobProfit()" ${subs.some(s=>s.workerPay>0)?'readonly style="opacity:.6"':''}></div>
@@ -11379,10 +11751,10 @@ function openJobModal(id,preStatus,preClientId){
   <span style="font-size:11px;color:var(--t3)">単価・支払を入力すると案件全体が自動計算</span>
 </div>
 </div>
-<div class="fg"><div class="fl">メモ</div><textarea id="j-notes" rows="2">${esc(j?.notes||'')}</textarea></div>
+`:''}<div id="j-ops-checklist">${opsChecklistHtml(jbiz,j)}</div><div class="fg"><div class="fl">メモ</div><textarea id="j-notes" rows="2">${esc(j?.notes||'')}</textarea></div>
 <div class="mfooter">
   <button class="btn btn-g" onclick="closeModal()">キャンセル</button>
-  ${j?`<button class="btn btn-red" onclick="delJob('${j.id}')">削除</button>`:''}
+  ${j&&_isOwner()?`<button class="btn btn-red" onclick="delJob('${j.id}')">削除</button>`:''}
   <button class="btn btn-p" onclick="saveJob()">保存</button>
 </div>`);
   document.getElementById('j-ttl')?.focus();
@@ -11431,6 +11803,7 @@ function setJobBiz(k,init){
     document.querySelectorAll('#j-sub-cont .j-sub-status').forEach(sel=>{const cur=sel.value;sel.innerHTML=bizStatOpts(k,cfg.statuses.indexOf(cur)>=0?cur:'');});
     document.querySelectorAll('#j-sub-cont .j-sub-d1-lbl').forEach(e=>{e.textContent=cfg.lbl.d1||'初稿(社内)';});
     document.querySelectorAll('#j-sub-cont .j-sub-d2-lbl').forEach(e=>{e.textContent=cfg.lbl.d2||'クライアント提出';});
+    renderJobChecklist(k,null);
   }
   if(typeof updJobProfit==='function')updJobProfit();
 }
@@ -11576,10 +11949,11 @@ function _appendWorkerOpt(w){
 function saveJob(){
   const title=document.getElementById('j-ttl')?.value.trim();
   if(!title){toast('タイトルを入力してください','err');return;}
-  if(!document.getElementById('j-invoice')?.value){toast('請求書提出日を入力してください（請求書ページで使います）','warn');return;}
-  const oldSubs=EID?S.jobs.find(j=>j.id===EID)?.subtasks||[]:[];
+  if(_isOwner()&&!document.getElementById('j-invoice')?.value){toast('請求書提出日を入力してください（請求書ページで使います）','warn');return;}
+  const current=EID?S.jobs.find(j=>j.id===EID):null;
+  const oldSubs=current?.subtasks||[];
   const subEls=[...document.querySelectorAll('#j-sub-cont .j-sub-row')];
-  const subtasks=subEls.map((el,i)=>{
+  const parsedSubtasks=subEls.map((el,i)=>{
     const inp=el.querySelector('.j-sub-inp');const chk=el.querySelector('.chk');
     const price=parseInt(el.querySelector('.j-sub-price')?.value)||0;
     const pay=parseInt(el.querySelector('.j-sub-pay')?.value)||0;
@@ -11595,13 +11969,16 @@ function saveJob(){
       payoutDate:el.querySelector('.j-sub-payout')?.value||null,
     };
   }).filter(s=>s.title);
+  const subtasks=_isOwner()?parsedSubtasks:oldSubs;
   const hasPricedSubs=subtasks.some(s=>s.unitPrice>0||s.workerPay>0);
-  const unitPrice=hasPricedSubs?subtasks.reduce((s,sub)=>s+(sub.unitPrice||0),0):(parseInt(document.getElementById('j-unit')?.value)||0);
+  const unitPrice=_isOwner()?(hasPricedSubs?subtasks.reduce((s,sub)=>s+(sub.unitPrice||0),0):(parseInt(document.getElementById('j-unit')?.value)||0)):(Number(current?.unitPrice)||0);
   const selWorkerIds=[...document.querySelectorAll('.j-worker-cb:checked')].map(cb=>cb.value);
   const onlySelf=selWorkerIds.length===0||selWorkerIds.every(id=>id===SELF_WID);
-  const workerPay=hasPricedSubs?subtasks.filter(s=>s.workerId!==SELF_WID).reduce((s,sub)=>s+(sub.workerPay||0),0):(onlySelf?0:parseInt(document.getElementById('j-wpay')?.value)||0);
+  const workerPay=_isOwner()?(hasPricedSubs?subtasks.filter(s=>s.workerId!==SELF_WID).reduce((s,sub)=>s+(sub.workerPay||0),0):(onlySelf?0:parseInt(document.getElementById('j-wpay')?.value)||0)):(Number(current?.workerPay)||0);
   const isTrial=document.getElementById('j-trial-val')?.value==='1';
-  const data={title,biz:document.getElementById('j-biz')?.value||'edit',monthlyFee:parseInt(document.getElementById('j-monthly')?.value)||0,jobType:document.getElementById('j-type')?.value||'edit',clientId:document.getElementById('j-cl').value||null,workerIds:selWorkerIds,workerId:selWorkerIds[0]||null,scope:document.getElementById('j-scope').value||null,status:document.getElementById('j-stat').value,isTrial,unitPrice,profit:unitPrice,workerPay,sharedDate:document.getElementById('j-shared').value||null,editorDraftDate:document.getElementById('j-editor-draft').value||null,clientDraftDate:document.getElementById('j-client-draft').value||null,thumbnailDate:document.getElementById('j-thumbnail')?.value||null,deliveryDate:document.getElementById('j-deliver').value||null,invoiceDate:document.getElementById('j-invoice').value||null,dueDate:document.getElementById('j-due')?.value||null,paymentDate:document.getElementById('j-payin').value||null,paidAt:document.getElementById('j-paid-val')?.value||null,payoutDate:document.getElementById('j-payout').value||null,salesRep:document.getElementById('j-sales-rep')?.value||null,salesPay:parseInt(document.getElementById('j-sales-pay')?.value)||0,notes:document.getElementById('j-notes').value.trim(),subtasks};
+  const data={title,biz:document.getElementById('j-biz')?.value||'edit',monthlyFee:_isOwner()?(parseInt(document.getElementById('j-monthly')?.value)||0):(Number(current?.monthlyFee)||0),jobType:document.getElementById('j-type')?.value||'edit',clientId:document.getElementById('j-cl').value||null,workerIds:selWorkerIds,workerId:selWorkerIds[0]||null,scope:document.getElementById('j-scope').value||null,status:document.getElementById('j-stat').value,isTrial,unitPrice,profit:_isOwner()?unitPrice:(Number(current?.profit)||unitPrice),workerPay,sharedDate:document.getElementById('j-shared').value||null,editorDraftDate:document.getElementById('j-editor-draft').value||null,clientDraftDate:document.getElementById('j-client-draft').value||null,thumbnailDate:document.getElementById('j-thumbnail')?.value||null,deliveryDate:document.getElementById('j-deliver').value||null,invoiceDate:_isOwner()?(document.getElementById('j-invoice')?.value||null):(current?.invoiceDate||null),dueDate:_isOwner()?(document.getElementById('j-due')?.value||null):(current?.dueDate||null),paymentDate:_isOwner()?(document.getElementById('j-payin')?.value||null):(current?.paymentDate||null),paidAt:_isOwner()?(document.getElementById('j-paid-val')?.value||null):(current?.paidAt||null),payoutDate:_isOwner()?(document.getElementById('j-payout')?.value||null):(current?.payoutDate||null),salesRep:_isOwner()?(document.getElementById('j-sales-rep')?.value||null):(current?.salesRep||null),salesPay:_isOwner()?(parseInt(document.getElementById('j-sales-pay')?.value)||0):(Number(current?.salesPay)||0),notes:document.getElementById('j-notes').value.trim(),opsChecklist:readOpsChecklist(),subtasks,updatedAt:Date.now(),updatedBy:_myEmail()};
+  const entersOperationalCompletion=opsRequiresChecklist(data.biz,data.status)&&!opsRequiresChecklist(jobBiz(current),current?.status);
+  if(entersOperationalCompletion&&data.opsChecklist.length<opsChecklistDef(data.biz).length){toast('公開・運用・完了へ進む前に「運用完了チェック」をすべて確認してください','warn');return;}
   if(EID){
     const j=S.jobs.find(j=>j.id===EID);
     const prevStatus=j?.status;
@@ -11613,7 +11990,7 @@ function saveJob(){
       const already=S.logs.find(l=>!l.deleted&&l.sourceJobId===EID&&l.type==='revenue');
       if(!already){
         S.logs.push({id:uid(),type:'revenue',date:today(),title:data.title,clientId:data.clientId||null,amount:profit,sourceJobId:EID,createdAt:new Date().toISOString()});
-        toast(`💰 収益 ¥${profit.toLocaleString()} を目標達成確認に自動記帳しました`);
+        toast(_isOwner()?`💰 収益 ¥${profit.toLocaleString()} を目標達成確認に自動記帳しました`:'完了ステータスを保存しました');
       }
     }
   }
@@ -12098,68 +12475,194 @@ const NAV_CATS=[
   {id:'mgmt',label:'経営',views:['bizboard']},
   {id:'info',label:'情報',views:['bizinfo','docs','minutes','posts']},
 ];
-// ===メンバー権限(役割) 2026-07-23 会長指示===
-// 会長=full(全タブ)。営業スタッフ=sales(「営業」「情報」カテゴリのみ表示)。役割はチーム共有(memberRoles)。
-// 会長メールは常にfull。未登録アカウントはfull(既存メンバー=佐々木等を締め出さない安全既定)。
-// 注意: これはUI制限。チームデータはサインインで同期されるため技術的な完全遮断ではない(信頼済みスタッフ向け)。
+// ===メンバー権限(役割)===
+// access/{uid} をログイン直後に解決し、未承認アカウントは共有データを同期しない。
+// 純粋な動画編集者は editor_portals/{uid} だけを使い、shared/mcapp を一切読まない。
+// その他の承認済み社内ロールは共有データを同期し、画面単位の閲覧範囲を役割で制御する。
 const ADMIN_EMAILS=['nakamurakouta512@gmail.com','mono.create.group@gmail.com'];
 const OWNER_NAME='中村航汰';
+const APP_ROLES=['動画編集者','動画編集ディレクター','AIコンサルタント','AIエンジニア','Webデザイナー','営業','SNSマーケター'];
+let APP_ACCESS=null;          // access/{uid}: Firestoreルールと同じ役割の正本
+let ACCESS_RESOLVED=false;
+let ACCESS_REQUESTS=[];
+let ACCESS_RECORDS=[];
+let ACCESS_CONTROL={configured:false,enforced:false,phase:'compatibility',compatibilityEmails:[]};
+let PORTAL_JOBS=[];
+let PORTAL_INVOICES=[];
+let PORTAL_PROFILES=[];
+let PORTAL_AUTHORIZATIONS=[];
+let _accessReqUnsub=null;
+let _accessRecordsUnsub=null;
+let _accessControlUnsub=null;
+let _portalJobsUnsub=null;
+let _portalInvoicesUnsub=null;
+let _portalProfilesUnsub=null;
+let _portalAuthorizationsUnsub=null;
+function memberRolesOf(m){
+  if(!m)return[];
+  if(Array.isArray(m.roles)&&m.roles.length)return m.roles.filter(x=>APP_ROLES.includes(x));
+  // legacy values are interpreted only; the original fields are never rewritten by migration.
+  if(m.role==='editor'||(m.jobs||[]).includes('動画編集者'))return['動画編集者'];
+  if(m.role==='sales')return['営業'];
+  if(m.role==='full')return APP_ROLES.filter(x=>x!=='動画編集者');
+  return[];
+}
+function myRoles(){if(_isOwner())return APP_ROLES.slice();if(APP_ACCESS&&Array.isArray(APP_ACCESS.roles))return APP_ACCESS.roles.filter(x=>APP_ROLES.includes(x));return memberRolesOf(_myProfile());}
+function hasAppRole(role){return _isOwner()||myRoles().includes(role);}
 function _myEmail(){try{return((typeof FB_USER!=='undefined'&&FB_USER&&FB_USER.email)||'').toLowerCase();}catch(_){return'';}}
 function _isOwner(){return ADMIN_EMAILS.includes(_myEmail());}  // オーナー=会長。設定はオーナーのみ閲覧可
+function _canViewFinancials(){return _isOwner();}
+function _canOpenProjectTab(tab){
+  if(tab==='listing'||tab==='profit'||tab==='payment'||tab==='invoice')return _canViewFinancials();
+  return true;
+}
+function _financialAccessDenied(label){
+  return`<div class="empty"><div class="empty-title">${esc(label||'金額情報')}は表示できません</div><div style="color:var(--t2)">財務閲覧権限を持つアカウントだけが確認できます。</div></div>`;
+}
 function myRole(){
   const em=_myEmail();
-  if(!em)return 'full';                          // 未サインイン(ローカルのみ)。認証ゲートで画面自体は遮断される
+  if(!em)return 'none';
   if(ADMIN_EMAILS.includes(em))return 'full';    // 会長は常にフル
-  const r=(S.memberRoles||[]).find(m=>m&&(m.email||'').toLowerCase()===em);
-  return (r&&r.role==='full')?'full':'sales';    // 既定=営業スタッフ(安全側)。フルは会長がメンバー権限で付与
+  const rs=myRoles();
+  if(rs.length===1&&rs[0]==='動画編集者')return 'editor';
+  if(!APP_ACCESS||APP_ACCESS.approved!==true)return 'none';
+  return rs.includes('営業')&&rs.length===1?'sales':'staff';
 }
 const ROLE_SALES_CATS=['sales','info'];
 function _salesAllowedViews(){const vs=[];NAV_CATS.forEach(c=>{if(ROLE_SALES_CATS.includes(c.id))vs.push(...c.views);});return vs;}
 function isViewAllowed(v){
-  if(v==='settings'||v==='accounts'||v==='igaccounts')return _isOwner(); // 設定・アカウント一覧・IGアカウントはオーナー(会長)のみ
-  if(myRole()!=='sales')return true;
-  if(v.startsWith('doc_')||v.startsWith('bidoc_')||v.startsWith('tp_'))return true; // ドキュメント/事業情報=情報カテゴリ
-  if(v.startsWith('cp_'))return false;          // 個人カスタムページは不可
-  return _salesAllowedViews().includes(v);
+  if(myRole()==='editor')return v==='editorportal'; // UI fail-closed; shared Firestore doc is not row-level security.
+  if(_isOwner())return true;
+  const rs=myRoles();
+  const allow={
+    '動画編集ディレクター':['projects','workers'],
+    'AIコンサルタント':['projects','docs','minutes','bizinfo'],
+    'AIエンジニア':['projects','docs','tasks','bizinfo'],
+    'Webデザイナー':['projects','docs','tasks','hpfee'],
+    '営業':['projects','salesleads','salesrank','pipeline','inquiries','crm','salessites','docs','minutes','posts','bizinfo'],
+    'SNSマーケター':['projects','posts','docs','minutes','crm']
+  };
+  if(v==='settings'||v==='accounts'||v==='igaccounts'||v==='revenue'||v==='bizboard')return false;
+  if(v.startsWith('cp_'))return false;
+  if(v.startsWith('doc_')||v.startsWith('bidoc_')||v.startsWith('tp_'))return rs.some(r=>(allow[r]||[]).includes('docs'));
+  return rs.some(r=>(allow[r]||[]).includes(v));
 }
-function mrAddMember(){
-  if(myRole()!=='full'){toast('権限がありません','err');return;}
+function _accessUidForEmail(email){
+  const em=String(email||'').toLowerCase();
+  return (ACCESS_RECORDS||[]).find(x=>String(x.email||'').toLowerCase()===em)?.id||(ACCESS_REQUESTS||[]).find(x=>String(x.email||'').toLowerCase()===em)?.id||(S.signins||[]).find(x=>String(x.email||'').toLowerCase()===em)?.id||'';
+}
+function accessMigrationRows(){
+  return(S.memberRoles||[]).filter(m=>m&&!m.deleted&&!ADMIN_EMAILS.includes(String(m.email||'').toLowerCase())).map(m=>{
+    const em=String(m.email||'').toLowerCase(),uid=_accessUidForEmail(em),a=(ACCESS_RECORDS||[]).find(x=>x.id===uid),roles=memberRolesOf(m);
+    return{member:m,email:em,uid,roles,ready:!!(uid&&a&&a.approved===true&&Array.isArray(a.roles)&&a.roles.length&&roles.length),approved:!!a?.approved};
+  });
+}
+function accessMigrationReady(){const rows=accessMigrationRows();return rows.length>0&&rows.every(x=>x.ready);}
+function accessCompatibilityEmails(){return[...new Set([...(S.memberRoles||[]).filter(m=>m&&!m.deleted).map(m=>String(m.email||'').toLowerCase()),...(ACCESS_RECORDS||[]).filter(a=>a.approved===true).map(a=>String(a.email||'').toLowerCase()),...ADMIN_EMAILS].filter(x=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x)))].sort();}
+async function accessPrepareCompatibilityAllowlist(){
+  if(!_isOwner())return toast('オーナーのみ操作できます','err');
+  const compatibilityEmails=accessCompatibilityEmails(),staff=compatibilityEmails.filter(x=>!ADMIN_EMAILS.includes(x));
+  if(!staff.length)return toast('先に既存メンバーのメールアドレスを登録してください','warn');
+  if(!confirm(`既存スタッフ ${staff.length}名を互換運用の許可リストに固定しますか？\nリスト外の未承認アカウントは共有データを開けなくなります。`))return;
+  try{await fbDb.collection('system').doc('access_control').set({enforced:false,phase:'compatibility',compatibilityEmails,allowlistPreparedAt:firebase.firestore.FieldValue.serverTimestamp(),allowlistPreparedBy:_myEmail(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});toast('既存スタッフの許可リストを固定しました');}catch(e){console.warn(e);toast('許可リストを保存できませんでした','err');}
+}
+async function accessEnableEnforcement(){
+  if(!_isOwner())return toast('オーナーのみ操作できます','err');
+  const rows=accessMigrationRows(),missing=rows.filter(x=>!x.ready);
+  if(ACCESS_CONTROL.configured!==true||!Array.isArray(ACCESS_CONTROL.compatibilityEmails)||!ACCESS_CONTROL.compatibilityEmails.length)return toast('先に既存スタッフの許可リストを固定してください','warn');
+  if(!rows.length)return toast('既存メンバーが登録されていないため切替できません','warn');
+  if(missing.length)return toast(`未移行のメンバーが ${missing.length}名います。先に役割とアクセスを承認してください`,'warn');
+  if(!confirm('既存メンバー全員の移行を確認しました。新しい役職権限を有効にしますか？\n未承認アカウントは社内データを開けなくなります。'))return;
+  try{await fbDb.collection('system').doc('access_control').set({enforced:true,phase:'enforced',enforcedAt:firebase.firestore.FieldValue.serverTimestamp(),enforcedBy:_myEmail(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});toast('新しい役職権限を有効にしました');}catch(e){console.warn(e);toast('役職権限を有効にできませんでした','err');}
+}
+async function accessDisableEnforcement(){
+  if(!_isOwner())return;
+  if(!confirm('緊急互換モードへ戻しますか？\n既存画面は維持され、事前に固定したスタッフだけが一時的に利用できます。'))return;
+  try{await fbDb.collection('system').doc('access_control').set({enforced:false,phase:'rollback',rollbackAt:firebase.firestore.FieldValue.serverTimestamp(),rollbackBy:_myEmail(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});toast('緊急互換モードへ戻しました','warn');}catch(e){console.warn(e);toast('互換モードへ戻せませんでした','err');}
+}
+function downloadOperationsBackup(){
+  if(!_isOwner())return toast('オーナーのみ操作できます','err');
+  const payload={schema:'mcapp-operations-backup-v1',createdAt:new Date().toISOString(),appVersion:APP_VERSION,jobs:S.jobs||[],clients:S.clients||[],workers:S.workers||[],memberRoles:S.memberRoles||[],portalJobs:PORTAL_JOBS||[],portalInvoices:PORTAL_INVOICES||[],accessRecords:ACCESS_RECORDS||[],accessControl:ACCESS_CONTROL};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=`mono-create-operations-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('運用バックアップを書き出しました');
+}
+async function mrAddMember(){
+  if(!_isOwner()){toast('権限がありません','err');return;}
   const el=document.getElementById('mr-email');const em=(el?.value||'').trim().toLowerCase();
-  const role=(document.getElementById('mr-role')?.value==='full')?'full':'sales';
+  const roles=[...document.querySelectorAll('.mr-role:checked')].map(x=>x.value).filter(x=>APP_ROLES.includes(x));
+  const workerId=document.getElementById('mr-worker')?.value||null;
   if(!em||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){toast('メールアドレスを正しく入力してください','warn');return;}
   if(ADMIN_EMAILS.includes(em)){toast('会長アカウントは常にフル権限です','warn');return;}
   if(!Array.isArray(S.memberRoles))S.memberRoles=[];
   const ex=S.memberRoles.find(m=>m&&(m.email||'').toLowerCase()===em);
-  if(ex){ex.role=role;ex.deleted=false;ex.updatedAt=Date.now();}
-  else{S.memberRoles.push({id:uid(),email:em,role,createdAt:today(),updatedAt:Date.now(),addedBy:_myEmail()});}
-  save();render();toast(`${em} を ${role==='sales'?'営業スタッフ(営業・情報のみ)':'フル'} に設定しました`);
+  if(!roles.length){toast('少なくとも1つの役割を選択してください','warn');return;}
+  if(roles.includes('動画編集者')&&roles.length>1){toast('金額情報を確実に分離するため、「動画編集者」は他の役割と併用できません','warn');return;}
+  if(roles.includes('動画編集者')&&!workerId){toast('動画編集者には担当者の紐付けが必要です','warn');return;}
+  if(ex){ex.roles=roles;ex.workerId=workerId;ex.deleted=false;ex.updatedAt=Date.now();}
+  else{S.memberRoles.push({id:uid(),email:em,roles,workerId,createdAt:today(),updatedAt:Date.now(),addedBy:_myEmail()});}
+  save();
+  const targetUid=_accessUidForEmail(em);
+  if(targetUid){
+    try{
+      await fbDb.collection('access').doc(targetUid).set({uid:targetUid,email:em,roles,workerId:workerId||null,approved:true,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:_myEmail()},{merge:true});
+      await fbDb.collection('accessRequests').doc(targetUid).set({status:'approved',approvedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+      toast(`${em} の役割とアクセスを承認しました`);
+    }catch(e){console.warn('access grant failed',e);toast('役割は保存しましたが、アクセス承認に失敗しました','warn');}
+  }else toast('役割を事前登録しました。相手が一度ログイン後、承認待ち一覧から有効化できます','ok');
+  render();
+}
+async function mrApproveRequest(requestUid){
+  if(!_isOwner())return toast('権限がありません','err');
+  const req=(ACCESS_REQUESTS||[]).find(x=>x.id===requestUid);if(!req)return toast('承認申請が見つかりません','warn');
+  const roles=[...document.querySelectorAll('.ar-role')].filter(x=>x.dataset.uid===requestUid&&x.checked).map(x=>x.value).filter(x=>APP_ROLES.includes(x));
+  const workerId=document.getElementById('ar-worker-'+requestUid)?.value||null;
+  if(!roles.length)return toast('少なくとも1つの役割を選択してください','warn');
+  if(roles.includes('動画編集者')&&roles.length>1)return toast('「動画編集者」は他の役割と併用できません','warn');
+  if(roles.includes('動画編集者')&&!workerId)return toast('動画編集者には担当者の紐付けが必要です','warn');
+  const em=String(req.email||'').toLowerCase();
+  try{
+    const batch=fbDb.batch();
+    batch.set(fbDb.collection('access').doc(requestUid),{uid:requestUid,email:em,name:req.name||'',roles,workerId:workerId||null,approved:true,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:_myEmail()},{merge:true});
+    batch.set(fbDb.collection('accessRequests').doc(requestUid),{status:'approved',approvedAt:firebase.firestore.FieldValue.serverTimestamp(),approvedBy:_myEmail()},{merge:true});
+    await batch.commit();
+    if(!Array.isArray(S.memberRoles))S.memberRoles=[];
+    let m=S.memberRoles.find(x=>x&&!x.deleted&&String(x.email||'').toLowerCase()===em);
+    if(!m){m={id:uid(),email:em,createdAt:today(),addedBy:_myEmail()};S.memberRoles.push(m);}
+    Object.assign(m,{name:req.name||m.name||'',roles,workerId:workerId||null,deleted:false,updatedAt:Date.now()});save();render();toast(`${em} のアクセスを承認しました`);
+  }catch(e){console.warn('approve access failed',e);toast('アクセス承認に失敗しました','err');}
+}
+async function mrRejectRequest(requestUid){
+  if(!_isOwner())return;
+  if(!confirm('このアクセス申請を却下しますか？'))return;
+  try{await fbDb.collection('accessRequests').doc(requestUid).set({status:'rejected',rejectedAt:firebase.firestore.FieldValue.serverTimestamp(),rejectedBy:_myEmail()},{merge:true});toast('アクセス申請を却下しました');}catch(e){toast('却下に失敗しました','err');}
 }
 function mrSetRole(id,role){
-  if(myRole()!=='full'){toast('権限がありません','err');render();return;}
-  const m=(S.memberRoles||[]).find(x=>x.id===id);if(!m)return;
-  m.role=(role==='full')?'full':'sales';m.deleted=false;m.updatedAt=Date.now();
-  save();render();toast(`${m.name||m.email} を ${m.role==='full'?'フル':'営業・情報のみ'} に変更しました`);
+  if(!_isOwner())return toast('権限がありません','err');
+  VIEW='settings';render();toast('7役職のチェックボックスから権限を変更してください');
 }
-function mrRemoveMember(id){
-  if(myRole()!=='full'){toast('権限がありません','err');return;}
+async function mrRemoveMember(id){
+  if(!_isOwner()){toast('権限がありません','err');return;}
   const m=(S.memberRoles||[]).find(x=>x.id===id);if(!m)return;
-  if(!confirm(`${m.email} の権限設定を削除しますか？（このアカウントは次回サインイン時に営業スタッフ表示へ戻ります）`))return;
-  m.deleted=true;m.updatedAt=Date.now();
-  save();render();toast('権限設定を削除しました');
+  if(!confirm(`${m.email} のアクセスを停止しますか？（次回は承認待ち画面になります）`))return;
+  m.deleted=true;m.updatedAt=Date.now();save();
+  const targetUid=_accessUidForEmail(m.email);
+  if(targetUid){try{await fbDb.collection('access').doc(targetUid).set({approved:false,revokedAt:firebase.firestore.FieldValue.serverTimestamp(),revokedBy:_myEmail()},{merge:true});}catch(e){console.warn('access revoke failed',e);toast('表示設定は削除しましたが、アクセス停止に失敗しました','warn');}}
+  render();toast('権限設定を停止しました');
 }
 
 // ===認証ゲート＋オンボーディング(2026-07-23 会長指示: 共有時はログイン必須・初回に名前/職種登録)===
 // ・未サインインでは画面自体を隠し、ログイン画面だけを見せる(データを一切見せない)
 // ・Googleサインイン後、初回のみ「名前・職種」を登録(会長=ADMINはスキップ)
-// ・アクセス権限(営業/フル)は会長がメンバー権限で設定。新規は営業スタッフ(安全側)。
+// ・アクセス権限は会長が7役職から設定。未承認ユーザーは共有データを読み込まない。
 let _authSettled=false;
 const JOB_OPTIONS=['動画編集者','動画撮影者','画像作成者','営業','ディレクター','その他'];
 function _myProfile(){const em=_myEmail();return em?(S.memberRoles||[]).find(m=>m&&!m.deleted&&(m.email||'').toLowerCase()===em):null;}
 function _hasProfile(){
   if(ADMIN_EMAILS.includes(_myEmail()))return true;       // 会長はオンボ不要
   const em=_myEmail(); if(!em)return false;
+  if(ACCESS_RESOLVED)return true;                         // 新権限ゲートで承認待ち/専用ポータルを表示
   try{if(localStorage.getItem('mcapp_prof_'+em))return true;}catch(_){}
-  const p=_myProfile(); return !!(p&&p.name);
+  const p=_myProfile(); return !!(p&&(p.name||memberRolesOf(p).includes('動画編集者')));
 }
 function _injectAuthGateCSS(){
   if(document.getElementById('auth-gate-css'))return;
@@ -12257,7 +12760,7 @@ function _navCatOf(id){return NAV_CATS.find(cat=>cat.views.includes(id))||null;}
 function renderNav(){
   const cfg=getNavCfg();
   const el=document.getElementById('nav-items');if(!el)return;
-  const visible=cfg.filter(c=>!c.hidden);
+  const visible=cfg.filter(c=>!c.hidden&&isViewAllowed(c.id));
   const catState=getNavCatState();
   const navItemHTML=(c,draggable=false)=>{
     const{label,icon}=navMeta(c.id);
@@ -12295,19 +12798,19 @@ function renderNav(){
   el.innerHTML=grouped(true);
   const _owner=_isOwner();
   // 営業スタッフには固定の「カスタマイズ」を出さない。設定はオーナー(会長)のみ表示(サインアウトは下部auth-uiボタン)。
-  document.querySelectorAll('#sidebar .nav-item[data-view="customize"]').forEach(el=>{el.style.display=_role==='sales'?'none':'';});
+  document.querySelectorAll('#sidebar .nav-item[data-view="customize"]').forEach(el=>{el.style.display=_owner?'':'none';});
   document.querySelectorAll('#sidebar .nav-item[data-view="settings"]').forEach(el=>{el.style.display=_owner?'':'none';});
   document.querySelectorAll('#sidebar .nav-item[data-view="accounts"]').forEach(el=>{el.style.display=_owner?'':'none';}); // サインイン中アカウント一覧はオーナーのみ
   document.querySelectorAll('#sidebar .nav-item[data-view="igaccounts"]').forEach(el=>{el.style.display=_owner?'':'none';}); // IGアカウント一覧もオーナーのみ
   // モバイル下タブバー: 営業スタッフには個人用(ホーム/タスク/AI/習慣/案件)を出さず、メニューのみ残す。
   document.querySelectorAll('#mob-nav .mnav-item').forEach(el=>{
     const v=el.dataset.view;
-    el.style.display=(_role==='sales'&&v&&!isViewAllowed(v))?'none':'';
+    el.style.display=(v&&!isViewAllowed(v))?'none':'';
   });
   // モバイルドロワー
   const dr=document.getElementById('mob-drawer-nav');if(!dr)return;
   dr.innerHTML=grouped(false)+`<div class="nav-sep"></div>
-  ${_role==='sales'?'':`<div class="nav-item${V==='customize'?' active':''}" data-view="customize"><span class="nav-icon">🛠</span>カスタマイズ</div>`}
+  ${_owner?`<div class="nav-item${V==='customize'?' active':''}" data-view="customize"><span class="nav-icon">🛠</span>カスタマイズ</div>`:''}
   ${_owner?`<div class="nav-item${V==='accounts'?' active':''}" data-view="accounts"><span class="nav-icon">👥</span>アカウント</div>`:''}
   ${_owner?`<div class="nav-item${V==='igaccounts'?' active':''}" data-view="igaccounts"><span class="nav-icon">📷</span>IGアカウント</div>`:''}
   ${_owner?`<div class="nav-item${V==='settings'?' active':''}" data-view="settings"><span class="nav-icon">⚙️</span>設定</div>`:''}`;
@@ -14872,7 +15375,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260825-01';
+const APP_VERSION='20260825-02';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -14889,22 +15392,23 @@ function forceAppUpdate(){
     });
   }else{location.href=location.pathname+bust;}
 }
+function showAppUpdate(version){
+  if(document.getElementById('system-update-banner'))return;
+  const el=document.createElement('div');el.id='system-update-banner';
+  el.style.cssText='position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:100001;width:min(680px,calc(100vw - 24px));background:#f5f3ff;border:1px solid #c4b5fd;border-radius:12px;padding:11px 13px;box-shadow:0 12px 34px rgba(35,24,70,.2);display:flex;gap:10px;align-items:center;color:#1f1734';
+  el.innerHTML=`<div style="flex:1;min-width:0"><b style="display:block;font-size:12px">システム更新 ${esc(version||'')}</b><span style="font-size:10.5px;color:#6b6478">入力内容を保存してから、最新版へ再読み込みます。</span></div><button class="btn btn-p btn-sm" onclick="saveBeforeAppUpdate()">保存して再読み込み</button>`;
+  document.body.appendChild(el);
+}
+function saveBeforeAppUpdate(){
+  try{save();}catch(e){console.warn('pre-update save',e);}
+  forceAppUpdate();
+}
 (function(){
   const stored=localStorage.getItem('ef_team_app_ver');
   if(stored!==APP_VERSION){
     localStorage.setItem('ef_team_app_ver',APP_VERSION);
-    if(stored){
-      // ループ防止: sessionStorageで試行回数を管理
-      const attempts=parseInt(sessionStorage.getItem('ef_update_attempts')||'0');
-      if(attempts<3){
-        sessionStorage.setItem('ef_update_attempts',String(attempts+1));
-        forceAppUpdate();
-      }else{
-        // 3回試みても解決しない場合はループを止める
-        sessionStorage.removeItem('ef_update_attempts');
-        console.warn('Update loop detected, skipping forceAppUpdate');
-      }
-    }
+    // 新しいHTML自体はすでに読み込み済み。ここで自動再読込しない。
+    sessionStorage.removeItem('ef_update_attempts');
   }else{
     sessionStorage.removeItem('ef_update_attempts');
   }
@@ -14937,18 +15441,14 @@ function checkServerVersion(){
   fetch('sw.js?vchk='+now,{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{
     const m=t.match(/mcshanai-(\d{8}-\d{2})/);
     if(!m||m[1]===APP_VERSION)return;
-    // 編集中(モーダル表示 or 未保存入力)は壊さない。次回チェックで再試行される
-    if(document.getElementById('modal-overlay')||window._modalDirty)return;
-    // リロードループ防止: 自動更新は10分に1回まで
-    const last=parseInt(localStorage.getItem('ef_vchk_reload')||'0');
-    if(now-last<600000)return;
-    localStorage.setItem('ef_vchk_reload',String(now));
-    forceAppUpdate();
+    // 編集中の入力を消さないため、自動再読込はせず利用者の操作を待つ。
+    showAppUpdate(m[1]);
   }).catch(()=>{});
 }
 setInterval(checkServerVersion,5*60*1000);                                         // 5分ごと
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
-</script>
+  </script>
+  <script src="./manager-features.js?v=20260825-02"></script>
 </body>
 </html>

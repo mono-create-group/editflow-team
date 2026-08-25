@@ -1,0 +1,37 @@
+name: Notify editor app system update
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - index.html
+      - editor.html
+      - editor-features.js
+      - manager-features.js
+      - sw.js
+
+permissions:
+  contents: read
+
+concurrency:
+  group: editor-app-system-update
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read release version
+        id: version
+        shell: bash
+        run: |
+          version=$(sed -n "s/.*const APP_VERSION='\([^']*\)'.*/\1/p" index.html | tail -1)
+          test -n "$version"
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+      - name: Notify existing Chatwork room after Pages is live
+        env:
+          CHATWORK_API_TOKEN: ${{ secrets.CHATWORK_API_TOKEN }}
+          CHATWORK_SYSTEM_UPDATE_ROOM_IDS: ${{ secrets.CHATWORK_SYSTEM_UPDATE_ROOM_IDS }}
+        run: python3 scripts/notify-system-update.py --version "${{ steps.version.outputs.value }}"
