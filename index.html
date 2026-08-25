@@ -11082,9 +11082,9 @@ function rWorkers(){
   const hiredWorkers=workers.filter(w=>w.employStatus==='hired');
 
   return`<div class="ph">
-  <div class="ph-title">ワーカー管理</div>
+  <div class="ph-title">編集者管理</div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-    <button class="btn btn-p" onclick="openAddWorkerModal()">＋ ワーカー追加</button>
+    <button class="btn btn-p" onclick="openAddWorkerModal()">＋ 編集者追加</button>
     <div style="display:flex;gap:10px;font-size:12px;color:var(--t2)">
       ${prospectWorkers.length?`<span class="badge bc">📋 採用予定 ${prospectWorkers.length}</span>`:''}
       ${trialWorkers.length?`<span class="badge ba">🔶 トライアル ${trialWorkers.length}</span>`:''}
@@ -11092,7 +11092,7 @@ function rWorkers(){
     </div>
   </div>
 </div>
-${!workers.length?`<div class="empty"><div class="empty-icon">👥</div><div class="empty-title">ワーカーがいません</div><div style="color:var(--t2)">「＋ ワーカー追加」から登録してください</div></div>`:''}
+${!workers.length?`<div class="empty"><div class="empty-icon">👥</div><div class="empty-title">編集者がいません</div><div style="color:var(--t2)">「＋ 編集者追加」から登録してください</div></div>`:''}
 
 ${prospectWorkers.length?`<div class="section-ttl" style="color:var(--cyan)">📋 採用予定ワーカー (${prospectWorkers.length})</div>
 ${prospectWorkers.map(w=>rWorkerCard(w)).join('')}`:''}
@@ -11109,7 +11109,7 @@ function workerAffiliationDatalist(){
   return`<datalist id="wm-aff-list">${affs.map(a=>`<option value="${esc(a)}">`).join('')}</datalist>`;
 }
 function openAddWorkerModal(){
-  openModal(`<div class="mhdr"><div class="mtitle">ワーカー追加</div><button class="mclose" onclick="closeModal()">✕</button></div>
+  openModal(`<div class="mhdr"><div class="mtitle">編集者追加</div><button class="mclose" onclick="closeModal()">✕</button></div>
 ${workerAffiliationDatalist()}
 <div class="fg"><div class="fl">名前 *</div><input id="wm-name" placeholder="担当者名"></div>
 <div class="fg"><div class="fl">ステータス</div>
@@ -15449,7 +15449,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260825-04';
+const APP_VERSION='20260826-01';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -15523,6 +15523,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-  <script src="./manager-features.js?v=20260825-04"></script>
+  <script src="./manager-features.js?v=20260826-01"></script>
 </body>
 </html>

@@ -121,7 +121,8 @@ def static_contract_checks() -> None:
         ok("editor job board, schedule, manual, and suggestion features")
 
     manager_feature_markers = [
-        "編集者管理", "契約区分と担当ディレクター", "クライアント → アカウント登録",
+        "編集者管理", "契約区分と担当ディレクター", "既存クライアントを編集者へ共有",
+        "legacyClients", "legacyWorkers", "sourceClientId",
         "編集可能スケジュール", "マニュアル保管庫", "外部編集者の支払い確定",
         "編集者からの請求書", "匿名目安箱",
     ]
