@@ -163,6 +163,7 @@ def static_contract_checks() -> None:
     board_choice_markers = [
         "DIRECT_ALL_ID='__direct_all__'", "mono.create直接編集者全員",
         "クライアントを選択", "先にクライアントを選択",
+        "managerAddBoardAccount", "このクライアントにアカウントを登録",
         "managerBoardAudienceChanged", "openAll=target===DIRECT_ALL_ID",
     ]
     absent = [marker for marker in board_choice_markers if marker not in manager_features]
