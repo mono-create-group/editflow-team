@@ -1247,6 +1247,8 @@ function fbSetupRealtimeSync(){
 const TEAM_KEYS=['jobs','clients','workers','pipeline','teamKgis','teamKpis','teamPosts','teamDocs','teamPages','bizUnits','teamMeetings','salesLeads','hpFees','salesSites','templates','bizInfo','crmClients','memberRoles','signins','salesDirectives'];
 let TEAM_SHARE_OK=null;      // null=未判定 / true=共有有効 / false=個人モード
 let _teamUnsub=null;
+let _teamCloudLoaded=false;  // shared/mcapp の初回読込前は共有データを絶対に保存しない
+let _teamKnownCounts={};     // 起動中に確認したクラウド件数。主要台帳の空上書きを防ぐ
 window._teamSnap=window._teamSnap||{};
 function _entSig(e){const o={};for(const k in e){if(k!=='updatedAt')o[k]=e[k];}return JSON.stringify(o);}
 // チーム共有フィールドのエンコード/デコード。salesLeadsは肥大するためLZ圧縮する。
@@ -1388,10 +1390,20 @@ function mergeTeamArr(local,remote,key){
 }
 function _teamSave(){
   if(!FB_USER||TEAM_SHARE_OK===false)return;
+  if(!_teamCloudLoaded){console.warn('team share save skipped: cloud snapshot is not loaded');return;}
   const payload={ts:firebase.firestore.FieldValue.serverTimestamp(),by:FB_USER.uid};
   // salesLeadsは分割格納(shared/mcapp_leads_0..3)へ移行済み。本体にはマーカーのみ置く
   // (旧クライアントはマーカーをJSON解釈できず無害スキップ。他キーは従来どおり)
-  TEAM_KEYS.forEach(k=>{payload[k]=(k==='salesLeads')?'SHARDED':_teamEncode(k,S[k]||[]);});
+  TEAM_KEYS.forEach(k=>{
+    if(k==='salesLeads'){payload[k]='SHARDED';return;}
+    const cur=Array.isArray(S[k])?S[k].length:0,known=Number(_teamKnownCounts[k]||0);
+    if(['jobs','clients','workers'].includes(k)&&known>0&&cur===0){
+      console.warn('team share save skipped for protected ledger: '+k+' '+known+'→0');
+      return;
+    }
+    payload[k]=_teamEncode(k,S[k]||[]);
+    if(cur>known)_teamKnownCounts[k]=cur;
+  });
   // _seed(種データ)はクラウドへ書かない。merge:true なので既存の実データを消さずに保持する。
   if(S.bizBoard && !S.bizBoard._seed) payload.bizBoard=_teamEncode('bizBoard',S.bizBoard);
   fbDb.collection('shared').doc('mcapp').set(payload,{merge:true})
@@ -1402,18 +1414,21 @@ function _teamSave(){
 function fbSetupTeamSync(){
   if(!FB_USER)return;
   if(_teamUnsub){_teamUnsub();_teamUnsub=null;}
+  _teamCloudLoaded=false;_teamKnownCounts={};
   _teamUnsub=fbDb.collection('shared').doc('mcapp').onSnapshot(doc=>{
     if(TEAM_SHARE_OK!==true){TEAM_SHARE_OK=true;renderAuthUI();}
-    if(!doc.exists){_teamSave();return;}
+    if(!doc.exists){_teamCloudLoaded=true;_teamSave();return;}
     const d=doc.data()||{};
     let changed=false;
     TEAM_KEYS.forEach(k=>{
       if(typeof d[k]!=='string')return;
       const remote=_teamDecode(d[k]);
       if(remote==null)return;
+      if(Array.isArray(remote))_teamKnownCounts[k]=remote.length;
       const merged=mergeTeamArr(S[k]||[],remote,k);
       if(JSON.stringify(merged)!==JSON.stringify(S[k]||[])){S[k]=merged;changed=true;}
     });
+    _teamCloudLoaded=true;
     // 経営ボード(bizBoard): オブジェクト全体を「新しい方優先」で取り込む。
     // 種データ(_seed)は updatedAt=0 なので、実データ(updatedAt>0)が常に勝ち、種で上書きされない。
     // 取り込みで内容が入れ替わる直前に、現在の実データを必ずローカルへバックアップ(誤消失の復元用)。
@@ -1524,6 +1539,7 @@ fbAuth.getRedirectResult().catch(e=>{console.warn('getRedirectResult:',e&&e.code
 function _stopRoleSubscriptions(){
   [_fbUnsubscribe,_teamUnsub,_accessReqUnsub,_accessRecordsUnsub,_accessControlUnsub,_portalJobsUnsub,_portalInvoicesUnsub,_portalProfilesUnsub,_portalAuthorizationsUnsub].forEach(u=>{try{if(u)u();}catch(_){}});
   _fbUnsubscribe=_teamUnsub=_accessReqUnsub=_accessRecordsUnsub=_accessControlUnsub=_portalJobsUnsub=_portalInvoicesUnsub=_portalProfilesUnsub=_portalAuthorizationsUnsub=null;
+  _teamCloudLoaded=false;_teamKnownCounts={};
 }
 function _clearSensitiveLocalState(){
   const fresh=defState();
@@ -10887,7 +10903,7 @@ ${(()=>{const rows=accessMigrationRows(),ready=rows.filter(x=>x.ready).length,en
   <div style="font-size:12px;color:var(--t2);line-height:1.7;margin-bottom:10px">互換モード中は現在のスタッフを締め出さず、新しい役割を順番に設定できます。${configured?'許可リスト外の未承認アカウントは共有データを開けません。':'最初に既存スタッフのメールを許可リストへ固定してください。'}全員が移行済みになるまで本番の強制切替ボタンは動作しません。</div>
   ${!configured&&!enforced?'<div style="padding:9px 10px;background:var(--card2);border:1px solid var(--amber);border-radius:8px;margin-bottom:10px;font-size:11px;color:var(--t2)"><b>初回の安全設定が未完了です。</b><br>既存メンバーを登録後、許可リストを固定すると外部の未承認ログインを遮断できます。</div>':''}
   ${rows.length?`<div style="display:flex;flex-direction:column;gap:5px;margin-bottom:12px">${rows.map(x=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 9px;background:var(--card2);border-radius:8px"><span style="color:${x.ready?'var(--green)':'var(--amber)'}">${x.ready?'✓':'!'}</span><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis">${esc(x.member.name||x.email)}</div><div style="font-size:10.5px;color:var(--t3)">${esc(x.roles.join(' / ')||'役割未設定')} ・ ${x.uid?'UID確認済み':'初回ログイン待ち'}</div></div></div>`).join('')}</div>`:'<div style="font-size:12px;color:var(--t3);margin-bottom:10px">既存メンバーはまだ登録されていません。</div>'}
-  <div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn btn-g btn-sm" onclick="downloadOperationsBackup()">運用バックアップを書き出す</button>${!configured&&!enforced?'<button class="btn btn-g btn-sm" onclick="accessPrepareCompatibilityAllowlist()">既存スタッフの許可リストを固定</button>':''}${enforced?'<button class="btn btn-g btn-sm" onclick="accessDisableEnforcement()">緊急互換モードへ戻す</button>':`<button class="btn btn-p btn-sm" ${accessMigrationReady()&&configured?'':'disabled'} onclick="accessEnableEnforcement()">全員確認後に役職権限を有効化</button>`}</div>
+  <div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn btn-g btn-sm" onclick="downloadOperationsBackup()">運用バックアップを書き出す</button><input id="operations-restore-file" type="file" accept=".json,application/json" style="display:none" onchange="previewOperationsRestoreFile(this)"><button class="btn btn-g btn-sm" onclick="document.getElementById('operations-restore-file').click()">改修前データを復元</button>${!configured&&!enforced?'<button class="btn btn-g btn-sm" onclick="accessPrepareCompatibilityAllowlist()">既存スタッフの許可リストを固定</button>':''}${enforced?'<button class="btn btn-g btn-sm" onclick="accessDisableEnforcement()">緊急互換モードへ戻す</button>':`<button class="btn btn-p btn-sm" ${accessMigrationReady()&&configured?'':'disabled'} onclick="accessEnableEnforcement()">全員確認後に役職権限を有効化</button>`}</div>
 </div>`})()}`:''}
 
 ${_isOwner()?`${secTitle('💴 DM営業の報酬設定')}
@@ -12659,6 +12675,48 @@ function downloadOperationsBackup(){
   const payload={schema:'mcapp-operations-backup-v1',createdAt:new Date().toISOString(),appVersion:APP_VERSION,jobs:S.jobs||[],clients:S.clients||[],workers:S.workers||[],memberRoles:S.memberRoles||[],portalJobs:PORTAL_JOBS||[],portalInvoices:PORTAL_INVOICES||[],accessRecords:ACCESS_RECORDS||[],accessControl:ACCESS_CONTROL};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download=`mono-create-operations-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('運用バックアップを書き出しました');
+}
+function _opsRestoreMissing(current,incoming){
+  const ids=new Set((current||[]).filter(x=>x&&x.id).map(x=>x.id));
+  return(incoming||[]).filter(x=>x&&x.id&&!ids.has(x.id));
+}
+async function previewOperationsRestoreFile(input){
+  if(!_isOwner())return toast('オーナーのみ操作できます','err');
+  const file=input&&input.files&&input.files[0];if(!file)return;
+  try{
+    const data=JSON.parse(await file.text());
+    const candidate={
+      jobs:Array.isArray(data.jobs)?data.jobs:[],
+      clients:Array.isArray(data.clients)?data.clients:[],
+      workers:Array.isArray(data.workers)?data.workers:[]
+    };
+    const missing={
+      jobs:_opsRestoreMissing(S.jobs,candidate.jobs),
+      clients:_opsRestoreMissing(S.clients,candidate.clients),
+      workers:_opsRestoreMissing(S.workers,candidate.workers)
+    };
+    if(!candidate.jobs.length&&!candidate.clients.length&&!candidate.workers.length)throw new Error('案件・クライアント・編集者がありません');
+    window._opsRestoreCandidate={fileName:file.name,candidate,missing};
+    openModal(`<div class="mhdr"><div class="mtitle">改修前データの復元確認</div><button class="mclose" onclick="closeModal()">✕</button></div>
+      <div style="font-size:12px;color:var(--t2);line-height:1.7;margin-bottom:12px">${esc(file.name)} を確認しました。現在のデータは上書きせず、同じIDが存在しない記録だけを追加します。</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+        <div class="card card-sm"><div style="font-size:11px;color:var(--t3)">案件</div><b style="font-size:22px">${missing.jobs.length}</b><div style="font-size:10px;color:var(--t3)">不足 / 元${candidate.jobs.length}</div></div>
+        <div class="card card-sm"><div style="font-size:11px;color:var(--t3)">クライアント</div><b style="font-size:22px">${missing.clients.length}</b><div style="font-size:10px;color:var(--t3)">不足 / 元${candidate.clients.length}</div></div>
+        <div class="card card-sm"><div style="font-size:11px;color:var(--t3)">編集者</div><b style="font-size:22px">${missing.workers.length}</b><div style="font-size:10px;color:var(--t3)">不足 / 元${candidate.workers.length}</div></div>
+      </div>
+      <div class="mfooter"><button class="btn btn-g" onclick="closeModal()">キャンセル</button><button class="btn btn-p" onclick="applyOperationsRestore()">不足分だけ復元</button></div>`);
+  }catch(e){console.warn('operations restore preview',e);toast('復元ファイルを確認できませんでした','err');}
+  finally{input.value='';}
+}
+function applyOperationsRestore(){
+  if(!_isOwner())return toast('オーナーのみ操作できます','err');
+  if(!_teamCloudLoaded)return toast('クラウドの読込完了後に復元してください','warn');
+  const r=window._opsRestoreCandidate;if(!r)return toast('復元候補がありません','warn');
+  const add=(current,missing)=>[...(current||[]),...(missing||[])];
+  S.jobs=add(S.jobs,r.missing.jobs);S.clients=add(S.clients,r.missing.clients);S.workers=add(S.workers,r.missing.workers);
+  _teamSnapRebase();save();closeModal();render();
+  toast(`復元しました：案件 ${r.missing.jobs.length}件 / クライアント ${r.missing.clients.length}件 / 編集者 ${r.missing.workers.length}件`);
+  window._opsRestoreCandidate=null;
 }
 async function mrAddMember(){
   if(!_isOwner()){toast('権限がありません','err');return;}
@@ -15449,7 +15507,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260826-02';
+const APP_VERSION='20260826-03';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -15523,6 +15581,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-  <script src="./manager-features.js?v=20260826-02"></script>
+  <script src="./manager-features.js?v=20260826-03"></script>
 </body>
 </html>

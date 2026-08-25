@@ -230,6 +230,22 @@ def static_contract_checks() -> None:
     else:
         ok("editor progress drafts survive real-time rerenders")
 
+    ledger_safety_markers = [
+        "let _teamCloudLoaded=false",
+        "if(!_teamCloudLoaded){console.warn('team share save skipped: cloud snapshot is not loaded');return;}",
+        "['jobs','clients','workers'].includes(k)&&known>0&&cur===0",
+        "if(!doc.exists){_teamCloudLoaded=true;_teamSave();return;}",
+        "if(Array.isArray(remote))_teamKnownCounts[k]=remote.length",
+        "function previewOperationsRestoreFile(input)",
+        "function applyOperationsRestore()",
+        "if(!_isOwner())return toast('オーナーのみ操作できます','err');",
+    ]
+    absent = [marker for marker in ledger_safety_markers if marker not in index]
+    if absent:
+        fail(f"case ledger startup protection/recovery markers missing: {', '.join(absent)}")
+    else:
+        ok("case ledger waits for cloud load, blocks empty overwrite, and restores owner-only")
+
     financial_markers = [
         "function _canViewFinancials(){return _isOwner();}",
         "bc.tabs.filter(_canOpenProjectTab)",
