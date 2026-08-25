@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const PORTAL_APP_VERSION='20260825-02';
+  const PORTAL_APP_VERSION='20260825-03';
   const feature={
     board:[],catalog:[],manuals:[],schedules:[],release:null,
     messages:new Map(),messageUnsubs:new Map(),unsubs:[],startedFor:'',serverVersion:''
@@ -51,7 +51,7 @@
   }
 
   function navHtmlExtended(){
-    const items=[['dashboard','概要'],['board','案件を探す'],['jobs','担当案件'],['schedule','スケジュール'],['manuals','マニュアル'],['suggestion','匿名目安箱'],['invoices','請求書'],['settings','請求者設定']];
+    const items=[['guide','使い方ガイド'],['dashboard','概要'],['board','案件を探す'],['jobs','担当案件'],['schedule','スケジュール'],['manuals','マニュアル'],['suggestion','匿名目安箱'],['invoices','請求書'],['settings','請求者設定']];
     return`<nav class="nav" aria-label="編集者メニュー">${items.map(([k,l])=>`<button type="button" class="btn ${view===k?'active':''}" onclick="setView('${k}')">${l}</button>`).join('')}</nav>`;
   }
 
