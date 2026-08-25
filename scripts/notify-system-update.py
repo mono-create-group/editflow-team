@@ -7,6 +7,7 @@ announced at most once per room.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 import time
@@ -48,6 +49,14 @@ def wait_until_live(app_url: str, version: str, timeout_seconds: int) -> None:
     raise RuntimeError(f"live version did not become {version} within {timeout_seconds} seconds")
 
 
+def history_has_marker(history_text: str, marker: str) -> bool:
+    try:
+        history = json.loads(history_text) if history_text else []
+    except json.JSONDecodeError:
+        return False
+    return any(marker in str(item.get("body", "")) for item in history if isinstance(item, dict))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--version", required=True)
@@ -78,8 +87,8 @@ def main() -> int:
         room_id = raw_room_id.strip()
         if not room_id.isdigit():
             raise RuntimeError(f"invalid existing room id: {room_id!r}")
-        history = request(token, "GET", f"/rooms/{room_id}/messages?force=1")
-        if marker in history:
+        history_text = request(token, "GET", f"/rooms/{room_id}/messages?force=1")
+        if history_has_marker(history_text, marker):
             print(f"room {room_id}: version already announced")
             continue
         request(token, "POST", f"/rooms/{room_id}/messages", {"body": message, "self_unread": "0"})
