@@ -37,7 +37,7 @@ function portalJob(uid, overrides = {}) {
 
 function boardJob(overrides = {}) {
   return {
-    title: '公開案件', caseName: '9月分', clientId: 'c1', clientName: 'クライアントA',
+    businessType: 'edit_agency', title: '公開案件', caseName: '9月分', clientId: 'c1', clientName: 'クライアントA',
     accountId: 'a1', accountName: 'アカウントA', summary: '概要', instructions: '編集指示',
     requestUrl: 'https://example.com/request', sourceUrl: 'https://example.com/source',
     editorDraftDate: '2026-09-05', clientDraftDate: '2026-09-06', thumbnailDate: '',
@@ -109,6 +109,10 @@ async function expectAllowed(label, promise) {
     const dir1 = env.authenticatedContext('dir1', claims('dir1@example.com')).firestore();
     const dir2 = env.authenticatedContext('dir2', claims('dir2@example.com')).firestore();
     const owner = env.authenticatedContext('owner', claims('mono.create.group@gmail.com')).firestore();
+
+    await expectAllowed('owner publishes edit-agency board job', setDoc(doc(owner, 'editor_job_board', 'owner-new'), boardJob({ createdByUid: 'owner' })));
+    await expectAllowed('director publishes own edit-agency board job', setDoc(doc(dir1, 'editor_job_board', 'dir-new'), boardJob({ audience: 'director_team', directorUid: 'dir1', eligibleUids: ['external1'], createdByUid: 'dir1' })));
+    await expectDenied('board rejects an unsupported business type', setDoc(doc(owner, 'editor_job_board', 'wrong-biz'), boardJob({ businessType: 'dispatch', createdByUid: 'owner' })));
 
     await expectAllowed('direct editor sees direct board', getDoc(doc(direct1, 'editor_job_board', 'direct-open')));
     await expectDenied('external editor cannot see direct board', getDoc(doc(external1, 'editor_job_board', 'direct-open')));

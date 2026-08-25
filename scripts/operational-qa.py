@@ -76,6 +76,13 @@ def quoted_values(source: str, name: str) -> list[str] | None:
     return re.findall(r"['\"]([^'\"]+)['\"]", match.group(1))
 
 
+def quoted_set_values(source: str, name: str) -> list[str] | None:
+    match = re.search(rf"const\s+{re.escape(name)}\s*=\s*new Set\(\[(.*?)\]\)", source, re.S)
+    if not match:
+        return None
+    return re.findall(r"['\"]([^'\"]+)['\"]", match.group(1))
+
+
 def require_values(label: str, actual: list[str] | None, expected: list[str]) -> None:
     if actual is None:
         fail(f"{label}: declaration missing")
@@ -144,6 +151,100 @@ def static_contract_checks() -> None:
         fail(f"manager feature markers missing: {', '.join(missing_manager_markers)}")
     else:
         ok("owner and director operations features")
+
+    overdue_exclusions = ["完了", "キャンセル", "確認待ち", "修正中"]
+    require_values("manager overdue exclusions",
+                   quoted_set_values(index, "VIDEO_OVERDUE_EXCLUDED_STATUSES"),
+                   overdue_exclusions)
+    require_values("editor overdue exclusions",
+                   quoted_set_values(editor, "JOB_OVERDUE_EXCLUDED_STATUSES"),
+                   overdue_exclusions)
+
+    board_choice_markers = [
+        "DIRECT_ALL_ID='__direct_all__'", "mono.create直接編集者全員",
+        "クライアントを選択", "先にクライアントを選択",
+        "managerBoardAudienceChanged", "openAll=target===DIRECT_ALL_ID",
+    ]
+    absent = [marker for marker in board_choice_markers if marker not in manager_features]
+    if absent:
+        fail(f"manager board selection guidance missing: {', '.join(absent)}")
+    else:
+        ok("manager board target, client, and account choices")
+
+    video_split_markers = [
+        "{id:'videoedit',label:'編集代行案件'",
+        "{id:'videohaken',label:'編集者派遣案件'",
+        "function rVideoEditProjects()", "function rVideoHakenProjects()",
+        "function _portalVideoBiz(j)", "j.biz===biz",
+        "businessType:'dispatch'", "businessType:'edit_agency'",
+    ]
+    absent = [marker for marker in video_split_markers
+              if marker not in index and marker not in editor_features and marker not in manager_features]
+    if absent:
+        fail(f"video agency/dispatch screen separation missing: {', '.join(absent)}")
+    else:
+        ok("video agency and editor-dispatch cases use separate screens and data routes")
+
+    editor_accept_markers = [
+        "accept-entry", "accept-count", "accept-howto", "claim-button",
+        "この案件を受ける", "view='jobs'",
+        "担当案件に反映しました",
+    ]
+    absent = [marker for marker in editor_accept_markers if marker not in editor_features]
+    if absent:
+        fail(f"editor job acceptance emphasis/redirect missing: {', '.join(absent)}")
+    else:
+        ok("editor job search and acceptance are emphasized and redirect to assigned jobs")
+
+    owner_acceptance_markers = [
+        "編集者の受託画面を確認（デモ）", "./editor.html?demo=editor",
+        "この管理画面は案件を掲載する側です",
+        "編集者の「案件を探す」に表示",
+    ]
+    absent = [marker for marker in owner_acceptance_markers
+              if marker not in index and marker not in manager_features]
+    if absent:
+        fail(f"owner acceptance preview/guidance missing: {', '.join(absent)}")
+    else:
+        ok("owner can open and understand the editor acceptance flow")
+
+    if "'businessType','title','caseName'" not in rules or "request.resource.data.businessType == 'edit_agency'" not in rules:
+        fail("editor job board rules do not accept only edit-agency publications")
+    else:
+        ok("editor job board rules accept the edit-agency publication payload")
+    if "_autoIntegratePortalJobs" in index or "_syncPortalLinkedJobsToLegacy" in index:
+        fail("opening the owner app must not auto-write or synthesize portal cases")
+    else:
+        ok("owner app load keeps existing portal and legacy case records unchanged")
+
+    guide_markers = [
+        "最初に覚える3つ", "いつ使う？", "まず最初に",
+        "操作の順番", "完了の目印", "GUIDE_PAGE_CHECKS", "GUIDE_PAGE_TIPS",
+    ]
+    absent = [marker for marker in guide_markers if marker not in index]
+    if absent:
+        fail(f"first-time internal guide detail missing: {', '.join(absent)}")
+    else:
+        ok("first-time internal guide purpose, steps, completion, and cautions")
+    editor_guide_markers = [
+        "最初の1回だけすること", "毎週月曜日にすること",
+        "案件を受ける2つの方法", "案件を受けた後の順番",
+        "確認待ち", "修正中", "期限超過には数えません",
+    ]
+    absent = [marker for marker in editor_guide_markers if marker not in editor]
+    if absent:
+        fail(f"first-time editor guide detail missing: {', '.join(absent)}")
+    else:
+        ok("first-time editor guide onboarding and full workflow")
+
+    if "rGcalReminder" in index or "Googleカレンダーを確認してください" in index:
+        fail("Google Calendar confirmation banner must be removed")
+    else:
+        ok("Google Calendar confirmation banner removed")
+    if "mono.create社内対応" not in index or re.search(r'value="__self"[^>]*>\s*自分', index):
+        fail("internal assignee label is ambiguous")
+    else:
+        ok("internal assignee label is explicit")
 
     for workspace in CONTRACT["workspaces"]:
         if workspace not in index:
@@ -230,14 +331,14 @@ def static_contract_checks() -> None:
     workflow_markers = [
         "従来の案件管理", "OPS_CHECKLISTS", "opsRequiresChecklist",
         "promotePortalJob", "_newPortalLegacyJob", "accessPrepareCompatibilityAllowlist",
-        "_autoIntegratePortalJobs", "_portalLegacyId",
+        "_portalLegacyId",
         "accessEnableEnforcement", "accessDisableEnforcement",
     ]
     absent = [marker for marker in workflow_markers if marker not in index]
     if absent:
         fail(f"no-downtime workflow markers missing: {', '.join(absent)}")
     else:
-        ok("legacy fallback, completion checklist, integration, and access rollback markers")
+        ok("legacy fallback, completion checklist, explicit integration, and access rollback markers")
     if "jobDraftKey" not in editor or "saveJobDraft" not in editor or "clearJobDraft" not in editor:
         fail("editor progress draft protection markers missing")
     else:
