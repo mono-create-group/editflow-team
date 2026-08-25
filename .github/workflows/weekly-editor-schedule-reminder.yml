@@ -1,0 +1,26 @@
+name: Weekly editor availability reminder
+
+on:
+  schedule:
+    # Monday 10:00 JST (Monday 01:00 UTC)
+    - cron: "0 1 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: weekly-editor-availability-reminder
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Notify existing editor Chatwork room
+        env:
+          CHATWORK_API_TOKEN: ${{ secrets.CHATWORK_API_TOKEN }}
+          CHATWORK_SYSTEM_UPDATE_ROOM_IDS: ${{ secrets.CHATWORK_SYSTEM_UPDATE_ROOM_IDS }}
+        run: python3 scripts/notify-weekly-schedule.py

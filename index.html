@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,viewport-fit=cover">
+<script>
+if(location.protocol==='file:')location.replace('https://mono-create-group.github.io/editflow-team/');
+</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="社内連絡">
@@ -45,7 +48,8 @@
   --fs-tl-axis-w:52px; /* 時間軸の幅 */
 }
 @media(max-width:700px){:root{--fs-tl-axis-w:40px}}
-body{background:var(--bg);color:var(--text);font-family:-apple-system,'Hiragino Sans','Yu Gothic',BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.6;height:100vh;overflow:hidden;display:flex;-webkit-font-smoothing:antialiased}
+html{width:100%;max-width:100%;overflow-x:hidden;overscroll-behavior-x:none}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,'Hiragino Sans','Yu Gothic',BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.6;height:100vh;width:100%;max-width:100%;overflow:hidden;overscroll-behavior-x:none;display:flex;-webkit-font-smoothing:antialiased}
 button{cursor:pointer;border:none;background:none;color:inherit;font:inherit}
 input,textarea,select{background:var(--card);border:1.5px solid var(--border);border-radius:var(--rs);color:var(--text);font:inherit;padding:8px 12px;width:100%;outline:none;transition:border-color .2s,box-shadow .2s;box-shadow:var(--shadow-sm)}
 input:focus,textarea:focus,select:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(109,40,217,0.1)}
@@ -55,7 +59,8 @@ a{color:inherit;text-decoration:none}
 
 /* ─── LAYOUT ─── */
 #sidebar{width:220px;height:100vh;background:var(--surface);border-right:1px solid var(--border);box-shadow:2px 0 12px rgba(15,23,42,.04);display:flex;flex-direction:column;padding:22px 0;position:sticky;top:0;flex-shrink:0;overflow-y:auto;scrollbar-width:none}
-#main{flex:1;overflow-y:auto;min-height:0;padding:32px 36px;max-width:960px}
+#main{flex:1;min-width:0;width:calc(100% - 220px);overflow-y:auto;overflow-x:hidden;min-height:0;padding:32px 36px;max-width:960px}
+#main>*{min-width:0;max-width:100%}
 .logo{padding:0 18px 22px;font-size:16px;font-weight:800;background:linear-gradient(135deg,var(--purple),#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-.3px}
 .logo small{display:block;font-size:11px;color:var(--t3);font-weight:500;margin-top:2px;-webkit-text-fill-color:var(--t3)}
 .nav-item{display:flex;align-items:center;gap:9px;padding:9px 12px;margin:1px 10px;border-radius:10px;color:var(--t2);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;user-select:none}
@@ -611,12 +616,19 @@ a{color:inherit;text-decoration:none}
   #sl-search{width:100%!important;max-width:none!important}
   #sidebar{display:none}
   #main{
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    overflow-x:hidden;
     padding:14px;
     /* ノッチ・Dynamic Island の分だけ上に余白 */
     padding-top:calc(env(safe-area-inset-top) + 56px);
     /* 下タブバー + ホームインジケーター分 */
     padding-bottom:calc(env(safe-area-inset-bottom) + 70px);
   }
+  #main .card,#main .ph,#main .stat-grid,#main .grid,#main .two-col,#main .form-grid,#main .split{min-width:0;max-width:100%}
+  #main input,#main textarea,#main select,#main button,#main a{max-width:100%}
+  #main .btn{min-width:0!important;white-space:normal}
   #mob-nav{display:flex}
   #mob-hamburger{display:flex}
 }
@@ -867,7 +879,10 @@ a{color:inherit;text-decoration:none}
 .guide-business.video{border-top:4px solid var(--purple)}.guide-business.hp{border-top:4px solid var(--blue)}.guide-business.sales{border-top:4px solid var(--green)}
 .guide-business h2{font-size:15px;margin:0 0 4px}.guide-business p{font-size:11px;color:var(--t2);line-height:1.6;margin-bottom:9px}.guide-business ul{padding-left:17px;margin:0 0 12px;font-size:11.5px;color:var(--t2);flex:1}.guide-business li{margin:3px 0}
 .guide-help-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.guide-help{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:13px}.guide-help b{display:block;font-size:12.5px;margin-bottom:3px}.guide-help span{display:block;font-size:11px;color:var(--t2);line-height:1.65}
-@media(max-width:820px){.guide-flow{grid-template-columns:1fr}.guide-step{min-height:auto}.guide-step:not(:last-child):after{content:"↓";right:16px;top:auto;bottom:-12px;width:24px;height:24px}.guide-business-grid{grid-template-columns:1fr}.guide-help-grid{grid-template-columns:1fr}.guide-hero{padding:20px}.guide-title{font-size:21px}}
+.guide-page-intro{font-size:11.5px;color:var(--t2);line-height:1.7;margin:-2px 0 12px}.guide-page-group{margin-top:14px}.guide-page-group-title{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:850;color:var(--t2);margin-bottom:7px}.guide-page-group-title:after{content:"";height:1px;background:var(--border);flex:1}.guide-page-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.guide-page-card{background:var(--card);border:1.5px solid var(--border);border-radius:13px;padding:14px;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;min-height:225px}.guide-page-head{display:flex;align-items:center;gap:9px;margin-bottom:7px}.guide-page-icon{width:34px;height:34px;border-radius:10px;background:var(--pldim);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}.guide-page-title{font-size:14px;font-weight:850}.guide-page-purpose{font-size:11px;color:var(--t2);line-height:1.65;margin-bottom:7px}.guide-page-steps{margin:0 0 10px;padding-left:20px;font-size:11px;color:var(--t2);line-height:1.65;flex:1}.guide-page-steps li{margin:3px 0;padding-left:2px}.guide-page-access{font-size:10px;color:var(--t3);line-height:1.5;margin-bottom:9px;padding-top:8px;border-top:1px dashed var(--border)}
+.manager-week-calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px}.manager-week-day{min-width:0;padding:8px;background:var(--card2);border-radius:9px}.manager-week-date{font-size:10px;color:var(--t3);margin-bottom:6px}.manager-week-entry{padding:6px;background:var(--card);border:1px solid var(--border);border-radius:7px;margin-top:5px;font-size:10px;overflow-wrap:anywhere}.manager-week-entry b{display:block;font-size:10.5px}.manager-week-empty{font-size:10px;color:var(--t3)}
+@media(max-width:820px){.guide-flow{grid-template-columns:1fr}.guide-step{min-height:auto}.guide-step:not(:last-child):after{content:"↓";right:16px;top:auto;bottom:-12px;width:24px;height:24px}.guide-business-grid,.guide-page-grid{grid-template-columns:1fr}.guide-help-grid{grid-template-columns:1fr}.guide-hero{padding:20px}.guide-title{font-size:21px}.guide-page-card{min-height:auto}}
+@media(max-width:900px){.manager-week-calendar{grid-template-columns:1fr}.manager-week-day{display:grid;grid-template-columns:72px minmax(0,1fr);gap:6px;align-items:start}.manager-week-date{margin:2px 0}.manager-week-entry{margin-top:0}}
 
 /* ===ナビのカテゴリー分け=== */
 .nav-cat{margin-bottom:2px}
@@ -5969,6 +5984,45 @@ function _guideRoleLabel(){
   const labels=myRoles().map(r=>r==='動画編集ディレクター'?'ディレクター':r);
   return labels.join(' / ')||'承認済みメンバー';
 }
+const GUIDE_PAGE_GROUPS=[
+  {label:'動画編集事業',ids:['projects','videoclients','workers','videoschedules','videomanuals','videoinvoices','videosuggestions']},
+  {label:'ホームページ事業',ids:['hpprojects','hpfee']},
+  {label:'営業・顧客',ids:['salesleads','pipeline','inquiries','crm']},
+  {label:'経営',ids:['bizboard']},
+  {label:'共通資料',ids:['posts','docs','minutes']},
+  {label:'管理・設定',ids:['customize','accounts','igaccounts','settings']}
+];
+const GUIDE_PAGE_DEFS={
+  projects:{purpose:'編集代行・編集者派遣の案件、担当者、納期、進捗をまとめて管理するページです。',steps:['案件を検索するか「社内案件」から新規登録します。','クライアント・担当者・納期を確認し、作業に合わせてステータスを更新します。','初稿・修正・納品の記録と証跡を残し、確認後に完了へ移します。'],access:'オーナー、動画編集ディレクター、営業など許可された社内担当者'},
+  videoclients:{purpose:'既存クライアントと、そのクライアントから依頼されるアカウントを分けて管理します。',steps:['既存クライアントを選び、必要なアカウント名を追加します。','案件を担当する編集者へ、必要なクライアント・アカウントだけ共有します。','名称や契約情報が変わったときだけ制作台帳を更新します。'],access:'オーナー、動画編集ディレクター'},
+  workers:{purpose:'編集者の採用状況、スキル、担当案件、契約区分を確認するページです。',steps:['編集者名を開き、採用状況・スキル・最低依頼料を確認します。','ログインを許可する編集者には、担当ディレクターと契約区分を設定します。','担当中案件を確認し、割り当てや進捗に漏れがないか確認します。'],access:'オーナー、動画編集ディレクター'},
+  videoschedules:{purpose:'編集者が登録した今週の1週間を、カレンダーで確認するページです。',steps:['月曜日に届く通知から開き、今週の編集可能日を入力します。','同じ予定は一括登録し、毎週同じ場合はルーティン保存を使います。','案件を割り当てる前に、曜日・時間・受託可能本数を確認します。'],access:'オーナー、動画編集ディレクター。入力は編集者本人'},
+  videomanuals:{purpose:'共通手順やクライアント別の編集ルールを、対象編集者へ共有します。',steps:['共通・クライアント別・アカウント別から対象を選びます。','タイトル、説明、マニュアルURL、共有相手を登録します。','内容を更新したらリンクを開いて確認し、対象者へ更新を知らせます。'],access:'オーナー、動画編集ディレクター'},
+  videoinvoices:{purpose:'クライアントへ出す請求書と、編集者から届く請求書を分けて確認します。',steps:['完了案件と金額を確認し、クライアント向け請求書を作成します。','編集者の請求書は原本・請求者名・明細・登録番号を確認します。','確認後に承認、支払処理中、支払済みの順で更新します。'],access:'オーナー。外部編集者分は担当ディレクターも確認可能'},
+  videosuggestions:{purpose:'編集者から届いた匿名の意見を、投稿者を特定せずに確認します。',steps:['未確認の投稿を開き、内容だけを確認します。','対応が必要な内容は社内で処理し、個人の特定を試みません。','必要な場合は返信コードを使い、匿名のまま回答します。'],access:'オーナーのみ'},
+  hpprojects:{purpose:'ホームページ制作案件の受注から公開・検収・納品までを管理します。',steps:['クライアントと制作範囲、担当者、各期限を登録します。','制作状況に合わせて工程と確認待ち項目を更新します。','公開URL・検収・納品証跡を確認して完了へ移します。'],access:'オーナー、Webデザイナー、営業'},
+  hpfee:{purpose:'公開後のホームページ月額維持費と入金状況を月ごとに管理します。',steps:['クライアント、開始月、月額、支払条件を登録します。','対象月の請求・入金状況を確認します。','入金後は支払済みに更新し、未入金だけを連絡対象にします。'],access:'オーナー、Webデザイナー'},
+  salesleads:{purpose:'見込み客、連絡方法、連絡結果、次回対応日をまとめて管理します。',steps:['業種や地域で絞り込み、対象企業を確認・追加します。','連絡後すぐに方法・結果・次回対応日を更新します。','商談化・クライアント化したら対応する状態へ変更します。'],access:'オーナー、営業'},
+  pipeline:{purpose:'商談の予定、担当者、進捗段階、次の対応を管理します。',steps:['商談先、日時、担当者、相談内容を登録します。','商談後に結果と次の対応日を記録します。','受注・失注・保留を確定し、受注時は案件またはクライアントへつなぎます。'],access:'オーナー、営業'},
+  inquiries:{purpose:'フォームなどから届いたお問い合わせの対応状況を管理します。',steps:['新着内容と連絡先を確認し、優先度と担当者を決めます。','返信・日程調整を行ったら対応状況を更新します。','商談へ進む場合は商談管理へ引き継ぎ、対応完了を記録します。'],access:'オーナー、営業'},
+  crm:{purpose:'契約後を含むクライアントの基本情報、連絡先、対応履歴を管理します。',steps:['クライアント名・担当者・連絡先を確認または登録します。','打ち合わせや連絡の要点を履歴へ残します。','案件・請求・次回対応に必要な情報を関連ページへ反映します。'],access:'オーナー、営業、SNSマーケター'},
+  bizboard:{purpose:'事業ごとの目標、実績、重要指標をオーナーが確認するページです。',steps:['対象月・事業を選び、目標値と実績値を確認します。','差がある項目の原因と次の行動を記録します。','週次・月次の判断に使い、確定値だけを更新します。'],access:'オーナーのみ'},
+  posts:{purpose:'SNS投稿の予定、原稿、確認状況、公開結果を管理します。',steps:['媒体、投稿日、担当者、原稿を登録します。','確認・修正・承認の状態を更新します。','公開後にURLと結果を記録し、週次・月次で振り返ります。'],access:'オーナー、営業、SNSマーケター'},
+  docs:{purpose:'社内で使う資料やリンクを、分類して共有するページです。',steps:['資料名・分類・URL・説明を登録します。','リンクを開いて最新版であることを確認します。','更新時は古い案内を残さず、利用者へ変更内容を知らせます。'],access:'オーナー、許可された社内担当者'},
+  minutes:{purpose:'会議の決定事項、担当者、期限、次回対応を残します。',steps:['会議日、参加者、議題を登録します。','決定事項と担当者・期限を明確に記録します。','次回までに完了状況を更新し、未完了だけを引き継ぎます。'],access:'オーナー、AIコンサルタント、営業、SNSマーケター'},
+  customize:{purpose:'サイドバーの表示・非表示と並び順を、この端末用に調整します。',steps:['表示したいページのスイッチをオンにします。','ドラッグして、よく使う順に並べ替えます。','表示がおかしい場合は「すべて表示に戻す」で初期化します。'],access:'オーナーのみ'},
+  accounts:{purpose:'このアプリへGoogleでサインインしたアカウントと最終利用状況を確認します。',steps:['新しくサインインしたアカウントを一覧で確認します。','役割が未設定の場合は「設定」の権限管理へ移動します。','本人と役割を照合し、不要な権限がないか確認します。'],access:'オーナーのみ'},
+  igaccounts:{purpose:'スタッフ用Instagramアカウントの作成状況と認証情報を管理します。',steps:['閲覧キーを設定した端末で一覧を開きます。','作成済み・未作成を確認し、必要な情報を安全にコピーします。','使用後はパスワードを隠し、不要な端末では閲覧キーを削除します。'],access:'オーナーのみ'},
+  settings:{purpose:'メンバー権限、共有設定、担当者、アプリ更新などを管理します。',steps:['承認待ちメンバーを確認し、役割と担当編集者を設定します。','役割ごとの表示範囲を確認してから承認します。','システム更新後はバージョンを確認し、必要なときだけ最新版へ更新します。'],access:'オーナーのみ'}
+};
+function _guidePageCard(id){
+  const d=GUIDE_PAGE_DEFS[id];if(!d)return'';
+  const meta=navMeta(id);
+  return`<article class="guide-page-card"><div class="guide-page-head"><div class="guide-page-icon">${meta.icon}</div><div class="guide-page-title">${esc(meta.label)}</div></div><div class="guide-page-purpose">${esc(d.purpose)}</div><ol class="guide-page-steps">${d.steps.map(x=>`<li>${esc(x)}</li>`).join('')}</ol><div class="guide-page-access">利用できる人：${esc(d.access)}</div><button class="btn btn-g btn-sm" onclick="setV('${id}')">このページを開く</button></article>`;
+}
+function _guidePageGroups(){
+  return GUIDE_PAGE_GROUPS.map(g=>{const ids=g.ids.filter(id=>isViewAllowed(id)&&GUIDE_PAGE_DEFS[id]);if(!ids.length)return'';return`<section class="guide-page-group"><div class="guide-page-group-title">${esc(g.label)}</div><div class="guide-page-grid">${ids.map(_guidePageCard).join('')}</div></section>`;}).join('');
+}
 function rGuide(){
   const canVideo=isViewAllowed('projects'),canWorkers=isViewAllowed('workers'),canVideoClients=isViewAllowed('videoclients'),canVideoSchedules=isViewAllowed('videoschedules'),canVideoManuals=isViewAllowed('videomanuals'),canVideoInvoices=isViewAllowed('videoinvoices'),canHp=isViewAllowed('hpprojects'),canHpFee=isViewAllowed('hpfee'),canSales=isViewAllowed('salesleads'),canDocs=isViewAllowed('docs');
   return`<div class="guide-hero">
@@ -5991,6 +6045,9 @@ function rGuide(){
     ${canHp?`<section class="guide-business hp"><h2>ホームページ事業</h2><p>HP制作の案件と、公開後の月額維持費を管理します。</p><ul><li>HP案件の制作工程</li><li>公開・検収・納品の確認</li><li>月額維持費の管理</li></ul><button class="btn btn-p btn-sm" onclick="setV('hpprojects')">HP案件を開く</button>${canHpFee?`<button class="btn btn-g btn-sm" style="margin-top:6px" onclick="setV('hpfee')">維持費を確認する</button>`:''}</section>`:''}
     ${canSales?`<section class="guide-business sales"><h2>営業・顧客</h2><p>見込み客から商談、契約後のクライアント情報まで管理します。</p><ul><li>見込み客の連絡状況</li><li>商談とお問い合わせ</li><li>クライアント情報</li></ul><button class="btn btn-p btn-sm" onclick="setV('salesleads')">営業リストを開く</button></section>`:''}
   </div>
+  <div class="guide-section-title">各ページの使い方</div>
+  <div class="guide-page-intro">現在の権限で利用できるページだけを表示しています。各カードの手順を上から順に行い、「このページを開く」から移動してください。</div>
+  ${_guidePageGroups()}
   <div class="guide-section-title">迷ったとき</div>
   <div class="guide-help-grid">
     <div class="guide-help"><b>「システム更新」がChatworkに届いた</b><span>入力中の内容を保存し、画面を再読み込みしてください。新しい機能や修正が表示されます。</span></div>
@@ -6491,7 +6548,12 @@ function rProjDeadline(){
 }
 
 // ===請求書ページ===
-function _invAmt(j){return (typeof jobTotalIn==='function'?jobTotalIn(j):0)||j.unitPrice||j.profit||0;}
+// 請求は親案件ではなく、単価が設定されたサブタスクを最小単位にする。
+// 親案件の unitPrice / profit は集計に使わず、親案件とサブタスクの二重計上を防ぐ。
+function _invoiceSubtasks(j){return(j.subtasks||[]).map((sub,index)=>({sub,index})).filter(x=>Number(x.sub.unitPrice)>0);}
+function _invAmt(j){return _invoiceSubtasks(j).reduce((sum,x)=>sum+Number(x.sub.unitPrice||0),0);}
+function _subInvoiceDate(j,sub){return sub.invoiceDate||j.invoiceDate||sub.deliveryDate||j.deliveryDate||'';}
+function _subInvoicedAt(j,sub){return sub.invoicedAt||j.invoicedAt||null;}
 function _jobInvDate(j){
   if(j.invoiceDate)return j.invoiceDate;
   if(j.deliveryDate)return j.deliveryDate;
@@ -6529,53 +6591,61 @@ function rProjInvoice(){
   <button class="btn btn-g btn-sm" onclick="openInvoiceInfo()">✏️ 請求元情報</button>
   <span style="font-size:13px;color:var(--t2)">対象 ¥${grand.toLocaleString()}・${Object.keys(byClient).length}社</span>
 </div>
-${!iss.name?`<div class="card" style="background:#3a2a00;border:1px solid var(--amber);margin-bottom:10px;font-size:12px">⚠️ まず「✏️ 請求元情報」に屋号・振込先などを設定してください（請求書に自動で差し込まれます）。</div>`:''}
-<div style="font-size:11px;color:var(--t3);margin-bottom:12px">請求書提出日が <b>${mLabel}</b> の案件を表示中。請求する案件を ☑ で選び「請求書を作成」→ 編集 → PDF保存。</div>
-${!Object.keys(byClient).length?`<div class="empty"><div class="empty-icon">🧾</div><div class="empty-title">${mLabel} に請求書提出予定の案件はありません</div><div style="color:var(--t2);font-size:12px;margin-top:4px">案件に「請求書提出日」を設定するとここに表示されます</div></div>`:Object.entries(byClient).map(([cid,js])=>{
+${!iss.name?`<div class="card" style="background:#fff7ed;border:2px solid #c2410c;color:#7c2d12;margin-bottom:10px;font-size:12px;font-weight:700">⚠️ まず「✏️ 請求元情報」に屋号・振込先などを設定してください（請求書に自動で差し込まれます）。</div>`:''}
+<div style="font-size:11px;color:var(--t3);margin-bottom:12px">請求書提出日が <b>${mLabel}</b> のサブタスクを表示中。単価を設定したサブタスクだけを ☑ で選び「請求書を作成」→ 編集 → PDF保存します。親案件の金額は請求額に含めません。</div>
+${!Object.keys(byClient).length?`<div class="empty"><div class="empty-icon">🧾</div><div class="empty-title">${mLabel} に請求予定のサブタスクはありません</div><div style="color:var(--t2);font-size:12px;margin-top:4px">案件に「請求書提出日」を設定し、サブタスクごとに単価を入力すると表示されます</div></div>`:Object.entries(byClient).map(([cid,js])=>{
   const sub=js.reduce((s,j)=>s+_invAmt(j),0);
-  const allInvoiced=js.length&&js.every(j=>j.invoicedAt);
+  const invoiceRows=js.flatMap(j=>_invoiceSubtasks(j).map(x=>({j,...x})));
+  const allInvoiced=invoiceRows.length&&invoiceRows.every(x=>_subInvoicedAt(x.j,x.sub));
   return`<div class="card" style="margin-bottom:12px">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:8px">
       <div style="font-weight:700;font-size:15px">${esc(clientName(cid))} <span style="font-size:11px;font-weight:500;color:var(--t2)">御中</span></div>
       ${allInvoiced?`<span class="badge bg" style="font-size:10px">🧾 請求済</span>`:`<span class="badge ba" style="font-size:10px">⏳ 未請求</span>`}
     </div>
-    ${js.map(j=>`<label style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border);cursor:pointer">
-      <span style="display:flex;align-items:center;gap:8px;min-width:0"><input type="checkbox" class="inv-sel" data-cid="${cid}" data-jid="${j.id}" checked><span>${esc(j.title)}${(j.subtasks||[]).filter(s=>s.unitPrice>0).length?` <span style="font-size:10px;color:var(--t3)">＋サブ${(j.subtasks||[]).filter(s=>s.unitPrice>0).length}件</span>`:''} <span style="font-size:10px;color:var(--t3)">🧾${j.invoiceDate||_jobInvDate(j)||'-'}</span>${j.invoicedAt?` <span style="font-size:10px;color:var(--green)">✅請求済 ${j.invoicedAt}</span>`:''}</span></span>
-      <span style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span style="font-weight:600">¥${_invAmt(j).toLocaleString()}</span><button class="btn btn-g btn-xs" onclick="event.preventDefault();event.stopPropagation();openJobModal('${j.id}')">詳細</button></span>
+    ${invoiceRows.map(({j,sub,index})=>`<label style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer;gap:10px">
+      <span style="display:flex;align-items:center;gap:8px;min-width:0"><input type="checkbox" class="inv-sel" data-cid="${cid}" data-jid="${j.id}" data-sidx="${index}" checked><span><span style="font-size:10px;color:var(--t3);display:block">${esc(j.title)}</span><b>${esc(sub.title||`サブタスク${index+1}`)}</b> <span style="font-size:10px;color:var(--t3)">🧾${_subInvoiceDate(j,sub)||'-'}</span>${_subInvoicedAt(j,sub)?` <span style="font-size:10px;color:var(--green)">✅請求済 ${_subInvoicedAt(j,sub)}</span>`:''}</span></span>
+      <span style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span style="font-weight:600">¥${Number(sub.unitPrice||0).toLocaleString()}</span><button class="btn btn-g btn-xs" onclick="event.preventDefault();event.stopPropagation();openJobModal('${j.id}')">詳細</button></span>
     </label>`).join('')}
-    <div style="text-align:right;margin-top:8px;font-size:13px">合計（全件） <span style="font-weight:800;font-size:16px;color:var(--green)">¥${sub.toLocaleString()}</span></div>
+    <div style="text-align:right;margin-top:8px;font-size:13px">サブタスク ${invoiceRows.length}件・合計 <span style="font-weight:800;font-size:16px;color:var(--green)">¥${sub.toLocaleString()}</span></div>
     <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
-      <button class="btn btn-p btn-sm" onclick="openInvoiceEditorFromSelection('${cid}','${curM}')">🧾 選択した案件で請求書を作成</button>
+      <button class="btn btn-p btn-sm" onclick="openInvoiceEditorFromSelection('${cid}','${curM}')">🧾 選択したサブタスクで請求書を作成</button>
       <button class="btn btn-g btn-sm" onclick="copyInvoiceText('${cid}','${curM}')">📋 テキストでコピー</button>
-      ${allInvoiced?`<button class="btn btn-g btn-sm" onclick="markClientInvoiced('${cid}','${curM}',false)">請求済を取消</button>`:`<button class="btn btn-g btn-sm" onclick="markClientInvoiced('${cid}','${curM}',true)">✅ 全件を請求済みに</button>`}
+      ${allInvoiced?`<button class="btn btn-g btn-sm" onclick="markClientInvoiced('${cid}','${curM}',false)">請求済を取消</button>`:`<button class="btn btn-g btn-sm" onclick="markClientInvoiced('${cid}','${curM}',true)">✅ 全サブタスクを請求済みに</button>`}
     </div>
   </div>`;}).join('')}`;
 }
-function openInvoiceEditor(cid,m,ids){
+function openInvoiceEditor(cid,m,subtaskRefs){
   let js=_invoiceJobs(cid,m);
-  if(ids&&ids.length)js=js.filter(j=>ids.includes(j.id));
-  if(!js.length){toast('対象の案件がありません','warn');return;}
+  const selected=Array.isArray(subtaskRefs)&&subtaskRefs.length?subtaskRefs:null;
+  if(selected)js=js.filter(j=>selected.some(x=>x.jobId===j.id));
+  if(!js.length){toast('対象のサブタスクがありません','warn');return;}
   const i=_issuer();
   const cname=cid?(S.clients.find(c=>c.id===cid)?.name||'クライアント'):'クライアント';
   const issue=today();
   const due=js.map(j=>j.dueDate).filter(Boolean).sort().reverse()[0]||_endNextMonth(issue);
   const items=[];
+  const refs=[];
   js.forEach(j=>{
-    const subs=(j.subtasks||[]).filter(s=>s.unitPrice>0);
-    if(subs.length){subs.forEach(s=>items.push({name:j.title+'（'+(s.title||'サブタスク')+'）',qty:1,unit:s.unitPrice,amount:s.unitPrice}));}
-    else{items.push({name:j.title,qty:1,unit:_invAmt(j),amount:_invAmt(j)});}
+    _invoiceSubtasks(j).forEach(({sub,index})=>{
+      if(selected&&!selected.some(x=>x.jobId===j.id&&Number(x.subtaskIndex)===index))return;
+      items.push({name:j.title+'（'+(sub.title||`サブタスク${index+1}`)+'）',qty:1,unit:Number(sub.unitPrice),amount:Number(sub.unitPrice)});
+      refs.push({jobId:j.id,subtaskIndex:index});
+    });
   });
-  window._invDraft={cid,m,jobIds:js.map(j=>j.id),recipient:cname,issue,no:'INV-'+issue.replace(/-/g,''),due,subject:js.length===1?js[0].title:'動画制作費 ほか',items,taxMode:i.defaultTax?'ex':'none',whOn:i.defaultWithholding,notes:i.notesDefault};
+  if(!items.length){toast('単価が設定されたサブタスクを選んでください','warn');return;}
+  const jobIds=[...new Set(refs.map(x=>x.jobId))];
+  window._invDraft={cid,m,jobIds,subtaskRefs:refs,recipient:cname,issue,no:'INV-'+issue.replace(/-/g,''),due,subject:items.length===1?items[0].name:'動画制作費 ほか',items,taxMode:i.defaultTax?'ex':'none',whOn:i.defaultWithholding,notes:i.notesDefault};
   _renderInvoiceEditor();
 }
 function openInvoiceEditorFromSelection(cid,m){
-  const ids=[...document.querySelectorAll('.inv-sel[data-cid="'+cid+'"]:checked')].map(cb=>cb.dataset.jid);
-  if(!ids.length){toast('請求する案件を1件以上選んでください','warn');return;}
-  openInvoiceEditor(cid,m,ids);
+  const refs=[...document.querySelectorAll('.inv-sel[data-cid="'+cid+'"]:checked')].map(cb=>({jobId:cb.dataset.jid,subtaskIndex:Number(cb.dataset.sidx)}));
+  if(!refs.length){toast('請求するサブタスクを1件以上選んでください','warn');return;}
+  openInvoiceEditor(cid,m,refs);
 }
 function markDraftInvoiced(){
   const d=window._invDraft;if(!d)return;
-  (d.jobIds||[]).forEach(id=>{const j=S.jobs.find(x=>x.id===id);if(j){j.invoicedAt=today();j.updatedAt=Date.now();}});
+  const at=today();
+  (d.subtaskRefs||[]).forEach(ref=>{const j=S.jobs.find(x=>x.id===ref.jobId),sub=j?.subtasks?.[Number(ref.subtaskIndex)];if(j&&sub){sub.invoicedAt=at;j.updatedAt=Date.now();if(_invoiceSubtasks(j).every(x=>_subInvoicedAt(j,x.sub)))j.invoicedAt=at;}});
   save();closeInvoiceEditor();render();toast('🧾 請求済みにしました');
 }
 function _invItemRow(it){
@@ -6726,7 +6796,7 @@ function genInvoiceText(cid,m){
   const wh=i.defaultWithholding?_calcWithholding(sub):0;
   const total=sub+tax-wh;
   let t=`請求書\n\n${name} 御中\n\nご請求日：${today()}\n下記の通りご請求申し上げます。\n\n────────────────\n`;
-  js.forEach(j=>{t+=`${j.title}　¥${_invAmt(j).toLocaleString()}\n`;});
+  js.forEach(j=>_invoiceSubtasks(j).forEach(({sub,index})=>{t+=`${j.title}（${sub.title||`サブタスク${index+1}`}）　¥${Number(sub.unitPrice||0).toLocaleString()}\n`;}));
   t+=`────────────────\n小計　¥${sub.toLocaleString()}\n`;
   if(tax)t+=`消費税(10%)　¥${tax.toLocaleString()}\n`;
   if(wh)t+=`源泉徴収税　-¥${wh.toLocaleString()}\n`;
@@ -6745,7 +6815,8 @@ function copyInvoiceText(cid,m){
 }
 function markClientInvoiced(cid,m,on){
   if(!_canViewFinancials())return toast('財務操作の権限がありません','err');
-  _invoiceJobs(cid,m).forEach(j=>{j.invoicedAt=on?today():null;j.updatedAt=Date.now();});
+  const at=on?today():null;
+  _invoiceJobs(cid,m).forEach(j=>{_invoiceSubtasks(j).forEach(({sub})=>{sub.invoicedAt=at;});j.invoicedAt=at;j.updatedAt=Date.now();});
   save();render();toast(on?'🧾 請求済みにしました':'請求済を取り消しました');
 }
 function openInvoiceInfo(){
@@ -12059,7 +12130,9 @@ function saveJob(){
     const inp=el.querySelector('.j-sub-inp');const chk=el.querySelector('.chk');
     const price=parseInt(el.querySelector('.j-sub-price')?.value)||0;
     const pay=parseInt(el.querySelector('.j-sub-pay')?.value)||0;
+    const previous=oldSubs[i]||{};
     return{
+      ...previous,id:previous.id||uid(),
       title:inp?.value.trim()||'',done:chk?.classList.contains('done')||false,
       unitPrice:price,workerPay:pay,
       status:el.querySelector('.j-sub-status')?.value||'未着手',
@@ -15537,7 +15610,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260826-04';
+const APP_VERSION='20260826-07';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)

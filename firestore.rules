@@ -469,7 +469,7 @@ service cloud.firestore {
         allow read: if portalManager(uid) || editor(uid);
         allow create, update: if portalManager(uid)
           && request.resource.data.keys().hasOnly([
-            'name','accounts','active','manualIds','updatedAt','updatedBy'
+            'sourceClientId','name','accounts','active','manualIds','updatedAt','updatedBy'
           ])
           && request.resource.data.name is string
           && request.resource.data.name.size() > 0
@@ -525,16 +525,27 @@ service cloud.firestore {
       allow create, update: if editor(uid)
         && request.resource.data.keys().hasOnly([
           'name','fromDate','toDate','hoursPerWeek','capacity','workType',
-          'available','note','updatedAt'
+          'available','note','weekStart','weekEnd','days','routineEnabled',
+          'routine','updatedAt'
         ])
         && request.resource.data.name is string
-        && request.resource.data.fromDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
-        && request.resource.data.toDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 100
+        && request.resource.data.weekStart.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.weekEnd.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.weekEnd >= request.resource.data.weekStart
+        && request.resource.data.fromDate == request.resource.data.weekStart
+        && request.resource.data.toDate == request.resource.data.weekEnd
+        && request.resource.data.days is list
+        && request.resource.data.days.size() == 7
+        && request.resource.data.routineEnabled is bool
+        && request.resource.data.routine is list
+        && request.resource.data.routine.size() <= 7
         && request.resource.data.toDate >= request.resource.data.fromDate
         && request.resource.data.hoursPerWeek >= 0
-        && request.resource.data.hoursPerWeek <= 100
+        && request.resource.data.hoursPerWeek <= 168
         && request.resource.data.capacity >= 0
-        && request.resource.data.capacity <= 100
+        && request.resource.data.capacity <= 140
         && request.resource.data.workType in ['short','long','both']
         && request.resource.data.note is string
         && request.resource.data.note.size() <= 300;

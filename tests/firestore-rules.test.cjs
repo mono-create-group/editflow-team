@@ -48,6 +48,21 @@ function boardJob(overrides = {}) {
   };
 }
 
+function weeklySchedule(overrides = {}) {
+  const dates = ['2026-08-24','2026-08-25','2026-08-26','2026-08-27','2026-08-28','2026-08-29','2026-08-30'];
+  const days = dates.map((date, index) => ({
+    date, status: index < 5 ? 'available' : 'unavailable', startTime: index < 5 ? '18:00' : '',
+    endTime: index < 5 ? '22:00' : '', capacity: index < 5 ? 1 : 0, workType: 'both', note: '',
+  }));
+  return {
+    name: 'Direct 1', weekStart: dates[0], weekEnd: dates[6], days,
+    routineEnabled: true, routine: days.map((day, index) => ({ weekday: index + 1, status: day.status, startTime: day.startTime, endTime: day.endTime, capacity: day.capacity, workType: day.workType, note: day.note })),
+    fromDate: dates[0], toDate: dates[6], hoursPerWeek: 20, capacity: 5,
+    workType: 'both', available: true, note: '', updatedAt: serverTimestamp(),
+    ...overrides,
+  };
+}
+
 async function expectDenied(label, promise) {
   await assertFails(promise);
   process.stdout.write(`PASS deny: ${label}\n`);
@@ -106,9 +121,11 @@ async function expectAllowed(label, promise) {
     await expectAllowed('owner reads every portal', getDoc(doc(owner, 'editor_portals', 'external2', 'editor_jobs', 'done2')));
     await expectDenied('editor cannot read shared financial monolith', getDoc(doc(direct1, 'shared', 'mcapp')));
 
-    await expectAllowed('editor saves availability without private details', setDoc(doc(direct1, 'editor_schedules', 'direct1'), { name: 'Direct 1', fromDate: '2026-09-01', toDate: '2026-09-30', hoursPerWeek: 20, capacity: 4, workType: 'both', available: true, note: '平日夜', updatedAt: serverTimestamp() }));
-    await expectDenied('editor cannot store private schedule reason', setDoc(doc(direct1, 'editor_schedules', 'direct1'), { name: 'Direct 1', fromDate: '2026-09-01', toDate: '2026-09-30', hoursPerWeek: 20, capacity: 4, workType: 'both', available: true, note: '平日夜', privateReason: '通院', updatedAt: serverTimestamp() }));
+    await expectAllowed('editor saves one-week calendar and routine', setDoc(doc(direct1, 'editor_schedules', 'direct1'), weeklySchedule()));
+    await expectDenied('editor cannot store private schedule reason', setDoc(doc(direct1, 'editor_schedules', 'direct1'), weeklySchedule({ privateReason: '通院' })));
+    await expectDenied('editor cannot save more than one week', setDoc(doc(direct1, 'editor_schedules', 'direct1'), weeklySchedule({ days: [...weeklySchedule().days, weeklySchedule().days[0]] })));
     await expectAllowed('editors see team availability', getDoc(doc(external1, 'editor_schedules', 'direct1')));
+    await expectAllowed('owner shares existing client source id', setDoc(doc(owner, 'editor_portals', 'external1', 'client_catalog', 'c2'), { sourceClientId: 'legacy-client-1', name: 'クライアントB', accounts: [{ id: 'a2', name: 'アカウントB' }], active: true, manualIds: [], updatedAt: 1, updatedBy: 'owner' }));
     await expectAllowed('editor reads own catalog', getDoc(doc(external1, 'editor_portals', 'external1', 'client_catalog', 'c1')));
     await expectDenied('editor cannot read another catalog', getDoc(doc(direct1, 'editor_portals', 'external1', 'client_catalog', 'c1')));
     await expectAllowed('global manual is visible', getDoc(doc(direct1, 'editor_manuals', 'global')));
