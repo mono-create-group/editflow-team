@@ -86,6 +86,7 @@ async function expectAllowed(label, promise) {
         ['direct2', { uid: 'direct2', email: 'direct2@example.com', approved: true, roles: ['動画編集者'], editorKind: 'direct' }],
         ['external1', { uid: 'external1', email: 'external1@example.com', approved: true, roles: ['動画編集者'], editorKind: 'external', directorUid: 'dir1', invoiceRecipientName: 'Dir 1' }],
         ['external2', { uid: 'external2', email: 'external2@example.com', approved: true, roles: ['動画編集者'], editorKind: 'external', directorUid: 'dir2', invoiceRecipientName: 'Dir 2' }],
+        ['hybrid1', { uid: 'hybrid1', email: 'hybrid1@example.com', approved: true, roles: ['動画編集者', 'Webデザイナー'], editorKind: 'direct' }],
         ['dir1', { uid: 'dir1', email: 'dir1@example.com', approved: true, roles: ['動画編集ディレクター'] }],
         ['dir2', { uid: 'dir2', email: 'dir2@example.com', approved: true, roles: ['動画編集ディレクター'] }],
       ];
@@ -96,6 +97,7 @@ async function expectAllowed(label, promise) {
       await setDoc(doc(db, 'editor_job_board', 'external-two'), boardJob({ audience: 'director_team', directorUid: 'dir2', eligibleUids: ['external2'] }));
       await setDoc(doc(db, 'editor_portals', 'external1', 'editor_jobs', 'done1'), portalJob('external1', { directorUid: 'dir1', status: '完了', evidenceUrl: 'https://example.com/delivery' }));
       await setDoc(doc(db, 'editor_portals', 'external2', 'editor_jobs', 'done2'), portalJob('external2', { directorUid: 'dir2', status: '完了', evidenceUrl: 'https://example.com/delivery' }));
+      await setDoc(doc(db, 'editor_portals', 'hybrid1', 'editor_jobs', 'own1'), portalJob('hybrid1'));
       await setDoc(doc(db, 'editor_portals', 'external1', 'client_catalog', 'c1'), { name: 'クライアントA', accounts: [{ id: 'a1', name: 'アカウントA' }], active: true, manualIds: [], updatedAt: 1, updatedBy: 'owner' });
       await setDoc(doc(db, 'editor_manuals', 'global'), { title: '全体', scope: 'global', scopeLabel: '全体', clientId: '', accountId: '', version: '1', body: '本文', url: '', required: true, audience: 'all', allowedUids: [], directorUid: '', updatedAt: 1, updatedBy: 'owner' });
       await setDoc(doc(db, 'editor_manuals', 'assigned'), { title: '個別', scope: 'client', scopeLabel: '個別', clientId: 'c1', accountId: '', version: '1', body: '本文', url: '', required: false, audience: 'assigned', allowedUids: ['external1'], directorUid: 'dir1', updatedAt: 1, updatedBy: 'dir1' });
@@ -106,6 +108,7 @@ async function expectAllowed(label, promise) {
     const direct1 = env.authenticatedContext('direct1', claims('direct1@example.com')).firestore();
     const direct2 = env.authenticatedContext('direct2', claims('direct2@example.com')).firestore();
     const external1 = env.authenticatedContext('external1', claims('external1@example.com')).firestore();
+    const hybrid1 = env.authenticatedContext('hybrid1', claims('hybrid1@example.com')).firestore();
     const dir1 = env.authenticatedContext('dir1', claims('dir1@example.com')).firestore();
     const dir2 = env.authenticatedContext('dir2', claims('dir2@example.com')).firestore();
     const owner = env.authenticatedContext('owner', claims('mono.create.group@gmail.com')).firestore();
@@ -124,6 +127,9 @@ async function expectAllowed(label, promise) {
     await expectDenied('director cannot read another director editor', getDoc(doc(dir1, 'editor_portals', 'external2', 'editor_jobs', 'done2')));
     await expectAllowed('owner reads every portal', getDoc(doc(owner, 'editor_portals', 'external2', 'editor_jobs', 'done2')));
     await expectDenied('editor cannot read shared financial monolith', getDoc(doc(direct1, 'shared', 'mcapp')));
+    await expectAllowed('hybrid editor uses core staff data through the additional role', getDoc(doc(hybrid1, 'shared', 'mcapp')));
+    await expectAllowed('hybrid editor also uses own editor portal', getDoc(doc(hybrid1, 'editor_portals', 'hybrid1', 'editor_jobs', 'own1')));
+    await expectDenied('hybrid editor still cannot read another editor portal', getDoc(doc(hybrid1, 'editor_portals', 'external1', 'editor_jobs', 'done1')));
 
     await expectAllowed('editor saves one-week calendar and routine', setDoc(doc(direct1, 'editor_schedules', 'direct1'), weeklySchedule()));
     await expectDenied('editor cannot store private schedule reason', setDoc(doc(direct1, 'editor_schedules', 'direct1'), weeklySchedule({ privateReason: '通院' })));

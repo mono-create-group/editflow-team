@@ -105,7 +105,15 @@ service cloud.firestore {
       return signedIn()
         && exists(accessPath(uid))
         && get(accessPath(uid)).data.roles is list
-        && get(accessPath(uid)).data.roles.hasAny(['動画編集者']);
+        && get(accessPath(uid)).data.roles.hasAny(['動画編集者'])
+        && !get(accessPath(uid)).data.roles.hasAny([
+          '動画編集ディレクター',
+          'AIコンサルタント',
+          'AIエンジニア',
+          'Webデザイナー',
+          '営業',
+          'SNSマーケター'
+        ]);
     }
 
     function coreStaff() {

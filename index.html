@@ -1585,8 +1585,8 @@ function _clearSensitiveLocalState(){
 function _coreAccessAllowed(){
   if(_isOwner())return true;
   const rs=(APP_ACCESS&&Array.isArray(APP_ACCESS.roles))?APP_ACCESS.roles:[];
-  // 動画編集者は他役割と併用させず、必ず専用ポータルへ分離する。
-  return APP_ACCESS?.approved===true&&!rs.includes('動画編集者')&&rs.some(r=>APP_ROLES.includes(r));
+  // 動画編集者だけのメンバーは専用ポータルへ分離し、兼任者は追加された社内役割の画面も利用する。
+  return APP_ACCESS?.approved===true&&rs.some(r=>r!=='動画編集者'&&APP_ROLES.includes(r));
 }
 async function _requestAccess(){
   if(!FB_USER)return;
@@ -6075,6 +6075,7 @@ function rGuide(){
     <div class="guide-title">初めてでも、することがすぐ分かる使い方ガイド</div>
     <div class="guide-lead">Chatworkは通知とこのアプリへの入口です。実際の案件登録、担当変更、進捗、提出、請求はすべてこのアプリで行います。下の「やりたいこと」から選べば、必要なページへ直接移動できます。</div>
     <div class="guide-role">あなたの権限　${esc(_guideRoleLabel())}</div>
+    ${hasAppRole('動画編集者')?'<a class="btn btn-g btn-sm" style="margin-top:10px" href="./editor.html">編集者ポータルを開く</a>':''}
   </div>
   <div class="guide-section-title">最初に覚える3つ</div>
   <div class="guide-start-grid">
@@ -10991,7 +10992,7 @@ ${secTitle('サインインしたアカウント一覧')}
 <div class="card" style="margin-bottom:14px">
   <div style="font-size:12px;color:var(--t2);line-height:1.7">
     このアプリに<b>Googleでサインインしたアカウント</b>が、新しくサインインした順に並びます（サインインすると自動で登録）。<br>
-    役割は「設定」の権限管理で変更できます。動画編集者は専用データ領域だけを読み込み、社内の金額・粗利・他編集者情報へアクセスしません。<br>
+    役割は「設定」の権限管理で変更できます。動画編集者だけのメンバーは専用データ領域だけを読み込みます。ほかの役割を兼任する場合は、その役割で許可された社内画面と編集者ポータルを併用できます。<br>
     <span style="color:var(--t3)">社内スタッフの閲覧範囲は役割ごとに分かれ、未承認アカウントはデータを読み込みません。</span>
   </div>
 </div>
@@ -11022,7 +11023,7 @@ ${_isOwner()?`${secTitle('🔑 サインインしたメンバー・権限')}
   <div style="font-size:12px;color:var(--t2);line-height:1.7;margin-bottom:10px">
     <b>オーナー: ${esc(_myEmail())}</b><br>
     メンバーはGoogleログイン後に承認し、役割ごとに閲覧範囲を分けます。<br>
-    <span style="color:var(--t3)">動画編集者は専用ポータルだけを使い、顧客請求額・原価・粗利・他編集者の情報を読み込みません。</span>
+    <span style="color:var(--t3)">動画編集者だけを設定したメンバーは専用ポータルのみを使用します。ほかの役割も設定した兼任者は、その役割の閲覧範囲と編集者ポータルを併用します。</span>
   </div>
   ${ACCESS_REQUESTS.length?`<div style="margin:0 0 14px"><div style="font-size:12px;font-weight:800;margin-bottom:7px">承認待ち ${ACCESS_REQUESTS.length}件</div>${ACCESS_REQUESTS.map(r=>`<div style="padding:10px;background:var(--card2);border:1px solid var(--border);border-radius:9px;margin-bottom:7px"><div style="font-weight:700;font-size:13px">${esc(r.name||'名前未登録')}</div><div style="font-size:11px;color:var(--t3);margin-bottom:7px">${esc(r.email||'')}</div><div style="display:flex;gap:5px;flex-wrap:wrap">${APP_ROLES.map(role=>`<label style="font-size:10.5px"><input class="ar-role" data-uid="${esc(r.id)}" type="checkbox" value="${role}"> ${role}</label>`).join('')}</div><select id="ar-worker-${esc(r.id)}" style="margin-top:7px"><option value="">担当者を紐付け（編集者のみ必須）</option>${(S.workers||[]).filter(w=>!w.deleted).map(w=>`<option value="${w.id}">${esc(w.name)}</option>`).join('')}</select><div style="display:flex;gap:6px;margin-top:7px"><button class="btn btn-p btn-sm" onclick="mrApproveRequest('${esc(r.id)}')">承認</button><button class="btn btn-g btn-sm" onclick="mrRejectRequest('${esc(r.id)}')">却下</button></div></div>`).join('')}</div>`:''}
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
@@ -12893,7 +12894,6 @@ async function mrAddMember(){
   if(!Array.isArray(S.memberRoles))S.memberRoles=[];
   const ex=S.memberRoles.find(m=>m&&(m.email||'').toLowerCase()===em);
   if(!roles.length){toast('少なくとも1つの役割を選択してください','warn');return;}
-  if(roles.includes('動画編集者')&&roles.length>1){toast('金額情報を確実に分離するため、「動画編集者」は他の役割と併用できません','warn');return;}
   if(roles.includes('動画編集者')&&!workerId){toast('動画編集者には担当者の紐付けが必要です','warn');return;}
   if(ex){ex.roles=roles;ex.workerId=workerId;ex.deleted=false;ex.updatedAt=Date.now();}
   else{S.memberRoles.push({id:uid(),email:em,roles,workerId,createdAt:today(),updatedAt:Date.now(),addedBy:_myEmail()});}
@@ -12914,7 +12914,6 @@ async function mrApproveRequest(requestUid){
   const roles=[...document.querySelectorAll('.ar-role')].filter(x=>x.dataset.uid===requestUid&&x.checked).map(x=>x.value).filter(x=>APP_ROLES.includes(x));
   const workerId=document.getElementById('ar-worker-'+requestUid)?.value||null;
   if(!roles.length)return toast('少なくとも1つの役割を選択してください','warn');
-  if(roles.includes('動画編集者')&&roles.length>1)return toast('「動画編集者」は他の役割と併用できません','warn');
   if(roles.includes('動画編集者')&&!workerId)return toast('動画編集者には担当者の紐付けが必要です','warn');
   const em=String(req.email||'').toLowerCase();
   try{
@@ -15672,7 +15671,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260826-14';
+const APP_VERSION='20260826-15';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -15746,6 +15745,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260826-14"></script>
+<script src="./manager-features.js?v=20260826-15"></script>
 </body>
 </html>
