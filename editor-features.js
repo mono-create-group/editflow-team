@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const PORTAL_APP_VERSION='20260826-13';
+  const PORTAL_APP_VERSION='20260826-14';
   const feature={
     board:[],catalog:[],manuals:[],schedules:[],release:null,
     messages:new Map(),messageUnsubs:new Map(),unsubs:[],startedFor:'',serverVersion:''
@@ -119,7 +119,7 @@
 
   function jobCardExtended(job){
     const base=original.jobCard(job);
-    return base.replace('</article>',`${messageBlock(job)}</article>`);
+    return base.replace('<details class="job-detail">',`${editorMilestonePanel(job)}<details class="job-detail">`).replace('</article>',`${messageBlock(job)}</article>`);
   }
 
   function mountUpdateBanner(){

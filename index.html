@@ -1026,9 +1026,11 @@ const BUILTIN_VIEWS=[
 
 const DB_OLD='ef_team_v4';
 const PPM=1.5, SS=7*60, SE=24*60;
-const PSTATUS=['案件掲載中','未着手','進行中','編集者進行中','初稿完成','確認待ち','FB待ち','修正中','完了','キャンセル'];
+const PSTATUS=['案件掲載中','未着手','進行中','編集者進行中','初稿提出済み','修正中','修正稿提出済み','D確認OK','完了','キャンセル','初稿完成','確認待ち','FB待ち'];
 const SCOL={'案件掲載中':'--cyan','未着手':'--t3','進行中':'--blue','編集者進行中':'--pink','初稿完成':'--purple','確認待ち':'--amber','FB待ち':'--pink','修正中':'--red','完了':'--green','キャンセル':'--t3'};
 const SCOLBG={'案件掲載中':'bc','未着手':'bk','進行中':'bb','編集者進行中':'bpk','初稿完成':'bp','確認待ち':'ba','FB待ち':'bk','修正中':'br','完了':'bg','キャンセル':'bk'};
+Object.assign(SCOL,{'初稿提出済み':'--purple','修正稿提出済み':'--purple','D確認OK':'--green'});
+Object.assign(SCOLBG,{'初稿提出済み':'bp','修正稿提出済み':'bp','D確認OK':'bg'});
 // ===事業(BIZ)定義 2026-07-26=== 案件管理を事業別に分割。既存データは書き換えず、読み取り時に分類する（jobBiz）。
 Object.assign(SCOLBG,{'募集中':'bc','編集者決定':'bb','受注済み':'bb','受注':'bb','商談中':'ba','ヒアリング':'bc','制作中':'bb','初稿提出':'bp','公開準備':'ba','公開済み':'bg','運用中':'bg','提案中':'ba','契約中':'bb','オンボーディング':'bc','継続中':'bg','更新待ち':'ba','解約':'bk','要件ヒアリング':'bc','見積提出':'ba','開発中':'bb','テスト中':'bp','デモ提出':'bp','納品済み':'bg','検収待ち':'ba','運用保守':'bg'});
 const BOARD_COL={'案件掲載中':'#06b6d4','未着手':'#6b7280','進行中':'#3b82f6','編集者進行中':'#ec4899','FB待ち':'#ec4899','確認待ち':'#f59e0b','修正中':'#ef4444','初稿完成':'#7c3aed','募集中':'#06b6d4','編集者決定':'#3b82f6','受注済み':'#3b82f6','受注':'#3b82f6','商談中':'#f59e0b','ヒアリング':'#06b6d4','制作中':'#3b82f6','初稿提出':'#7c3aed','公開準備':'#f59e0b','公開済み':'#16a34a','運用中':'#16a34a','提案中':'#f59e0b','契約中':'#3b82f6','オンボーディング':'#06b6d4','継続中':'#16a34a','更新待ち':'#f59e0b','解約':'#6b7280','要件ヒアリング':'#06b6d4','見積提出':'#f59e0b','開発中':'#3b82f6','テスト中':'#7c3aed','デモ提出':'#7c3aed','納品済み':'#16a34a','検収待ち':'#f59e0b','運用保守':'#16a34a'};
@@ -1042,8 +1044,8 @@ const BIZ_DEFS=[
 const PTAB_LBL={board:'📋 ボード',deadline:'📅 今日明日期限',listing:'📢 掲載中',list:'📄 リスト',clients:'👥 クライアント一覧',profit:'💰 利益',payment:'💳 支払い',invoice:'🧾 請求書',completed:'✅ 完了済み',worker:'👤 担当者別',priority:'📊 優先度表'};
 const BIZ_CFG={
   edit:{
-    statuses:['案件掲載中','未着手','進行中','編集者進行中','初稿完成','確認待ち','FB待ち','修正中','完了','キャンセル'],
-    board:['案件掲載中','未着手','進行中','編集者進行中','FB待ち','確認待ち','修正中','初稿完成'],
+    statuses:['案件掲載中','未着手','進行中','編集者進行中','初稿提出済み','修正中','修正稿提出済み','D確認OK','完了','キャンセル','初稿完成','確認待ち','FB待ち'],
+    board:['案件掲載中','未着手','進行中','編集者進行中','初稿提出済み','修正中','修正稿提出済み','D確認OK','初稿完成','確認待ち','FB待ち'],
     scopes:['動画編集','サムネイル制作','動画編集＋サムネイル','ショート動画','VSL','スクール動画','その他'],
     lbl:{scope:'担当範囲',shared:'共有日',deliver:'納品日',d1:'編集者 初稿',d2:'クライアント提出 初稿',unit:'単価（円）',wpay:'ワーカー支払額（円）',profit:'利益（自動計算）',monthly:'',member:'👤 編集者別',d1s:'✏️ 編集者初稿',d2s:'📋 クライアント提出',deliverS:'📅 納品'},
     show:{scope:1,d1:1,d2:1,thumb:1,wpay:1,subs:1,monthly:0},
@@ -1051,8 +1053,8 @@ const BIZ_CFG={
     prio:[['clientDraftDate','クライアント初稿'],['editorDraftDate','編集者初稿']]
   },
   haken:{
-    statuses:['案件掲載中','募集中','編集者決定','受注済み','進行中','初稿完成','確認待ち','修正中','完了','キャンセル'],
-    board:['案件掲載中','募集中','編集者決定','受注済み','進行中','確認待ち','修正中','初稿完成'],
+    statuses:['案件掲載中','募集中','編集者決定','受注済み','進行中','初稿提出済み','修正中','修正稿提出済み','D確認OK','完了','キャンセル','初稿完成','確認待ち'],
+    board:['案件掲載中','募集中','編集者決定','受注済み','進行中','初稿提出済み','修正中','修正稿提出済み','D確認OK','初稿完成','確認待ち'],
     scopes:['長尺動画','ショート動画','サムネイル制作','その他'],
     lbl:{scope:'案件種別',shared:'受注日',deliver:'納品日',d1:'編集者 初稿',d2:'クライアント提出 初稿',unit:'クライアント請求額（円）',wpay:'編集者支払額（円）',profit:'手数料（自動計算）',monthly:'',member:'👤 編集者別',d1s:'✏️ 編集者初稿',d2s:'📋 クライアント提出',deliverS:'📅 納品'},
     show:{scope:1,d1:1,d2:1,thumb:1,wpay:1,subs:1,monthly:0},
@@ -5784,10 +5786,11 @@ const VIDEO_PHASES=[
   {id:'intake',label:'受付・募集',statuses:['案件掲載中','募集中','未着手']},
   {id:'assigned',label:'アサイン済み',statuses:['編集者決定','受注済み']},
   {id:'editing',label:'編集',statuses:['進行中','編集者進行中']},
-  {id:'review',label:'確認・修正',statuses:['初稿完成','確認待ち','FB待ち','修正中']},
+  {id:'review',label:'確認・修正',statuses:['初稿提出済み','修正稿提出済み','D確認OK','初稿完成','確認待ち','FB待ち','修正中']},
   {id:'done',label:'完了',statuses:['完了','キャンセル']}
 ];
-const VIDEO_OVERDUE_EXCLUDED_STATUSES=new Set(['完了','キャンセル','確認待ち','修正中']);
+const EDITOR_OWNED_VIDEO_STATUSES=new Set(['初稿提出済み','修正稿提出済み','D確認OK','完了']);
+const VIDEO_OVERDUE_EXCLUDED_STATUSES=new Set(['完了','キャンセル','初稿提出済み','修正稿提出済み','D確認OK','確認待ち','修正中']);
 function _videoPhase(status){return VIDEO_PHASES.find(p=>p.statuses.includes(status))||VIDEO_PHASES[0];}
 function _videoIsOverdue(j,baseDate=today()){
   return!!(j&&j.deadline&&j.deadline<baseDate&&!VIDEO_OVERDUE_EXCLUDED_STATUSES.has(j.status));
@@ -5805,6 +5808,7 @@ function _videoJobs(){
 function _videoFiltered(biz=PBIZ){const q=VIDEO_QUERY.trim().toLowerCase();return _videoJobs().filter(j=>j.biz===biz&&(!VIDEO_STATUS||j.status===VIDEO_STATUS)&&(!q||[j.title,j.clientDisplay,j.assignee,j.status].join(' ').toLowerCase().includes(q)));}
 function _videoCanEdit(){return _isOwner()||hasAppRole('動画編集ディレクター');}
 function _videoSafeUrl(v){try{const u=new URL(v);return['https:','http:'].includes(u.protocol)?u.href:'';}catch(_){return'';}}
+function _editorMilestoneSummary(j){const defs=[['initial_submitted','初稿提出'],['revision_submitted','修正稿提出'],['director_approved','D確認OK'],['client_approved_delivered','クライアントOK・納品']],saved=Array.isArray(j?.progressMilestones)?j.progressMilestones:[];return`<div class="card" style="margin:8px 0;background:var(--card2)"><div style="font-size:11px;font-weight:800">担当編集者が更新する必須進捗</div><div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px">${defs.map(([key,label])=>{const x=saved.find(v=>v?.key===key);return`<span class="badge ${x?'bg':'ba'}" title="${x?esc(`${x.byName||x.byEmail||'担当編集者'} / ${new Date(Number(x.at)||0).toLocaleString('ja-JP')}`):'担当編集者の更新待ち'}">${x?'✓':'未'} ${label}</span>`}).join('')}</div><div style="font-size:10px;color:var(--t3);margin-top:6px">この4項目は管理者が代理更新せず、担当編集者本人が編集者ポータルから更新します。</div></div>`;}
 function _jobScheduleError(schedule){
   const ordered=[schedule.sharedDate,schedule.editorDraftDate,schedule.clientDraftDate,schedule.deliveryDate].filter(Boolean);
   for(let i=1;i<ordered.length;i++)if(ordered[i]<ordered[i-1])return'日程は「受注日 → 編集者初稿 → クライアント提出初稿 → 納品日」の順で入力してください';
@@ -5835,6 +5839,7 @@ function openPortalJobModal(portalUid,id){
 <div class="fg"><div class="fl">ステータス</div><select id="vp-status" ${canEdit?'':'disabled'}>${bizStatOpts(portalBiz,j.status)}</select></div>
 <div class="fg"><div class="fl">指示・確認メモ</div><textarea id="vp-instructions" ${canEdit?'':'disabled'}>${esc(j.instructions||'')}</textarea></div>
 <div class="fg"><div class="fl">差戻し理由</div><textarea id="vp-correction" ${canEdit?'':'disabled'}>${esc(j.correctionReason||'')}</textarea></div>
+${_editorMilestoneSummary(j)}
 ${owner?`<div class="card" style="background:var(--card2)"><div style="font-size:11px;font-weight:800;margin-bottom:6px">オーナーのみ・編集者報酬</div><div class="frow"><div class="fg"><div class="fl">請求可能額</div><input id="vp-pay" type="number" min="0" value="${Number(j.ownPay||0)}"></div><div class="fg"><div class="fl">請求対象月</div><input id="vp-pay-month" type="month" value="${esc(j.payableMonth||String(deliveryDate).slice(0,7))}"></div></div><div class="fg"><div class="fl">請求承認</div><select id="vp-payable"><option value="false" ${j.payableApproved?'':'selected'}>未承認</option><option value="true" ${j.payableApproved?'selected':''}>承認済み</option></select></div></div>
 <div class="card" style="margin-top:8px;background:var(--card2)"><div style="font-size:11px;font-weight:800">社内案件台帳</div><div style="font-size:11px;color:var(--t3);margin:4px 0 8px">${j.linkedLegacyJobId?'自動連携済み。編集者の更新は案件台帳にも反映されます。':'自動連携を処理中です。画面を閉じても次回起動時に再実行します。'}</div>${j.linkedLegacyJobId?`<button class="btn btn-g btn-sm" onclick="openJobModal('${esc(j.linkedLegacyJobId)}')">連携先を開く</button>`:''}</div>`:''}
 <div class="mfooter"><button class="btn btn-g" onclick="closeModal()">閉じる</button>${canEdit?`<button class="btn btn-p" onclick="savePortalJobAdmin('${portalUid}','${id}')">保存</button>`:''}</div>`);
@@ -5842,10 +5847,12 @@ ${owner?`<div class="card" style="background:var(--card2)"><div style="font-size
 async function savePortalJobAdmin(portalUid,id){
   if(!_videoCanEdit())return toast('権限がありません','err');
   const j=(PORTAL_JOBS||[]).find(x=>x._portalUid===portalUid&&x.id===id);if(!j)return;
+  const requestedStatus=document.getElementById('vp-status').value;
+  if(requestedStatus!==j.status&&EDITOR_OWNED_VIDEO_STATUSES.has(requestedStatus))return toast('この進捗は担当編集者本人が編集者ポータルから更新してください','warn');
   const at=Date.now(),deliveryDate=document.getElementById('vp-deadline').value,schedule={sharedDate:document.getElementById('vp-shared').value,editorDraftDate:document.getElementById('vp-editor-draft').value,clientDraftDate:document.getElementById('vp-client-draft').value,thumbnailDate:document.getElementById('vp-thumbnail').value,deliveryDate};
   const scheduleError=_jobScheduleError(schedule);if(scheduleError)return toast(scheduleError,'warn');
   if(!deliveryDate)return toast('納品日を入力してください','warn');
-  const data={title:document.getElementById('vp-title').value.trim(),clientDisplay:document.getElementById('vp-client').value.trim(),deadline:deliveryDate,...schedule,status:document.getElementById('vp-status').value,instructions:document.getElementById('vp-instructions').value.trim(),correctionReason:document.getElementById('vp-correction').value.trim(),updatedAt:at,updatedBy:_myEmail(),history:[...(j.history||[]).slice(-49),{at,by:_myEmail(),type:'manager_update',status:document.getElementById('vp-status').value}]};
+  const data={title:document.getElementById('vp-title').value.trim(),clientDisplay:document.getElementById('vp-client').value.trim(),deadline:deliveryDate,...schedule,status:requestedStatus,instructions:document.getElementById('vp-instructions').value.trim(),correctionReason:document.getElementById('vp-correction').value.trim(),updatedAt:at,updatedBy:_myEmail(),history:[...(j.history||[]).slice(-49),{at,by:_myEmail(),type:'manager_update',status:requestedStatus}]};
   if(_isOwner()){
     data.ownPay=Math.max(0,Number(document.getElementById('vp-pay').value)||0);data.payableMonth=document.getElementById('vp-pay-month').value||'';data.payableApproved=document.getElementById('vp-payable').value==='true';data.payableApprovedAt=data.payableApproved?at:null;
     if(data.payableApproved&&(data.status!=='完了'||!data.ownPay||!data.payableMonth||!_videoSafeUrl(j.evidenceUrl||'')||j.blocker))return toast('完了済み・納品証跡・停止理由・金額・請求対象月を確認してから請求承認してください','warn');
@@ -5862,7 +5869,7 @@ function _portalLegacyId(portalUid,id){return('ep_'+String(portalUid).slice(0,10
 function _newPortalLegacyJob(j){
   const client=(S.clients||[]).find(c=>!c.deleted&&String(c.name||'').trim()===String(j.clientDisplay||'').trim()),access=(ACCESS_RECORDS||[]).find(x=>x.id===j._portalUid),workerId=access?.workerId||null,at=Number(j.updatedAt)||Date.now();
   const biz=_portalVideoBiz(j);
-  return{id:j.linkedLegacyJobId,biz,jobType:'edit',title:j.title||(biz==='haken'?'編集者直接依頼':'編集代行案件'),clientId:client?.id||null,workerId,workerIds:workerId?[workerId]:[],scope:'その他',status:j.status||'受注済み',sharedDate:j.sharedDate||String(j.createdAt?new Date(j.createdAt).toISOString().slice(0,10):today()),deliveryDate:j.deliveryDate||j.deadline||null,editorDraftDate:j.editorDraftDate||null,clientDraftDate:j.clientDraftDate||null,thumbnailDate:j.thumbnailDate||null,invoiceDate:null,dueDate:null,paymentDate:null,paidAt:null,payoutDate:null,unitPrice:0,workerPay:Number(j.ownPay)||0,profit:0,notes:j.instructions||'',progressNote:j.progress||'',evidenceUrl:j.evidenceUrl||'',blocker:j.blocker||'',portalUid:j._portalUid,portalJobId:j.id,source:'editor_portal',opsChecklist:[],createdAt:new Date().toISOString(),updatedAt:at,updatedBy:j.updatedBy||j.editorEmail||_myEmail()};
+  return{id:j.linkedLegacyJobId,biz,jobType:'edit',title:j.title||(biz==='haken'?'編集者直接依頼':'編集代行案件'),clientId:client?.id||null,workerId,workerIds:workerId?[workerId]:[],scope:'その他',status:j.status||'受注済み',sharedDate:j.sharedDate||String(j.createdAt?new Date(j.createdAt).toISOString().slice(0,10):today()),deliveryDate:j.deliveryDate||j.deadline||null,editorDraftDate:j.editorDraftDate||null,clientDraftDate:j.clientDraftDate||null,thumbnailDate:j.thumbnailDate||null,invoiceDate:null,dueDate:null,paymentDate:null,paidAt:null,payoutDate:null,unitPrice:0,workerPay:Number(j.ownPay)||0,profit:0,notes:j.instructions||'',progressNote:j.progress||'',progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:[],lastProgressChangedByUid:j.lastProgressChangedByUid||null,lastProgressChangedByEmail:j.lastProgressChangedByEmail||null,lastProgressChangedByRole:j.lastProgressChangedByRole||null,evidenceUrl:j.evidenceUrl||'',blocker:j.blocker||'',portalUid:j._portalUid,portalJobId:j.id,source:'editor_portal',opsChecklist:[],createdAt:new Date().toISOString(),updatedAt:at,updatedBy:j.updatedBy||j.editorEmail||_myEmail()};
 }
 function _portalField(j,key,fallback){return Object.prototype.hasOwnProperty.call(j,key)?(j[key]||null):fallback;}
 function _applyPortalToLegacy(j,createMissing=false){
@@ -5871,7 +5878,7 @@ function _applyPortalToLegacy(j,createMissing=false){
   if(!target&&createMissing&&_isOwner()){target=_newPortalLegacyJob(j);S.jobs.unshift(target);changed=true;}
   if(!target)return false;
   if(target.portalUid&&target.portalUid!==j._portalUid||target.portalJobId&&target.portalJobId!==j.id)return false;
-  const next={title:j.title||target.title,status:j.status||target.status,sharedDate:_portalField(j,'sharedDate',target.sharedDate),editorDraftDate:_portalField(j,'editorDraftDate',target.editorDraftDate),clientDraftDate:_portalField(j,'clientDraftDate',target.clientDraftDate),thumbnailDate:_portalField(j,'thumbnailDate',target.thumbnailDate),deliveryDate:_portalField(j,'deliveryDate',j.deadline||target.deliveryDate),notes:j.instructions||target.notes,progressNote:j.progress||target.progressNote,evidenceUrl:j.evidenceUrl||target.evidenceUrl,blocker:j.blocker||'',updatedAt:Number(j.updatedAt)||Date.now(),updatedBy:j.updatedBy||j.editorEmail||_myEmail()};
+  const next={title:j.title||target.title,status:j.status||target.status,sharedDate:_portalField(j,'sharedDate',target.sharedDate),editorDraftDate:_portalField(j,'editorDraftDate',target.editorDraftDate),clientDraftDate:_portalField(j,'clientDraftDate',target.clientDraftDate),thumbnailDate:_portalField(j,'thumbnailDate',target.thumbnailDate),deliveryDate:_portalField(j,'deliveryDate',j.deadline||target.deliveryDate),notes:j.instructions||target.notes,progressNote:j.progress||target.progressNote,progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:(target.progressMilestones||[]),lastProgressChangedByUid:j.lastProgressChangedByUid||target.lastProgressChangedByUid||null,lastProgressChangedByEmail:j.lastProgressChangedByEmail||target.lastProgressChangedByEmail||null,lastProgressChangedByRole:j.lastProgressChangedByRole||target.lastProgressChangedByRole||null,evidenceUrl:j.evidenceUrl||target.evidenceUrl,blocker:j.blocker||'',updatedAt:Number(j.updatedAt)||Date.now(),updatedBy:j.updatedBy||j.editorEmail||_myEmail()};
   if(Object.keys(next).some(k=>JSON.stringify(target[k])!==JSON.stringify(next[k]))){Object.assign(target,next);target.statusHistory=[...(target.statusHistory||[]).slice(-99),{at:next.updatedAt,by:next.updatedBy,status:next.status,note:next.progressNote,evidenceUrl:next.evidenceUrl,source:'editor_portal'}];changed=true;}
   return changed;
 }
@@ -5982,8 +5989,8 @@ const GUIDE_PAGE_GROUPS=[
   {label:'管理・設定',ids:['customize','accounts','igaccounts','settings']}
 ];
 const GUIDE_PAGE_DEFS={
-  videoedit:{purpose:'mono.createがクライアントから受けた編集代行案件の募集、担当、初稿、納品を管理します。',steps:['「＋ 編集代行案件」で案件を登録するか、下部の募集欄から編集者へ掲載します。','編集者が「この案件を受ける」を押した後、担当者と初稿日・納品日を確認します。','初稿、確認、修正、納品の順にステータスと証跡URLを更新します。'],access:'オーナー、動画編集ディレクター、営業など許可された社内担当者'},
-  videohaken:{purpose:'編集者が派遣先クライアントから直接受け、自分で登録した案件だけを管理します。',steps:['編集者は編集者ポータルの「担当案件」から、派遣先で受けた案件を登録します。','オーナー・ディレクターはこの画面で担当者、初稿日、納品日、進捗を確認します。','初稿・修正・納品の証跡を確認し、完了後に支払いと請求対象を確定します。'],access:'オーナー、動画編集ディレクター、営業など許可された社内担当者'},
+  videoedit:{purpose:'mono.createがクライアントから受けた編集代行案件の募集、担当、初稿、納品を管理します。',steps:['「＋ 編集代行案件」で案件を登録するか、下部の募集欄から編集者へ掲載します。','編集者が「この案件を受ける」を押した後、担当者と初稿日・納品日を確認します。','初稿提出・修正稿提出・D確認OK・クライアントOK／納品は、担当編集者本人が編集者ポータルで更新します。'],access:'オーナー、動画編集ディレクター、営業など許可された社内担当者'},
+  videohaken:{purpose:'編集者が派遣先クライアントから直接受け、自分で登録した案件だけを管理します。',steps:['編集者は編集者ポータルの「担当案件」から、派遣先で受けた案件を登録します。','オーナー・ディレクターはこの画面で担当者、初稿日、納品日、進捗を確認します。','初稿提出・修正稿提出・D確認OK・クライアントOK／納品は、担当編集者本人の更新履歴と証跡を確認します。'],access:'オーナー、動画編集ディレクター、営業など許可された社内担当者'},
   videoclients:{purpose:'既存クライアントと、そのクライアントから依頼されるアカウントを分けて管理します。',steps:['既存クライアントを選び、必要なアカウント名を追加します。','案件を担当する編集者へ、必要なクライアント・アカウントだけ共有します。','名称や契約情報が変わったときだけ制作台帳を更新します。'],access:'オーナー、動画編集ディレクター'},
   workers:{purpose:'編集者の採用状況、スキル、担当案件、契約区分を確認するページです。',steps:['編集者名を開き、採用状況・スキル・最低依頼料を確認します。','ログインを許可する編集者には、担当ディレクターと契約区分を設定します。','担当中案件を確認し、割り当てや進捗に漏れがないか確認します。'],access:'オーナー、動画編集ディレクター'},
   videoschedules:{purpose:'編集者が登録した今週の1週間を、カレンダーで確認するページです。',steps:['月曜日に届く通知から開き、今週の編集可能日を入力します。','同じ予定は一括登録し、毎週同じ場合はルーティン保存を使います。','案件を割り当てる前に、曜日・時間・受託可能本数を確認します。'],access:'オーナー、動画編集ディレクター。入力は編集者本人'},
@@ -12177,6 +12184,8 @@ function saveJob(){
   if(!title){toast('タイトルを入力してください','err');return;}
   if(_isOwner()&&!document.getElementById('j-invoice')?.value){toast('請求書提出日を入力してください（請求書ページで使います）','warn');return;}
   const current=EID?S.jobs.find(j=>j.id===EID):null;
+  const requestedStatus=document.getElementById('j-stat').value;
+  if(current?.portalJobId&&requestedStatus!==current.status&&EDITOR_OWNED_VIDEO_STATUSES.has(requestedStatus)){toast('この進捗は担当編集者本人が編集者ポータルから更新してください','warn');return;}
   const oldSubs=current?.subtasks||[];
   const subEls=[...document.querySelectorAll('#j-sub-cont .j-sub-row')];
   const parsedSubtasks=subEls.map((el,i)=>{
@@ -12204,7 +12213,7 @@ function saveJob(){
   const onlySelf=selWorkerIds.length===0||selWorkerIds.every(id=>id===SELF_WID);
   const workerPay=_isOwner()?(hasPricedSubs?subtasks.filter(s=>s.workerId!==SELF_WID).reduce((s,sub)=>s+(sub.workerPay||0),0):(onlySelf?0:parseInt(document.getElementById('j-wpay')?.value)||0)):(Number(current?.workerPay)||0);
   const isTrial=document.getElementById('j-trial-val')?.value==='1';
-  const data={title,biz:document.getElementById('j-biz')?.value||'edit',monthlyFee:_isOwner()?(parseInt(document.getElementById('j-monthly')?.value)||0):(Number(current?.monthlyFee)||0),jobType:document.getElementById('j-type')?.value||'edit',clientId:document.getElementById('j-cl').value||null,workerIds:selWorkerIds,workerId:selWorkerIds[0]||null,scope:document.getElementById('j-scope').value||null,status:document.getElementById('j-stat').value,isTrial,unitPrice,profit:_isOwner()?unitPrice:(Number(current?.profit)||unitPrice),workerPay,sharedDate:document.getElementById('j-shared').value||null,editorDraftDate:document.getElementById('j-editor-draft').value||null,clientDraftDate:document.getElementById('j-client-draft').value||null,thumbnailDate:document.getElementById('j-thumbnail')?.value||null,deliveryDate:document.getElementById('j-deliver').value||null,invoiceDate:_isOwner()?(document.getElementById('j-invoice')?.value||null):(current?.invoiceDate||null),dueDate:_isOwner()?(document.getElementById('j-due')?.value||null):(current?.dueDate||null),paymentDate:_isOwner()?(document.getElementById('j-payin')?.value||null):(current?.paymentDate||null),paidAt:_isOwner()?(document.getElementById('j-paid-val')?.value||null):(current?.paidAt||null),payoutDate:_isOwner()?(document.getElementById('j-payout')?.value||null):(current?.payoutDate||null),salesRep:_isOwner()?(document.getElementById('j-sales-rep')?.value||null):(current?.salesRep||null),salesPay:_isOwner()?(parseInt(document.getElementById('j-sales-pay')?.value)||0):(Number(current?.salesPay)||0),notes:document.getElementById('j-notes').value.trim(),opsChecklist:readOpsChecklist(),subtasks,updatedAt:Date.now(),updatedBy:_myEmail()};
+  const data={title,biz:document.getElementById('j-biz')?.value||'edit',monthlyFee:_isOwner()?(parseInt(document.getElementById('j-monthly')?.value)||0):(Number(current?.monthlyFee)||0),jobType:document.getElementById('j-type')?.value||'edit',clientId:document.getElementById('j-cl').value||null,workerIds:selWorkerIds,workerId:selWorkerIds[0]||null,scope:document.getElementById('j-scope').value||null,status:requestedStatus,isTrial,unitPrice,profit:_isOwner()?unitPrice:(Number(current?.profit)||unitPrice),workerPay,sharedDate:document.getElementById('j-shared').value||null,editorDraftDate:document.getElementById('j-editor-draft').value||null,clientDraftDate:document.getElementById('j-client-draft').value||null,thumbnailDate:document.getElementById('j-thumbnail')?.value||null,deliveryDate:document.getElementById('j-deliver').value||null,invoiceDate:_isOwner()?(document.getElementById('j-invoice')?.value||null):(current?.invoiceDate||null),dueDate:_isOwner()?(document.getElementById('j-due')?.value||null):(current?.dueDate||null),paymentDate:_isOwner()?(document.getElementById('j-payin')?.value||null):(current?.paymentDate||null),paidAt:_isOwner()?(document.getElementById('j-paid-val')?.value||null):(current?.paidAt||null),payoutDate:_isOwner()?(document.getElementById('j-payout')?.value||null):(current?.payoutDate||null),salesRep:_isOwner()?(document.getElementById('j-sales-rep')?.value||null):(current?.salesRep||null),salesPay:_isOwner()?(parseInt(document.getElementById('j-sales-pay')?.value)||0):(Number(current?.salesPay)||0),notes:document.getElementById('j-notes').value.trim(),opsChecklist:readOpsChecklist(),subtasks,updatedAt:Date.now(),updatedBy:_myEmail()};
   const entersOperationalCompletion=opsRequiresChecklist(data.biz,data.status)&&!opsRequiresChecklist(jobBiz(current),current?.status);
   if(entersOperationalCompletion&&data.opsChecklist.length<opsChecklistDef(data.biz).length){toast('公開・運用・完了へ進む前に「運用完了チェック」をすべて確認してください','warn');return;}
   if(EID){
@@ -15663,7 +15672,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260826-13';
+const APP_VERSION='20260826-14';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -15737,6 +15746,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-  <script src="./manager-features.js?v=20260826-13"></script>
+<script src="./manager-features.js?v=20260826-14"></script>
 </body>
 </html>

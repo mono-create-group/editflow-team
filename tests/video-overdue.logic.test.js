@@ -20,6 +20,8 @@ test('manager overdue excludes confirmation and revision statuses', () => {
   vm.runInContext(`${setSource}\n${fnSource}\nthis.check=_videoIsOverdue;`, context);
   assert.equal(context.check({ deadline: '2026-08-01', status: '確認待ち' }, '2026-08-26'), false);
   assert.equal(context.check({ deadline: '2026-08-01', status: '修正中' }, '2026-08-26'), false);
+  assert.equal(context.check({ deadline: '2026-08-01', status: '初稿提出済み' }, '2026-08-26'), false);
+  assert.equal(context.check({ deadline: '2026-08-01', status: 'D確認OK' }, '2026-08-26'), false);
   assert.equal(context.check({ deadline: '2026-08-01', status: '進行中' }, '2026-08-26'), true);
   assert.equal(context.check({ deadline: '2026-08-27', status: '進行中' }, '2026-08-26'), false);
 });
@@ -34,5 +36,7 @@ test('editor portal uses the same overdue exclusions', () => {
   vm.runInContext(`${setSource}\n${fnSource}\nthis.check=isJobOverdue;`, context);
   assert.equal(context.check({ deliveryDate: '2026-08-01', status: '確認待ち' }, '2026-08-26'), false);
   assert.equal(context.check({ deliveryDate: '2026-08-01', status: '修正中' }, '2026-08-26'), false);
+  assert.equal(context.check({ deliveryDate: '2026-08-01', status: '修正稿提出済み' }, '2026-08-26'), false);
+  assert.equal(context.check({ deliveryDate: '2026-08-01', status: 'D確認OK' }, '2026-08-26'), false);
   assert.equal(context.check({ deliveryDate: '2026-08-01', status: '進行中' }, '2026-08-26'), true);
 });

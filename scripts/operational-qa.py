@@ -152,7 +152,7 @@ def static_contract_checks() -> None:
     else:
         ok("owner and director operations features")
 
-    overdue_exclusions = ["完了", "キャンセル", "確認待ち", "修正中"]
+    overdue_exclusions = ["完了", "キャンセル", "初稿提出済み", "修正稿提出済み", "D確認OK", "確認待ち", "修正中"]
     require_values("manager overdue exclusions",
                    quoted_set_values(index, "VIDEO_OVERDUE_EXCLUDED_STATUSES"),
                    overdue_exclusions)

@@ -173,6 +173,7 @@ service cloud.firestore {
     function validJobStatus(status) {
       return status in [
         '案件掲載中','募集中','編集者決定','受注済み','進行中',
+        '初稿提出済み','修正稿提出済み','D確認OK',
         '初稿完成','確認待ち','修正中','完了','キャンセル'
       ];
     }
@@ -289,8 +290,14 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status','deadline','sharedDate','editorDraftDate','clientDraftDate',
             'thumbnailDate','deliveryDate','progress','evidenceUrl','blocker',
-            'workDate','startTime','endTime','updatedAt'
+            'workDate','startTime','endTime','progressMilestones',
+            'lastProgressChangedByUid','lastProgressChangedByEmail',
+            'lastProgressChangedByRole','updatedAt','history'
           ])
+          && request.resource.data.get('lastProgressChangedByUid', uid) == uid
+          && request.resource.data.get('lastProgressChangedByRole', '担当編集者') == '担当編集者'
+          && request.resource.data.get('progressMilestones', []) is list
+          && request.resource.data.get('history', []) is list
           && validJobSchedule();
         allow update: if directorFor(uid)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
@@ -300,6 +307,8 @@ service cloud.firestore {
             'payableApproved','payableApprovedAt','payableMonth'
           ])
           && validJobStatus(request.resource.data.status)
+          && (request.resource.data.status == resource.data.status
+            || !(request.resource.data.status in ['初稿提出済み','修正稿提出済み','D確認OK','完了']))
           && validJobSchedule()
           && validCompletedJobEvidence()
           && (!('ownPay' in request.resource.data) || request.resource.data.ownPay >= 0)
@@ -317,6 +326,8 @@ service cloud.firestore {
             'linkedLegacyJobId','integratedAt','integratedBy'
           ])
           && validJobStatus(request.resource.data.status)
+          && (request.resource.data.status == resource.data.status
+            || !(request.resource.data.status in ['初稿提出済み','修正稿提出済み','D確認OK','完了']))
           && validJobSchedule()
           && validCompletedJobEvidence()
           && (!('ownPay' in request.resource.data) || request.resource.data.ownPay >= 0)

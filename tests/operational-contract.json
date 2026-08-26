@@ -1,7 +1,7 @@
 {
   "workspaces": ["動画編集事業", "HP制作事業", "AI事業"],
   "roles": ["動画編集者", "動画編集ディレクター", "AIコンサルタント", "AIエンジニア", "Webデザイナー", "営業", "SNSマーケター"],
-  "editor_job_statuses": ["案件掲載中", "募集中", "編集者決定", "受注済み", "進行中", "初稿完成", "確認待ち", "修正中", "完了", "キャンセル"],
+  "editor_job_statuses": ["案件掲載中", "募集中", "編集者決定", "受注済み", "進行中", "初稿提出済み", "修正中", "修正稿提出済み", "D確認OK", "完了", "キャンセル", "初稿完成", "確認待ち"],
   "editor_job_schedule_fields": ["sharedDate", "editorDraftDate", "clientDraftDate", "thumbnailDate", "deliveryDate"],
   "invoice_statuses": ["下書き", "提出済み", "再提出", "差戻し", "承認済み", "支払処理中", "支払済み", "取消"]
 }
