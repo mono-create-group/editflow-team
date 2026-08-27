@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>動画案件・サブ案件 表示確認</title>
+</head>
+<body>
+  <main id="fixture" style="max-width:760px;margin:0 auto;padding:28px">
+    <div class="ph"><div><div class="ph-title">編集代行案件</div><div style="font-size:12px;color:var(--t2)">表示確認用データ（保存・通信なし）</div></div></div>
+    <section class="card" style="border-left:3px solid var(--red)">
+      <div style="display:flex;justify-content:space-between"><b>未割当</b><span>1件</span></div>
+      <div id="case-card"></div>
+    </section>
+  </main>
+  <script>
+  (async()=>{
+    const source=await fetch('../index.html').then(r=>r.text());
+    const css=source.match(/<style>([^]*?)<\/style>/)?.[1]||'';
+    const style=document.createElement('style');style.textContent=css;document.head.appendChild(style);
+    const fn=name=>source.match(new RegExp(`function ${name}\\([^]*?\\n\\}`,'m'))?.[0]||'';
+    window.S={workers:[{id:'worker-a',name:'鈴木 真由美'}]};
+    window.SELF_WID='__self';
+    window.BOARD_COL={'未着手':'#6b7280','進行中':'#3b82f6','確認待ち':'#f59e0b','修正中':'#ef4444','完了':'#16a34a'};
+    window.SCOLBG={'未着手':'bk','進行中':'bb','確認待ち':'ba','修正中':'br','完了':'bg'};
+    window.VIDEO_OVERDUE_EXCLUDED_STATUSES=new Set(['完了','キャンセル','初稿提出済み','修正稿提出済み','D確認OK','確認待ち','修正中']);
+    window.today=()=> '2026-08-27';
+    window._isOwner=()=>true;
+    window.esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    (0,eval)(`${fn('_videoIsOverdue')}\n${fn('_videoSubtaskAssignee')}\n${fn('_videoSubtasks')}\n${fn('_videoCard')}`);
+    const raw={subtasks:[
+      {title:'ショート動画 1本目',status:'進行中',workerId:'worker-a',deliveryDate:'2026-08-29'},
+      {title:'ショート動画 2本目',status:'確認待ち',workerId:'worker-a',deliveryDate:'2026-08-30'},
+      {title:'ショート動画 3本目',status:'修正中',deliveryDate:'2026-08-31'},
+      {title:'ショート動画 4本目',done:true,workerId:'__self',deliveryDate:'2026-08-26'}
+    ]};
+    const job={_source:'legacy',id:'visual-parent',title:'ショート動画編集パック_4本分',clientDisplay:'株式会社 ワイブロ様',assignee:'未割当',deadline:'期限未設定',status:'編集者進行中',subtasks:_videoSubtasks(raw)};
+    document.getElementById('case-card').innerHTML=_videoCard(job);
+  })();
+  </script>
+</body>
+</html>

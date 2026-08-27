@@ -99,6 +99,27 @@ a{color:inherit;text-decoration:none}
 .card{background:var(--card);border:1.5px solid var(--border);border-radius:var(--r);padding:18px;box-shadow:var(--shadow)}
 .card-sm{padding:12px 14px}
 
+/* ─── VIDEO CASE CARDS / SUBCASES ─── */
+.video-job-card{display:block;width:100%;margin:6px 0;text-align:left;padding:0;overflow:hidden}
+.video-job-main{display:block;width:100%;padding:12px 14px;text-align:left;background:transparent;border-radius:0;transition:background .15s}
+.video-job-main:hover,.video-job-main:focus-visible{background:var(--pdim)}
+.video-job-main:focus-visible{outline:2px solid var(--purple);outline-offset:-2px}
+.video-job-title-row{display:flex;justify-content:space-between;align-items:flex-start;gap:6px}
+.video-job-title{font-size:12px;line-height:1.45;word-break:break-word}
+.video-subcase-list{border-top:1px solid var(--border);background:var(--card2);padding:9px 10px 10px}
+.video-subcase-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;color:var(--t2);font-size:10.5px;font-weight:800}
+.video-subcase-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 8px;padding:7px 8px;background:var(--card);border:1px solid var(--border);border-left:3px solid var(--subcase-color,var(--pl));border-radius:8px;margin-top:5px}
+.video-subcase-title{min-width:0;font-size:11px;font-weight:750;line-height:1.4;word-break:break-word}
+.video-subcase-status{align-self:start;white-space:nowrap}
+.video-subcase-meta{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:3px 8px;color:var(--t3);font-size:10px;line-height:1.45}
+@media(max-width:700px){
+  .video-job-main{padding:13px 12px}
+  .video-subcase-list{padding:9px}
+  .video-subcase-row{grid-template-columns:minmax(0,1fr);gap:4px;padding:8px}
+  .video-subcase-status{justify-self:start}
+  .video-subcase-meta{grid-column:1}
+}
+
 /* ─── BADGES ─── */
 .badge{display:inline-flex;align-items:center;gap:3px;padding:2px 9px;border-radius:100px;font-size:11px;font-weight:700;letter-spacing:.1px}
 .bp{background:var(--pdim);color:var(--purple)}
@@ -5800,12 +5821,32 @@ function _portalVideoBiz(j){
   if(j?.businessType==='edit_agency'||j?.source==='job_board'||j?.boardJobId)return'edit';
   return'edit';
 }
+function _videoSubtaskAssignee(workerId){
+  if(!workerId)return'未割当';
+  if(workerId===SELF_WID)return'mono.create社内対応';
+  return(S.workers||[]).find(w=>w.id===workerId)?.name||'担当者未登録';
+}
+function _videoSubtasks(raw,fallbackRaw){
+  const direct=Array.isArray(raw?.subtasks)&&raw.subtasks.length?raw.subtasks:null;
+  const source=direct||(Array.isArray(fallbackRaw?.subtasks)?fallbackRaw.subtasks:[]);
+  return source.filter(s=>s&&!s.deleted).map((s,index)=>({
+    id:s.id||String(index),
+    title:s.title||`サブ案件 ${index+1}`,
+    deadline:s.deliveryDate||s.clientDraftDate||s.editorDraftDate||'',
+    status:s.done?'完了':(s.status||'未着手'),
+    assignee:_videoSubtaskAssignee(s.workerId),
+    done:!!s.done
+  }));
+}
 function _videoJobs(){
-  const legacy=(S.jobs||[]).filter(j=>!j.deleted&&['edit','haken'].includes(jobBiz(j))&&!j.portalJobId).map(j=>({_source:'legacy',_raw:j,biz:jobBiz(j),id:j.id,title:j.title||'',clientDisplay:(S.clients||[]).find(c=>c.id===j.clientId)?.name||'',deadline:j.deliveryDate||j.clientDraftDate||j.editorDraftDate||'',status:j.status||'未着手',assignee:getJobWorkerNames(j)||'未割当',urgent:!!j.urgent,progress:j.progressNote||j.notes||'',evidenceUrl:j.evidenceUrl||'',blocker:j.blocker||'',history:j.statusHistory||[],updatedAt:j.updatedAt||0}));
-  const portal=(PORTAL_JOBS||[]).map(j=>({_source:'portal',_raw:j,_portalUid:j._portalUid,biz:_portalVideoBiz(j),id:j.id,title:j.title||'',clientDisplay:j.clientDisplay||'',deadline:j.deliveryDate||j.deadline||j.clientDraftDate||j.editorDraftDate||'',status:j.status||'案件掲載中',assignee:j.editorName||j.editorEmail||'編集者直接入力',urgent:!!j.urgent,progress:j.progress||'',evidenceUrl:j.evidenceUrl||'',blocker:j.blocker||'',history:j.history||[],updatedAt:j.updatedAt||0}));
+  const legacy=(S.jobs||[]).filter(j=>!j.deleted&&['edit','haken'].includes(jobBiz(j))&&!j.portalJobId).map(j=>({_source:'legacy',_raw:j,biz:jobBiz(j),id:j.id,title:j.title||'',clientDisplay:(S.clients||[]).find(c=>c.id===j.clientId)?.name||'',deadline:j.deliveryDate||j.clientDraftDate||j.editorDraftDate||'',status:j.status||'未着手',assignee:getJobWorkerNames(j)||'未割当',subtasks:_videoSubtasks(j),urgent:!!j.urgent,progress:j.progressNote||j.notes||'',evidenceUrl:j.evidenceUrl||'',blocker:j.blocker||'',history:j.statusHistory||[],updatedAt:j.updatedAt||0}));
+  const portal=(PORTAL_JOBS||[]).map(j=>{
+    const linked=(S.jobs||[]).find(x=>!x.deleted&&(x.id===j.linkedLegacyJobId||x.portalUid===j._portalUid&&x.portalJobId===j.id));
+    return{_source:'portal',_raw:j,_portalUid:j._portalUid,biz:_portalVideoBiz(j),id:j.id,title:j.title||'',clientDisplay:j.clientDisplay||'',deadline:j.deliveryDate||j.deadline||j.clientDraftDate||j.editorDraftDate||'',status:j.status||'案件掲載中',assignee:j.editorName||j.editorEmail||'編集者直接入力',subtasks:_videoSubtasks(j,linked),urgent:!!j.urgent,progress:j.progress||'',evidenceUrl:j.evidenceUrl||'',blocker:j.blocker||'',history:j.history||[],updatedAt:j.updatedAt||0};
+  });
   return[...legacy,...portal];
 }
-function _videoFiltered(biz=PBIZ){const q=VIDEO_QUERY.trim().toLowerCase();return _videoJobs().filter(j=>j.biz===biz&&(!VIDEO_STATUS||j.status===VIDEO_STATUS)&&(!q||[j.title,j.clientDisplay,j.assignee,j.status].join(' ').toLowerCase().includes(q)));}
+function _videoFiltered(biz=PBIZ){const q=VIDEO_QUERY.trim().toLowerCase();return _videoJobs().filter(j=>j.biz===biz&&(!VIDEO_STATUS||j.status===VIDEO_STATUS)&&(!q||[j.title,j.clientDisplay,j.assignee,j.status,...(j.subtasks||[]).flatMap(s=>[s.title,s.assignee,s.status])].join(' ').toLowerCase().includes(q)));}
 function _videoCanEdit(){return _isOwner()||hasAppRole('動画編集ディレクター');}
 function _videoSafeUrl(v){try{const u=new URL(v);return['https:','http:'].includes(u.protocol)?u.href:'';}catch(_){return'';}}
 function _editorMilestoneSummary(j){const defs=[['initial_submitted','初稿提出'],['revision_submitted','修正稿提出'],['director_approved','D確認OK'],['client_approved_delivered','クライアントOK・納品']],saved=Array.isArray(j?.progressMilestones)?j.progressMilestones:[];return`<div class="card" style="margin:8px 0;background:var(--card2)"><div style="font-size:11px;font-weight:800">担当編集者が更新する必須進捗</div><div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px">${defs.map(([key,label])=>{const x=saved.find(v=>v?.key===key);return`<span class="badge ${x?'bg':'ba'}" title="${x?esc(`${x.byName||x.byEmail||'担当編集者'} / ${new Date(Number(x.at)||0).toLocaleString('ja-JP')}`):'担当編集者の更新待ち'}">${x?'✓':'未'} ${label}</span>`}).join('')}</div><div style="font-size:10px;color:var(--t3);margin-top:6px">この4項目は管理者が代理更新せず、担当編集者本人が編集者ポータルから更新します。</div></div>`;}
@@ -5817,7 +5858,9 @@ function _jobScheduleError(schedule){
 }
 function _videoCard(j){
   const overdue=_videoIsOverdue(j),click=j._source==='portal'?`openPortalJobModal('${j._portalUid}','${j.id}')`:_isOwner()?`openJobModal('${j.id}')`:`openVideoLegacySafeModal('${j.id}')`;
-  return`<button class="card card-sm" style="display:block;width:100%;margin:6px 0;text-align:left;cursor:pointer;border-left:3px solid ${overdue?'var(--red)':j.urgent?'var(--amber)':'var(--pl)'}" onclick="${click}"><div style="display:flex;justify-content:space-between;gap:6px"><b style="font-size:12px">${esc(j.title)}</b>${j._source==='portal'?'<span class="badge bk">直接依頼</span>':''}</div><div style="font-size:10.5px;color:var(--t3);margin-top:3px">${esc(j.clientDisplay||'クライアント未設定')} ・ ${esc(j.assignee)}</div><div style="font-size:10.5px;color:${overdue?'var(--red)':'var(--t3)'}">${esc(j.deadline||'期限未設定')} ・ ${esc(j.status)}${j.evidenceUrl?' ・ 証跡あり':''}${j.blocker?' ・ 停止理由あり':''}</div></button>`;
+  const subtasks=j.subtasks||[];
+  const subtaskHtml=subtasks.length?`<section class="video-subcase-list" aria-label="${esc(j.title)}のサブ案件"><div class="video-subcase-head"><span>↳ サブ案件</span><span>${subtasks.length}件</span></div>${subtasks.map(s=>{const subOverdue=_videoIsOverdue(s),color=subOverdue?'var(--red)':BOARD_COL[s.status]||'var(--pl)',badge=SCOLBG[s.status]||'bk';return`<div class="video-subcase-row" style="--subcase-color:${color}"><div class="video-subcase-title">${esc(s.title)}</div><span class="badge ${badge} video-subcase-status">${esc(s.status)}</span><div class="video-subcase-meta"><span>担当 ${esc(s.assignee)}</span><span style="color:${subOverdue?'var(--red)':'var(--t3)'}">期限 ${esc(s.deadline||'未設定')}</span></div></div>`;}).join('')}</section>`:'';
+  return`<article class="card video-job-card" style="border-left:3px solid ${overdue?'var(--red)':j.urgent?'var(--amber)':'var(--pl)'}"><button type="button" class="video-job-main" onclick="${click}" aria-label="${esc(j.title)}を開く"><div class="video-job-title-row"><b class="video-job-title">${esc(j.title)}</b>${j._source==='portal'?'<span class="badge bk">直接依頼</span>':''}</div><div style="font-size:10.5px;color:var(--t3);margin-top:3px">${esc(j.clientDisplay||'クライアント未設定')} ・ ${esc(j.assignee)}</div><div style="font-size:10.5px;color:${overdue?'var(--red)':'var(--t3)'}">${esc(j.deadline||'期限未設定')} ・ ${esc(j.status)}${j.evidenceUrl?' ・ 証跡あり':''}${j.blocker?' ・ 停止理由あり':''}</div></button>${subtaskHtml}</article>`;
 }
 function openVideoLegacySafeModal(id){
   const j=(S.jobs||[]).find(x=>x.id===id);if(!j)return;
@@ -5989,8 +6032,8 @@ const GUIDE_PAGE_GROUPS=[
   {label:'管理・設定',ids:['customize','accounts','igaccounts','settings']}
 ];
 const GUIDE_PAGE_DEFS={
-  videoedit:{purpose:'mono.createがクライアントから受けた編集代行案件の募集、担当、初稿、納品を管理します。',steps:['「＋ 編集代行案件」で案件を登録するか、下部の募集欄から編集者へ掲載します。','編集者が「この案件を受ける」を押した後、担当者と初稿日・納品日を確認します。','初稿提出・修正稿提出・D確認OK・クライアントOK／納品は、担当編集者本人が編集者ポータルで更新します。'],access:'オーナー、動画編集ディレクター、営業など許可された社内担当者'},
-  videohaken:{purpose:'編集者が派遣先クライアントから直接受け、自分で登録した案件だけを管理します。',steps:['編集者は編集者ポータルの「担当案件」から、派遣先で受けた案件を登録します。','オーナー・ディレクターはこの画面で担当者、初稿日、納品日、進捗を確認します。','初稿提出・修正稿提出・D確認OK・クライアントOK／納品は、担当編集者本人の更新履歴と証跡を確認します。'],access:'オーナー、動画編集ディレクター、営業など許可された社内担当者'},
+  videoedit:{purpose:'mono.createがクライアントから受けた編集代行案件の募集、担当、初稿、納品を管理します。',steps:['「＋ 編集代行案件」で案件を登録するか、下部の募集欄から編集者へ掲載します。','編集者が「この案件を受ける」を押した後、担当者と初稿日・納品日を確認します。','親案件カード内の「サブ案件」で、各本の担当者・期限・状態を確認します。','初稿提出・修正稿提出・D確認OK・クライアントOK／納品は、担当編集者本人が編集者ポータルで更新します。'],access:'オーナー、動画編集ディレクター、営業など許可された社内担当者'},
+  videohaken:{purpose:'編集者が派遣先クライアントから直接受け、自分で登録した案件だけを管理します。',steps:['編集者は編集者ポータルの「担当案件」から、派遣先で受けた案件を登録します。','オーナー・ディレクターはこの画面で担当者、初稿日、納品日、進捗を確認します。','親案件カード内の「サブ案件」で、各本の担当者・期限・状態を確認します。','初稿提出・修正稿提出・D確認OK・クライアントOK／納品は、担当編集者本人の更新履歴と証跡を確認します。'],access:'オーナー、動画編集ディレクター、営業など許可された社内担当者'},
   videoclients:{purpose:'既存クライアントと、そのクライアントから依頼されるアカウントを分けて管理します。',steps:['既存クライアントを選び、必要なアカウント名を追加します。','案件を担当する編集者へ、必要なクライアント・アカウントだけ共有します。','名称や契約情報が変わったときだけ制作台帳を更新します。'],access:'オーナー、動画編集ディレクター'},
   workers:{purpose:'編集者の採用状況、スキル、担当案件、契約区分を確認するページです。',steps:['編集者名を開き、採用状況・スキル・最低依頼料を確認します。','ログインを許可する編集者には、担当ディレクターと契約区分を設定します。','担当中案件を確認し、割り当てや進捗に漏れがないか確認します。'],access:'オーナー、動画編集ディレクター'},
   videoschedules:{purpose:'編集者が登録した今週の1週間を、カレンダーで確認するページです。',steps:['月曜日に届く通知から開き、今週の編集可能日を入力します。','同じ予定は一括登録し、毎週同じ場合はルーティン保存を使います。','案件を割り当てる前に、曜日・時間・受託可能本数を確認します。'],access:'オーナー、動画編集ディレクター。入力は編集者本人'},
@@ -6013,8 +6056,8 @@ const GUIDE_PAGE_DEFS={
   settings:{purpose:'メンバー権限、共有設定、担当者、アプリ更新などを管理します。',steps:['承認待ちメンバーを確認し、役割と担当編集者を設定します。','役割ごとの表示範囲を確認してから承認します。','システム更新後はバージョンを確認し、必要なときだけ最新版へ更新します。'],access:'オーナーのみ'}
 };
 const GUIDE_PAGE_CHECKS={
-  videoedit:'掲載後は「案件を探す」に表示され、受託後は担当編集者の「担当案件」とこの画面の両方に表示される。',
-  videohaken:'編集者が登録した案件の最新ステータス・日程・証跡URLが表示される。',
+  videoedit:'掲載後は「案件を探す」に表示され、受託後は担当編集者の「担当案件」とこの画面に親案件・サブ案件が表示される。',
+  videohaken:'編集者が登録した親案件とサブ案件の担当者・期限・最新ステータス・証跡URLが表示される。',
   videoclients:'クライアントの下にアカウント名が表示され、共有先の編集者名も一覧で確認できる。',
   workers:'編集者の契約区分、担当ディレクター、ログイン権限が正しく表示される。',
   videoschedules:'今週の月曜日から日曜日までに、編集可能日・時間・本数が表示される。',
@@ -6124,14 +6167,14 @@ function rVideoSuggestions(){return rManagerVideoFeature('managerVideoSuggestion
 function rVideoOperations(showBusinessSwitcher=false,biz=PBIZ){
   biz=biz==='haken'?'haken':'edit';PBIZ=biz;
   if(VIDEO_STATUS&&!BIZ_CFG[biz].statuses.includes(VIDEO_STATUS))VIDEO_STATUS='';
-  const all=_videoJobs().filter(j=>j.biz===biz),active=all.filter(j=>!['完了','キャンセル'].includes(j.status)),filtered=_videoFiltered(biz),overdue=active.filter(j=>_videoIsOverdue(j)),unassigned=active.filter(j=>j._source==='legacy'&&j.assignee==='未割当'),blocked=active.filter(j=>j.blocker),review=active.filter(j=>_videoPhase(j.status).id==='review'),portalCount=all.filter(j=>j._source==='portal').length;
+  const all=_videoJobs().filter(j=>j.biz===biz),active=all.filter(j=>!['完了','キャンセル'].includes(j.status)),filtered=_videoFiltered(biz),overdue=active.filter(j=>_videoIsOverdue(j)),unassigned=active.filter(j=>j._source==='legacy'&&j.assignee==='未割当'),blocked=active.filter(j=>j.blocker),review=active.filter(j=>_videoPhase(j.status).id==='review'),portalCount=all.filter(j=>j._source==='portal').length,subcaseCount=all.reduce((n,j)=>n+(j.subtasks||[]).length,0);
   const editorPortalReady=ACCESS_CONTROL.configured===true&&Array.isArray(ACCESS_CONTROL.compatibilityEmails)&&ACCESS_CONTROL.compatibilityEmails.length>0;
   const tabs=[['overview','ダッシュボード'],['board','工程ボード'],['queue','対応キュー'],['legacy','従来の案件管理']];
   const title=biz==='haken'?'編集者派遣案件':'編集代行案件',description=biz==='haken'?'編集者がクライアントから直接受け、自分で登録した案件を管理':'mono.createがクライアントから受け、編集者が受託する案件を管理';
   const screenSwitch=`<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px" role="tablist" aria-label="動画案件の種類"><button class="btn btn-sm ${biz==='edit'?'btn-p':'btn-g'}" role="tab" aria-selected="${biz==='edit'}" onclick="setV('videoedit')">🎥 編集代行案件</button><button class="btn btn-sm ${biz==='haken'?'btn-p':'btn-g'}" role="tab" aria-selected="${biz==='haken'}" onclick="setV('videohaken')">🤝 編集者派遣案件</button></div>`;
   const board=`<div style="display:flex;gap:8px;overflow-x:auto;align-items:start">${VIDEO_PHASES.map(p=>`<section class="card" style="min-width:210px;flex:1"><div style="display:flex;justify-content:space-between"><b>${p.label}</b><span class="badge bk">${filtered.filter(j=>p.statuses.includes(j.status)).length}</span></div>${filtered.filter(j=>p.statuses.includes(j.status)).map(_videoCard).join('')||'<div style="font-size:11px;color:var(--t3);padding:12px 0">0件</div>'}</section>`).join('')}</div>`;
   const queue=[['期限超過',overdue,'var(--red)'],['停止中',blocked,'var(--amber)'],['確認・修正待ち',review,'var(--pl)'],['未割当',unassigned,'var(--red)']].map(([label,list,color])=>`<div class="card" style="border-left:3px solid ${color}"><div style="display:flex;justify-content:space-between"><b>${label}</b><span>${list.length}件</span></div>${list.slice(0,20).map(_videoCard).join('')||'<div style="font-size:11px;color:var(--t3);padding-top:8px">該当なし</div>'}</div>`).join('');
-  const overview=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px;margin-bottom:10px"><div class="card"><div style="font-size:11px;color:var(--t3)">制作中</div><b style="font-size:24px">${active.length}</b></div><div class="card"><div style="font-size:11px;color:var(--t3)">${biz==='haken'?'編集者直接登録':'編集者受託'}</div><b style="font-size:24px">${portalCount}</b></div><div class="card"><div style="font-size:11px;color:var(--t3)">期限超過</div><b style="font-size:24px;color:var(--red)">${overdue.length}</b></div><div class="card"><div style="font-size:11px;color:var(--t3)">確認・修正待ち</div><b style="font-size:24px">${review.length}</b></div></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px">${VIDEO_PHASES.map(p=>`<div class="card"><div style="font-size:11px;color:var(--t3)">${p.label}</div><div style="font-size:20px;font-weight:800">${all.filter(j=>p.statuses.includes(j.status)).length}</div><div style="height:5px;background:var(--card2);border-radius:99px;margin-top:7px"><div style="height:100%;width:${all.length?Math.round(all.filter(j=>p.statuses.includes(j.status)).length/all.length*100):0}%;background:var(--pl);border-radius:99px"></div></div></div>`).join('')}</div><div style="margin-top:10px">${queue}</div>`;
+  const overview=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px;margin-bottom:10px"><div class="card"><div style="font-size:11px;color:var(--t3)">制作中</div><b style="font-size:24px">${active.length}</b></div><div class="card"><div style="font-size:11px;color:var(--t3)">サブ案件</div><b style="font-size:24px">${subcaseCount}</b></div><div class="card"><div style="font-size:11px;color:var(--t3)">${biz==='haken'?'編集者直接登録':'編集者受託'}</div><b style="font-size:24px">${portalCount}</b></div><div class="card"><div style="font-size:11px;color:var(--t3)">期限超過</div><b style="font-size:24px;color:var(--red)">${overdue.length}</b></div><div class="card"><div style="font-size:11px;color:var(--t3)">確認・修正待ち</div><b style="font-size:24px">${review.length}</b></div></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px">${VIDEO_PHASES.map(p=>`<div class="card"><div style="font-size:11px;color:var(--t3)">${p.label}</div><div style="font-size:20px;font-weight:800">${all.filter(j=>p.statuses.includes(j.status)).length}</div><div style="height:5px;background:var(--card2);border-radius:99px;margin-top:7px"><div style="height:100%;width:${all.length?Math.round(all.filter(j=>p.statuses.includes(j.status)).length/all.length*100):0}%;background:var(--pl);border-radius:99px"></div></div></div>`).join('')}</div><div style="margin-top:10px">${queue}</div>`;
   const ownerAcceptancePreview=_isOwner()&&biz==='edit'?'<a class="btn btn-p btn-sm" href="./editor.html?demo=editor" target="_blank" rel="noopener">編集者の受託画面を確認（デモ）</a>':'';
   const acceptanceNote=biz==='edit'&&_isOwner()?'<div style="font-size:11px;color:var(--t2);margin:-2px 0 10px;padding:8px 10px;border-radius:8px;background:var(--card2)">この管理画面は案件を掲載する側です。編集者は「案件を探す」から「この案件を受ける」を押します。</div>':'';
   return`${showBusinessSwitcher?rBizBar():''}${screenSwitch}<div class="ph"><div><div class="ph-title">${title}</div><div style="font-size:12px;color:var(--t2)">${description}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap">${ownerAcceptancePreview}${editorPortalReady?'<a class="btn btn-g btn-sm" href="./editor.html" target="_blank" rel="noopener">編集者共有リンク</a>':_isOwner()?'<button class="btn btn-g btn-sm" disabled title="設定で既存スタッフの許可リストを固定してください">編集者共有リンク（権限設定後）</button>':''}${_videoCanEdit()?`<button class="btn btn-p btn-sm" onclick="openJobModal()">＋ ${biz==='haken'?'派遣案件':'編集代行案件'}</button>`:''}</div></div>${acceptanceNote}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px">${tabs.map(([k,l])=>`<button class="btn btn-g btn-sm ${VIDEO_TAB===k?'btn-p':''}" onclick="setVideoTab('${k}')">${l}</button>`).join('')}</div>${VIDEO_TAB==='board'?`<div class="card" style="display:grid;grid-template-columns:minmax(180px,1fr) 180px;gap:8px;margin-bottom:9px"><input aria-label="案件検索" placeholder="案件・クライアント・担当者を検索" value="${esc(VIDEO_QUERY)}" oninput="VIDEO_QUERY=this.value;render()"><select aria-label="ステータス絞り込み" onchange="VIDEO_STATUS=this.value;render()"><option value="">すべてのステータス</option>${BIZ_CFG[biz].statuses.map(s=>`<option ${VIDEO_STATUS===s?'selected':''}>${s}</option>`).join('')}</select></div>${board}`:VIDEO_TAB==='queue'?`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px">${queue}</div>`:VIDEO_TAB==='invoices'?_videoInvoiceHtml():overview}`;
@@ -15671,7 +15714,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260826-15';
+const APP_VERSION='20260827-01';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -15745,6 +15788,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260826-15"></script>
+<script src="./manager-features.js?v=20260827-01"></script>
 </body>
 </html>
