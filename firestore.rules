@@ -98,7 +98,8 @@ service cloud.firestore {
     }
 
     function editor(uid) {
-      return self(uid) && hasRole(uid, '動画編集者');
+      return self(uid) && (hasRole(uid, '動画編集者')
+        || hasRole(uid, '動画編集ディレクター'));
     }
 
     function pureEditor(uid) {
@@ -165,7 +166,7 @@ service cloud.firestore {
 
     function canSeeBoard(data) {
       return approvedMember()
-        && hasRole(request.auth.uid, '動画編集者')
+        && editor(request.auth.uid)
         && data.status == 'open'
         && (
           (data.get('audience', '') == 'direct'

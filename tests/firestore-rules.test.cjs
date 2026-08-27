@@ -131,6 +131,10 @@ async function expectAllowed(label, promise) {
     await expectAllowed('hybrid editor also uses own editor portal', getDoc(doc(hybrid1, 'editor_portals', 'hybrid1', 'editor_jobs', 'own1')));
     await expectDenied('hybrid editor still cannot read another editor portal', getDoc(doc(hybrid1, 'editor_portals', 'external1', 'editor_jobs', 'done1')));
 
+    await expectAllowed('video director receives editor board access', getDoc(doc(dir1, 'editor_job_board', 'direct-open')));
+    await expectAllowed('video director creates a job in own editor portal', setDoc(doc(dir1, 'editor_portals', 'dir1', 'editor_jobs', 'director-own'), portalJob('dir1')));
+    await expectAllowed('video director saves own weekly editor schedule', setDoc(doc(dir1, 'editor_schedules', 'dir1'), weeklySchedule({ name: 'Dir 1' })));
+
     await expectAllowed('editor saves one-week calendar and routine', setDoc(doc(direct1, 'editor_schedules', 'direct1'), weeklySchedule()));
     await expectDenied('editor cannot store private schedule reason', setDoc(doc(direct1, 'editor_schedules', 'direct1'), weeklySchedule({ privateReason: '通院' })));
     await expectDenied('editor cannot save more than one week', setDoc(doc(direct1, 'editor_schedules', 'direct1'), weeklySchedule({ days: [...weeklySchedule().days, weeklySchedule().days[0]] })));

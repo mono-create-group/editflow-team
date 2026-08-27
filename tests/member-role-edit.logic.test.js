@@ -16,12 +16,15 @@ test('registered members expose edit and delete actions', () => {
 
 test('role selection validation is shared by add, approve, and edit', () => {
   const fn = index.match(/function mrValidateRoleSelection\(roles,workerId\)\{[\s\S]*?\n\}/)?.[0];
+  const grantFn = index.match(/function rolesGrantVideoEditor\(roles\)\{[^}]+\}/)?.[0];
   assert.ok(fn, 'mrValidateRoleSelection must exist');
+  assert.ok(grantFn, 'rolesGrantVideoEditor must exist');
   const context = {};
   vm.createContext(context);
-  vm.runInContext(`${fn}\nthis.validate=mrValidateRoleSelection;`, context);
+  vm.runInContext(`${grantFn}\n${fn}\nthis.validate=mrValidateRoleSelection;`, context);
   assert.equal(context.validate([], null), '少なくとも1つの役割を選択してください');
-  assert.equal(context.validate(['動画編集者'], null), '動画編集者には担当者の紐付けが必要です');
+  assert.equal(context.validate(['動画編集者'], null), '動画編集者・動画編集ディレクターには担当者の紐付けが必要です');
+  assert.equal(context.validate(['動画編集ディレクター'], null), '動画編集者・動画編集ディレクターには担当者の紐付けが必要です');
   assert.equal(context.validate(['動画編集者'], 'worker-1'), '');
   assert.equal(context.validate(['営業'], null), '');
   assert.equal((index.match(/mrValidateRoleSelection\(roles,workerId\)/g) || []).length >= 4, true);
@@ -32,7 +35,7 @@ test('editing an approved member updates access before local state', () => {
   const end = index.indexOf('async function mrRemoveMember(id)', start);
   const body = index.slice(start, end);
   assert.match(body, /collection\('access'\)\.doc\(targetUid\)\.set/);
-  assert.match(body, /nextWorkerId=roles\.includes\('動画編集者'\)\?workerId:null/);
+  assert.match(body, /nextWorkerId=rolesGrantVideoEditor\(roles\)\?workerId:null/);
   assert.match(body, /name,roles,workerId:nextWorkerId,approved:true/);
   assert.ok(body.indexOf("collection('access')") < body.indexOf('Object.assign(m,'), 'cloud access must save before local state');
   assert.match(body, /return toast\('権限を保存できませんでした/);

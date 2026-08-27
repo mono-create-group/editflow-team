@@ -260,6 +260,17 @@ def static_contract_checks() -> None:
             fail(f"Firestore role marker missing: {role}")
     if all(role in rules for role in CONTRACT["roles"]):
         ok("Firestore role markers")
+    director_editor_markers = [
+        "rolesGrantVideoEditor", "role==='動画編集者'&&rolesGrantVideoEditor(roles)",
+        "hasVideoEditorPermission", "roles.includes('動画編集ディレクター')",
+        "hasRole(uid, '動画編集ディレクター')", "editor(request.auth.uid)",
+    ]
+    combined = index + editor + rules
+    absent = [marker for marker in director_editor_markers if marker not in combined]
+    if absent:
+        fail(f"video director editor inheritance missing: {', '.join(absent)}")
+    else:
+        ok("video director inherits editor portal and self-service permissions")
 
     require_values("editor portal job statuses", quoted_values(editor, "HAKEN_STATUSES"), CONTRACT["editor_job_statuses"])
     for field in CONTRACT["editor_job_schedule_fields"]:

@@ -12,7 +12,7 @@
   const linkedWorker=e=>legacyWorkers().find(w=>w.id===e?.workerId);
   const editorName=e=>linkedWorker(e)?.name||e?.name||e?.email||'編集者';
   const catalogsFor=uid=>state.catalog.get(uid)||[];
-  const editorOptions=()=>state.editors.filter(x=>(x.roles||[]).includes('動画編集者')).map(x=>`<option value="${esc(x.id)}">${esc(editorName(x))} / ${x.editorKind==='external'?'外部':'直接'}</option>`).join('');
+  const editorOptions=()=>state.editors.filter(x=>rolesGrantVideoEditor(x.roles||[])).map(x=>`<option value="${esc(x.id)}">${esc(editorName(x))} / ${x.editorKind==='external'?'外部':'直接'}</option>`).join('');
   const timestamp=v=>v&&typeof v.toMillis==='function'?v.toMillis():Number(v||0);
   const weekdayLabels=['月','火','水','木','金','土','日'];
   function dateAtNoon(value){const d=new Date(`${value}T12:00:00`);return Number.isNaN(d.getTime())?new Date():d}
@@ -43,7 +43,7 @@
     if(!FB_USER||!ACCESS_RESOLVED||!canManage()||state.started===FB_USER.uid)return;
     stop();state.started=FB_USER.uid;
     const aq=_isOwner()?fbDb.collection('access'):fbDb.collection('access').where('directorUid','==',FB_USER.uid);
-    state.unsubs.push(aq.onSnapshot(q=>{state.editors=q.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.approved===true&&(x.roles||[]).includes('動画編集者'));subscribePortals();renderSafe()},e=>console.warn('editor relations',e?.code||e)));
+    state.unsubs.push(aq.onSnapshot(q=>{state.editors=q.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.approved===true&&rolesGrantVideoEditor(x.roles||[]));subscribePortals();renderSafe()},e=>console.warn('editor relations',e?.code||e)));
     const bq=_isOwner()?fbDb.collection('editor_job_board'):fbDb.collection('editor_job_board').where('directorUid','==',FB_USER.uid);
     state.unsubs.push(bq.onSnapshot(q=>{state.board=q.docs.map(d=>({id:d.id,...d.data()}));renderSafe()},e=>console.warn('manager board',e?.code||e)));
     const mq=_isOwner()?fbDb.collection('editor_manuals'):fbDb.collection('editor_manuals').where('directorUid','==',FB_USER.uid);
@@ -52,7 +52,7 @@
     if(_isOwner())state.unsubs.push(fbDb.collection('editor_suggestions').orderBy('createdAt','desc').limit(100).onSnapshot(q=>{state.suggestions=q.docs.map(d=>({id:d.id,...d.data()}));renderSafe()},e=>console.warn('suggestions',e?.code||e)));
   }
 
-  const managedEditors=()=>state.editors.filter(x=>(x.roles||[]).includes('動画編集者'));
+  const managedEditors=()=>state.editors.filter(x=>rolesGrantVideoEditor(x.roles||[]));
   const managedJobs=()=>(PORTAL_JOBS||[]).filter(j=>_isOwner()||j.directorUid===FB_USER?.uid);
   const portalJobBiz=j=>j.businessType==='dispatch'||(!j.businessType&&j.source==='direct_client')?'haken':j.businessType==='edit_agency'||(!j.businessType&&j.source==='job_board')?'edit':'edit';
   function page(title,description,body){return`<div class="ph"><div><div class="ph-title">${title}</div><div style="font-size:12px;color:var(--t2)">${description}</div></div></div><div class="card">${body}</div>`}
