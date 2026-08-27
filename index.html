@@ -6053,7 +6053,7 @@ const GUIDE_PAGE_DEFS={
   customize:{purpose:'サイドバーの表示・非表示と並び順を、この端末用に調整します。',steps:['表示したいページのスイッチをオンにします。','ドラッグして、よく使う順に並べ替えます。','表示がおかしい場合は「すべて表示に戻す」で初期化します。'],access:'オーナーのみ'},
   accounts:{purpose:'このアプリへGoogleでサインインしたアカウントと最終利用状況を確認します。',steps:['新しくサインインしたアカウントを一覧で確認します。','役割が未設定の場合は「設定」の権限管理へ移動します。','本人と役割を照合し、不要な権限がないか確認します。'],access:'オーナーのみ'},
   igaccounts:{purpose:'スタッフ用Instagramアカウントの作成状況と認証情報を管理します。',steps:['閲覧キーを設定した端末で一覧を開きます。','作成済み・未作成を確認し、必要な情報を安全にコピーします。','使用後はパスワードを隠し、不要な端末では閲覧キーを削除します。'],access:'オーナーのみ'},
-  settings:{purpose:'メンバー権限、共有設定、担当者、アプリ更新などを管理します。',steps:['承認待ちメンバーを確認し、役割と担当編集者を設定します。','役割ごとの表示範囲を確認してから承認します。','システム更新後はバージョンを確認し、必要なときだけ最新版へ更新します。'],access:'オーナーのみ'}
+  settings:{purpose:'メンバー権限、共有設定、担当者、アプリ更新などを管理します。',steps:['承認待ちメンバーを確認し、役割と担当編集者を設定します。','登録済みメンバーは一覧の「編集」から、名前・役割・担当者を変更して保存します。','不要な登録は「削除」でアクセスを停止します。役割ごとの表示範囲を確認してから操作してください。','システム更新後はバージョンを確認し、必要なときだけ最新版へ更新します。'],access:'オーナーのみ'}
 };
 const GUIDE_PAGE_CHECKS={
   videoedit:'掲載後は「案件を探す」に表示され、受託後は担当編集者の「担当案件」とこの画面に親案件・サブ案件が表示される。',
@@ -11066,7 +11066,8 @@ ${_isOwner()?`${secTitle('🔑 サインインしたメンバー・権限')}
   <div style="font-size:12px;color:var(--t2);line-height:1.7;margin-bottom:10px">
     <b>オーナー: ${esc(_myEmail())}</b><br>
     メンバーはGoogleログイン後に承認し、役割ごとに閲覧範囲を分けます。<br>
-    <span style="color:var(--t3)">動画編集者だけを設定したメンバーは専用ポータルのみを使用します。ほかの役割も設定した兼任者は、その役割の閲覧範囲と編集者ポータルを併用します。</span>
+    <span style="color:var(--t3)">動画編集者だけを設定したメンバーは専用ポータルのみを使用します。ほかの役割も設定した兼任者は、その役割の閲覧範囲と編集者ポータルを併用します。</span><br>
+    <span style="color:var(--pl);font-weight:700">登録後も一覧の「編集」から、名前・役割・担当者をいつでも変更できます。</span>
   </div>
   ${ACCESS_REQUESTS.length?`<div style="margin:0 0 14px"><div style="font-size:12px;font-weight:800;margin-bottom:7px">承認待ち ${ACCESS_REQUESTS.length}件</div>${ACCESS_REQUESTS.map(r=>`<div style="padding:10px;background:var(--card2);border:1px solid var(--border);border-radius:9px;margin-bottom:7px"><div style="font-weight:700;font-size:13px">${esc(r.name||'名前未登録')}</div><div style="font-size:11px;color:var(--t3);margin-bottom:7px">${esc(r.email||'')}</div><div style="display:flex;gap:5px;flex-wrap:wrap">${APP_ROLES.map(role=>`<label style="font-size:10.5px"><input class="ar-role" data-uid="${esc(r.id)}" type="checkbox" value="${role}"> ${role}</label>`).join('')}</div><select id="ar-worker-${esc(r.id)}" style="margin-top:7px"><option value="">担当者を紐付け（編集者のみ必須）</option>${(S.workers||[]).filter(w=>!w.deleted).map(w=>`<option value="${w.id}">${esc(w.name)}</option>`).join('')}</select><div style="display:flex;gap:6px;margin-top:7px"><button class="btn btn-p btn-sm" onclick="mrApproveRequest('${esc(r.id)}')">承認</button><button class="btn btn-g btn-sm" onclick="mrRejectRequest('${esc(r.id)}')">却下</button></div></div>`).join('')}</div>`:''}
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
@@ -11081,7 +11082,10 @@ ${_isOwner()?`${secTitle('🔑 サインインしたメンバー・権限')}
         <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.name||'（名前未登録）')}</div>
         <div style="font-size:11px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.email||'')} ・ ${esc(memberRolesOf(m).join(' / ')||'未設定')}${m.workerId?` ・ ${(S.workers||[]).find(w=>w.id===m.workerId)?.name||'担当者未登録'}`:''}</div>
       </div>
-      <button class="btn btn-red btn-xs" onclick="mrRemoveMember('${m.id}')">削除</button>
+      <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+        <button class="btn btn-g btn-xs" onclick="mrEditMember('${m.id}')">編集</button>
+        <button class="btn btn-red btn-xs" onclick="mrRemoveMember('${m.id}')">削除</button>
+      </div>
     </div>`).join('')}
   </div>`:`<div style="font-size:12px;color:var(--t3)">まだ登録がありません。営業スタッフのGoogleメールを追加してください。</div>`}
 </div>`:''}
@@ -12936,8 +12940,7 @@ async function mrAddMember(){
   if(ADMIN_EMAILS.includes(em)){toast('会長アカウントは常にフル権限です','warn');return;}
   if(!Array.isArray(S.memberRoles))S.memberRoles=[];
   const ex=S.memberRoles.find(m=>m&&(m.email||'').toLowerCase()===em);
-  if(!roles.length){toast('少なくとも1つの役割を選択してください','warn');return;}
-  if(roles.includes('動画編集者')&&!workerId){toast('動画編集者には担当者の紐付けが必要です','warn');return;}
+  const roleError=mrValidateRoleSelection(roles,workerId);if(roleError){toast(roleError,'warn');return;}
   if(ex){ex.roles=roles;ex.workerId=workerId;ex.deleted=false;ex.updatedAt=Date.now();}
   else{S.memberRoles.push({id:uid(),email:em,roles,workerId,createdAt:today(),updatedAt:Date.now(),addedBy:_myEmail()});}
   save();
@@ -12956,8 +12959,7 @@ async function mrApproveRequest(requestUid){
   const req=(ACCESS_REQUESTS||[]).find(x=>x.id===requestUid);if(!req)return toast('承認申請が見つかりません','warn');
   const roles=[...document.querySelectorAll('.ar-role')].filter(x=>x.dataset.uid===requestUid&&x.checked).map(x=>x.value).filter(x=>APP_ROLES.includes(x));
   const workerId=document.getElementById('ar-worker-'+requestUid)?.value||null;
-  if(!roles.length)return toast('少なくとも1つの役割を選択してください','warn');
-  if(roles.includes('動画編集者')&&!workerId)return toast('動画編集者には担当者の紐付けが必要です','warn');
+  const roleError=mrValidateRoleSelection(roles,workerId);if(roleError)return toast(roleError,'warn');
   const em=String(req.email||'').toLowerCase();
   try{
     const batch=fbDb.batch();
@@ -12977,7 +12979,40 @@ async function mrRejectRequest(requestUid){
 }
 function mrSetRole(id,role){
   if(!_isOwner())return toast('権限がありません','err');
-  VIEW='settings';render();toast('7役職のチェックボックスから権限を変更してください');
+  mrEditMember(id);
+}
+function mrValidateRoleSelection(roles,workerId){
+  if(!Array.isArray(roles)||!roles.length)return'少なくとも1つの役割を選択してください';
+  if(roles.includes('動画編集者')&&!workerId)return'動画編集者には担当者の紐付けが必要です';
+  return'';
+}
+function mrEditMember(id){
+  if(!_isOwner())return toast('権限がありません','err');
+  const m=(S.memberRoles||[]).find(x=>x&&x.id===id&&!x.deleted);if(!m)return toast('メンバーが見つかりません','warn');
+  const roles=memberRolesOf(m),workers=(S.workers||[]).filter(w=>w&&!w.deleted);
+  openModal(`<div class="mhdr"><div><div class="mtitle">メンバー権限を編集</div><div style="font-size:11px;color:var(--t3);margin-top:3px">${esc(m.email||'')}</div></div><button class="mclose" onclick="closeModal()">✕</button></div>
+  <div class="fg"><div class="fl">表示名</div><input id="mre-name" value="${esc(m.name||'')}" placeholder="社内アプリで表示する名前"></div>
+  <div class="fg"><div class="fl">役割（複数選択可）</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:7px">${APP_ROLES.map(role=>`<label style="display:flex;align-items:center;gap:7px;padding:9px 10px;background:var(--card2);border:1px solid var(--border);border-radius:9px;font-size:12px;font-weight:650"><input class="mre-role" type="checkbox" value="${role}" ${roles.includes(role)?'checked':''}> ${role}</label>`).join('')}</div></div>
+  <div class="fg"><div class="fl">担当編集者</div><select id="mre-worker"><option value="">担当者を紐付けない</option>${workers.map(w=>`<option value="${w.id}" ${m.workerId===w.id?'selected':''}>${esc(w.name)}</option>`).join('')}</select><div style="font-size:10.5px;color:var(--t3);margin-top:5px">「動画編集者」を選ぶ場合は必須です。</div></div>
+  <div class="mfooter"><button class="btn btn-red" onclick="closeModal();mrRemoveMember('${m.id}')">削除</button><span style="flex:1"></span><button class="btn btn-g" onclick="closeModal()">キャンセル</button><button class="btn btn-p" onclick="mrSaveMemberEdit('${m.id}')">変更を保存</button></div>`);
+}
+async function mrSaveMemberEdit(id){
+  if(!_isOwner())return toast('権限がありません','err');
+  const m=(S.memberRoles||[]).find(x=>x&&x.id===id&&!x.deleted);if(!m)return toast('メンバーが見つかりません','warn');
+  const name=(document.getElementById('mre-name')?.value||'').trim();
+  const roles=[...document.querySelectorAll('.mre-role:checked')].map(x=>x.value).filter(x=>APP_ROLES.includes(x));
+  const workerId=document.getElementById('mre-worker')?.value||null;
+  const roleError=mrValidateRoleSelection(roles,workerId);if(roleError)return toast(roleError,'warn');
+  const nextWorkerId=roles.includes('動画編集者')?workerId:null;
+  const em=String(m.email||'').trim().toLowerCase(),targetUid=_accessUidForEmail(em);
+  if(targetUid){
+    try{
+      await fbDb.collection('access').doc(targetUid).set({uid:targetUid,email:em,name,roles,workerId:nextWorkerId,approved:true,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:_myEmail()},{merge:true});
+    }catch(e){console.warn('member role update failed',e);return toast('権限を保存できませんでした。通信状態を確認して再度お試しください','err');}
+  }
+  Object.assign(m,{name,roles,workerId:nextWorkerId,deleted:false,updatedAt:Date.now(),updatedBy:_myEmail()});
+  save();closeModal();render();
+  toast(targetUid?'メンバーの権限を変更しました':'役割を更新しました。相手が初回ログイン後にアクセスへ反映されます');
 }
 async function mrRemoveMember(id){
   if(!_isOwner()){toast('権限がありません','err');return;}
@@ -15714,7 +15749,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260827-01';
+const APP_VERSION='20260827-02';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -15788,6 +15823,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260827-01"></script>
+<script src="./manager-features.js?v=20260827-02"></script>
 </body>
 </html>
