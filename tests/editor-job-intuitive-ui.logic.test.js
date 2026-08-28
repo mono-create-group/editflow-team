@@ -29,8 +29,8 @@ test('cards show the repeatable editor, director, client, and delivery timeline 
   assert.match(features, /`第\$\{workflow\.round\}回 修正作業`/);
   assert.match(features, /<details class="job-detail"><summary>案件の詳細・連絡を開く<\/summary>/);
   assert.match(features, /\$\{messageBlock\(j\)\}<\/details>/);
-  assert.match(features, /saveJobDraft\('\$\{esc\(j\.id\)\}'\)/);
-  assert.match(features, /saveJobProgress\('\$\{esc\(j\.id\)\}'\)/);
+  assert.match(features, /saveJobDraft\('\$\{jid\}'\)/);
+  assert.match(features, /saveJobProgress\('\$\{jid\}'\)/);
   assert.match(features, /quickJobStatus\(jid,status\)/);
   assert.match(features, /D確認待ちです。ディレクターが確認します。/);
   assert.match(features, /function submitEditorJobAction\(jid,status\)/);
@@ -73,6 +73,31 @@ test('parent cases are collapsed and preserve independent child cards', () => {
   assert.match(features, /親案件を開くと、担当している子案件を確認・更新できます。/);
   assert.match(features, /editorGroupJobs\(ordered\)\.map\(group=>editorGroupHtml\(group\)\)/);
   assert.match(features, /group\.jobs\.map\(jobCard\)/);
+});
+
+test('mobile navigation and notification links keep the editor focused on one next action', () => {
+  const html = fs.readFileSync(path.resolve(__dirname, '..', 'editor.html'), 'utf8');
+  assert.match(html, /app-ui\.css/);
+  assert.match(features, /editor-nav-mobile/);
+  assert.match(features, /その他/);
+  assert.match(features, /今日、次にすること/);
+  assert.match(features, /function openEditorJob\(jobId\)/);
+  assert.match(features, /window\.openEditorJob=openEditorJob/);
+  assert.match(features, /overdue=active\.filter\(j=>editorWorkIsOverdue\(j\)\)/);
+  assert.match(features, /data-case-key/);
+  assert.match(features, /editor-readonly-status/);
+  assert.equal((features.match(/function jobCardExtended\(job\)/g) || []).length, 1);
+});
+
+test('job cards keep supporting edits behind details and expose one primary action path', () => {
+  const html = fs.readFileSync(path.resolve(__dirname, '..', 'editor.html'), 'utf8');
+  assert.match(features, /<details class="job-detail"><summary>案件の詳細・連絡を開く<\/summary>/);
+  assert.match(features, /<details><summary>日程・案件内容を確認する<\/summary>/);
+  assert.match(features, /class="btn primary claim-button"/);
+  assert.match(features, /editor-primary-action/);
+  assert.doesNotMatch(features, /legacyJobCardExtendedUnused/);
+  assert.equal((features.match(/function jobCardExtended\(job\)/g) || []).length, 1);
+  assert.ok(html.indexOf('</style>') < html.indexOf('href="app-ui.css"'), 'shared CSS must load after portal overrides');
 });
 
 test('parent grouping uses a stable id, then client account and case name, and never merges unnamed jobs', () => {

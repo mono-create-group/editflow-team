@@ -1,6 +1,6 @@
 // mono.create 社内連絡アプリ SW
-const CACHE='mcshanai-20260828-08';
-const URLS=['./','./index.html','./editor.html','./editor-features.js','./manager-features.js','./manifest.json','./icon-192.png','./ai-bridge-client.js'];
+const CACHE='mcshanai-20260828-09';
+const URLS=['./','./index.html','./editor.html','./editor-features.js','./manager-features.js','./app-ui.css','./manifest.json','./icon-192.png','./ai-bridge-client.js'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(URLS)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('mcshanai-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',e=>{

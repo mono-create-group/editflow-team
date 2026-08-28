@@ -70,3 +70,14 @@ test('legacy video operations keep child cases inside parent details in every op
     assert.match(scope, /<details[^>]*(video-subcase-list|subtask-list)/, `${marker} nests child cases`);
   }
 });
+
+test('manager video workspace has accessible context, attention, and responsive kanban primitives', () => {
+  assert.match(html, /href="app-ui\.css"/);
+  assert.match(html, /class="app-breadcrumb"/);
+  assert.match(html, /class="app-attention-grid"/);
+  assert.match(html, /class="app-context-switch" role="tablist"/);
+  assert.match(html, /class="app-view-tabs" role="tablist"/);
+  assert.match(html, /class="app-kanban"/);
+  assert.match(html, /aria-selected="\$\{VIDEO_TAB===k\}"/);
+  assert.match(html, /function _videoCaseSummary\(job\)/);
+});
