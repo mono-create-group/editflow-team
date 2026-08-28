@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260829-03"></script>
+<script src="./billing-terms.js?v=20260829-04"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -986,7 +986,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260829-03">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260829-04">
 </head>
 <body class="owner-yellow-ui">
 
@@ -6893,7 +6893,7 @@ function _videoReferenceWorkspace({biz,all,active,title,addJobAction}){
   return`<section class="ref-workspace" aria-label="案件詳細ワークスペース">
     <div class="ref-workspace-topbar">
       <button type="button" class="ref-topbar-module" onclick="setVideoTab('board')"><span aria-hidden="true">▣</span><b>案件</b><span aria-hidden="true">⌄</span></button>
-      <div class="ref-topbar-search"><span aria-hidden="true">⌕</span><input aria-label="案件を検索" value="${esc(VIDEO_QUERY)}" placeholder="案件名・クライアント名で検索" oninput="setVideoQuery(this.value)"></div>
+      <div class="ref-topbar-search"><span aria-hidden="true">⌕</span><input aria-label="案件を検索" value="${esc(VIDEO_QUERY)}" placeholder="案件を検索" oninput="setVideoQuery(this.value)"></div>
       <div class="ref-topbar-tools"><button class="ref-icon-button" type="button" aria-label="通知" title="通知" onclick="setVideoTab('queue')">♢</button><button class="ref-icon-button" type="button" aria-label="ヘルプ" title="使い方ガイド" onclick="setV('guide')">?</button><button class="ref-icon-button" type="button" aria-label="管理画面" title="従来の管理機能" onclick="setVideoTab('manage-board')">⚙</button><span class="ref-user-avatar" title="${esc(FB_USER?.displayName||FB_USER?.email||'オーナー')}">${esc(String(FB_USER?.displayName||'オ').trim().slice(0,1)||'オ')}</span></div>
     </div>
     <div class="ref-workspace-body">
@@ -16856,7 +16856,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260829-03';
+const APP_VERSION='20260829-04';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -16930,6 +16930,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260829-03"></script>
+<script src="./manager-features.js?v=20260829-04"></script>
 </body>
 </html>
