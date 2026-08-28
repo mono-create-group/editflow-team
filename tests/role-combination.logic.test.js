@@ -43,6 +43,20 @@ test('video director automatically receives editor permission', () => {
   assert.match(fs.readFileSync(path.join(root, 'manager-features.js'), 'utf8'), /rolesGrantVideoEditor\(x\.roles\|\|\[\]\)/);
 });
 
+test('video director has a visible route to the editor self-service portal', () => {
+  assert.match(index, /\{id:'editorportal',label:'編集者本人ポータル',icon:'👤'\}/);
+  const portalRenderer = index.match(/function rEditorPortal\(\)\{[\s\S]*?\n\}/)?.[0] || '';
+  assert.match(portalRenderer, /href="\.\/editor\.html">編集者本人ポータルを開く/);
+  assert.match(portalRenderer, /_rolePreviewActive\(\)/);
+  assert.match(portalRenderer, /rolePreviewOpenEditor\('\$\{esc\(previewUid\)\}'\)/);
+  assert.match(index, /GUIDE_PAGE_DEFS=\{\s*editorportal:/);
+  assert.match(index, /GUIDE_PAGE_CHECKS=\{\s*editorportal:/);
+  assert.match(index, /id:'video',label:'動画編集事業',views:\['editorportal','videoedit'/);
+  const directorViews = index.match(/'動画編集ディレクター':\[([^\]]+)\]/)?.[1] || '';
+  assert.match(directorViews, /'editorportal'/);
+  assert.match(index, /editorportal:rEditorPortal/);
+});
+
 test('Firestore treats only editor-only accounts as isolated', () => {
   const body = rules.match(/function pureEditor\(uid\) \{([\s\S]*?)\n\s*\}/)?.[1] || '';
   assert.match(body, /roles\.hasAny\(\['動画編集者'\]\)/);

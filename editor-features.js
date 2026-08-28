@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const PORTAL_APP_VERSION='20260828-05';
+  const PORTAL_APP_VERSION='20260828-06';
   const feature={
     board:[],catalog:[],manuals:[],schedules:[],release:null,
     messages:new Map(),messageUnsubs:new Map(),unsubs:[],startedFor:'',serverVersion:'',jobsListMode:'active'

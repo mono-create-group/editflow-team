@@ -1028,6 +1028,7 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
 const DB='ef_team_v5';
 const BUILTIN_VIEWS=[
   {id:'guide',label:'使い方ガイド',icon:'📘'},
+  {id:'editorportal',label:'編集者本人ポータル',icon:'👤'},
   {id:'videoedit',label:'編集代行案件',icon:'🎥'},
   {id:'videohaken',label:'編集者派遣案件',icon:'🤝'},
   {id:'videoclients',label:'クライアント・アカウント管理',icon:'🏷️'},
@@ -3329,7 +3330,7 @@ function render(){
     // 役割ガード(2026-07-23): 営業スタッフは「営業」「情報」タブ以外を開けない。許可外Vは営業リストへ退避。
     if(!isViewAllowed(V)){V=(BUILTIN_VIEWS.find(x=>isViewAllowed(x.id))?.id)||'videoedit';sessionStorage.setItem('ef_team_view',V);}
     if(V==='kpi'){V='goals';} // KPI管理は目標・KPI統合ページにリダイレクト
-    const views={dashboard:rDash,tasks:rTasks,guide:rGuide,projects:rProjects,videoedit:rVideoEditProjects,videohaken:rVideoHakenProjects,videoclients:rVideoClients,videoschedules:rVideoSchedules,videomanuals:rVideoManuals,videoinvoices:rVideoInvoices,videosuggestions:rVideoSuggestions,hpprojects:rHpProjects,pipeline:rPipeline,teamgoals:rTeamGoals,posts:rPosts,docs:rDocs,workers:rWorkers,habits:rHabits,goals:rGoals,journal:rJournal,revenue:rRevenue,memo:rMemo,settings:rSettings,customize:rCustomize,aichat:rAIChat,fitness:rFitness,kpi:rKpi,bizboard:rBizBoard,bizunits:rBizUnits,bizinfo:rBizInfo,minutes:rMinutes,salesleads:rSalesLeads,salesrank:rSalesRank,igaccounts:rIgAccounts,hpfee:rHpFee,salessites:rSalesSites,inquiries:rInquiries,templates:rTemplates,crm:rCrm,accounts:rAccounts};
+    const views={dashboard:rDash,tasks:rTasks,guide:rGuide,editorportal:rEditorPortal,projects:rProjects,videoedit:rVideoEditProjects,videohaken:rVideoHakenProjects,videoclients:rVideoClients,videoschedules:rVideoSchedules,videomanuals:rVideoManuals,videoinvoices:rVideoInvoices,videosuggestions:rVideoSuggestions,hpprojects:rHpProjects,pipeline:rPipeline,teamgoals:rTeamGoals,posts:rPosts,docs:rDocs,workers:rWorkers,habits:rHabits,goals:rGoals,journal:rJournal,revenue:rRevenue,memo:rMemo,settings:rSettings,customize:rCustomize,aichat:rAIChat,fitness:rFitness,kpi:rKpi,bizboard:rBizBoard,bizunits:rBizUnits,bizinfo:rBizInfo,minutes:rMinutes,salesleads:rSalesLeads,salesrank:rSalesRank,igaccounts:rIgAccounts,hpfee:rHpFee,salessites:rSalesSites,inquiries:rInquiries,templates:rTemplates,crm:rCrm,accounts:rAccounts};
     let html;
     if(V.startsWith('doc_')){
       // Googleドキュメント風エディタ(teamPages.htmlを編集)。BUILTIN_VIEWSガードを迂回する。
@@ -6082,7 +6083,7 @@ function _guideRoleLabel(){
   return labels.join(' / ')||'承認済みメンバー';
 }
 const GUIDE_PAGE_GROUPS=[
-  {label:'動画編集事業',ids:['videoedit','videohaken','videoclients','workers','videoschedules','videomanuals','videoinvoices','videosuggestions']},
+  {label:'動画編集事業',ids:['editorportal','videoedit','videohaken','videoclients','workers','videoschedules','videomanuals','videoinvoices','videosuggestions']},
   {label:'ホームページ事業',ids:['hpprojects','hpfee']},
   {label:'営業・顧客',ids:['salesleads','pipeline','inquiries','crm']},
   {label:'経営',ids:['bizboard']},
@@ -6090,6 +6091,7 @@ const GUIDE_PAGE_GROUPS=[
   {label:'管理・設定',ids:['customize','accounts','igaccounts','settings']}
 ];
 const GUIDE_PAGE_DEFS={
+  editorportal:{purpose:'動画編集ディレクターが、動画編集者本人として案件受託・進捗・予定・請求を行う入口です。',steps:['左メニューの「編集者本人ポータル」を開きます。','「編集者本人ポータルを開く」を押して、本人用画面へ移動します。','「案件を探す」で募集案件を受け、「担当案件」で進捗・提出・納品を更新します。','スケジュール、マニュアル、匿名目安箱、請求書、登録情報も本人用画面から操作します。'],access:'オーナー、動画編集ディレクター。動画編集者はログイン後に本人用画面へ案内される'},
   videoedit:{purpose:'mono.createがクライアントから受けた編集代行案件の募集、担当、初稿、納品を管理します。',steps:['「＋ 編集代行案件」で案件を登録するか、下部の募集欄から編集者へ掲載します。','編集者が「この案件を受ける」を押した後、担当者と初稿日・納品日を確認します。','親案件カード内の「サブ案件」で、各本の担当者・期限・状態を確認します。','初稿提出・修正稿提出・D確認OK・クライアントOK／納品は、担当編集者本人が編集者ポータルで更新します。'],access:'オーナー、動画編集ディレクター、営業など許可された社内担当者'},
   videohaken:{purpose:'編集者が派遣先クライアントから直接受け、自分で登録した案件だけを管理します。',steps:['編集者は編集者ポータルの「担当案件」から、派遣先で受けた案件を登録します。','オーナー・ディレクターはこの画面で担当者、初稿日、納品日、進捗を確認します。','親案件カード内の「サブ案件」で、各本の担当者・期限・状態を確認します。','初稿提出・修正稿提出・D確認OK・クライアントOK／納品は、担当編集者本人の更新履歴と証跡を確認します。'],access:'オーナー、動画編集ディレクター、営業など許可された社内担当者'},
   videoclients:{purpose:'既存クライアントと、そのクライアントから依頼されるアカウントを分けて管理します。',steps:['既存クライアントを選び、必要なアカウント名を追加します。','案件を担当する編集者へ、必要なクライアント・アカウントだけ共有します。','名称や契約情報が変わったときだけ制作台帳を更新します。'],access:'オーナー、動画編集ディレクター'},
@@ -6114,6 +6116,7 @@ const GUIDE_PAGE_DEFS={
   settings:{purpose:'メンバー権限、共有設定、担当者、アプリ更新などを管理します。',steps:['承認待ちメンバーを確認し、役割と担当編集者を設定します。動画編集ディレクターには動画編集者の権限も自動で含まれます。','登録済みメンバーは一覧の「編集」から、名前・役割・担当者を変更して保存します。','不要な登録は「削除」でアクセスを停止します。役割ごとの表示範囲を確認してから操作してください。','システム更新後はバージョンを確認し、必要なときだけ最新版へ更新します。'],access:'オーナーのみ'}
 };
 const GUIDE_PAGE_CHECKS={
+  editorportal:'案件を探す・担当案件・スケジュール・マニュアル・匿名目安箱・請求書・登録情報のメニューが表示される。',
   videoedit:'掲載後は「案件を探す」に表示され、受託後は担当編集者の「担当案件」とこの画面に親案件・サブ案件が表示される。',
   videohaken:'編集者が登録した親案件とサブ案件の担当者・期限・最新ステータス・証跡URLが表示される。',
   videoclients:'クライアントの下にアカウント名が表示され、共有先の編集者名も一覧で確認できる。',
@@ -6138,6 +6141,7 @@ const GUIDE_PAGE_CHECKS={
   settings:'保存した役割・担当・公開範囲が再読み込み後も同じ内容で表示される。'
 };
 const GUIDE_PAGE_TIPS={
+  editorportal:'ここで扱う案件・予定・請求は、ログインしている本人分です。ディレクターの管理対象案件は「編集代行案件」「編集者派遣案件」で確認します。',
   videoedit:'この画面はmono.create受託案件専用です。「確認待ち」と「修正中」は期限超過に数えません。',
   videohaken:'この画面は派遣先から編集者へ直接来た案件専用です。編集代行の募集案件は入れません。',
   videoclients:'クライアント名とアカウント名は別の項目です。例：クライアント「大塚周平さん」、アカウント「YouTube A」。',
@@ -6168,6 +6172,26 @@ function _guidePageCard(id){
 }
 function _guidePageGroups(){
   return GUIDE_PAGE_GROUPS.map(g=>{const ids=g.ids.filter(id=>isViewAllowed(id)&&GUIDE_PAGE_DEFS[id]);if(!ids.length)return'';return`<section class="guide-page-group"><div class="guide-page-group-title">${esc(g.label)}</div><div class="guide-page-grid">${ids.map(_guidePageCard).join('')}</div></section>`;}).join('');
+}
+function rEditorPortal(){
+  const previewActive=_rolePreviewActive(),previewUid=previewActive?rolePreviewUid():'';
+  const portalCta=previewActive
+    ?(previewUid
+      ?`<button class="btn btn-p" style="margin-top:14px;display:inline-flex;align-items:center;min-height:44px" onclick="rolePreviewOpenEditor('${esc(previewUid)}')">選択中ディレクターの本人ポータルを開く</button>`
+      :'<button class="btn btn-p" style="margin-top:14px;min-height:44px" disabled>確認対象のディレクターを選択してください</button>')
+    :'<a class="btn btn-p" style="margin-top:14px;display:inline-flex;align-items:center;min-height:44px" href="./editor.html">編集者本人ポータルを開く</a>';
+  return`<div class="guide-hero">
+    <div class="guide-kicker">EDITOR SELF-SERVICE</div>
+    <div class="guide-title">編集者本人ポータル</div>
+    <div class="guide-lead">動画編集ディレクターには、動画編集者本人の操作権限も含まれます。ここからご自身の編集案件と請求情報を確認・更新します。</div>
+    ${portalCta}
+  </div>
+  <div class="guide-section-title">このポータルでできること</div>
+  <div class="guide-start-grid">
+    <div class="guide-start-card"><b>案件を探す・担当案件</b><span>募集案件の受託、担当案件の進捗・提出・納品を更新します。</span></div>
+    <div class="guide-start-card"><b>スケジュール・マニュアル</b><span>今週の編集可能日を登録し、必要な手順を確認します。</span></div>
+    <div class="guide-start-card"><b>目安箱・請求書・登録情報</b><span>匿名の相談、本人分の請求書、表示名などを管理します。</span></div>
+  </div>`;
 }
 function rGuide(){
   const canVideoEdit=isViewAllowed('videoedit'),canVideoHaken=isViewAllowed('videohaken'),canVideo=canVideoEdit||canVideoHaken,canWorkers=isViewAllowed('workers'),canVideoClients=isViewAllowed('videoclients'),canVideoSchedules=isViewAllowed('videoschedules'),canVideoManuals=isViewAllowed('videomanuals'),canVideoInvoices=isViewAllowed('videoinvoices'),canHp=isViewAllowed('hpprojects'),canHpFee=isViewAllowed('hpfee'),canSales=isViewAllowed('salesleads'),canDocs=isViewAllowed('docs');
@@ -12904,7 +12928,7 @@ function navMeta(id){
 // ナビのカテゴリー分け(2026-07-10 会長指示)。開閉状態は端末localStorage記憶。設定/カスタマイズは従来どおり下部固定。
 const NAV_CATS=[
   {id:'start',label:'はじめに',views:['guide']},
-  {id:'video',label:'動画編集事業',views:['videoedit','videohaken','videoclients','workers','videoschedules','videomanuals','videoinvoices','videosuggestions']},
+  {id:'video',label:'動画編集事業',views:['editorportal','videoedit','videohaken','videoclients','workers','videoschedules','videomanuals','videoinvoices','videosuggestions']},
   {id:'hp',label:'ホームページ事業',views:['hpprojects','hpfee']},
   {id:'sales',label:'営業・顧客',views:['salesleads','pipeline','inquiries','crm']},
   {id:'mgmt',label:'経営',views:['bizboard']},
@@ -12931,7 +12955,7 @@ const ROLE_PREVIEW_DESCRIPTIONS={
   'SNSマーケター':'投稿管理、動画案件、クライアント、ドキュメント・議事録'
 };
 const ROLE_VIEW_ACCESS={
-  '動画編集ディレクター':['guide','videoedit','videohaken','videoclients','workers','videoschedules','videomanuals','videoinvoices'],
+  '動画編集ディレクター':['guide','editorportal','videoedit','videohaken','videoclients','workers','videoschedules','videomanuals','videoinvoices'],
   'AIコンサルタント':['guide','videoedit','videohaken','docs','minutes','bizinfo'],
   'AIエンジニア':['guide','videoedit','videohaken','docs','tasks','bizinfo'],
   'Webデザイナー':['guide','hpprojects','docs','tasks','hpfee'],
@@ -15951,7 +15975,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260828-05';
+const APP_VERSION='20260828-06';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -16025,6 +16049,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260828-05"></script>
+<script src="./manager-features.js?v=20260828-06"></script>
 </body>
 </html>
