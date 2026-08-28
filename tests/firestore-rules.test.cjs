@@ -29,6 +29,7 @@ function portalJob(uid, overrides = {}) {
     recordType: 'editor_portal_job', businessType: 'dispatch', title: '案件1', caseName: '9月分',
     clientId: 'c1', clientDisplay: 'クライアントA', accountId: 'a1', accountDisplay: 'アカウントA',
     deadline: '2026-09-10', sharedDate: '2026-09-01', editorDraftDate: '2026-09-05',
+    editorDraftDateSetter: 'editor',
     clientDraftDate: '2026-09-06', thumbnailDate: '', deliveryDate: '2026-09-10',
     requestUrl: 'https://example.com/request', sourceUrl: 'https://example.com/source',
     instructions: '編集指示', urgent: false, status: '受注済み', progress: '', evidenceUrl: '', blocker: '',
@@ -60,7 +61,7 @@ function boardJob(overrides = {}) {
     businessType: 'edit_agency', title: '公開案件', caseName: '9月分', clientId: 'c1', clientName: 'クライアントA',
     accountId: 'a1', accountName: 'アカウントA', summary: '概要', instructions: '編集指示',
     requestUrl: 'https://example.com/request', sourceUrl: 'https://example.com/source',
-    editorDraftDate: '2026-09-05', clientDraftDate: '2026-09-06', thumbnailDate: '',
+    editorDraftDate: '2026-09-05', editorDraftDateSetter: 'creator', clientDraftDate: '2026-09-06', thumbnailDate: '',
     deliveryDate: '2026-09-10', urgent: false, status: 'open', audience: 'direct',
     eligibleUids: [], directorUid: '', createdByUid: 'owner', createdByName: 'owner',
     createdAt: 1, updatedAt: 1, assignedUid: '', assignedName: '', assignedAt: null,
@@ -142,6 +143,11 @@ async function expectAllowed(label, promise) {
       await setDoc(doc(db, 'editor_portals', 'external2', 'editor_jobs', 'done2'), portalJob('external2', { directorUid: 'dir2', status: '完了', evidenceUrl: 'https://example.com/delivery' }));
       await setDoc(doc(db, 'editor_portals', 'hybrid1', 'editor_jobs', 'own1'), portalJob('hybrid1'));
       await setDoc(doc(db, 'editor_portals', 'direct1', 'editor_jobs', 'priced-direct1'), portalJob('direct1', { ownPay: 5000, payableApproved: true, payableApprovedAt: 1, payableMonth: '2026-09' }));
+      await setDoc(doc(db, 'editor_portals', 'direct1', 'editor_jobs', 'draft-creator'), portalJob('direct1', { editorDraftDateSetter: 'creator' }));
+      await setDoc(doc(db, 'editor_portals', 'direct1', 'editor_jobs', 'draft-editor'), portalJob('direct1', { editorDraftDateSetter: 'editor' }));
+      const legacyDraftSetterJob = portalJob('direct1');
+      delete legacyDraftSetterJob.editorDraftDateSetter;
+      await setDoc(doc(db, 'editor_portals', 'direct1', 'editor_jobs', 'draft-legacy'), legacyDraftSetterJob);
       await setDoc(doc(db, 'editor_portals', 'external1', 'client_catalog', 'c1'), clientCatalog({ sourceClientId: '', formerNames: [] }));
       await setDoc(doc(db, 'editor_manuals', 'global'), { title: '全体', scope: 'global', scopeLabel: '全体', clientId: '', accountId: '', version: '1', body: '本文', url: '', required: true, audience: 'all', allowedUids: [], directorUid: '', updatedAt: 1, updatedBy: 'owner' });
       await setDoc(doc(db, 'editor_manuals', 'assigned'), { title: '個別', scope: 'client', scopeLabel: '個別', clientId: 'c1', accountId: '', version: '1', body: '本文', url: '', required: false, audience: 'assigned', allowedUids: ['external1'], directorUid: 'dir1', updatedAt: 1, updatedBy: 'dir1' });
@@ -173,6 +179,8 @@ async function expectAllowed(label, promise) {
     await expectAllowed('owner publishes edit-agency board job', setDoc(doc(owner, 'editor_job_board', 'owner-new'), boardJob({ createdByUid: 'owner' })));
     await expectAllowed('director publishes own edit-agency board job', setDoc(doc(dir1, 'editor_job_board', 'dir-new'), boardJob({ audience: 'director_team', directorUid: 'dir1', eligibleUids: ['external1'], createdByUid: 'dir1' })));
     await expectDenied('board rejects an unsupported business type', setDoc(doc(owner, 'editor_job_board', 'wrong-biz'), boardJob({ businessType: 'dispatch', createdByUid: 'owner' })));
+    await expectDenied('board creator-set draft requires a date', setDoc(doc(owner, 'editor_job_board', 'creator-without-draft'), boardJob({ editorDraftDate: '', editorDraftDateSetter: 'creator', createdByUid: 'owner' })));
+    await expectAllowed('board editor-set draft may start blank', setDoc(doc(owner, 'editor_job_board', 'editor-without-draft'), boardJob({ editorDraftDate: '', editorDraftDateSetter: 'editor', createdByUid: 'owner' })));
 
     await expectAllowed('direct editor sees direct board', getDoc(doc(direct1, 'editor_job_board', 'direct-open')));
     await expectDenied('external editor cannot see direct board', getDoc(doc(external1, 'editor_job_board', 'direct-open')));
@@ -226,6 +234,16 @@ async function expectAllowed(label, promise) {
 
     await expectAllowed('video director receives editor board access', getDoc(doc(dir1, 'editor_job_board', 'direct-open')));
     await expectAllowed('video director creates a job in own editor portal', setDoc(doc(dir1, 'editor_portals', 'dir1', 'editor_jobs', 'director-own'), portalJob('dir1')));
+    const editorDraftDateUpdate = (date) => ({
+      editorDraftDate: date,
+      lastProgressChangedByUid: 'direct1',
+      lastProgressChangedByEmail: 'direct1@example.com',
+      lastProgressChangedByRole: '担当編集者',
+      updatedAt: 2,
+    });
+    await expectDenied('editor cannot change a creator-set first-draft date', updateDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_jobs', 'draft-creator'), editorDraftDateUpdate('2026-09-07')));
+    await expectAllowed('editor can change an editor-set first-draft date', updateDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_jobs', 'draft-editor'), editorDraftDateUpdate('2026-09-07')));
+    await expectAllowed('legacy job without setter keeps editor-set first-draft behavior', updateDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_jobs', 'draft-legacy'), editorDraftDateUpdate('2026-09-07')));
     await expectAllowed('video director saves own weekly editor schedule', setDoc(doc(dir1, 'editor_schedules', 'dir1'), weeklySchedule({ name: 'Dir 1' })));
 
     await expectAllowed('editor saves one-week calendar and routine', setDoc(doc(direct1, 'editor_schedules', 'direct1'), weeklySchedule()));

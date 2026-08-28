@@ -16,21 +16,21 @@ function functionSource(name) {
 test('video cards normalize and expose saved subcases', () => {
   const context = { S: { workers: [{ id: 'worker-1', name: '編集者A' }] } };
   vm.createContext(context);
-  vm.runInContext(`const SELF_WID='__self';\n${functionSource('_videoSubtaskAssignee')}\n${functionSource('_videoSubtasks')}\nthis.normalize=_videoSubtasks;`, context);
+  vm.runInContext(`const SELF_WID='__self';\n${functionSource('_editorDraftDateSetter')}\n${functionSource('_videoSubtaskAssignee')}\n${functionSource('_videoSubtasks')}\nthis.normalize=_videoSubtasks;`, context);
   const result = context.normalize({ subtasks: [
     { title: '1本目', status: '修正中', workerId: 'worker-1', deliveryDate: '2026-08-30' },
     { title: '2本目', done: true, workerId: '__self', clientDraftDate: '2026-08-29' },
   ] });
   assert.deepEqual(JSON.parse(JSON.stringify(result)), [
-    { id: '0', title: '1本目', deadline: '2026-08-30', editorDraftDate: '', clientDraftDate: '', completedDeliveryDate: '', status: '修正中', assignee: '編集者A', progressMilestones: [], updatedAt: 0, done: false },
-    { id: '1', title: '2本目', deadline: '2026-08-29', editorDraftDate: '', clientDraftDate: '2026-08-29', completedDeliveryDate: '', status: '完了', assignee: 'mono.create社内対応', progressMilestones: [], updatedAt: 0, done: true },
+    { id: '0', title: '1本目', deadline: '2026-08-30', editorDraftDate: '', editorDraftDateSetter: 'editor', clientDraftDate: '', completedDeliveryDate: '', status: '修正中', assignee: '編集者A', progressMilestones: [], updatedAt: 0, done: false },
+    { id: '1', title: '2本目', deadline: '2026-08-29', editorDraftDate: '', editorDraftDateSetter: 'editor', clientDraftDate: '2026-08-29', completedDeliveryDate: '', status: '完了', assignee: 'mono.create社内対応', progressMilestones: [], updatedAt: 0, done: true },
   ]);
 });
 
 test('portal video cards fall back to linked legacy subcases without mutating data', () => {
   const context = { S: { workers: [] } };
   vm.createContext(context);
-  vm.runInContext(`const SELF_WID='__self';\n${functionSource('_videoSubtaskAssignee')}\n${functionSource('_videoSubtasks')}\nthis.normalize=_videoSubtasks;`, context);
+  vm.runInContext(`const SELF_WID='__self';\n${functionSource('_editorDraftDateSetter')}\n${functionSource('_videoSubtaskAssignee')}\n${functionSource('_videoSubtasks')}\nthis.normalize=_videoSubtasks;`, context);
   const portal = { subtasks: [] };
   const legacy = { subtasks: [{ title: '既存サブ案件', status: '進行中' }] };
   const before = JSON.stringify({ portal, legacy });
@@ -41,13 +41,13 @@ test('portal video cards fall back to linked legacy subcases without mutating da
   assert.match(html, /subtasks:_videoSubtasks\(j,linked,workerNames\)/);
 });
 
-test('video case cards render subcase name, assignee, deadline, and status', () => {
+test('video case cards render subcase name, assignee, planned due date, and status', () => {
   assert.match(html, /<details class="video-subcase-list"/);
   assert.match(html, /<summary class="video-subcase-head">/);
   assert.match(html, /class="video-subcase-list"/);
   assert.match(html, /class="video-subcase-title"/);
   assert.match(html, /担当 \$\{esc\(s\.assignee\)\}/);
-  assert.match(html, /期限 \$\{esc\(s\.deadline\|\|'未設定'\)\}/);
+  assert.match(html, /納期（予定） \$\{esc\(s\.deadline\|\|'未設定'\)\}/);
   assert.match(html, /class="badge \$\{badge\} video-subcase-status"/);
 });
 
@@ -90,7 +90,7 @@ test('manager video workspace has accessible context, attention, and responsive 
   assert.match(html, /class="app-breadcrumb"/);
   assert.match(html, /class="app-attention-grid"/);
   assert.match(html, /class="app-context-switch" role="tablist"/);
-  assert.match(html, /class="app-view-tabs" role="tablist"/);
+  assert.match(html, /class="app-view-tabs app-view-tabs-parity" role="tablist"/);
   assert.match(html, /class="app-kanban"/);
   assert.match(html, /aria-selected="\$\{VIDEO_TAB===k\}"/);
   assert.match(html, /function _videoCaseSummary\(job\)/);

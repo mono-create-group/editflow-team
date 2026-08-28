@@ -6,16 +6,16 @@ const path=require('node:path');
 const features=fs.readFileSync(path.resolve(__dirname,'..','editor-features.js'),'utf8');
 const rules=fs.readFileSync(path.resolve(__dirname,'..','firestore.rules'),'utf8');
 
-test('editor records a real delivery date separately from the promised delivery deadline',()=>{
+test('editor records a delivery date separately from the planned due date',()=>{
   assert.match(features,/completedDeliveryDate/);
-  assert.match(features,/実納品日 \*/);
+  assert.match(features,/納品日 \*/);
   assert.match(features,/納品の証跡URL \*/);
   assert.match(features,/editor_delivery_completed/);
   assert.match(features,/先方確認が完了するまで納品完了にはできません/);
 });
 
-test('editor card shows both draft dates, deadline, and the actual delivery date',()=>{
-  for(const label of ['編集者 初稿','クライアント 初稿','納品期限','実納品日'])assert.match(features,new RegExp(label));
+test('editor card shows both draft dates, planned due date, and the delivery date',()=>{
+  for(const label of ['編集者 初稿','クライアント 初稿','納期（予定）','納品日'])assert.match(features,new RegExp(label));
   assert.match(features,/editor-job-dates/);
 });
 

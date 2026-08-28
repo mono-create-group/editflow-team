@@ -80,6 +80,20 @@ test('owner can bulk sync existing master clients and sees exact scope', () => {
   assert.match(source, /managerSyncMasterCatalog/);
 });
 
+test('missing catalog rows are repaired automatically for direct editors only', () => {
+  const start = source.indexOf('async function syncMissingDirectCatalogsForEditor');
+  const end = source.indexOf('async function syncDirectCatalogForClient', start);
+  const body = source.slice(start, end);
+  assert.ok(start >= 0 && end > start);
+  assert.match(body, /editor\.editorKind==='external'/);
+  assert.match(body, /state\.catalogRepairing\.has\(editor\.id\)/);
+  assert.match(body, /currentCatalogs/);
+  assert.match(body, /sourceClientId/);
+  assert.match(body, /catalogDocIdForClient\(client\)/);
+  assert.match(body, /missing\.slice\(offset,offset\+300\)/);
+  assert.match(source, /e\.editorKind!=='external'\)void syncMissingDirectCatalogsForEditor\(e,catalogs\)/);
+});
+
 test('catalog schema permits the bounded former-name trail used by direct synchronization', () => {
   const start = rules.indexOf('function validClientCatalogDocument()');
   const end = rules.indexOf('function approvedMember()', start);

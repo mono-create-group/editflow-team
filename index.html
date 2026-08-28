@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#000000">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260828-21"></script>
+<script src="./billing-terms.js?v=20260828-22"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -102,6 +102,7 @@ a{color:inherit;text-decoration:none}
 
 /* ─── VIDEO CASE CARDS / SUBCASES ─── */
 .video-job-card{display:block;width:100%;margin:6px 0;text-align:left;padding:0;overflow:hidden}
+.video-job-card.video-deadline-danger{border:2px solid var(--red)!important;box-shadow:0 0 0 2px rgba(220,38,38,.12),var(--shadow-sm)}.video-job-card.video-deadline-warning{border:2px solid var(--amber)!important;box-shadow:0 0 0 2px rgba(217,119,6,.12),var(--shadow-sm)}.video-subcase-row.video-deadline-danger{border-color:var(--red)!important;box-shadow:0 0 0 1px rgba(220,38,38,.14)}.video-subcase-row.video-deadline-warning{border-color:var(--amber)!important;box-shadow:0 0 0 1px rgba(217,119,6,.14)}.video-deadline-alert{display:inline-flex;align-items:center;min-height:24px;padding:3px 7px;border-radius:999px;font-size:11px;font-weight:900;white-space:nowrap}.video-deadline-alert.danger{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}.video-deadline-alert.warning{background:#fffbeb;color:#a16207;border:1px solid #fde68a}
 .video-job-main{display:block;width:100%;padding:12px 14px;text-align:left;background:transparent;border-radius:0;transition:background .15s}
 .video-job-main:hover,.video-job-main:focus-visible{background:var(--pdim)}
 .video-job-main:focus-visible{outline:2px solid var(--purple);outline-offset:-2px}
@@ -1094,7 +1095,7 @@ const BIZ_CFG={
     statuses:['案件掲載中','未着手','進行中','編集者進行中','初稿提出済み','修正中','修正稿提出済み','D確認OK','完了','キャンセル','初稿完成','確認待ち','FB待ち'],
     board:['案件掲載中','未着手','進行中','編集者進行中','初稿提出済み','修正中','修正稿提出済み','D確認OK','初稿完成','確認待ち','FB待ち'],
     scopes:['動画編集','サムネイル制作','動画編集＋サムネイル','ショート動画','VSL','スクール動画','その他'],
-    lbl:{scope:'担当範囲',shared:'共有日',deliver:'納品期限',d1:'編集者 初稿',d2:'クライアント提出 初稿',unit:'単価（円）',wpay:'ワーカー支払額（円）',profit:'利益（自動計算）',monthly:'',member:'👤 編集者別',d1s:'✏️ 編集者初稿',d2s:'📋 クライアント提出',deliverS:'📅 納品期限'},
+    lbl:{scope:'担当範囲',shared:'共有日',deliver:'納期（予定）',d1:'編集者 初稿',d2:'クライアント提出 初稿',unit:'単価（円）',wpay:'ワーカー支払額（円）',profit:'利益（自動計算）',monthly:'',member:'👤 編集者別',d1s:'✏️ 編集者初稿',d2s:'📋 クライアント提出',deliverS:'📅 納期（予定）'},
     show:{scope:1,d1:1,d2:1,thumb:1,wpay:1,subs:1,monthly:0},
     tabs:['board','deadline','listing','list','clients','profit','payment','completed','worker','priority'],
     prio:[['clientDraftDate','クライアント初稿'],['editorDraftDate','編集者初稿']]
@@ -1103,7 +1104,7 @@ const BIZ_CFG={
     statuses:['案件掲載中','募集中','編集者決定','受注済み','進行中','初稿提出済み','修正中','修正稿提出済み','D確認OK','完了','キャンセル','初稿完成','確認待ち'],
     board:['案件掲載中','募集中','編集者決定','受注済み','進行中','初稿提出済み','修正中','修正稿提出済み','D確認OK','初稿完成','確認待ち'],
     scopes:['長尺動画','ショート動画','サムネイル制作','その他'],
-    lbl:{scope:'案件種別',shared:'受注日',deliver:'納品期限',d1:'編集者 初稿',d2:'クライアント提出 初稿',unit:'クライアント請求額（円）',wpay:'編集者支払額（円）',profit:'手数料（自動計算）',monthly:'',member:'👤 編集者別',d1s:'✏️ 編集者初稿',d2s:'📋 クライアント提出',deliverS:'📅 納品期限'},
+    lbl:{scope:'案件種別',shared:'受注日',deliver:'納期（予定）',d1:'編集者 初稿',d2:'クライアント提出 初稿',unit:'クライアント請求額（円）',wpay:'編集者支払額（円）',profit:'手数料（自動計算）',monthly:'',member:'👤 編集者別',d1s:'✏️ 編集者初稿',d2s:'📋 クライアント提出',deliverS:'📅 納期（予定）'},
     show:{scope:1,d1:1,d2:1,thumb:1,wpay:1,subs:1,monthly:0},
     tabs:['board','deadline','listing','list','clients','profit','payment','completed','worker','priority'],
     prio:[['clientDraftDate','クライアント初稿'],['editorDraftDate','編集者初稿']]
@@ -2299,14 +2300,17 @@ function hakenRowToJob(row, existing){
   if(seikyu)noteParts.push('請求:'+seikyu);
   if(shiharai)noteParts.push('支払:'+shiharai);
   if(g(16))noteParts.push(g(16));
+  var mappedWorkerId=worker?worker.id:((existing&&existing.workerId)||null);
+  var billingSnapshot=_paymentRecipientSnapshot(mappedWorkerId,existing||{});
   var mapped={
     title: g(5)||(g(3)?g(3)+(seibetsu?' '+seibetsu:''):'')||g(1)||'(無題)',
     biz: (existing&&existing.biz)||'haken',
     jobType: (existing&&existing.jobType)||'edit',
     clientName: g(3)||((existing&&existing.clientName)||null),
     clientId: client?client.id:((existing&&existing.clientId)||null),
-    workerId: worker?worker.id:((existing&&existing.workerId)||null),
+    workerId: mappedWorkerId,
     workerIds: worker?[worker.id]:((existing&&existing.workerIds)||[]),
+    ...billingSnapshot,
     scope: scope||((existing&&existing.scope)||null),
     status: status,
     unitPrice: unitPrice, profit: unitPrice, workerPay: workerPay,
@@ -2326,7 +2330,7 @@ function hakenRowToJob(row, existing){
     if(mapped.title) existing.title=mapped.title;
     if(mapped.clientName) existing.clientName=mapped.clientName;
     if(client) existing.clientId=mapped.clientId;
-    if(worker){ existing.workerId=mapped.workerId; existing.workerIds=mapped.workerIds; }
+    if(worker){ existing.workerId=mapped.workerId; existing.workerIds=mapped.workerIds;Object.assign(existing,billingSnapshot); }
     if(scope) existing.scope=mapped.scope;
     if(unitPrice>0) existing.unitPrice=unitPrice;
     if(unitPrice>0 && !(existing.profit>0)) existing.profit=unitPrice;
@@ -2403,16 +2407,17 @@ async function hakenImportModal(){
 function hakenDoImport(){
   var checked=[].slice.call(document.querySelectorAll('.hk-chk')).filter(function(c){return c.checked;}).map(function(c){return parseInt(c.dataset.idx);});
   if(!checked.length){toast('取り込む案件を選択してください','warn');return;}
-  var items=window._hakenItems||[]; var nN=0,nU=0;
+  var items=window._hakenItems||[]; var nN=0,nU=0,settlementTargets=[];
   var byId={}; (S.jobs||[]).forEach(function(j){ if(j.hakenId&&!j.deleted)byId[j.hakenId]=j; });
   checked.forEach(function(i){
     var it=items[i]; if(!it)return;
     var ex=it.hid?byId[it.hid]:null;
-    if(ex){ hakenRowToJob(it.row, ex); nU++; }
-    else{ var nj=hakenRowToJob(it.row, null); S.jobs.push(nj); if(nj.hakenId)byId[nj.hakenId]=nj; nN++; }
+    if(ex){ settlementTargets=settlementTargets.concat(_directorSettlementTargetsForJob(ex));hakenRowToJob(it.row, ex);settlementTargets=settlementTargets.concat(_directorSettlementTargetsForJob(ex));nU++; }
+    else{ var nj=hakenRowToJob(it.row, null); S.jobs.push(nj);settlementTargets=settlementTargets.concat(_directorSettlementTargetsForJob(nj));if(nj.hakenId)byId[nj.hakenId]=nj; nN++; }
   });
   save(); if(typeof render==='function')render(); closeModal();
   toast('📥 取込完了：新規 '+nN+' 件 ／ 更新 '+nU+' 件');
+  _refreshDirectorSettlementTargets(settlementTargets).catch(function(error){console.warn('director invoice authorization refresh failed',error);toast('案件は取り込みましたが、担当ディレクターの請求対象を更新できませんでした','warn');});
 }
 
 
@@ -5852,6 +5857,17 @@ const VIDEO_PHASES=[
 ];
 const EDITOR_OWNED_VIDEO_STATUSES=new Set(['初稿提出済み','修正稿提出済み','D確認OK','完了']);
 const VIDEO_OVERDUE_EXCLUDED_STATUSES=new Set(['完了','キャンセル','初稿提出済み','初稿完成','修正中','修正稿提出済み','D確認OK','確認待ち','FB待ち','納品','納品済み']);
+function _editorDraftDateSetter(row,fallback='editor'){
+  const value=String(row?.editorDraftDateSetter||'');
+  return ['creator','editor','mixed'].includes(value)?value:fallback;
+}
+function _editorDraftDateSetterLabel(row){const setter=_editorDraftDateSetter(row);return setter==='creator'?'案件追加者':setter==='mixed'?'子案件ごとに異なる':'担当編集者';}
+function changeEditorDraftDateSetter(select,target){
+  const input=typeof target==='string'?document.getElementById(target):select?.closest?.('.j-sub-row')?.querySelector('.j-sub-editor');
+  if(!input)return;
+  input.disabled=select.value==='editor';
+  if(select.value==='editor')input.value='';
+}
 function _videoDeadlineExemptStatus(status){return VIDEO_OVERDUE_EXCLUDED_STATUSES.has(String(status||''));}
 function _videoPhase(status){return VIDEO_PHASES.find(p=>p.statuses.includes(status))||VIDEO_PHASES[0];}
 function _videoPhaseBuckets(filtered,renderLimit=VIDEO_RENDER_LIMIT){
@@ -5864,6 +5880,31 @@ function _videoPhaseBuckets(filtered,renderLimit=VIDEO_RENDER_LIMIT){
 function _videoIsOverdue(j,baseDate=today()){
   return!!(j&&j.deadline&&j.deadline<baseDate&&!_videoDeadlineExemptStatus(j.status));
 }
+// 期限の色は「いまの工程で次に必要な日付」だけを対象にする。
+// 確認待ち・修正待ちでは期限超過として扱わない既存の運用ルールをそのまま使う。
+function _videoNextDeadline(job){
+  if(!job||_videoDeadlineExemptStatus(job.status))return null;
+  const workflow=_videoWorkflow(job),stage=workflow.stage;
+  if(stage==='delivered')return null;
+  if(stage==='director_review'||stage==='client_submission'){
+    return job.clientDraftDate?{date:job.clientDraftDate,label:'クライアント初稿'}:job.deadline?{date:job.deadline,label:'納品予定'}:null;
+  }
+  return job.editorDraftDate?{date:job.editorDraftDate,label:'編集者初稿'}:job.clientDraftDate?{date:job.clientDraftDate,label:'クライアント初稿'}:job.deadline?{date:job.deadline,label:'納品予定'}:null;
+}
+function _videoDeadlineAlert(job,baseDate=today()){
+  if(job?._aggregateParent){
+    const alerts=(job.subtasks||[]).map(child=>_videoDeadlineAlert(child,baseDate)).filter(Boolean);
+    return alerts.sort((a,b)=>(a.level==='danger'?0:1)-(b.level==='danger'?0:1)||a.remaining-b.remaining)[0]||null;
+  }
+  const next=_videoNextDeadline(job);if(!next?.date)return null;
+  const utc=value=>{const m=String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?Date.UTC(Number(m[1]),Number(m[2])-1,Number(m[3])):NaN;};
+  const remaining=Math.round((utc(next.date)-utc(baseDate))/86400000);if(!Number.isFinite(remaining)||remaining>2)return null;
+  if(remaining<0)return{level:'danger',label:`期限超過：${next.label}`,date:next.date,remaining};
+  if(remaining===0)return{level:'danger',label:`本日：${next.label}`,date:next.date,remaining};
+  if(remaining===1)return{level:'danger',label:`明日：${next.label}`,date:next.date,remaining};
+  return{level:'warning',label:`2日後：${next.label}`,date:next.date,remaining};
+}
+function _videoDeadlineAlertHtml(alert){return alert?`<span class="video-deadline-alert ${alert.level}">${esc(alert.label)} ${esc(alert.date)}</span>`:'';}
 function _portalVideoBiz(j){
   if(j?.businessType==='dispatch'||j?.source==='direct_client')return'haken';
   if(j?.businessType==='edit_agency'||j?.source==='job_board'||j?.boardJobId)return'edit';
@@ -5882,6 +5923,7 @@ function _videoSubtasks(raw,fallbackRaw,workerNames){
     title:s.title||`サブ案件 ${index+1}`,
     deadline:s.deliveryDate||s.clientDraftDate||s.editorDraftDate||'',
     editorDraftDate:s.editorDraftDate||'',
+    editorDraftDateSetter:_editorDraftDateSetter(s),
     clientDraftDate:s.clientDraftDate||'',
     completedDeliveryDate:s.completedDeliveryDate||'',
     status:s.done?'完了':(s.status||'未着手'),
@@ -5925,10 +5967,10 @@ function _videoJobs(){
   if(_videoJobsMemoEpoch===_renderEpoch)return _videoJobsMemo;
   const jobs=S.jobs||[],clientNames=new Map((S.clients||[]).map(c=>[c.id,c.name||''])),workerNames=new Map((S.workers||[]).map(w=>[w.id,w.name||''])),legacyById=new Map(),legacyByPortal=new Map();
   jobs.forEach(j=>{if(j?.deleted)return;legacyById.set(j.id,j);if(j.portalUid&&j.portalJobId)legacyByPortal.set(`${j.portalUid}:${j.portalJobId}`,j)});
-  const legacy=jobs.filter(j=>!j.deleted&&['edit','haken'].includes(jobBiz(j))&&!j.portalJobId).map(j=>({_source:'legacy',_raw:j,biz:jobBiz(j),id:j.id,title:j.title||'',clientDisplay:clientNames.get(j.clientId)||'',deadline:j.deliveryDate||j.clientDraftDate||j.editorDraftDate||'',editorDraftDate:j.editorDraftDate||'',clientDraftDate:j.clientDraftDate||'',completedDeliveryDate:j.completedDeliveryDate||'',status:j.status||'未着手',assignee:getJobWorkerNames(j)||'未割当',subtasks:_videoSubtasks(j,null,workerNames),attachments:_videoCaseMaterials(j.attachments,j),urgent:!!j.urgent,progress:j.progressNote||j.notes||'',progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:[],evidenceUrl:j.evidenceUrl||'',blocker:j.blocker||'',history:j.statusHistory||[],updatedAt:j.updatedAt||0}));
+  const legacy=jobs.filter(j=>!j.deleted&&['edit','haken'].includes(jobBiz(j))&&!j.portalJobId).map(j=>({_source:'legacy',_raw:j,biz:jobBiz(j),id:j.id,title:j.title||'',clientDisplay:clientNames.get(j.clientId)||'',deadline:j.deliveryDate||j.clientDraftDate||j.editorDraftDate||'',editorDraftDate:j.editorDraftDate||'',editorDraftDateSetter:_editorDraftDateSetter(j),clientDraftDate:j.clientDraftDate||'',completedDeliveryDate:j.completedDeliveryDate||'',status:j.status||'未着手',assignee:getJobWorkerNames(j)||'未割当',subtasks:_videoSubtasks(j,null,workerNames),attachments:_videoCaseMaterials(j.attachments,j),urgent:!!j.urgent,progress:j.progressNote||j.notes||'',progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:[],evidenceUrl:j.evidenceUrl||'',blocker:j.blocker||'',history:j.statusHistory||[],updatedAt:j.updatedAt||0}));
   const portal=(PORTAL_JOBS||[]).map(j=>{
     const linked=legacyById.get(j.linkedLegacyJobId)||legacyByPortal.get(`${j._portalUid}:${j.id}`);
-    return{_source:'portal',_raw:j,_portalUid:j._portalUid,biz:_portalVideoBiz(j),id:j.id,title:j.title||'',clientDisplay:j.clientDisplay||'',deadline:j.deliveryDate||j.deadline||j.clientDraftDate||j.editorDraftDate||'',editorDraftDate:j.editorDraftDate||'',clientDraftDate:j.clientDraftDate||'',completedDeliveryDate:j.completedDeliveryDate||'',status:j.status||'案件掲載中',assignee:j.editorName||j.editorEmail||'編集者直接入力',subtasks:_videoSubtasks(j,linked,workerNames),attachments:_videoCaseMaterials(j.attachments,j),urgent:!!j.urgent,progress:j.progress||'',progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:[],progressEvents:Array.isArray(j.progressEvents)?j.progressEvents:[],workflow:j.workflow||null,evidenceUrl:j.evidenceUrl||'',blocker:j.blocker||'',history:j.history||[],updatedAt:j.updatedAt||0};
+    return{_source:'portal',_raw:j,_portalUid:j._portalUid,biz:_portalVideoBiz(j),id:j.id,title:j.title||'',clientDisplay:j.clientDisplay||'',deadline:j.deliveryDate||j.deadline||j.clientDraftDate||j.editorDraftDate||'',editorDraftDate:j.editorDraftDate||'',editorDraftDateSetter:_editorDraftDateSetter(j),clientDraftDate:j.clientDraftDate||'',completedDeliveryDate:j.completedDeliveryDate||'',status:j.status||'案件掲載中',assignee:j.editorName||j.editorEmail||'編集者直接入力',subtasks:_videoSubtasks(j,linked,workerNames),attachments:_videoCaseMaterials(j.attachments,j),urgent:!!j.urgent,progress:j.progress||'',progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:[],progressEvents:Array.isArray(j.progressEvents)?j.progressEvents:[],workflow:j.workflow||null,evidenceUrl:j.evidenceUrl||'',blocker:j.blocker||'',history:j.history||[],updatedAt:j.updatedAt||0};
   });
   _videoJobsMemo=[...legacy,..._videoGroupPortalJobs(portal)];_videoJobsMemoEpoch=_renderEpoch;return _videoJobsMemo;
 }
@@ -6030,10 +6072,10 @@ function _videoWorkflow(job){
 function _videoWorkflowLabel(workflow){return({editing:'編集作業中',director_review:'D確認待ち',client_submission:'先方へ提出中',client_review:'先方確認中',delivered:'納品完了'})[workflow?.stage]||'編集作業中';}
 function _videoCurrentProgressLabel(job){const status=String(job?.status||'');if(['修正中','FB待ち','確認待ち'].includes(status))return videoStatusLabel(status);return _videoWorkflowLabel(_videoWorkflow(job));}
 function _videoNextOwner(job){const stage=_videoWorkflow(job).stage;return stage==='director_review'?'動画編集ディレクター':stage==='client_submission'||stage==='client_review'?'ディレクター／クライアント':stage==='delivered'?'完了':'担当編集者';}
-function _videoCaseSummary(job){return`<div class="video-case-summary"><span>現在の進捗 <b>${esc(_videoCurrentProgressLabel(job))}</b></span><span>次に対応する人 <b>${esc(_videoNextOwner(job))}</b></span><span>納品期限 <b>${esc(job.deadline||'未設定')}</b></span>${job.completedDeliveryDate?`<span>実納品日 <b>${esc(job.completedDeliveryDate)}</b></span>`:''}</div>`;}
-function _videoDraftDateSummary(job){return`<div class="video-card-dates"><span>編集者初稿 <b>${esc(job.editorDraftDate||'未設定')}</b></span><span>クライアント初稿 <b>${esc(job.clientDraftDate||'未設定')}</b></span><span>納品期限 <b>${esc(job.deadline||'未設定')}</b></span><span>実納品日 <b>${esc(job.completedDeliveryDate||'未記録')}</b></span></div>`;}
-function _videoWorkflowEventLabel(type){return({editor_submitted:'編集者が稿を提出',director_approved:'DのOKを記録',client_submitted:'クライアントへ提出',client_revision_requested:'クライアントから修正指示',editor_delivery_completed:'編集者が実納品を完了',client_approved_delivered:'クライアントOK・納品（旧記録）'})[type]||'進捗を更新';}
-function _videoWorkflowHtml(job,portalUid){const w=_videoWorkflow(job),events=Array.isArray(job?.progressEvents)?job.progressEvents:[],actions=w.stage==='director_review'?[['directorApprove','DのOKを記録']]:w.stage==='client_submission'?[['clientSubmitted','クライアントへの提出を記録']]:w.stage==='client_review'?[['clientRevision','修正指示を記録']]:[],history=events.slice(-8).reverse(),deliveryNotice=w.stage==='client_review'&&!job.completedDeliveryDate?'<div class="notice" style="margin-top:8px;box-shadow:none"><b>先方からOKが出たら、担当編集者が実納品日と納品の証跡URLを記録して完了にします。</b><div style="font-size:12px;color:var(--t2);margin-top:3px">管理画面では完了にしません。</div></div>':'';return`<div class="card" style="margin:8px 0;background:var(--card2)"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b style="font-size:14px">進捗共有</b><span class="badge bk">${Number(w.round)}回目・現在：${esc(_videoCurrentProgressLabel(job))}</span></div><div style="font-size:14px;color:var(--t2);line-height:1.6;margin-top:6px">編集者提出 → D確認 → 先方提出 → 修正指示 → 再D確認を、回数付きで残します。</div>${actions.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${actions.map(([action,label])=>`<button class="btn btn-g btn-xs" onclick="advancePortalWorkflow('${esc(portalUid)}','${esc(job.id)}','${action}')">${label}</button>`).join('')}</div>`:''}${deliveryNotice}${history.length?`<details style="margin-top:8px"><summary style="font-size:14px;font-weight:700;cursor:pointer">進捗履歴を見る（${events.length}件）</summary><div style="display:grid;gap:5px;margin-top:7px">${history.map(event=>`<div style="font-size:14px;color:var(--t2);line-height:1.6"><b>第${Number(event.round)||1}回</b> ・ ${esc(_videoWorkflowEventLabel(event.type))}${event.reason?`<br><span style="color:var(--red)">修正内容：${esc(event.reason)}</span>`:''}</div>`).join('')}</div></details>`:''}</div>`;}
+function _videoCaseSummary(job){return`<div class="video-case-summary"><span>現在の進捗 <b>${esc(_videoCurrentProgressLabel(job))}</b></span><span>次に対応する人 <b>${esc(_videoNextOwner(job))}</b></span><span>納期（予定） <b>${esc(job.deadline||'未設定')}</b></span>${job.completedDeliveryDate?`<span>納品日 <b>${esc(job.completedDeliveryDate)}</b></span>`:''}</div>`;}
+function _videoDraftDateSummary(job){return`<div class="video-card-dates"><span>編集者初稿 <b>${esc(job.editorDraftDate||'未設定')}</b>（${esc(_editorDraftDateSetterLabel(job))}が設定）</span><span>クライアント初稿 <b>${esc(job.clientDraftDate||'未設定')}</b></span><span>納期（予定） <b>${esc(job.deadline||'未設定')}</b></span><span>納品日 <b>${esc(job.completedDeliveryDate||'未記録')}</b></span></div>`;}
+function _videoWorkflowEventLabel(type){return({editor_submitted:'編集者が稿を提出',director_approved:'DのOKを記録',client_submitted:'クライアントへ提出',client_revision_requested:'クライアントから修正指示',editor_delivery_completed:'編集者が納品を完了',client_approved_delivered:'クライアントOK・納品（旧記録）'})[type]||'進捗を更新';}
+function _videoWorkflowHtml(job,portalUid){const w=_videoWorkflow(job),events=Array.isArray(job?.progressEvents)?job.progressEvents:[],actions=w.stage==='director_review'?[['directorApprove','DのOKを記録']]:w.stage==='client_submission'?[['clientSubmitted','クライアントへの提出を記録']]:w.stage==='client_review'?[['clientRevision','修正指示を記録']]:[],history=events.slice(-8).reverse(),deliveryNotice=w.stage==='client_review'&&!job.completedDeliveryDate?'<div class="notice" style="margin-top:8px;box-shadow:none"><b>先方からOKが出たら、担当編集者が納品日と納品の証跡URLを記録して完了にします。</b><div style="font-size:12px;color:var(--t2);margin-top:3px">納品日が未記録の案件には報酬が発生しません。</div></div>':'';return`<div class="card" style="margin:8px 0;background:var(--card2)"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b style="font-size:14px">進捗共有</b><span class="badge bk">${Number(w.round)}回目・現在：${esc(_videoCurrentProgressLabel(job))}</span></div><div style="font-size:14px;color:var(--t2);line-height:1.6;margin-top:6px">編集者提出 → D確認 → 先方提出 → 修正指示 → 再D確認を、回数付きで残します。</div>${actions.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${actions.map(([action,label])=>`<button class="btn btn-g btn-xs" onclick="advancePortalWorkflow('${esc(portalUid)}','${esc(job.id)}','${action}')">${label}</button>`).join('')}</div>`:''}${deliveryNotice}${history.length?`<details style="margin-top:8px"><summary style="font-size:14px;font-weight:700;cursor:pointer">進捗履歴を見る（${events.length}件）</summary><div style="display:grid;gap:5px;margin-top:7px">${history.map(event=>`<div style="font-size:14px;color:var(--t2);line-height:1.6"><b>第${Number(event.round)||1}回</b> ・ ${esc(_videoWorkflowEventLabel(event.type))}${event.reason?`<br><span style="color:var(--red)">修正内容：${esc(event.reason)}</span>`:''}</div>`).join('')}</div></details>`:''}</div>`;}
 async function advancePortalWorkflow(portalUid,id,action){
   if(!_videoCanEdit())return toast('権限がありません','err');
   const j=(PORTAL_JOBS||[]).find(x=>x._portalUid===portalUid&&x.id===id);if(!j)return;
@@ -6046,7 +6088,7 @@ async function advancePortalWorkflow(portalUid,id,action){
   const data={workflow,progressEvents:[...(j.progressEvents||[]).slice(-99),eventData],status,updatedAt:at,updatedBy:_myEmail(),history:[...(j.history||[]).slice(-49),eventData],...(action==='clientRevision'?{correctionReason:reason}:{})};
   try{const ref=fbDb.collection('editor_portals').doc(portalUid).collection('editor_jobs').doc(id),event=ref.collection('events').doc(),batch=fbDb.batch();batch.set(ref,data,{merge:true});batch.set(event,{at:firebase.firestore.FieldValue.serverTimestamp(),...eventData});await batch.commit();if(_applyPortalToLegacy({...j,...data},true))save();closeModal();toast('進捗を更新しました');}catch(e){console.warn('workflow update',e);toast('進捗の更新に失敗しました','err');}
 }
-function _editorMilestoneSummary(j){const saved=Array.isArray(j?.progressMilestones)?j.progressMilestones:[],events=Array.isArray(j?.progressEvents)?j.progressEvents:[],defs=[['initial_submitted','初稿提出',events.some(x=>x?.type==='editor_submitted'&&x?.status==='初稿提出済み')],['revision_submitted','修正稿提出',events.some(x=>x?.type==='editor_submitted'&&x?.status==='修正稿提出済み')],['actual_delivery','実納品',!!j?.completedDeliveryDate||events.some(x=>x?.type==='editor_delivery_completed')]];return`<div class="card" style="margin:8px 0;background:var(--card2)"><div style="font-size:11px;font-weight:800">編集者の提出・納品記録</div><div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px">${defs.map(([key,label,hasEvent])=>{const x=saved.find(v=>v?.key===key),done=!!x||hasEvent;return`<span class="badge ${done?'bg':'ba'}">${done?'✓':'未'} ${label}</span>`}).join('')}</div><div style="font-size:10px;color:var(--t3);margin-top:6px">初稿・修正稿・先方OK後の実納品は担当編集者が記録します。ディレクターまたはオーナーはD確認・クライアント提出・修正指示を記録します。</div></div>`;}
+function _editorMilestoneSummary(j){const saved=Array.isArray(j?.progressMilestones)?j.progressMilestones:[],events=Array.isArray(j?.progressEvents)?j.progressEvents:[],defs=[['initial_submitted','初稿提出',events.some(x=>x?.type==='editor_submitted'&&x?.status==='初稿提出済み')],['revision_submitted','修正稿提出',events.some(x=>x?.type==='editor_submitted'&&x?.status==='修正稿提出済み')],['actual_delivery','納品',!!j?.completedDeliveryDate||events.some(x=>x?.type==='editor_delivery_completed')]];return`<div class="card" style="margin:8px 0;background:var(--card2)"><div style="font-size:11px;font-weight:800">編集者の提出・納品記録</div><div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px">${defs.map(([key,label,hasEvent])=>{const x=saved.find(v=>v?.key===key),done=!!x||hasEvent;return`<span class="badge ${done?'bg':'ba'}">${done?'✓':'未'} ${label}</span>`}).join('')}</div><div style="font-size:10px;color:var(--t3);margin-top:6px">初稿・修正稿と、先方OK後の納品日は担当編集者が記録します。納品日が未記録の案件には報酬が発生しません。ディレクターまたはオーナーはD確認・クライアント提出・修正指示を記録します。</div></div>`;}
 const VIDEO_PROGRESS_STEPS=[['editor_work','編集者の作業'],['director_review','D確認'],['client_submission','クライアントへ提出'],['client_review','クライアント確認'],['delivered','納品']];
 function _videoProgressStepState(job,key){
   const status=String(job?.status||''),workflow=_videoWorkflow(job),stage=workflow.stage,round=Math.max(1,Number(workflow.round)||1),order=['editing','director_review','client_submission','client_review','delivered'],current=order.indexOf(stage),target=order.indexOf(key==='editor_work'?'editing':key),isRevision=round>1||['修正中','修正稿提出済み'].includes(status)||(Array.isArray(job?.progressEvents)&&job.progressEvents.some(x=>x?.type==='editor_submitted'&&x?.status==='修正稿提出済み'));
@@ -6057,9 +6099,9 @@ function _videoProgressStepState(job,key){
   }
   if(target<current)return{state:'done',label:key==='director_review'?'D確認OK':key==='client_submission'?'提出済み':key==='client_review'?'先方OK':'実納品完了'};
   if(target===current)return key==='delivered'?{state:'done',label:'納品完了'}:{state:'active',label:key==='director_review'?'確認待ち':key==='client_submission'?'先方へ提出する':'返事待ち'};
-  return{state:'waiting',label:key==='director_review'?'稿の提出後':key==='client_submission'?'D確認後':key==='client_review'?'提出後':'先方OK後'};
+  return{state:'waiting',label:key==='director_review'?(isRevision?'修正稿提出後':'初稿提出後'):key==='client_submission'?'D確認後':key==='client_review'?'クライアント提出後':'先方OK後'};
 }
-function _videoProgressNextAction(job){const workflow=_videoWorkflow(job),round=Math.max(1,Number(workflow.round)||1);return workflow.stage==='editing'?(round>1?'編集者が修正稿を提出する':'編集者が初稿を提出する'):workflow.stage==='director_review'?'ディレクターが内容を確認する':workflow.stage==='client_submission'?'ディレクターがクライアントへ提出する':workflow.stage==='client_review'?'クライアントの返事待ち（OKなら担当編集者が実納品日を記録／修正なら編集者へ戻す）':'対応完了';}
+function _videoProgressNextAction(job){const workflow=_videoWorkflow(job),round=Math.max(1,Number(workflow.round)||1);return workflow.stage==='editing'?(round>1?'編集者が修正稿を提出する':'編集者が初稿を提出する'):workflow.stage==='director_review'?'ディレクターが内容を確認する':workflow.stage==='client_submission'?'ディレクターがクライアントへ提出する':workflow.stage==='client_review'?'クライアントの返事待ち（OKなら担当編集者が納品日を記録／修正なら編集者へ戻す）':'対応完了';}
 function _videoProgressRows(items){
   return items.flatMap(parent=>{
     const base={_parent:parent,clientDisplay:parent.clientDisplay,assignee:parent.assignee};
@@ -6076,7 +6118,7 @@ function _videoProgressBoard(items){
     const children=parent.subtasks?.length?parent.subtasks.map(sub=>({...sub,_parent:parent,clientDisplay:parent.clientDisplay,assignee:sub.assignee||parent.assignee,progressMilestones:Array.isArray(sub.progressMilestones)?sub.progressMilestones:[]})):[{...parent,_parent:parent}];
     const visible=children.filter(row=>isCompleted?['完了','キャンセル'].includes(row.status):!['完了','キャンセル'].includes(row.status));if(!visible.length)return'';
     const click=parent._source==='portal'?`openPortalJobModal('${parent._portalUid}','${parent.id}')`:_isOwner()?`openJobModal('${parent.id}')`:`openVideoLegacySafeModal('${parent.id}')`;
-    const rowHtml=row=>{const rowClick=row._portalChildJobId?`openPortalJobModal(${JSON.stringify(row._portalChildPortalUid)},${JSON.stringify(row._portalChildJobId)})`:click;return`<article class="video-progress-row"><button type="button" class="video-progress-info" onclick="${esc(rowClick)}"><b>${esc(row.title||'案件名未設定')}</b><span class="video-progress-current">いま：${esc(_videoCurrentProgressLabel(row))}</span><span class="video-progress-next">次：${esc(_videoProgressNextAction(row))}</span><span>${esc(row.clientDisplay||'クライアント未設定')} ・ ${esc(row.assignee||'未割当')}</span><span>納品期限 ${esc(row.deadline||'未設定')}${row.completedDeliveryDate?` ・ 実納品 ${esc(row.completedDeliveryDate)}`:''}</span></button>${VIDEO_PROGRESS_STEPS.map(([key,label])=>{const x=_videoProgressStepState(row,key);return`<div class="video-progress-stage ${x.state}" data-label="${label}"><span aria-hidden="true">${x.state==='done'?'✓':x.state==='active'?'●':x.state==='cancelled'?'—':'○'}</span><span>${esc(x.label)}</span></div>`}).join('')}</article>`;};
+    const rowHtml=row=>{const rowClick=row._portalChildJobId?`openPortalJobModal(${JSON.stringify(row._portalChildPortalUid)},${JSON.stringify(row._portalChildJobId)})`:click;return`<article class="video-progress-row"><button type="button" class="video-progress-info" onclick="${esc(rowClick)}"><b>${esc(row.title||'案件名未設定')}</b><span class="video-progress-current">いま：${esc(_videoCurrentProgressLabel(row))}</span><span class="video-progress-next">次：${esc(_videoProgressNextAction(row))}</span><span>${esc(row.clientDisplay||'クライアント未設定')} ・ ${esc(row.assignee||'未割当')}</span><span>納期（予定） ${esc(row.deadline||'未設定')}${row.completedDeliveryDate?` ・ 納品日 ${esc(row.completedDeliveryDate)}`:''}</span></button>${VIDEO_PROGRESS_STEPS.map(([key,label])=>{const x=_videoProgressStepState(row,key);return`<div class="video-progress-stage ${x.state}" data-label="${label}"><span aria-hidden="true">${x.state==='done'?'✓':x.state==='active'?'●':x.state==='cancelled'?'—':'○'}</span><span>${esc(x.label)}</span></div>`}).join('')}</article>`;};
     if(!parent.subtasks?.length)return rowHtml(visible[0]);
     return`<details class="video-subcase-list" aria-label="${esc(parent.title)}のサブ案件進捗"><summary class="video-subcase-head"><span>↳ ${esc(parent.title)} のサブ案件</span><span><span class="video-progress-parent-state">現在：${esc(_videoProgressStatusSummary(visible))}</span> ・ ${visible.length}/${children.length}件</span></summary><div class="video-progress-children">${visible.map(rowHtml).join('')}</div></details>`;
   }).join('');
@@ -6084,8 +6126,8 @@ function _videoProgressBoard(items){
 }
 function _jobScheduleError(schedule){
   const ordered=[schedule.sharedDate,schedule.editorDraftDate,schedule.clientDraftDate,schedule.deliveryDate].filter(Boolean);
-  for(let i=1;i<ordered.length;i++)if(ordered[i]<ordered[i-1])return'日程は「受注日 → 編集者初稿 → クライアント提出初稿 → 納品期限」の順で入力してください';
-  if(schedule.thumbnailDate&&schedule.deliveryDate&&schedule.thumbnailDate>schedule.deliveryDate)return'サムネイル納品日は案件の納品期限以前に設定してください';
+  for(let i=1;i<ordered.length;i++)if(ordered[i]<ordered[i-1])return'日程は「受注日 → 編集者初稿 → クライアント提出初稿 → 納期（予定）」の順で入力してください';
+  if(schedule.thumbnailDate&&schedule.deliveryDate&&schedule.thumbnailDate>schedule.deliveryDate)return'サムネイル納品日は案件の納期（予定）以前に設定してください';
   return'';
 }
 function _findVideoSubcase(parent,subId){
@@ -6093,8 +6135,8 @@ function _findVideoSubcase(parent,subId){
   return index<0?null:{index,sub:parent.subtasks[index]};
 }
 function _videoSubcaseDetailHtml(parent,sub,{canEdit=false,onSave='',openParent=''}={}){
-  const materials=_videoCaseMaterials(sub?.attachments,sub||{}),note=String(sub?.instructions||sub?.notes||parent?.instructions||parent?.notes||'').trim();
-  return`<div class="mhdr"><div class="mtitle">サブ案件の詳細</div><button class="mclose" onclick="closeModal()">✕</button></div><div class="video-breadcrumb">${esc(parent?.title||'親案件')} / サブ案件</div><div class="fg"><div class="fl">案件名</div><div style="font-size:16px;font-weight:800;padding:8px 0">${esc(sub?.title||'サブ案件')}</div></div><div class="frow"><div class="fg"><div class="fl">ステータス</div><div>${esc(videoStatusLabel(sub?.status||'未着手'))}</div></div><div class="fg"><div class="fl">担当者</div><div>${esc(_videoSubtaskAssignee(sub?.workerId,new Map((S.workers||[]).map(w=>[w.id,w.name||'']))))}</div></div></div><div style="font-size:12px;font-weight:800;color:var(--t2);margin:10px 0 6px">日程</div><div class="frow"><div class="fg"><div class="fl">編集者初稿</div><input id="vs-editor-draft" type="date" value="${esc(sub?.editorDraftDate||'')}" ${canEdit?'':'disabled'}></div><div class="fg"><div class="fl">クライアント初稿</div><input id="vs-client-draft" type="date" value="${esc(sub?.clientDraftDate||'')}" ${canEdit?'':'disabled'}></div></div><div class="frow"><div class="fg"><div class="fl">納品期限</div><input type="date" value="${esc(sub?.deliveryDate||'')}" disabled></div><div class="fg"><div class="fl">実納品日</div><input type="date" value="${esc(sub?.completedDeliveryDate||'')}" disabled></div></div>${note?`<div class="fg"><div class="fl">指示・メモ</div><div style="white-space:pre-wrap;line-height:1.6;color:var(--t2)">${esc(note)}</div></div>`:''}<div class="video-attachment-editor"><div class="video-attachment-heading"><div><b>素材・資料</b><span>リンクを新しいタブで開きます</span></div></div>${_videoAttachmentLinksHtml(materials)||'<div class="video-attachment-hint">添付された素材・資料はありません。</div>'}</div><div class="mfooter"><button class="btn btn-g" onclick="closeModal()">閉じる</button>${openParent?`<button class="btn btn-g" onclick="${esc(openParent)}">親案件を開く</button>`:''}${canEdit&&onSave?`<button class="btn btn-p" onclick="${esc(onSave)}">初稿日を保存</button>`:''}</div>`;
+  const materials=_videoCaseMaterials(sub?.attachments,sub||{}),note=String(sub?.instructions||sub?.notes||parent?.instructions||parent?.notes||'').trim(),setter=_editorDraftDateSetter(sub);
+  return`<div class="mhdr"><div class="mtitle">サブ案件の詳細</div><button class="mclose" onclick="closeModal()">✕</button></div><div class="video-breadcrumb">${esc(parent?.title||'親案件')} / サブ案件</div><div class="fg"><div class="fl">案件名</div><div style="font-size:16px;font-weight:800;padding:8px 0">${esc(sub?.title||'サブ案件')}</div></div><div class="frow"><div class="fg"><div class="fl">ステータス</div><div>${esc(videoStatusLabel(sub?.status||'未着手'))}</div></div><div class="fg"><div class="fl">担当者</div><div>${esc(_videoSubtaskAssignee(sub?.workerId,new Map((S.workers||[]).map(w=>[w.id,w.name||'']))))}</div></div></div><div style="font-size:12px;font-weight:800;color:var(--t2);margin:10px 0 6px">日程</div><div class="frow"><div class="fg"><div class="fl">編集者初稿の設定者</div><select id="vs-editor-draft-setter" ${canEdit?'':'disabled'} onchange="changeEditorDraftDateSetter(this,'vs-editor-draft')"><option value="creator" ${setter==='creator'?'selected':''}>案件追加者が設定</option><option value="editor" ${setter==='editor'?'selected':''}>担当編集者が設定</option></select></div><div class="fg"><div class="fl">編集者初稿</div><input id="vs-editor-draft" type="date" value="${esc(sub?.editorDraftDate||'')}" ${canEdit&&setter==='creator'?'':'disabled'}></div></div><div class="frow"><div class="fg"><div class="fl">クライアント初稿</div><input id="vs-client-draft" type="date" value="${esc(sub?.clientDraftDate||'')}" ${canEdit?'':'disabled'}></div><div class="fg"><div class="fl">納期（予定）</div><input type="date" value="${esc(sub?.deliveryDate||'')}" disabled></div></div><div class="frow"><div class="fg"><div class="fl">納品日</div><input type="date" value="${esc(sub?.completedDeliveryDate||'')}" disabled></div><div class="fg"></div></div>${note?`<div class="fg"><div class="fl">指示・メモ</div><div style="white-space:pre-wrap;line-height:1.6;color:var(--t2)">${esc(note)}</div></div>`:''}<div class="video-attachment-editor"><div class="video-attachment-heading"><div><b>素材・資料</b><span>リンクを新しいタブで開きます</span></div></div>${_videoAttachmentLinksHtml(materials)||'<div class="video-attachment-hint">添付された素材・資料はありません。</div>'}</div><div class="mfooter"><button class="btn btn-g" onclick="closeModal()">閉じる</button>${openParent?`<button class="btn btn-g" onclick="${esc(openParent)}">親案件を開く</button>`:''}${canEdit&&onSave?`<button class="btn btn-p" onclick="${esc(onSave)}">設定を保存</button>`:''}</div>`;
 }
 function openLegacySubcaseDetail(jobId,subId){
   const parent=(S.jobs||[]).find(job=>job.id===jobId),found=_findVideoSubcase(parent,subId);if(!parent||!found)return;
@@ -6104,10 +6146,11 @@ function openLegacySubcaseDetail(jobId,subId){
 function saveLegacySubcaseDraftDates(jobId,subId){
   if(!_videoCanEdit())return toast('権限がありません','err');
   const parent=(S.jobs||[]).find(job=>job.id===jobId),found=_findVideoSubcase(parent,subId);if(!parent||!found)return toast('サブ案件が見つかりません','err');
-  const at=Date.now(),editorDraftDate=document.getElementById('vs-editor-draft')?.value||null,clientDraftDate=document.getElementById('vs-client-draft')?.value||null;
-  parent.subtasks=parent.subtasks.map((sub,index)=>index===found.index?{...sub,editorDraftDate,clientDraftDate,updatedAt:at,updatedBy:_myEmail()}:sub);
-  parent.updatedAt=at;parent.updatedBy=_myEmail();parent.statusHistory=[...(parent.statusHistory||[]).slice(-99),{at,by:_myEmail(),type:'subcase_schedule_update',subId:String(subId),editorDraftDate,clientDraftDate}];
-  save();closeModal();render();toast('サブ案件の初稿日を保存しました');
+  const at=Date.now(),editorDraftDateSetter=document.getElementById('vs-editor-draft-setter')?.value||'editor',editorDraftDate=document.getElementById('vs-editor-draft')?.value||null,clientDraftDate=document.getElementById('vs-client-draft')?.value||null;
+  if(editorDraftDateSetter==='creator'&&!editorDraftDate)return toast('案件追加者が設定する場合は、編集者初稿日を入力してください','warn');
+  parent.subtasks=parent.subtasks.map((sub,index)=>index===found.index?{...sub,editorDraftDateSetter,editorDraftDate,clientDraftDate,updatedAt:at,updatedBy:_myEmail()}:sub);
+  parent.updatedAt=at;parent.updatedBy=_myEmail();parent.statusHistory=[...(parent.statusHistory||[]).slice(-99),{at,by:_myEmail(),type:'subcase_schedule_update',subId:String(subId),editorDraftDateSetter,editorDraftDate,clientDraftDate}];
+  save();closeModal();render();toast('サブ案件の初稿設定を保存しました');
 }
 function openPortalSubcaseDetail(portalUid,jobId,subId){
   const parent=(PORTAL_JOBS||[]).find(job=>job._portalUid===portalUid&&job.id===jobId),found=_findVideoSubcase(parent,subId);if(!parent||!found)return;
@@ -6115,14 +6158,14 @@ function openPortalSubcaseDetail(portalUid,jobId,subId){
   openModal(_videoSubcaseDetailHtml(parent,found.sub,{openParent:`openPortalJobModal(${args(portalUid)},${args(jobId)})`}));
 }
 function _videoCard(j){
-  const isParent=!!j._aggregateParent,overdue=_videoIsOverdue(j),click=j._source==='portal'?`openPortalJobModal('${j._portalUid}','${j.id}')`:_isOwner()?`openJobModal('${j.id}')`:`openVideoLegacySafeModal('${j.id}')`;
+  const isParent=!!j._aggregateParent,overdue=_videoIsOverdue(j),alert=_videoDeadlineAlert(j),click=j._source==='portal'?`openPortalJobModal('${j._portalUid}','${j.id}')`:_isOwner()?`openJobModal('${j.id}')`:`openVideoLegacySafeModal('${j.id}')`;
   const openMaterials=(subIndex)=>j._source==='portal'?`openPortalAttachmentViewer('${j._portalUid}','${j.id}',${subIndex})`:`openLegacyAttachmentViewer('${j.id}',${subIndex})`;
   const subtasks=_videoSortJobs(j.subtasks||[]);
-  const subtaskHtml=subtasks.length?`<details class="video-subcase-list" aria-label="${esc(j.title)}のサブ案件"><summary class="video-subcase-head"><span>↳ サブ案件</span><span>${subtasks.length}件</span></summary><div class="video-subcase-children">${subtasks.map(s=>{const subOverdue=_videoIsOverdue(s),color=subOverdue?'var(--red)':BOARD_COL[s.status]||'var(--pl)',badge=SCOLBG[s.status]||'bk',materials=_videoAttachments(s.attachments),subId=String(s.id||''),openSubcase=s._portalChildJobId?`openPortalJobModal(${JSON.stringify(s._portalChildPortalUid)},${JSON.stringify(s._portalChildJobId)})`:j._source==='portal'?`openPortalSubcaseDetail(${JSON.stringify(j._portalUid)},${JSON.stringify(j.id)},${JSON.stringify(subId)})`:`openLegacySubcaseDetail(${JSON.stringify(j.id)},${JSON.stringify(subId)})`;return`<button type="button" class="video-subcase-row" style="--subcase-color:${color}" onclick="${esc(openSubcase)}" aria-label="${esc(s.title)}の詳細を開く"><div class="video-subcase-title">${esc(s.title)}</div><span class="badge ${badge} video-subcase-status">${esc(videoStatusLabel(s.status))}</span><div class="video-subcase-meta"><span>担当 ${esc(s.assignee)}</span><span>編集者初稿 ${esc(s.editorDraftDate||'未設定')}</span><span>クライアント初稿 ${esc(s.clientDraftDate||'未設定')}</span><span style="color:${subOverdue?'var(--red)':'var(--t3)'}">納品期限 ${esc(s.deadline||'未設定')}</span><span>実納品日 ${esc(s.completedDeliveryDate||'未記録')}</span>${materials.length?`<span class="video-material-count">素材 ${materials.length}件</span>`:''}</div></button>`;}).join('')}</div></details>`:'';
+  const subtaskHtml=subtasks.length?`<details class="video-subcase-list" aria-label="${esc(j.title)}のサブ案件"><summary class="video-subcase-head"><span>↳ サブ案件</span><span>${subtasks.length}件</span></summary><div class="video-subcase-children">${subtasks.map(s=>{const subOverdue=_videoIsOverdue(s),subAlert=_videoDeadlineAlert(s),color=subAlert?.level==='danger'||subOverdue?'var(--red)':subAlert?.level==='warning'?'var(--amber)':BOARD_COL[s.status]||'var(--pl)',badge=SCOLBG[s.status]||'bk',materials=_videoAttachments(s.attachments),subId=String(s.id||''),openSubcase=s._portalChildJobId?`openPortalJobModal(${JSON.stringify(s._portalChildPortalUid)},${JSON.stringify(s._portalChildJobId)})`:j._source==='portal'?`openPortalSubcaseDetail(${JSON.stringify(j._portalUid)},${JSON.stringify(j.id)},${JSON.stringify(subId)})`:`openLegacySubcaseDetail(${JSON.stringify(j.id)},${JSON.stringify(subId)})`;return`<button type="button" class="video-subcase-row ${subAlert?`video-deadline-${subAlert.level}`:''}" style="--subcase-color:${color}" onclick="${esc(openSubcase)}" aria-label="${esc(s.title)}の詳細を開く"><div class="video-subcase-title">${esc(s.title)}</div><span class="badge ${badge} video-subcase-status">${esc(videoStatusLabel(s.status))}</span><div class="video-subcase-meta"><span>担当 ${esc(s.assignee)}</span>${_videoDeadlineAlertHtml(subAlert)}<span>編集者初稿 ${esc(s.editorDraftDate||'未設定')}（${esc(_editorDraftDateSetterLabel(s))}が設定）</span><span>クライアント初稿 ${esc(s.clientDraftDate||'未設定')}</span><span style="color:${subOverdue?'var(--red)':'var(--t3)'}">納期（予定） ${esc(s.deadline||'未設定')}</span><span>納品日 ${esc(s.completedDeliveryDate||'未記録')}</span>${materials.length?`<span class="video-material-count">素材 ${materials.length}件</span>`:''}</div></button>`;}).join('')}</div></details>`:'';
   const materials=_videoAttachments(j.attachments);
-  const parentSummary=`<div class="video-case-summary"><span>サブ案件 <b>${subtasks.length}件</b></span><span>進行中 <b>${subtasks.filter(s=>!['完了','キャンセル'].includes(String(s.status||''))).length}件</b></span><span>最短の納品期限 <b>${esc(j.deadline||'未設定')}</b></span></div>`;
-  const main=isParent?`<div class="video-job-main video-job-parent-main"><div class="video-job-title-row"><b class="video-job-title">${esc(j.title)}</b><span class="badge bk">親案件・集計</span></div><div style="font-size:10.5px;color:var(--t3);margin-top:3px">${esc(j.clientDisplay||'クライアント未設定')} ・ ${esc(j.assignee)}</div>${parentSummary}</div>`:`<button type="button" class="video-job-main" onclick="${click}" aria-label="${esc(j.title)}を開く"><div class="video-job-title-row"><b class="video-job-title">${esc(j.title)}</b>${j._source==='portal'?'<span class="badge bk">直接依頼</span>':''}</div><div style="font-size:10.5px;color:var(--t3);margin-top:3px">${esc(j.clientDisplay||'クライアント未設定')} ・ ${esc(j.assignee)}</div>${_videoCaseSummary(j)}${_videoDraftDateSummary(j)}${j.blocker?`<div style="font-size:10.5px;color:var(--red);margin-top:4px">停止理由あり</div>`:''}</button>`;
-  return`<article class="card video-job-card" style="border-left:3px solid ${overdue?'var(--red)':j.urgent?'var(--amber)':'var(--pl)'}">${main}${materials.length?`<button type="button" class="video-material-count video-material-card-action" onclick="${openMaterials(-1)}">📎 素材・資料 ${materials.length}件</button>`:''}${subtaskHtml}</article>`;
+  const parentSummary=`<div class="video-case-summary"><span>サブ案件 <b>${subtasks.length}件</b></span><span>進行中 <b>${subtasks.filter(s=>!['完了','キャンセル'].includes(String(s.status||''))).length}件</b></span><span>最短の納期（予定） <b>${esc(j.deadline||'未設定')}</b></span></div>`;
+  const main=isParent?`<div class="video-job-main video-job-parent-main"><div class="video-job-title-row"><b class="video-job-title">${esc(j.title)}</b><span class="badge bk">親案件・集計</span></div><div style="font-size:10.5px;color:var(--t3);margin-top:3px">${esc(j.clientDisplay||'クライアント未設定')} ・ ${esc(j.assignee)}</div>${_videoDeadlineAlertHtml(alert)}${parentSummary}</div>`:`<button type="button" class="video-job-main" onclick="${click}" aria-label="${esc(j.title)}を開く"><div class="video-job-title-row"><b class="video-job-title">${esc(j.title)}</b>${j._source==='portal'?'<span class="badge bk">直接依頼</span>':''}</div><div style="font-size:10.5px;color:var(--t3);margin-top:3px">${esc(j.clientDisplay||'クライアント未設定')} ・ ${esc(j.assignee)}</div>${_videoDeadlineAlertHtml(alert)}${_videoCaseSummary(j)}${_videoDraftDateSummary(j)}${j.blocker?`<div style="font-size:10.5px;color:var(--red);margin-top:4px">停止理由あり</div>`:''}</button>`;
+  return`<article class="card video-job-card ${alert?`video-deadline-${alert.level}`:''}" style="border-left:3px solid ${alert?.level==='danger'||overdue?'var(--red)':alert?.level==='warning'||j.urgent?'var(--amber)':'var(--pl)'}">${main}${materials.length?`<button type="button" class="video-material-count video-material-card-action" onclick="${openMaterials(-1)}">📎 素材・資料 ${materials.length}件</button>`:''}${subtaskHtml}</article>`;
 }
 function openVideoLegacySafeModal(id){
   const j=(S.jobs||[]).find(x=>x.id===id);if(!j)return;
@@ -6137,17 +6180,18 @@ function _portalBillingTerms(completedDeliveryDate){return window.EditflowBillin
 function openPortalJobModal(portalUid,id){
   const j=(PORTAL_JOBS||[]).find(x=>x._portalUid===portalUid&&x.id===id);if(!j)return;
   const canEdit=_videoCanEdit(),owner=_isOwner(),external=_portalIsExternal(portalUid),portalBiz=_portalVideoBiz(j);
-  const deliveryDate=j.deliveryDate||j.deadline||'',completedDeliveryDate=j.completedDeliveryDate||'',billingTerms=_portalBillingTerms(completedDeliveryDate);
-  const billingText=billingTerms?`請求可能日 <b>${esc(billingTerms.invoiceAvailableOn)}</b> ・ 支払予定日 <b>${esc(billingTerms.paymentDueDate)}</b>`:'実納品日が記録されると、請求可能日と支払予定日が自動で決まります。';
+  const deliveryDate=j.deliveryDate||j.deadline||'',completedDeliveryDate=j.completedDeliveryDate||'',billingTerms=_portalBillingTerms(completedDeliveryDate),draftSetter=_editorDraftDateSetter(j);
+  const billingText=billingTerms?`請求可能日 <b>${esc(billingTerms.invoiceAvailableOn)}</b> ・ 支払予定日 <b>${esc(billingTerms.paymentDueDate)}</b>`:'納品日が記録されると、請求可能日と支払予定日が自動で決まります。';
   const payBlock=owner&&!external?`<div class="card" style="background:var(--card2)"><div style="font-size:14px;font-weight:800;margin-bottom:6px">オーナーのみ・直接契約編集者の報酬</div><div class="frow"><div class="fg"><div class="fl">請求可能額</div><input id="vp-pay" type="number" min="0" value="${Number(j.ownPay||0)}"></div><div class="fg"><div class="fl">請求対象月（自動）</div><input id="vp-pay-month" type="month" value="${esc(billingTerms?.invoiceMonth||'')}" disabled></div></div><div class="notice" style="box-shadow:none;margin:7px 0;font-size:14px;line-height:1.6">${billingText}</div><div class="fg"><div class="fl">請求承認</div><select id="vp-payable"><option value="false" ${j.payableApproved?'':'selected'}>未承認</option><option value="true" ${j.payableApproved?'selected':''}>承認済み</option></select></div></div>`:owner&&external?`<div class="card notice" style="box-shadow:none"><b>外部編集者の案件に金額は保存しません</b><div style="font-size:14px;line-height:1.6;color:var(--t2);margin-top:4px">mono.createからディレクターへの単価と請求額は、ディレクター本人のまとめ請求で管理します。</div></div>`:'';
   const legacyBlock=owner?`<div class="card" style="margin-top:8px;background:var(--card2)"><div style="font-size:11px;font-weight:800">社内案件台帳</div><div style="font-size:11px;color:var(--t3);margin:4px 0 8px">${j.linkedLegacyJobId?'自動連携済み。編集者の更新は案件台帳にも反映されます。':'自動連携を処理中です。画面を閉じても次回起動時に再実行します。'}</div>${j.linkedLegacyJobId?`<button class="btn btn-g btn-sm" onclick="openJobModal('${esc(j.linkedLegacyJobId)}')">連携先を開く</button>`:''}</div>`:'';
   openModal(`<div class="mhdr"><div class="mtitle">${portalBiz==='haken'?'編集者派遣案件':'編集代行案件'}</div><button class="mclose" onclick="closeModal()">✕</button></div>
 <div class="fg"><div class="fl">案件名</div><input id="vp-title" value="${esc(j.title||'')}" ${canEdit?'':'disabled'}></div>
 <div class="fg"><div class="fl">クライアント表示名</div><input id="vp-client" value="${esc(j.clientDisplay||'')}" ${canEdit?'':'disabled'}></div>
 <div style="font-size:12px;font-weight:800;color:var(--t2);margin:10px 0 6px">日程</div>
-<div class="frow"><div class="fg"><div class="fl">受注日</div><input id="vp-shared" type="date" value="${esc(j.sharedDate||'')}" ${canEdit?'':'disabled'}></div><div class="fg"><div class="fl">編集者 初稿</div><input id="vp-editor-draft" type="date" value="${esc(j.editorDraftDate||'')}" ${canEdit?'':'disabled'}></div></div>
-<div class="frow"><div class="fg"><div class="fl">クライアント提出 初稿</div><input id="vp-client-draft" type="date" value="${esc(j.clientDraftDate||'')}" ${canEdit?'':'disabled'}></div><div class="fg"><div class="fl">サムネイル納品日</div><input id="vp-thumbnail" type="date" value="${esc(j.thumbnailDate||'')}" ${canEdit?'':'disabled'}></div></div>
-<div class="frow"><div class="fg"><div class="fl">納品期限</div><input id="vp-deadline" type="date" value="${esc(deliveryDate)}" ${canEdit?'':'disabled'}></div><div class="fg"><div class="fl">実納品日</div><input type="date" value="${esc(completedDeliveryDate)}" disabled aria-label="担当編集者が記録する実納品日"><div style="font-size:10px;color:var(--t3);margin-top:3px">先方OK後に、担当編集者が記録します。</div></div></div>
+<div class="frow"><div class="fg"><div class="fl">受注日</div><input id="vp-shared" type="date" value="${esc(j.sharedDate||'')}" ${canEdit?'':'disabled'}></div><div class="fg"><div class="fl">編集者初稿の設定者</div><select id="vp-editor-draft-setter" ${canEdit?'':'disabled'} onchange="changeEditorDraftDateSetter(this,'vp-editor-draft')"><option value="creator" ${draftSetter==='creator'?'selected':''}>案件追加者が設定</option><option value="editor" ${draftSetter==='editor'?'selected':''}>担当編集者が設定</option></select></div></div>
+<div class="frow"><div class="fg"><div class="fl">編集者 初稿</div><input id="vp-editor-draft" type="date" value="${esc(j.editorDraftDate||'')}" ${canEdit&&draftSetter==='creator'?'':'disabled'}><div style="font-size:10px;color:var(--t3);margin-top:3px">${draftSetter==='creator'?'ここで案件追加者が設定します。':'担当編集者の画面で設定します。'}</div></div><div class="fg"><div class="fl">クライアント提出 初稿</div><input id="vp-client-draft" type="date" value="${esc(j.clientDraftDate||'')}" ${canEdit?'':'disabled'}></div></div>
+<div class="frow"><div class="fg"><div class="fl">サムネイル納品日</div><input id="vp-thumbnail" type="date" value="${esc(j.thumbnailDate||'')}" ${canEdit?'':'disabled'}></div><div class="fg"></div></div>
+<div class="frow"><div class="fg"><div class="fl">納期（予定）</div><input id="vp-deadline" type="date" value="${esc(deliveryDate)}" ${canEdit?'':'disabled'}></div><div class="fg"><div class="fl">納品日</div><input type="date" value="${esc(completedDeliveryDate)}" disabled aria-label="担当編集者が記録する納品日"><div style="font-size:10px;color:var(--t3);margin-top:3px">先方OK後に、担当編集者が記録します。未記録の案件には報酬が発生しません。</div></div></div>
 <div class="fg"><div class="fl">ステータス</div><select id="vp-status" ${canEdit?'':'disabled'}>${bizStatOpts(portalBiz,j.status)}</select></div>
 	<div class="fg"><div class="fl">指示・確認メモ</div><textarea id="vp-instructions" ${canEdit?'':'disabled'}>${esc(j.instructions||'')}</textarea></div>
 	${canEdit?_videoAttachmentEditorHtml(j.attachments||[],"addVideoAttachmentRow(document.getElementById('vp-attachment-list'))",'vp-attachment-list'):`<div class="video-attachment-editor"><div class="video-attachment-heading"><div><b>素材・資料</b><span>閲覧のみ</span></div></div>${_videoAttachmentLinksHtml(_videoCaseMaterials(j.attachments,j))||'<div class="video-attachment-hint">添付された素材・資料はありません。</div>'}</div>`}
@@ -6162,15 +6206,16 @@ async function savePortalJobAdmin(portalUid,id){
   const j=(PORTAL_JOBS||[]).find(x=>x._portalUid===portalUid&&x.id===id);if(!j)return;const external=_portalIsExternal(portalUid);
   const requestedStatus=document.getElementById('vp-status').value;
   if(requestedStatus!==j.status&&EDITOR_OWNED_VIDEO_STATUSES.has(requestedStatus))return toast('この進捗は担当編集者本人が編集者ポータルから更新してください','warn');
-  const at=Date.now(),deliveryDate=document.getElementById('vp-deadline').value,schedule={sharedDate:document.getElementById('vp-shared').value,editorDraftDate:document.getElementById('vp-editor-draft').value,clientDraftDate:document.getElementById('vp-client-draft').value,thumbnailDate:document.getElementById('vp-thumbnail').value,deliveryDate};
+  const at=Date.now(),deliveryDate=document.getElementById('vp-deadline').value,editorDraftDateSetter=document.getElementById('vp-editor-draft-setter')?.value||'editor',schedule={sharedDate:document.getElementById('vp-shared').value,editorDraftDate:document.getElementById('vp-editor-draft').value,clientDraftDate:document.getElementById('vp-client-draft').value,thumbnailDate:document.getElementById('vp-thumbnail').value,deliveryDate};
+  if(editorDraftDateSetter==='creator'&&!schedule.editorDraftDate)return toast('案件追加者が設定する場合は、編集者初稿日を入力してください','warn');
   const scheduleError=_jobScheduleError(schedule);if(scheduleError)return toast(scheduleError,'warn');
-  if(!deliveryDate)return toast('納品期限を入力してください','warn');
+  if(!deliveryDate)return toast('納期（予定）を入力してください','warn');
   const attachmentRead=_readVideoAttachments(document.getElementById('vp-attachment-list'));if(attachmentRead.error)return toast(attachmentRead.error,'warn');
-  const data={title:document.getElementById('vp-title').value.trim(),clientDisplay:document.getElementById('vp-client').value.trim(),deadline:deliveryDate,...schedule,status:requestedStatus,instructions:document.getElementById('vp-instructions').value.trim(),attachments:attachmentRead.items,correctionReason:document.getElementById('vp-correction').value.trim(),updatedAt:at,updatedBy:_myEmail(),history:[...(j.history||[]).slice(-49),{at,by:_myEmail(),type:'manager_update',status:requestedStatus}]};
+  const data={title:document.getElementById('vp-title').value.trim(),clientDisplay:document.getElementById('vp-client').value.trim(),deadline:deliveryDate,...schedule,editorDraftDateSetter,status:requestedStatus,instructions:document.getElementById('vp-instructions').value.trim(),attachments:attachmentRead.items,correctionReason:document.getElementById('vp-correction').value.trim(),updatedAt:at,updatedBy:_myEmail(),history:[...(j.history||[]).slice(-49),{at,by:_myEmail(),type:'manager_update',status:requestedStatus,editorDraftDateSetter}]};
   if(_isOwner()&&!external){
     const billingTerms=_portalBillingTerms(j.completedDeliveryDate);
     data.ownPay=Math.max(0,Number(document.getElementById('vp-pay').value)||0);data.payableMonth=billingTerms?.invoiceMonth||'';data.payableApproved=document.getElementById('vp-payable').value==='true';data.payableApprovedAt=data.payableApproved?at:null;
-    if(data.payableApproved&&(data.status!=='完了'||!billingTerms||!data.ownPay||!_videoSafeUrl(j.evidenceUrl||'')||j.blocker))return toast('実納品日・納品証跡・停止理由・金額を確認してから請求承認してください','warn');
+    if(data.payableApproved&&(data.status!=='完了'||!billingTerms||!data.ownPay||!_videoSafeUrl(j.evidenceUrl||'')||j.blocker))return toast('納品日・納品証跡・停止理由・金額を確認してから請求承認してください','warn');
   }
   try{
     const ref=fbDb.collection('editor_portals').doc(portalUid).collection('editor_jobs').doc(id),event=ref.collection('events').doc(),batch=fbDb.batch();
@@ -6185,16 +6230,102 @@ function _portalLegacyId(portalUid,id){return('ep_'+String(portalUid).slice(0,10
 function _newPortalLegacyJob(j){
   const client=(S.clients||[]).find(c=>!c.deleted&&String(c.name||'').trim()===String(j.clientDisplay||'').trim()),access=(ACCESS_RECORDS||[]).find(x=>x.id===j._portalUid),workerId=access?.workerId||null,at=Number(j.updatedAt)||Date.now();
   const biz=_portalVideoBiz(j);
-	  return{id:j.linkedLegacyJobId,biz,jobType:'edit',title:j.title||(biz==='haken'?'編集者直接依頼':'編集代行案件'),clientId:client?.id||null,workerId,workerIds:workerId?[workerId]:[],scope:'その他',status:j.status||'受注済み',sharedDate:j.sharedDate||String(j.createdAt?new Date(j.createdAt).toISOString().slice(0,10):today()),deliveryDate:j.deliveryDate||j.deadline||null,completedDeliveryDate:j.completedDeliveryDate||null,editorDraftDate:j.editorDraftDate||null,clientDraftDate:j.clientDraftDate||null,thumbnailDate:j.thumbnailDate||null,invoiceDate:null,dueDate:null,paymentDate:null,paidAt:null,payoutDate:null,unitPrice:0,workerPay:_portalIsExternal(j._portalUid)?0:Number(j.ownPay)||0,profit:0,notes:j.instructions||'',progressNote:j.progress||'',progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:[],progressEvents:Array.isArray(j.progressEvents)?j.progressEvents:[],workflow:j.workflow||null,lastProgressChangedByUid:j.lastProgressChangedByUid||null,lastProgressChangedByEmail:j.lastProgressChangedByEmail||null,lastProgressChangedByRole:j.lastProgressChangedByRole||null,evidenceUrl:j.evidenceUrl||'',blocker:j.blocker||'',attachments:_videoAttachments(j.attachments),portalUid:j._portalUid,portalJobId:j.id,source:'editor_portal',opsChecklist:[],createdAt:new Date().toISOString(),updatedAt:at,updatedBy:j.updatedBy||j.editorEmail||_myEmail()};
+	  return{id:j.linkedLegacyJobId,biz,jobType:'edit',title:j.title||(biz==='haken'?'編集者直接依頼':'編集代行案件'),clientId:client?.id||null,workerId,workerIds:workerId?[workerId]:[],scope:'その他',status:j.status||'受注済み',sharedDate:j.sharedDate||String(j.createdAt?new Date(j.createdAt).toISOString().slice(0,10):today()),deliveryDate:j.deliveryDate||j.deadline||null,completedDeliveryDate:j.completedDeliveryDate||null,editorDraftDate:j.editorDraftDate||null,editorDraftDateSetter:_editorDraftDateSetter(j),clientDraftDate:j.clientDraftDate||null,thumbnailDate:j.thumbnailDate||null,invoiceDate:null,dueDate:null,paymentDate:null,paidAt:null,payoutDate:null,unitPrice:0,workerPay:_portalIsExternal(j._portalUid)?0:Number(j.ownPay)||0,profit:0,notes:j.instructions||'',progressNote:j.progress||'',progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:[],progressEvents:Array.isArray(j.progressEvents)?j.progressEvents:[],workflow:j.workflow||null,lastProgressChangedByUid:j.lastProgressChangedByUid||null,lastProgressChangedByEmail:j.lastProgressChangedByEmail||null,lastProgressChangedByRole:j.lastProgressChangedByRole||null,evidenceUrl:j.evidenceUrl||'',blocker:j.blocker||'',attachments:_videoAttachments(j.attachments),portalUid:j._portalUid,portalJobId:j.id,source:'editor_portal',opsChecklist:[],createdAt:new Date().toISOString(),updatedAt:at,updatedBy:j.updatedBy||j.editorEmail||_myEmail()};
 }
 function _portalField(j,key,fallback){return Object.prototype.hasOwnProperty.call(j,key)?(j[key]||null):fallback;}
+function _legacyPortalJobId(parentId,subId){
+  return(`legacy_${String(parentId||'case')}_${String(subId||'main')}`).replace(/[^A-Za-z0-9_-]/g,'_').slice(0,220);
+}
+function _legacyPortalStatus(status){
+  const value=String(status||'');
+  if(['完了','キャンセル'].includes(value))return'';
+  if(['案件掲載中','募集中','編集者決定','受注済み','進行中','初稿提出済み','修正稿提出済み','D確認OK','初稿完成','確認待ち','修正中'].includes(value))return value;
+  if(value==='FB待ち')return'初稿提出済み';
+  if(['未着手','編集者進行中'].includes(value))return'進行中';
+  return'受注済み';
+}
+function _legacyPortalAccessForWorker(workerId){
+  const wid=String(workerId||'');if(!wid||wid===SELF_WID)return null;
+  const matches=(ACCESS_RECORDS||[]).filter(row=>row&&row.approved===true&&String(row.workerId||'')===wid&&Array.isArray(row.roles)&&row.roles.some(role=>['動画編集者','動画編集ディレクター'].includes(role)));
+  return matches.length===1?matches[0]:null;
+}
+function _legacyPortalWorkerId(parent,record,hasChildren){
+  const explicit=String(record?.workerId||'').trim();
+  if(explicit&&explicit!==SELF_WID)return explicit;
+  if(!hasChildren){
+    const parentExplicit=String(parent?.workerId||'').trim();
+    if(parentExplicit&&parentExplicit!==SELF_WID)return parentExplicit;
+  }
+  const parentIds=[...(Array.isArray(parent?.workerIds)?parent.workerIds:[]),parent?.workerId]
+    .map(value=>String(value||'').trim()).filter(value=>value&&value!==SELF_WID);
+  const unique=[...new Set(parentIds)];
+  return unique.length===1?unique[0]:'';
+}
+async function syncLegacyAssignedSubtasksToPortal(jobOrId,{silent=false,targetUid='',onlyMissing=false}={}){
+  const parent=typeof jobOrId==='string'?(S.jobs||[]).find(job=>String(job.id)===String(jobOrId)):jobOrId;
+  if(!parent||!fbDb||!FB_USER||!['edit','haken'].includes(jobBiz(parent)))return{synced:0,skipped:0};
+  if(!_isOwner()&&!(typeof myRoles==='function'&&myRoles().includes('動画編集ディレクター')))return{synced:0,skipped:0};
+  const hasChildren=(parent.subtasks||[]).length>0,records=hasChildren?(parent.subtasks||[]):[parent],client=(S.clients||[]).find(item=>String(item.id||'')===String(parent.clientId||'')),candidates=[],problems=[];
+  records.forEach((record,index)=>{
+    if(record?.deleted)return;
+    const status=_legacyPortalStatus(record.status||parent.status);if(!status)return;
+    if(hasChildren&&!String(record.id||'').trim()){problems.push(`${record.title||`サブ案件${index+1}`}：子案件IDが未設定`);return;}
+    const workerId=_legacyPortalWorkerId(parent,record,hasChildren),access=_legacyPortalAccessForWorker(workerId);
+    if(!access){if(_editorDraftDateSetter(record)==='editor')problems.push(`${record.title||'サブ案件'}：担当編集者のポータル連携が未設定`);return;}
+    // One-editor repair must never expose sibling subcases assigned to a
+    // different editor in the same legacy parent case.
+    if(targetUid&&String(access.id)!==String(targetUid))return;
+    if(!_isOwner()&&String(access.directorUid||'')!==String(FB_USER.uid||'')){problems.push(`${record.title||'サブ案件'}：自分のチーム外の編集者です`);return;}
+    const setter=_editorDraftDateSetter(record),draft=setter==='creator'?String(record.editorDraftDate||''):'';
+    if(setter==='creator'&&!draft){problems.push(`${record.title||'サブ案件'}：編集者初稿日が未入力`);return;}
+    if(record.portalUid&&String(record.portalUid)!==String(access.id)){problems.push(`${record.title||'サブ案件'}：同期後に担当者が変更されています`);return;}
+    const subId=String(record.id||parent.id),portalJobId=record.portalJobId||_legacyPortalJobId(parent.id,subId),deliveryDate=String(record.deliveryDate||parent.deliveryDate||''),at=Date.now();
+    if(!deliveryDate){problems.push(`${record.title||'サブ案件'}：納期（予定）が未入力`);return;}
+    candidates.push({record,access,workerId,subId,portalJobId,setter,draft,status,deliveryDate,at});
+  });
+  if(!candidates.length){if(!silent&&problems.length)toast(problems[0],'warn');return{synced:0,skipped:problems.length,problems};}
+  try{
+    const rows=await Promise.all(candidates.map(async item=>{const ref=fbDb.collection('editor_portals').doc(item.access.id).collection('editor_jobs').doc(item.portalJobId),snap=await ref.get();return{...item,ref,snap};})),batch=fbDb.batch(),failedRows=new Set(),alreadyRows=new Set();let writeCount=0;
+    for(const item of rows){
+      const existing=item.snap.exists?item.snap.data():null;
+      if(existing&&(existing.source!=='legacy_sync'||String(existing.legacyParentId||'')!==String(parent.id)||String(existing.legacySubtaskId||'')!==item.subId)){problems.push(`${item.record.title||'サブ案件'}：同期先IDが別案件で使用中`);failedRows.add(item.portalJobId);continue;}
+      if(existing&&onlyMissing){alreadyRows.add(item.portalJobId);continue;}
+      const title=String(item.record.title||parent.title||'案件').slice(0,120),parentName=String(parent.title||title).slice(0,120),clientDisplay=String(client?.name||parent.clientName||'クライアント未設定'),instructions=String(item.record.instructions||item.record.notes||parent.notes||'').slice(0,3000),requestUrl=String(item.record.requestUrl||parent.requestUrl||''),sourceUrl=String(item.record.sourceUrl||parent.sourceUrl||''),attachments=_videoAttachments([...(parent.attachments||[]),...(item.record.attachments||[])]);
+      if(existing){
+        const keepEditorDraft=item.setter==='editor'&&_editorDraftDateSetter(existing)==='editor'?String(existing.editorDraftDate||''):item.draft;
+        batch.set(item.ref,{title,clientDisplay,deadline:item.deliveryDate,sharedDate:String(item.record.sharedDate||parent.sharedDate||''),editorDraftDateSetter:item.setter,editorDraftDate:keepEditorDraft,clientDraftDate:String(item.record.clientDraftDate||parent.clientDraftDate||''),thumbnailDate:String(item.record.thumbnailDate||parent.thumbnailDate||''),deliveryDate:item.deliveryDate,instructions,urgent:false,attachments,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:_myEmail()},{merge:true});writeCount++;
+      }else{
+        batch.set(item.ref,{recordType:'editor_portal_job',businessType:jobBiz(parent)==='haken'?'dispatch':'edit_agency',title,caseName:parentName,parentCaseId:`legacy:${parent.id}`,parentCaseName:parentName,clientId:String(parent.clientId||''),clientDisplay,accountId:String(parent.accountId||''),accountDisplay:String(parent.accountName||''),deadline:item.deliveryDate,requestUrl,sourceUrl,sharedDate:String(item.record.sharedDate||parent.sharedDate||''),editorDraftDate:item.draft,editorDraftDateSetter:item.setter,clientDraftDate:String(item.record.clientDraftDate||parent.clientDraftDate||''),thumbnailDate:String(item.record.thumbnailDate||parent.thumbnailDate||''),deliveryDate:item.deliveryDate,instructions,urgent:false,status:item.status,progress:String(item.record.progress||''),evidenceUrl:String(item.record.evidenceUrl||''),blocker:String(item.record.blocker||''),submittedByUid:item.access.id,editorUid:item.access.id,editorEmail:String(item.access.email||''),editorName:String(item.access.name||_paymentWorkerName(item.workerId)||''),directorUid:String(item.access.directorUid||''),source:'legacy_sync',legacyParentId:String(parent.id),legacySubtaskId:item.subId,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp(),history:[{at:item.at,by:_myEmail(),type:'legacy_sync_created'}],attachments});writeCount++;
+      }
+    }
+    if(failedRows.size===rows.length){if(!silent)toast(problems[0],'warn');return{synced:0,skipped:problems.length,problems};}
+    if(writeCount)await batch.commit();
+    let linked=false;rows.forEach(item=>{if(failedRows.has(item.portalJobId))return;item.record.portalUid=item.access.id;item.record.portalJobId=item.portalJobId;item.record.parentCaseId=`legacy:${parent.id}`;linked=true;});
+    if(linked){parent.updatedAt=Date.now();parent.updatedBy=_myEmail();save();}
+    const synced=writeCount,alreadyLinked=alreadyRows.size;if(!silent)toast(`${synced}件を担当編集者の画面へ同期しました${alreadyLinked?`（同期済み ${alreadyLinked}件）`:''}${problems.length?` （${problems.length}件は要確認）`:''}`,problems.length?'warn':undefined);
+    return{synced,alreadyLinked,skipped:problems.length,problems};
+  }catch(error){console.warn('legacy portal sync failed',error);if(!silent)toast('案件は保存しましたが、担当編集者の画面へ同期できませんでした','warn');return{synced:0,skipped:candidates.length,error};}
+}
 function _applyPortalToLegacy(j,createMissing=false){
-  if(!j?.linkedLegacyJobId)return false;
-  let target=(S.jobs||[]).find(x=>x.id===j.linkedLegacyJobId),changed=false;
+  if(!j)return false;
+  const linkedId=String(j.linkedLegacyJobId||j.legacyParentId||j.parentCaseId||'').replace(/^legacy:/,'');
+  if(!linkedId)return false;
+  let target=(S.jobs||[]).find(x=>String(x.id)===linkedId||String(x.boardParentCaseId||'')===linkedId),changed=false;
   if(!target&&createMissing&&_isOwner()){target=_newPortalLegacyJob(j);S.jobs.unshift(target);changed=true;}
   if(!target)return false;
+  const subIndex=(target.subtasks||[]).findIndex(sub=>String(sub?.id||'')===String(j.id||'')||String(sub?.portalJobId||'')===String(j.id||''));
+  if(subIndex>=0){
+    const sub=target.subtasks[subIndex],access=(ACCESS_RECORDS||[]).find(x=>x.id===j._portalUid),workerId=access?.workerId||sub.workerId||null,billingSnapshot=_paymentRecipientSnapshot(workerId,sub),updatedAt=Number(j.updatedAt)||Date.now(),updatedBy=j.updatedBy||j.editorEmail||_myEmail();
+    if(sub.portalUid&&sub.portalUid!==j._portalUid||sub.portalJobId&&sub.portalJobId!==j.id)return false;
+    const next={...sub,workerId,...billingSnapshot,status:j.status||sub.status,sharedDate:_portalField(j,'sharedDate',sub.sharedDate),editorDraftDate:_portalField(j,'editorDraftDate',sub.editorDraftDate),editorDraftDateSetter:_editorDraftDateSetter(j,_editorDraftDateSetter(sub)),clientDraftDate:_portalField(j,'clientDraftDate',sub.clientDraftDate),thumbnailDate:_portalField(j,'thumbnailDate',sub.thumbnailDate),deliveryDate:_portalField(j,'deliveryDate',j.deadline||sub.deliveryDate),completedDeliveryDate:_portalField(j,'completedDeliveryDate',sub.completedDeliveryDate),instructions:j.instructions||sub.instructions,progress:j.progress||sub.progress,progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:(sub.progressMilestones||[]),progressEvents:Array.isArray(j.progressEvents)?j.progressEvents:(sub.progressEvents||[]),workflow:j.workflow||sub.workflow||null,evidenceUrl:j.evidenceUrl||sub.evidenceUrl,blocker:j.blocker||'',attachments:Array.isArray(j.attachments)?_videoAttachments(j.attachments):(sub.attachments||[]),portalUid:j._portalUid,portalJobId:j.id,updatedAt,updatedBy};
+    if(Object.keys(next).some(key=>JSON.stringify(sub[key])!==JSON.stringify(next[key]))){
+      target.subtasks=target.subtasks.map((item,index)=>index===subIndex?next:item);target.updatedAt=updatedAt;target.updatedBy=updatedBy;target.statusHistory=[...(target.statusHistory||[]).slice(-99),{at:updatedAt,by:updatedBy,type:'portal_subcase_update',subId:String(sub.id||''),status:next.status,editorDraftDate:next.editorDraftDate,editorDraftDateSetter:next.editorDraftDateSetter,source:'editor_portal'}];changed=true;
+    }
+    return changed;
+  }
+  if(!j.linkedLegacyJobId)return changed;
   if(target.portalUid&&target.portalUid!==j._portalUid||target.portalJobId&&target.portalJobId!==j.id)return false;
-	  const next={title:j.title||target.title,status:j.status||target.status,sharedDate:_portalField(j,'sharedDate',target.sharedDate),editorDraftDate:_portalField(j,'editorDraftDate',target.editorDraftDate),clientDraftDate:_portalField(j,'clientDraftDate',target.clientDraftDate),thumbnailDate:_portalField(j,'thumbnailDate',target.thumbnailDate),deliveryDate:_portalField(j,'deliveryDate',j.deadline||target.deliveryDate),completedDeliveryDate:_portalField(j,'completedDeliveryDate',target.completedDeliveryDate),notes:j.instructions||target.notes,progressNote:j.progress||target.progressNote,progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:(target.progressMilestones||[]),progressEvents:Array.isArray(j.progressEvents)?j.progressEvents:(target.progressEvents||[]),workflow:j.workflow||target.workflow||null,lastProgressChangedByUid:j.lastProgressChangedByUid||target.lastProgressChangedByUid||null,lastProgressChangedByEmail:j.lastProgressChangedByEmail||target.lastProgressChangedByEmail||null,lastProgressChangedByRole:j.lastProgressChangedByRole||target.lastProgressChangedByRole||null,evidenceUrl:j.evidenceUrl||target.evidenceUrl,blocker:j.blocker||'',attachments:Array.isArray(j.attachments)?_videoAttachments(j.attachments):(target.attachments||[]),updatedAt:Number(j.updatedAt)||Date.now(),updatedBy:j.updatedBy||j.editorEmail||_myEmail()};
+	  const next={title:j.title||target.title,status:j.status||target.status,sharedDate:_portalField(j,'sharedDate',target.sharedDate),editorDraftDate:_portalField(j,'editorDraftDate',target.editorDraftDate),editorDraftDateSetter:_editorDraftDateSetter(j,_editorDraftDateSetter(target)),clientDraftDate:_portalField(j,'clientDraftDate',target.clientDraftDate),thumbnailDate:_portalField(j,'thumbnailDate',target.thumbnailDate),deliveryDate:_portalField(j,'deliveryDate',j.deadline||target.deliveryDate),completedDeliveryDate:_portalField(j,'completedDeliveryDate',target.completedDeliveryDate),notes:j.instructions||target.notes,progressNote:j.progress||target.progressNote,progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:(target.progressMilestones||[]),progressEvents:Array.isArray(j.progressEvents)?j.progressEvents:(target.progressEvents||[]),workflow:j.workflow||target.workflow||null,lastProgressChangedByUid:j.lastProgressChangedByUid||target.lastProgressChangedByUid||null,lastProgressChangedByEmail:j.lastProgressChangedByEmail||target.lastProgressChangedByEmail||null,lastProgressChangedByRole:j.lastProgressChangedByRole||target.lastProgressChangedByRole||null,evidenceUrl:j.evidenceUrl||target.evidenceUrl,blocker:j.blocker||'',attachments:Array.isArray(j.attachments)?_videoAttachments(j.attachments):(target.attachments||[]),updatedAt:Number(j.updatedAt)||Date.now(),updatedBy:j.updatedBy||j.editorEmail||_myEmail()};
   if(Object.keys(next).some(k=>JSON.stringify(target[k])!==JSON.stringify(next[k]))){Object.assign(target,next);target.statusHistory=[...(target.statusHistory||[]).slice(-99),{at:next.updatedAt,by:next.updatedBy,status:next.status,note:next.progressNote,evidenceUrl:next.evidenceUrl,source:'editor_portal'}];changed=true;}
   return changed;
 }
@@ -6209,10 +6340,44 @@ async function promotePortalJob(portalUid,id){
     save();closeModal();render();toast('既存の案件管理へ統合しました');
   }catch(e){console.warn('portal integration',e);toast('案件台帳へ統合できませんでした','err');}
 }
+function _invoiceTermsForMonth(month){
+  const match=String(month||'').match(/^(\d{4})-(\d{2})$/);if(!match)return null;
+  const y=Number(match[1]),m=Number(match[2]),due=new Date(y,m+1,0);
+  return{invoiceMonth:month,invoiceAvailableOn:`${month}-25`,paymentDueDate:`${due.getFullYear()}-${String(due.getMonth()+1).padStart(2,'0')}-${String(due.getDate()).padStart(2,'0')}`};
+}
+function _directorTeamInvoiceLines(portalUid,month,rate){
+  const lines=[];
+  (BJOBS()||[]).filter(j=>j&&!j.deleted).forEach(j=>{
+    const subs=(j.subtasks||[]).filter(s=>Number(s.workerPay)>0),records=subs.length?subs:[j];
+    records.forEach((record,index)=>{
+      if(!(Number(record.workerPay)>0))return;
+      const recipient=_paymentRecipientForRecord(record,record.workerId),completedDeliveryDate=record.completedDeliveryDate||j.completedDeliveryDate||'',terms=_portalBillingTerms(completedDeliveryDate);
+      if(!recipient.ok||recipient.route!=='director_team'||recipient.payeeUid!==portalUid||terms?.invoiceMonth!==month)return;
+      const subId=subs.length?String(record.id||index):'main',title=subs.length?`${j.title||'親案件'} / ${record.title||'サブ案件'}`:(j.title||'案件'),assignee=_paymentWorkerName(record.workerId);
+      lines.push({jobId:`team:${j.id}:${subId}`,title,serviceDescription:`${title}（作業担当 ${assignee}）`,transactionDate:completedDeliveryDate,amount:Number(record.workerPay),taxRate:rate});
+    });
+  });
+  return lines.sort((a,b)=>String(a.jobId).localeCompare(String(b.jobId)));
+}
+function _directorSettlementTargetsForJob(job){
+  const targets=[];if(!job||job.deleted)return targets;
+  const subs=(job.subtasks||[]).filter(s=>Number(s.workerPay)>0),records=subs.length?subs:[job];
+  records.forEach(record=>{
+    if(!(Number(record.workerPay)>0))return;
+    const recipient=_paymentRecipientForRecord(record,record.workerId),terms=_portalBillingTerms(record.completedDeliveryDate||job.completedDeliveryDate||'');
+    if(recipient.ok&&recipient.route==='director_team'&&recipient.payeeUid&&terms?.invoiceMonth)targets.push(`${recipient.payeeUid}|${terms.invoiceMonth}`);
+  });
+  return[...new Set(targets)];
+}
+function _refreshDirectorSettlementTargets(keys){
+  if(!_isOwner()||!FB_USER||!fbDb)return Promise.resolve();
+  return Promise.all([...new Set(keys||[])].map(key=>{const split=String(key).split('|');return split.length===2?_refreshInvoiceAuthorization(split[0],split[1]):null;}));
+}
 async function _refreshInvoiceAuthorization(portalUid,month,overrideJob){
   if(!_isOwner()||!month||_portalIsExternal(portalUid))return;
-  const all=(PORTAL_JOBS||[]).map(j=>j._portalUid===portalUid&&overrideJob&&j.id===overrideJob.id?{...j,...overrideJob}:j),jobs=all.filter(j=>{const terms=_portalBillingTerms(j.completedDeliveryDate);return j._portalUid===portalUid&&j.status==='完了'&&terms?.invoiceMonth===month&&j.payableApproved===true&&Number(j.ownPay)>0}).sort((a,b)=>String(a.id).localeCompare(String(b.id))),billingTerms=_portalBillingTerms(jobs[0]?.completedDeliveryDate||overrideJob?.completedDeliveryDate);if(!billingTerms||billingTerms.invoiceMonth!==month)return;
-  const profile=(PORTAL_PROFILES||[]).find(p=>p._portalUid===portalUid),rate=[0,8,10].includes(Number(profile?.taxRate))?Number(profile.taxRate):0,lines=jobs.map(j=>({jobId:j.id,title:j.title||'',serviceDescription:j.title||'',transactionDate:j.completedDeliveryDate,amount:Number(j.ownPay),taxRate:rate})),jobIds=lines.map(x=>x.jobId),subtotal=lines.reduce((n,x)=>n+x.amount,0),taxByRate={[rate]:Math.round(subtotal*rate/100)},tax=Object.values(taxByRate).reduce((a,b)=>a+b,0),total=subtotal+tax,active=jobIds.length>0,authId=month,ref=fbDb.collection('editor_portals').doc(portalUid).collection('invoice_authorizations').doc(authId),event=ref.collection('events').doc();
+  const all=(PORTAL_JOBS||[]).map(j=>j._portalUid===portalUid&&overrideJob&&j.id===overrideJob.id?{...j,...overrideJob}:j),jobs=all.filter(j=>{const terms=_portalBillingTerms(j.completedDeliveryDate);return j._portalUid===portalUid&&j.status==='完了'&&terms?.invoiceMonth===month&&j.payableApproved===true&&Number(j.ownPay)>0}).sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+  const profile=(PORTAL_PROFILES||[]).find(p=>p._portalUid===portalUid),rate=[0,8,10].includes(Number(profile?.taxRate))?Number(profile.taxRate):0,directLines=jobs.map(j=>({jobId:j.id,title:j.title||'',serviceDescription:j.title||'',transactionDate:j.completedDeliveryDate,amount:Number(j.ownPay),taxRate:rate})),teamLines=_directorTeamInvoiceLines(portalUid,month,rate),lines=[...directLines,...teamLines].sort((a,b)=>String(a.jobId).localeCompare(String(b.jobId))),billingTerms=_portalBillingTerms(lines[0]?.transactionDate)||_invoiceTermsForMonth(month);if(!billingTerms||billingTerms.invoiceMonth!==month)return;
+  const jobIds=lines.map(x=>x.jobId),subtotal=lines.reduce((n,x)=>n+x.amount,0),taxByRate={[rate]:Math.round(subtotal*rate/100)},tax=Object.values(taxByRate).reduce((a,b)=>a+b,0),total=subtotal+tax,active=jobIds.length>0,authId=month,ref=fbDb.collection('editor_portals').doc(portalUid).collection('invoice_authorizations').doc(authId),event=ref.collection('events').doc();
   await fbDb.runTransaction(async tx=>{
     const snap=await tx.get(ref),existing=snap.exists?snap.data():null,unchanged=existing&&existing.active===active&&existing.month===month&&existing.invoiceAvailableOn===billingTerms.invoiceAvailableOn&&existing.paymentDueDate===billingTerms.paymentDueDate&&JSON.stringify(existing.jobIds||[])===JSON.stringify(jobIds)&&JSON.stringify(existing.lines||[])===JSON.stringify(lines)&&Number(existing.subtotal)===subtotal&&JSON.stringify(existing.taxByRate||{})===JSON.stringify(taxByRate)&&Number(existing.tax)===tax&&Number(existing.total)===total;
     if(unchanged)return;
@@ -6255,13 +6420,26 @@ function _portalInvoiceCheck(x){
   if(!exactAuthorization)return{ok:false,reason:'請求内容が管理者の確定報酬と一致しません'};
   const duplicate=(PORTAL_INVOICES||[]).some(v=>v._portalUid===x._portalUid&&v.id!==x.id&&!['取消','差戻し'].includes(v.status)&&(v.jobIds||[]).some(jobId=>ids.includes(jobId)));
   if(duplicate)return{ok:false,reason:'同じ案件を含む有効な請求書が既にあります'};
+  const teamLines=lines.filter(line=>String(line?.jobId||'').startsWith('team:'));
+  const profile=(PORTAL_PROFILES||[]).find(profile=>profile._portalUid===x._portalUid),rate=[0,8,10].includes(Number(profile?.taxRate))?Number(profile.taxRate):0;
+  const expectedTeamLines=_directorTeamInvoiceLines(x._portalUid,String(x.month||''),rate);
+  if(JSON.stringify(teamLines)!==JSON.stringify(expectedTeamLines))return{ok:false,reason:'外部編集者分の明細が現在の作業担当・支払先と一致しません'};
+  const expectedTeamById=new Map(expectedTeamLines.map(line=>[String(line.jobId),line]));
   let subtotal=0;const taxByRate={};
   for(const jobId of ids){
-    const j=(PORTAL_JOBS||[]).find(v=>v._portalUid===x._portalUid&&v.id===jobId),line=lines.find(v=>v.jobId===jobId);
+    const line=lines.find(v=>v.jobId===jobId);
+    if(String(jobId).startsWith('team:')){
+      const expected=expectedTeamById.get(String(jobId));
+      if(!expected||JSON.stringify(line)!==JSON.stringify(expected))return{ok:false,reason:'外部編集者分の明細が現在の作業担当・支払先と一致しません'};
+      const teamRate=Number(line.taxRate||0);if(![0,8,10].includes(teamRate))return{ok:false,reason:'税率を確認してください'};
+      subtotal+=Number(line.amount);taxByRate[teamRate]=(taxByRate[teamRate]||0)+Number(line.amount);
+      continue;
+    }
+    const j=(PORTAL_JOBS||[]).find(v=>v._portalUid===x._portalUid&&v.id===jobId);
     if(!j||!line)return{ok:false,reason:'元案件または明細が見つかりません'};
     if(j.payableApproved!==true||Number(j.ownPay)<=0)return{ok:false,reason:'未承認の報酬が含まれています'};
-    const terms=_portalBillingTerms(j.completedDeliveryDate);if(!terms||terms.invoiceMonth!==String(x.month||'')||terms.invoiceAvailableOn!==String(x.invoiceAvailableOn||'')||terms.paymentDueDate!==String(x.paymentDueDate||''))return{ok:false,reason:'実納品日から計算した請求日・支払日と一致しません'};
-    if(String(line.transactionDate||'')!==String(j.completedDeliveryDate||''))return{ok:false,reason:'明細の実納品日が案件と一致しません'};
+    const terms=_portalBillingTerms(j.completedDeliveryDate);if(!terms||terms.invoiceMonth!==String(x.month||'')||terms.invoiceAvailableOn!==String(x.invoiceAvailableOn||'')||terms.paymentDueDate!==String(x.paymentDueDate||''))return{ok:false,reason:'納品日から計算した請求日・支払日と一致しません'};
+    if(String(line.transactionDate||'')!==String(j.completedDeliveryDate||''))return{ok:false,reason:'明細の納品日が案件と一致しません'};
     if(Number(line.amount)!==Number(j.ownPay))return{ok:false,reason:'請求額が承認済み報酬と一致しません'};
     const rate=Number(line.taxRate||0);if(![0,8,10].includes(rate))return{ok:false,reason:'税率を確認してください'};
     subtotal+=Number(line.amount);taxByRate[rate]=(taxByRate[rate]||0)+Number(line.amount);
@@ -6323,8 +6501,8 @@ const GUIDE_PAGE_GROUPS=[
 ];
 const GUIDE_PAGE_DEFS={
   editorportal:{purpose:'編集者が、自分の案件を受け、初稿・修正稿の提出、予定の登録、請求書の作成をする画面です。',steps:['左メニューの「編集者本人ポータル」を開きます。','「編集者本人ポータルを開く」を押して、本人用画面を開きます。','「案件を探す」で募集案件を受け、「担当案件」で初稿または修正稿を提出します。','予定、マニュアル、匿名目安箱、請求書、登録情報もこの画面から開けます。'],access:'オーナー、動画編集ディレクター。動画編集者はログイン後に本人用画面を開けます。'},
-  videoedit:{purpose:'mono.createがクライアントから受けた編集代行案件を、募集から納品まで管理する画面です。',steps:['「＋ 編集代行案件」で親案件と子案件を登録し、必要に応じて編集者の募集を開始します。','編集者が「この案件を受ける」を押したら、担当者・編集者初稿・クライアント初稿・納品期限を確認します。','親案件の「サブ案件」を開き、各動画の担当者・初稿日・期限・状況を確認します。','編集者は初稿・修正稿を提出します。ディレクターまたはオーナーがD確認・先方提出・修正指示を更新し、先方OK後の実納品は担当編集者が記録します。'],access:'オーナー、動画編集ディレクター、営業など、アクセスを許可された社内メンバー。'},
-  videohaken:{purpose:'編集者が派遣先から直接受けた案件を登録し、進み具合を管理する画面です。',steps:['編集者は編集者本人ポータルの「担当案件」から、「9月分」などの親案件と各動画の子案件を登録します。','オーナー・ディレクターは、各子案件の担当者・編集者初稿・クライアント初稿・納品期限・進み具合を確認します。','親案件の「サブ案件」を開き、各動画の担当者・初稿日・期限・状況を確認します。','編集者は初稿・修正稿を提出します。ディレクターまたはオーナーがD確認・先方提出・修正指示を更新し、先方OK後の実納品は担当編集者が記録します。'],access:'オーナー、動画編集ディレクター、営業など、アクセスを許可された社内メンバー。'},
+  videoedit:{purpose:'mono.createがクライアントから受けた編集代行案件を、募集から納品まで管理する画面です。',steps:['「＋ 編集代行案件」で親案件と子案件を登録し、必要に応じて編集者の募集を開始します。','編集者が「この案件を受ける」を押したら、担当者・編集者初稿・クライアント初稿・納期（予定）を確認します。','親案件の「サブ案件」を開き、各動画の担当者・初稿日・期限・状況を確認します。','編集者は初稿・修正稿を提出します。ディレクターまたはオーナーがD確認・先方提出・修正指示を更新します。先方OK後は担当編集者が納品日と証跡URLを記録します。納品日が未記録の案件には報酬が発生しません。'],access:'オーナー、動画編集ディレクター、営業など、アクセスを許可された社内メンバー。'},
+  videohaken:{purpose:'編集者が派遣先から直接受けた案件を登録し、進み具合を管理する画面です。',steps:['編集者は編集者本人ポータルの「担当案件」から、「9月分」などの親案件と各動画の子案件を登録します。','オーナー・ディレクターは、各子案件の担当者・編集者初稿・クライアント初稿・納期（予定）・進み具合を確認します。','親案件の「サブ案件」を開き、各動画の担当者・初稿日・期限・状況を確認します。','編集者は初稿・修正稿を提出します。ディレクターまたはオーナーがD確認・先方提出・修正指示を更新します。先方OK後は担当編集者が納品日と証跡URLを記録します。納品日が未記録の案件には報酬が発生しません。'],access:'オーナー、動画編集ディレクター、営業など、アクセスを許可された社内メンバー。'},
   videoclients:{purpose:'既存クライアントと、そのクライアントから依頼されるアカウントを分けて管理します。',steps:['既存クライアントを選び、必要なアカウント名を追加します。','案件を担当する編集者へ、必要なクライアント・アカウントだけ共有します。','名称や契約情報が変わったときだけ制作台帳を更新します。'],access:'オーナー、動画編集ディレクター'},
   workers:{purpose:'編集者の採用状況、スキル、担当案件、契約区分を確認するページです。',steps:['編集者名を開き、採用状況・スキル・最低依頼料を確認します。','ログインを許可する編集者には、担当ディレクターと契約区分を設定します。','担当中案件を確認し、割り当てや進捗に漏れがないか確認します。'],access:'オーナー、動画編集ディレクター'},
   videoschedules:{purpose:'編集者が登録した今週の1週間を、カレンダーで確認するページです。',steps:['月曜日に届く通知から開き、今週の編集可能日を入力します。','同じ予定は一括登録し、毎週同じ場合はルーティン保存を使います。','案件を割り当てる前に、曜日・時間・受託可能本数を確認します。'],access:'オーナー、動画編集ディレクター。入力は編集者本人'},
@@ -6439,7 +6617,7 @@ function rGuide(){
     <div class="guide-start-card"><span class="guide-start-mark">2</span><b>「*」が付いた項目を入力する</b><span>保存できないときは、未入力の必須項目とURL・日付の順序を確認します。</span></div>
     <div class="guide-start-card"><span class="guide-start-mark">3</span><b>保存完了は画面で確認する</b><span>完了メッセージと一覧の変更を確認します。画面を開いただけでは保存完了ではありません。</span></div>
   </div>
-  ${canVideo?`<div class="guide-section-title">動画案件の状態の見方</div><div class="guide-status-grid"><div class="guide-status editing"><b>編集者進行中</b><span>編集者が作業している状態。納品期限を過ぎると期限超過に入ります。</span></div><div class="guide-status review"><b>確認待ち</b><span>初稿や修正稿の確認中。期限超過には入りません。</span></div><div class="guide-status review"><b>修正中</b><span>返却内容に対応している状態。期限超過には入りません。</span></div><div class="guide-status done"><b>完了</b><span>先方OK後に担当編集者が実納品日と証跡URLを記録した状態。請求と支払の確認へ進みます。</span></div></div>`:''}
+  ${canVideo?`<div class="guide-section-title">動画案件の状態の見方</div><div class="guide-status-grid"><div class="guide-status editing"><b>編集者進行中</b><span>編集者が作業している状態。納期（予定）が明日の案件は赤、2日後の案件は黄で表示します。</span></div><div class="guide-status review"><b>確認待ち</b><span>初稿や修正稿の確認中。期限超過には入りません。</span></div><div class="guide-status review"><b>修正中</b><span>返却内容に対応している状態。期限超過には入りません。</span></div><div class="guide-status done"><b>完了</b><span>先方OK後に担当編集者が納品日と証跡URLを記録した状態。納品日が未記録の案件には報酬が発生しません。</span></div></div>`:''}
   <div class="guide-section-title">動画編集案件の基本の流れ</div>
   <div class="guide-flow">
     <div class="guide-step"><div class="guide-step-no">STEP 1</div><b>案件を受ける</b><span>クライアントとアカウント、納期を確認します。</span></div>
@@ -6526,8 +6704,15 @@ function rVideoOperations(showBusinessSwitcher=false,biz=PBIZ){
   if(VIDEO_STATUS&&!BIZ_CFG[biz].statuses.includes(VIDEO_STATUS))VIDEO_STATUS='';
   const all=_videoJobs().filter(j=>j.biz===biz),active=all.filter(j=>!['完了','キャンセル'].includes(j.status)),overdue=active.filter(j=>_videoIsOverdue(j)),unassigned=active.filter(j=>j._source==='legacy'&&j.assignee==='未割当'),blocked=active.filter(j=>j.blocker),review=active.filter(j=>_videoPhase(j.status).id==='review'),portalCount=all.reduce((count,j)=>count+(j._portalChildCount||Number(j._source==='portal')),0),subcaseCount=all.reduce((n,j)=>n+(j.subtasks||[]).length,0);
   const editorPortalReady=ACCESS_CONTROL.configured===true&&Array.isArray(ACCESS_CONTROL.compatibilityEmails)&&ACCESS_CONTROL.compatibilityEmails.length>0;
-  const tabs=[['overview','ダッシュボード'],['progress','編集進行ボード'],['board','工程ボード'],['queue','対応キュー'],['legacy','従来の案件管理']];
-  const title=biz==='haken'?'編集者派遣案件':'編集代行案件',description=biz==='haken'?'編集者がクライアントから直接受け、自分で登録した案件を管理':'mono.createがクライアントから受け、編集者が受託する案件を管理';
+  const operationTabs=[['overview','要対応'],['progress','編集進行ボード'],['board','工程ボード'],['queue','対応キュー']];
+  // 旧画面の管理機能は別画面へ隔離せず、同じ新ワークスペースから直接開く。
+  // 集計や保存処理は従来の renderer を再利用し、旧データと二重管理しない。
+  const managementTabs=BIZ_CFG[biz].tabs.filter(_canOpenProjectTab).map(k=>[`manage-${k}`,k==='worker'?BIZ_CFG[biz].lbl.member:PTAB_LBL[k]]);
+  const tabs=[...operationTabs,...managementTabs];
+  if(!tabs.some(([k])=>k===VIDEO_TAB)){VIDEO_TAB='overview';sessionStorage.setItem('mc_video_tab',VIDEO_TAB);}
+  const managementKey=VIDEO_TAB.startsWith('manage-')?VIDEO_TAB.slice(7):'';
+  const title=biz==='haken'?'編集者派遣案件':'編集代行案件',baseDescription=biz==='haken'?'編集者がクライアントから直接受け、自分で登録した案件を管理':'mono.createがクライアントから受け、編集者が受託する案件を管理';
+  const description=managementKey?'過去から引き継いだ案件・金額・支払い記録を、以前と同じ集計で管理します。':baseDescription;
   const screenSwitch=`<div class="app-context-switch" role="tablist" aria-label="動画案件の種類"><button class="btn btn-sm" role="tab" aria-selected="${biz==='edit'}" aria-controls="video-workspace" onclick="setV('videoedit')">編集代行</button><button class="btn btn-sm" role="tab" aria-selected="${biz==='haken'}" aria-controls="video-workspace" onclick="setV('videohaken')">編集者派遣</button></div>`;
   let board='',queue='';
   if(VIDEO_TAB==='board'){
@@ -6544,8 +6729,9 @@ function rVideoOperations(showBusinessSwitcher=false,biz=PBIZ){
   const acceptanceNote=biz==='edit'&&_isOwner()?'<div style="font-size:11px;color:var(--t2);margin:-2px 0 10px;padding:8px 10px;border-radius:8px;background:var(--card2)">この管理画面は案件を掲載する側です。編集者は「案件を探す」から「この案件を受ける」を押します。</div>':'';
   const roleNote=_isOwner()?'全案件の優先順位・請求・配置を管理します。':'担当する編集者と案件だけを確認・判断します。';
   const addJobAction=_videoCanEdit()?(biz==='edit'?'<button class="btn btn-p" onclick="window.managerOpenBoardForm?managerOpenBoardForm():openJobModal()">＋ 案件を掲載</button>':'<button class="btn btn-p" onclick="openJobModal()">＋ 派遣案件</button>'):'';
+  const managementActions=_videoCanEdit()?`<button class="btn btn-p" onclick="openClientModal()">＋ クライアント追加</button><button class="btn btn-g" onclick="openJobModal()">＋ 案件追加</button>`:'';
   const legacyAddAction=_videoCanEdit()&&biz==='edit'?'<button class="btn btn-g btn-sm" onclick="openJobModal()">従来形式で案件を直接登録</button>':'';
-  const headerPrimary=VIDEO_TAB==='overview'&&attentionTotal?`<button class="btn btn-p" onclick="setVideoTab('queue')">要対応 ${attentionTotal}件を確認</button>`:addJobAction;
+  const headerPrimary=managementKey?managementActions:(VIDEO_TAB==='overview'&&attentionTotal?`<button class="btn btn-p" onclick="setVideoTab('queue')">要対応 ${attentionTotal}件を確認</button>`:addJobAction);
   const utilityActions=`${VIDEO_TAB==='overview'&&attentionTotal?addJobAction:''}${legacyAddAction}${ownerAcceptancePreview}${editorPortalReady?'<a class="btn btn-g btn-sm" href="./editor.html" target="_blank" rel="noopener">編集者画面</a>':''}`;
   let workspaceBody=overview;
   if(VIDEO_TAB==='progress'){
@@ -6554,7 +6740,13 @@ function rVideoOperations(showBusinessSwitcher=false,biz=PBIZ){
   }else if(VIDEO_TAB==='board'){
     workspaceBody=`<div class="app-searchbar"><input aria-label="案件検索" placeholder="案件・クライアント・担当者を検索" value="${esc(VIDEO_QUERY)}" oninput="setVideoQuery(this.value)"><select aria-label="ステータス絞り込み" onchange="VIDEO_STATUS=this.value;VIDEO_RENDER_LIMIT=50;render()"><option value="">すべてのステータス</option>${BIZ_CFG[biz].statuses.map(s=>`<option value="${esc(s)}" ${VIDEO_STATUS===s?'selected':''}>${esc(bizStatusLabel(biz,s))}</option>`).join('')}</select><select aria-label="案件の並び替え" onchange="VIDEO_RENDER_LIMIT=50;setVideoSort(this.value)"><option value="deadline" ${VIDEO_SORT==='deadline'?'selected':''}>期限が近い順</option><option value="updated-desc" ${VIDEO_SORT==='updated-desc'?'selected':''}>更新が新しい順</option><option value="updated-asc" ${VIDEO_SORT==='updated-asc'?'selected':''}>更新が古い順</option><option value="title" ${VIDEO_SORT==='title'?'selected':''}>案件名順</option></select></div><div class="app-scroll-hint" aria-hidden="true">工程ボードは左右にスクロールできます</div>${board}`;
   }else if(VIDEO_TAB==='queue')workspaceBody=`<div class="app-queue-grid">${queue}</div>`;
-  return`${showBusinessSwitcher?rBizBar():''}<div id="video-workspace"><div class="app-breadcrumb"><span>動画編集事業</span><span>${biz==='haken'?'編集者派遣':'編集代行'}</span><span>${tabs.find(x=>x[0]===VIDEO_TAB)?.[1]||'ダッシュボード'}</span></div>${screenSwitch}<header class="app-header"><div class="app-header-copy"><h1>${title}</h1><p>${roleNote} ${description}</p></div><div class="app-header-actions">${headerPrimary}${utilityActions?`<details><summary class="btn btn-g btn-sm">その他</summary><div style="position:absolute;right:0;z-index:20;display:grid;gap:6px;padding:8px;margin-top:6px;border:1px solid var(--border);border-radius:10px;background:var(--card);box-shadow:var(--shadow-lg)">${utilityActions}</div></details>`:''}</div></header>${acceptanceNote}${rVideoNotificationCenter(biz)}<div class="app-view-tabs" role="tablist" aria-label="動画案件の表示">${tabs.map(([k,l])=>`<button class="btn btn-sm" role="tab" aria-selected="${VIDEO_TAB===k}" aria-controls="video-workspace" onclick="setVideoTab('${k}')">${k==='overview'?'要対応':l}</button>`).join('')}</div>${workspaceBody}</div>`;
+  if(managementKey){
+    const clients=S.clients.filter(c=>!c.deleted);
+    const renderer={board:rProjBoard,deadline:rProjDeadline,listing:rProjListing,list:()=>rProjList(clients),clients:rProjClients,profit:rProjProfit,payment:rProjPayment,invoice:rProjInvoice,completed:rProjCompleted,worker:rProjWorker,priority:rProjPriority}[managementKey];
+    workspaceBody=renderer?renderer():rProjBoard();
+  }
+  const tabButtons=tabs.map(([k,l])=>`<button class="btn btn-sm" role="tab" aria-selected="${VIDEO_TAB===k}" aria-controls="video-workspace" onclick="setVideoTab('${k}')">${l}</button>`).join('');
+  return`${showBusinessSwitcher?rBizBar():''}<div id="video-workspace"><div class="app-breadcrumb"><span>動画編集事業</span><span>${biz==='haken'?'編集者派遣':'編集代行'}</span><span>${tabs.find(x=>x[0]===VIDEO_TAB)?.[1]||'要対応'}</span></div>${screenSwitch}<header class="app-header"><div class="app-header-copy"><h1>${title}</h1><p>${roleNote} ${description}</p></div><div class="app-header-actions">${headerPrimary}${utilityActions&&!managementKey?`<details><summary class="btn btn-g btn-sm">その他</summary><div style="position:absolute;right:0;z-index:20;display:grid;gap:6px;padding:8px;margin-top:6px;border:1px solid var(--border);border-radius:10px;background:var(--card);box-shadow:var(--shadow-lg)">${utilityActions}</div></details>`:''}</div></header>${acceptanceNote}${rVideoNotificationCenter(biz)}<div class="app-view-tabs app-view-tabs-parity" role="tablist" aria-label="動画案件の表示">${tabButtons}</div>${workspaceBody}</div>`;
 }
 
 function rVideoEditProjects(){PWORK='video';PBIZ='edit';sessionStorage.setItem('mc_work_space','video');return rProjectWorkspace(false);}
@@ -6563,7 +6755,11 @@ function rProjects(){return rVideoEditProjects();} // 旧projects画面IDの互�
 function rHpProjects(){PWORK='hp';PBIZ='hp';sessionStorage.setItem('mc_work_space','hp');return rProjectWorkspace(false);}
 function rProjectWorkspace(showBusinessSwitcher=true){
   const spaces=allowedWorkspaces();if(!spaces.includes(PWORK)){PWORK=spaces[0]||'video';sessionStorage.setItem('mc_work_space',PWORK);}
-  if(PWORK==='video'&&VIDEO_TAB!=='legacy')return rVideoOperations(showBusinessSwitcher);
+  if(PWORK==='video'){
+    // 旧セッションの「従来の案件管理」は、新画面内の同じ案件ボードへ移す。
+    if(VIDEO_TAB==='legacy'){VIDEO_TAB='manage-board';sessionStorage.setItem('mc_video_tab',VIDEO_TAB);}
+    return rVideoOperations(showBusinessSwitcher);
+  }
   if(PWORK==='video'&&!['edit','haken'].includes(PBIZ))PBIZ='edit';
   if(PWORK==='hp')PBIZ='hp';
   if(PWORK==='ai'&&!['consult','tool'].includes(PBIZ))PBIZ='consult';
@@ -6700,7 +6896,7 @@ function rProjListing(){
           ${swName?`<span>🛠 ${swName}</span>`:''}
           ${s.sharedDate?`<span>📤 共有: ${s.sharedDate}</span>`:''}
           ${s.editorDraftDate?`<span>✏️ 初稿: ${s.editorDraftDate}</span>`:''}
-          ${s.deliveryDate?`<span class="${urgCls(s.deliveryDate)}">📅 納品期限: ${s.deliveryDate} (${fmt(s.deliveryDate)})</span>`:''}
+          ${s.deliveryDate?`<span class="${urgCls(s.deliveryDate)}">📅 納期（予定）: ${s.deliveryDate} (${fmt(s.deliveryDate)})</span>`:''}
           ${s.payoutDate?`<span>💸 支払: ${s.payoutDate}</span>`:''}
         </div>
       </div>
@@ -7397,7 +7593,7 @@ function rJobItem(j){
   const wNames=getJobWorkerNames(j);
   const pr=jobProfit(j),ti=jobTotalIn(j),to=jobTotalOut(j);
   const subDone=(j.subtasks||[]).filter(s=>s.done).length, subTot=(j.subtasks||[]).length;
-  const subRows=(j.subtasks||[]).map((s,i)=>{const w=S.workers.find(x=>x.id===s.workerId),name=s.workerId===SELF_WID?'mono.create社内対応':w?.name||'未割当',status=s.done?'完了':(s.status||'未着手'),subId=String(s.id||i),openSubcase=`openLegacySubcaseDetail(${JSON.stringify(j.id)},${JSON.stringify(subId)})`;return`<button type="button" class="video-subcase-row" onclick="event.stopPropagation();${esc(openSubcase)}" aria-label="${esc(s.title||`サブ案件${i+1}`)}の詳細を開く"><div class="video-subcase-title">${esc(s.title||`サブ案件${i+1}`)}</div><span class="badge ${SCOLBG[status]||'bk'} video-subcase-status">${esc(status)}</span><div class="video-subcase-meta"><span>担当 ${esc(name)}</span><span>編集者初稿 ${esc(s.editorDraftDate||'未設定')}</span><span>クライアント初稿 ${esc(s.clientDraftDate||'未設定')}</span><span>納品期限 ${esc(s.deliveryDate||'未設定')}</span>${s.completedDeliveryDate?`<span>実納品日 ${esc(s.completedDeliveryDate)}</span>`:''}${_isOwner()&&Number(s.unitPrice||0)?`<span>¥${Number(s.unitPrice).toLocaleString()}</span>`:''}${_isOwner()&&Number(s.workerPay||0)?`<span>支払 ¥${Number(s.workerPay).toLocaleString()}</span>`:''}</div></button>`;}).join('');
+  const subRows=(j.subtasks||[]).map((s,i)=>{const w=S.workers.find(x=>x.id===s.workerId),name=s.workerId===SELF_WID?'mono.create社内対応':w?.name||'未割当',status=s.done?'完了':(s.status||'未着手'),subId=String(s.id||i),openSubcase=`openLegacySubcaseDetail(${JSON.stringify(j.id)},${JSON.stringify(subId)})`;return`<button type="button" class="video-subcase-row" onclick="event.stopPropagation();${esc(openSubcase)}" aria-label="${esc(s.title||`サブ案件${i+1}`)}の詳細を開く"><div class="video-subcase-title">${esc(s.title||`サブ案件${i+1}`)}</div><span class="badge ${SCOLBG[status]||'bk'} video-subcase-status">${esc(status)}</span><div class="video-subcase-meta"><span>担当 ${esc(name)}</span><span>編集者初稿 ${esc(s.editorDraftDate||'未設定')}</span><span>クライアント初稿 ${esc(s.clientDraftDate||'未設定')}</span><span>納期（予定） ${esc(s.deliveryDate||'未設定')}</span>${s.completedDeliveryDate?`<span>納品日 ${esc(s.completedDeliveryDate)}</span>`:''}${_isOwner()&&Number(s.unitPrice||0)?`<span>¥${Number(s.unitPrice).toLocaleString()}</span>`:''}${_isOwner()&&Number(s.workerPay||0)?`<span>支払 ¥${Number(s.workerPay).toLocaleString()}</span>`:''}</div></button>`;}).join('');
   return`<div class="job-item-wrap"><div class="job-item" onclick="openJobModal('${j.id}')">
   <span class="badge ${SCOLBG[j.status]||'bk'}">${j.status}</span>
   <span class="job-title">${esc(j.title)}</span>
@@ -7419,10 +7615,42 @@ function rJobItem(j){
 </div>${subTot?`<details class="video-subcase-list" onclick="event.stopPropagation()"><summary class="video-subcase-head">↳ サブ案件 <span>${subTot}件</span></summary><div class="video-subcase-children">${subRows}</div></details>`:''}</div>`;
 }
 
+function _paymentAccessForWorker(workerId,records=ACCESS_RECORDS){
+  const wid=String(workerId||'');
+  if(!wid||wid===SELF_WID)return null;
+  return(records||[]).find(row=>row&&row.approved===true&&String(row.workerId||'')===wid)||null;
+}
+function resolvePaymentRecipient(workerId,records=ACCESS_RECORDS){
+  const assigneeWorkerId=String(workerId||'');
+  if(!assigneeWorkerId||assigneeWorkerId==='__none')return{ok:false,blocked:true,assigneeWorkerId,payeeWorkerId:'',payeeUid:'',route:'unresolved',reason:'作業担当者が設定されていません'};
+  if(assigneeWorkerId===SELF_WID)return{ok:true,blocked:false,assigneeWorkerId,payeeWorkerId:SELF_WID,payeeUid:'',route:'internal',reason:''};
+  const assignee=_paymentAccessForWorker(assigneeWorkerId,records);
+  if(!assignee||assignee.editorKind!=='external')return{ok:true,blocked:false,assigneeWorkerId,payeeWorkerId:assigneeWorkerId,payeeUid:assignee?.id||'',route:'direct',reason:''};
+  const directorUid=String(assignee.directorUid||''),director=(records||[]).find(row=>row&&row.approved===true&&String(row.id||'')===directorUid&&(row.roles||[]).includes('動画編集ディレクター'));
+  if(!directorUid||!director)return{ok:false,blocked:true,assigneeWorkerId,assigneeUid:assignee.id||'',payeeWorkerId:'',payeeUid:'',directorUid,route:'director_team',reason:'外部編集者の担当ディレクターが設定されていません'};
+  const payeeWorkerId=String(director.workerId||'');
+  if(!payeeWorkerId)return{ok:false,blocked:true,assigneeWorkerId,assigneeUid:assignee.id||'',payeeWorkerId:'',payeeUid:director.id||'',directorUid,route:'director_team',reason:'担当ディレクターの支払先が設定されていません'};
+  return{ok:true,blocked:false,assigneeWorkerId,assigneeUid:assignee.id||'',payeeWorkerId,payeeUid:director.id||'',directorUid,route:'director_team',reason:''};
+}
+function _paymentRecipientForRecord(record,workerId=record?.workerId){
+  const assigneeWorkerId=String(workerId||'');
+  if(record&&record.billingResolutionStatus==='resolved'&&String(record.billingAssigneeWorkerId||'')===assigneeWorkerId&&record.billingRecipientWorkerId){
+    return{ok:true,blocked:false,assigneeWorkerId,assigneeUid:record.billingAssigneeUid||'',payeeWorkerId:String(record.billingRecipientWorkerId),payeeUid:record.billingRecipientUid||'',directorUid:record.billingDirectorUid||'',route:record.billingRoute||'direct',reason:'',source:'snapshot'};
+  }
+  return resolvePaymentRecipient(assigneeWorkerId);
+}
+function _paymentRecipientSnapshot(workerId,previous={}){
+  const resolved=_paymentRecipientForRecord(previous,workerId);
+  return{billingAssigneeWorkerId:String(workerId||''),billingAssigneeUid:resolved.assigneeUid||'',billingRecipientWorkerId:resolved.payeeWorkerId||null,billingRecipientUid:resolved.payeeUid||'',billingDirectorUid:resolved.directorUid||'',billingRoute:resolved.route||'unresolved',billingResolutionStatus:resolved.ok?'resolved':'blocked'};
+}
+function _paymentWorkerName(workerId){
+  if(workerId===SELF_WID)return'mono.create社内対応';
+  return(S.workers||[]).find(w=>w.id===workerId)?.name||'担当者未設定';
+}
 function _profitWorkerLabel(workerId){
   if(workerId===SELF_WID)return'自社対応';
-  if(!workerId||workerId==='__none')return'担当編集者未設定';
-  return S.workers.find(w=>w.id===workerId)?.name||'担当編集者未設定';
+  if(!workerId||workerId==='__none'||workerId==='__unresolved')return'支払先未設定';
+  return S.workers.find(w=>w.id===workerId)?.name||'支払先未設定';
 }
 function _profitWorkerKey(workerId){
   if(workerId===SELF_WID)return SELF_WID;
@@ -7438,26 +7666,16 @@ function _profitGroupEntries(jobs,mode){
       entries.push({...base,key:j.clientId||`name:${label}`,label,inAmount:jobMainIn(j),outAmount:jobMainOut(j),detail:''});
       return;
     }
-    const subs=j.subtasks||[];
-    const hasPricedSubs=subs.some(s=>(+s.unitPrice||0)>0);
-    if(hasPricedSubs){
-      subs.filter(s=>(+s.unitPrice||0)>0||(+s.workerPay||0)>0).forEach((s,i)=>{
-        const wid=_profitWorkerKey(s.workerId);
-        entries.push({...base,key:wid,label:_profitWorkerLabel(wid),inAmount:+s.unitPrice||0,outAmount:wid===SELF_WID?0:(+s.workerPay||0),detail:s.title||`サブタスク${i+1}`});
+    const subs=j.subtasks||[],pricedSubs=subs.filter(s=>(+s.unitPrice||0)>0||(+s.workerPay||0)>0);
+    if(pricedSubs.length){
+      pricedSubs.forEach((s,i)=>{
+        const recipient=_paymentRecipientForRecord(s,s.workerId),wid=recipient.ok?_profitWorkerKey(recipient.payeeWorkerId):'__unresolved',assignee=_paymentWorkerName(s.workerId),detailTitle=s.title||`サブ案件${i+1}`,detail=recipient.payeeWorkerId!==s.workerId?`${detailTitle} ／ 作業担当 ${assignee}`:detailTitle;
+        entries.push({...base,key:wid,label:_profitWorkerLabel(wid),inAmount:+s.unitPrice||0,outAmount:wid===SELF_WID?0:(+s.workerPay||0),detail});
       });
       return;
     }
-    const paidSubs=subs.filter(s=>(+s.workerPay||0)>0);
-    const paidWorkerIds=[...new Set(paidSubs.map(s=>_profitWorkerKey(s.workerId)))];
-    let key,label;
-    if(paidWorkerIds.length===1){key=paidWorkerIds[0];label=_profitWorkerLabel(key);}
-    else{
-      const wids=[...new Set(getJobWorkerIds(j).map(_profitWorkerKey))];
-      if(wids.length===1){key=wids[0];label=_profitWorkerLabel(key);}
-      else if(wids.length>1||paidWorkerIds.length>1){key='__multiple';label='複数担当（売上配分未設定）';}
-      else{key='__none';label='担当編集者未設定';}
-    }
-    entries.push({...base,key,label,inAmount:jobMainIn(j),outAmount:jobMainOut(j),detail:''});
+    const recipient=_paymentRecipientForRecord(j,j.workerId),key=recipient.ok?_profitWorkerKey(recipient.payeeWorkerId):'__unresolved',assignee=_paymentWorkerName(j.workerId),detail=recipient.payeeWorkerId!==j.workerId?`作業担当 ${assignee}`:'';
+    entries.push({...base,key,label:_profitWorkerLabel(key),inAmount:jobMainIn(j),outAmount:key===SELF_WID?0:jobMainOut(j),detail});
   });
   return entries;
 }
@@ -7530,7 +7748,7 @@ function rProjProfit(){
 </div>
 <div class="rev-tabs" style="margin-bottom:14px" aria-label="利益のまとめ方">
   <button class="rev-tab ${groupMode==='job'?'act':''}" onclick="window._profitGroup='job';render()">案件別</button>
-  <button class="rev-tab ${groupMode==='worker'?'act':''}" onclick="window._profitGroup='worker';render()">担当編集者別</button>
+  <button class="rev-tab ${groupMode==='worker'?'act':''}" onclick="window._profitGroup='worker';render()">支払先別</button>
   <button class="rev-tab ${groupMode==='client'?'act':''}" onclick="window._profitGroup='client';render()">クライアント別</button>
 </div>
 <div class="card" style="margin-bottom:16px">
@@ -7567,12 +7785,14 @@ function getPayEntries(month){
         if(!s.workerPay||s.workerId===SELF_WID)return;
         const pd=s.payoutDate||j.payoutDate;
         if(!pd?.startsWith(month))return;
-        entries.push({jobId:j.id,jobTitle:j.title,label:esc(s.title),workerId:s.workerId||'__none',workerPay:s.workerPay,payoutDate:pd});
+        const recipient=_paymentRecipientForRecord(s,s.workerId);
+        entries.push({jobId:j.id,jobTitle:j.title,label:s.title||'サブ案件',assigneeWorkerId:s.workerId||'__none',payeeWorkerId:recipient.ok?recipient.payeeWorkerId:'__unresolved',payeeUid:recipient.payeeUid||'',billingRoute:recipient.route,blocked:!recipient.ok,blockReason:recipient.reason||'',workerPay:s.workerPay,payoutDate:pd});
       });
     }else{
       const wids=getJobWorkerIds(j);if(!j.workerPay||(!wids.length||wids.every(id=>id===SELF_WID)))return;
       if(!j.payoutDate?.startsWith(month))return;
-      entries.push({jobId:j.id,jobTitle:j.title,label:esc(j.title),workerId:j.workerId||'__none',workerPay:j.workerPay,payoutDate:j.payoutDate});
+      const recipient=_paymentRecipientForRecord(j,j.workerId);
+      entries.push({jobId:j.id,jobTitle:j.title,label:j.title||'案件',assigneeWorkerId:j.workerId||'__none',payeeWorkerId:recipient.ok?recipient.payeeWorkerId:'__unresolved',payeeUid:recipient.payeeUid||'',billingRoute:recipient.route,blocked:!recipient.ok,blockReason:recipient.reason||'',workerPay:j.workerPay,payoutDate:j.payoutDate});
     }
   });
   return entries;
@@ -7590,11 +7810,12 @@ function rProjPayment(){
   const curM=window._payMonth||selM;
   const entries=getPayEntries(curM);
   const total=entries.reduce((s,e)=>s+e.workerPay,0);
+  const blockedEntries=entries.filter(e=>e.blocked),blockedTotal=blockedEntries.reduce((s,e)=>s+e.workerPay,0);
   // 入金済み件数・未入金件数の集計
   const paidEntries=entries.filter(e=>{const j=S.jobs.find(j=>j.id===e.jobId);return isJobPaid(j);});
   const unpaidEntries=entries.filter(e=>{const j=S.jobs.find(j=>j.id===e.jobId);return !isJobPaid(j);});
   const byWorker={};
-  entries.forEach(e=>{if(!byWorker[e.workerId])byWorker[e.workerId]=[];byWorker[e.workerId].push(e);});
+  entries.forEach(e=>{if(!byWorker[e.payeeWorkerId])byWorker[e.payeeWorkerId]=[];byWorker[e.payeeWorkerId].push(e);});
   const rewardsAll=(S.rewards||[]).filter(r=>!r.deleted);
   const rewardSection=(t,title,icon)=>{
     const list=rewardsAll.filter(r=>r.type===t&&(r.date||'').startsWith(curM));
@@ -7626,17 +7847,18 @@ ${entries.length?`<div class="card" style="margin-bottom:14px;display:flex;gap:2
   <div><div style="font-size:11px;color:var(--t2)">入金済み案件</div><div style="font-size:16px;font-weight:700;color:var(--green)">${paidEntries.length}件</div></div>
   <div><div style="font-size:11px;color:var(--t2)">入金待ち案件</div><div style="font-size:16px;font-weight:700;color:${unpaidEntries.length?'var(--amber)':'var(--t2)'}">${unpaidEntries.length}件</div></div>
 </div>`:''}
+${blockedEntries.length?`<div class="card notice warn" style="margin-bottom:14px"><b>支払先を確定できない案件が ${blockedEntries.length}件あります</b><div style="font-size:14px;line-height:1.65;color:var(--t2);margin-top:4px">合計 ¥${blockedTotal.toLocaleString()} は誤送金を防ぐため、支払先の設定が完了するまで保留します。外部編集者の「所属・契約区分」で担当ディレクターを確認してください。</div></div>`:''}
 ${Object.entries(byWorker).length?Object.entries(byWorker).map(([wid,es])=>{
   const w=S.workers.find(w=>w.id===wid);
   const wTotal=es.reduce((s,e)=>s+e.workerPay,0);
   const byParent=es.reduce((m,e)=>{(m[e.jobId]=m[e.jobId]||[]).push(e);return m;},{});
   return`<div class="card" style="margin-bottom:10px">
-    <div style="font-weight:700;margin-bottom:8px">${w?esc(w.name):'担当者未設定'} — <span style="color:var(--amber)">¥${wTotal.toLocaleString()}</span></div>
+    <div style="font-weight:700;margin-bottom:8px">${wid==='__unresolved'?'支払先未設定':`支払先：${w?esc(w.name):'支払先未設定'}`} — <span style="color:var(--amber)">¥${wTotal.toLocaleString()}</span></div>
     ${Object.entries(byParent).map(([jobId,parentEntries])=>{const parentJob=S.jobs.find(j=>j.id===jobId);return`<details class="video-subcase-list"><summary class="video-subcase-head"><span>${esc(parentJob?.title||'親案件')}</span><span>サブ案件 ${parentEntries.length}件</span></summary><div class="video-subcase-children">${parentEntries.map(e=>{
       const job=S.jobs.find(j=>j.id===e.jobId);
       const isClientPaid=isJobPaid(job);
       return`<div class="payment-row" style="flex-wrap:wrap;gap:4px">
-        <span class="pmt-worker">${e.label}</span>
+        <span class="pmt-worker">${esc(e.label)}<span style="display:block;font-size:11px;color:var(--t2);margin-top:2px">作業担当：${esc(_paymentWorkerName(e.assigneeWorkerId))}${e.blocked?` ／ ${esc(e.blockReason)}`:''}</span></span>
         <span class="pmt-amount">¥${e.workerPay.toLocaleString()}</span>
         <span style="font-size:11px;color:var(--t2)">${e.payoutDate}</span>
         ${isClientPaid
@@ -7818,7 +8040,7 @@ function rProjPriority(){
     <th style="padding:8px 12px;text-align:left">案件名</th>
     <th style="padding:8px 10px;text-align:left">ステータス</th>
     <th style="padding:8px 10px;text-align:left">${fieldLbl}</th>
-    <th style="padding:8px 10px;text-align:left">納品期限</th>
+    <th style="padding:8px 10px;text-align:left">納期（予定）</th>
     <th style="padding:8px 10px;text-align:left">担当</th>
   </tr></thead><tbody>${[...byParent.values()].map(({job,parent,subs})=>{const base=parent||{type:'job',job,date:job[field]||''};const childRows=subs.map(rowHtml).join('');return`${rowHtml(base)}${subs.length?`<tr><td colspan="5" style="padding:0 10px 8px"><details class="video-subcase-list"><summary class="video-subcase-head">↳ ${esc(job.title)} のサブ案件 <span>${subs.length}件</span></summary><table style="width:100%;border-collapse:collapse"><tbody>${childRows}</tbody></table></details></td></tr>`:''}`;}).join('')}</tbody></table></div>`;};
   return`${toggle}${groups.map(section).join('')}`;
@@ -12364,6 +12586,13 @@ function _renderJobAssigneeSummary(){
   summary.innerHTML=ids.length
     ?ids.map(id=>`<span class="job-assignee-chip">${esc(_jobModalWorkerLabel(id))}<button type="button" aria-label="${esc(_jobModalWorkerLabel(id))}を外す" onclick="toggleJobWorkerSelection('${String(id).replace(/'/g,'\\\'')}',false)">×</button></span>`).join('')
     :'<span class="job-assignee-empty">未割当</span>';
+  const payment=document.getElementById('j-worker-payment-summary');
+  if(payment){
+    const current=EID?(S.jobs||[]).find(job=>job.id===EID):null;
+    if(ids.length===1){const recipient=_paymentRecipientForRecord(current||{},ids[0]);payment.textContent=_paymentRecipientHint(ids[0],current||{});payment.style.color=recipient.ok?'var(--t2)':'var(--red)';}
+    else if(ids.length>1){payment.textContent='複数担当の支払は、サブ案件ごとの作業担当者から自動で決まります。';payment.style.color='var(--t2)';}
+    else{payment.textContent='支払先：作業担当者を選択してください';payment.style.color='var(--red)';}
+  }
 }
 function toggleJobAssigneePicker(){
   const picker=document.getElementById('j-worker-picker');
@@ -12405,6 +12634,7 @@ function openJobModal(id,preStatus,preClientId){
   const subs=j?.subtasks||[];
   const canManageMaterials=_videoCanEdit()&&['edit','haken'].includes(jbiz);
   const materialSection=canManageMaterials?_videoAttachmentEditorHtml(j?.attachments||[],"addVideoAttachmentRow(document.getElementById('j-attachment-list'))",'j-attachment-list'):`<div class="video-attachment-editor"><div class="video-attachment-heading"><div><b>素材・資料</b><span>閲覧のみ</span></div></div>${_videoAttachmentLinksHtml(_videoCaseMaterials(j?.attachments,j))||'<div class="video-attachment-hint">添付された素材・資料はありません。</div>'}</div>`;
+  const parentDraftSetter=j?_editorDraftDateSetter(j):'creator';
   const up=j?.unitPrice||j?.profit||0, wp=j?.workerPay||0;
   const pr=up-wp;
   openModalLg(`<div class="mhdr"><div class="mtitle">${j?'案件編集':'案件追加'}</div><button class="mclose" onclick="closeModal()">✕</button></div>
@@ -12426,6 +12656,7 @@ function openJobModal(id,preStatus,preClientId){
   <div class="fg"><div class="fl">担当者名</div>
     <div id="j-worker-list" class="job-assignee-control" data-selected-worker-ids="${esc(JSON.stringify(selectedWorkerIds))}">
       <div id="j-worker-summary" class="job-assignee-summary"></div>
+      <div id="j-worker-payment-summary" style="font-size:12px;line-height:1.55;color:var(--t2)"></div>
       <button type="button" class="btn btn-g btn-sm" onclick="toggleJobAssigneePicker()">担当者を変更</button>
       <div id="j-worker-picker" class="job-assignee-picker" hidden></div>
     </div>
@@ -12455,13 +12686,17 @@ function openJobModal(id,preStatus,preClientId){
 <div style="font-size:12px;font-weight:700;color:var(--t2);margin:10px 0 6px">📅 日程</div>
 <div class="frow">
   <div class="fg"><div class="fl" id="jl-shared">共有日</div><input type="date" id="j-shared" value="${j?.sharedDate||''}"></div>
-  <div class="fg"><div class="fl" id="jl-deliver">納品期限</div><input type="date" id="j-deliver" value="${j?.deliveryDate||''}"></div>
+  <div class="fg"><div class="fl" id="jl-deliver">納期（予定）</div><input type="date" id="j-deliver" value="${j?.deliveryDate||''}"></div>
 </div>
 <div class="frow" id="jf-drafts">
-  <div class="fg"><div class="fl" id="jl-d1">編集者 初稿</div><input type="date" id="j-editor-draft" value="${j?.editorDraftDate||''}"></div>
-  <div class="fg"><div class="fl" id="jl-d2">クライアント提出 初稿</div><input type="date" id="j-client-draft" value="${j?.clientDraftDate||''}"></div>
+  <div class="fg"><div class="fl">編集者初稿の設定者</div><select id="j-editor-draft-setter" onchange="changeEditorDraftDateSetter(this,'j-editor-draft')" ${subs.length?'disabled':''}><option value="creator" ${parentDraftSetter==='creator'?'selected':''}>案件追加者が設定</option><option value="editor" ${parentDraftSetter==='editor'?'selected':''}>担当編集者が設定</option>${parentDraftSetter==='mixed'?'<option value="mixed" selected>子案件ごとに設定</option>':''}</select></div>
+  <div class="fg"><div class="fl" id="jl-d1">編集者 初稿</div><input type="date" id="j-editor-draft" value="${j?.editorDraftDate||''}" ${parentDraftSetter!=='creator'||subs.length?'disabled':''}><div style="font-size:10px;color:var(--t3);margin-top:3px">${subs.length?'子案件ごとに下の欄で設定します。':parentDraftSetter==='creator'?'案件追加時に入力します。':'担当編集者の画面で入力します。'}</div></div>
 </div>
-	<div class="frow"><div class="fg"><div class="fl">実納品日</div><input type="date" value="${j?.completedDeliveryDate||''}" disabled aria-label="担当編集者が記録する実納品日"><div style="font-size:10px;color:var(--t3);margin-top:3px">先方OK後に担当編集者が記録します。</div></div><div class="fg"></div></div>
+<div class="frow" id="jf-client-draft">
+  <div class="fg"><div class="fl" id="jl-d2">クライアント提出 初稿</div><input type="date" id="j-client-draft" value="${j?.clientDraftDate||''}"></div>
+  <div class="fg"></div>
+</div>
+	<div class="frow"><div class="fg"><div class="fl">納品日</div><input type="date" value="${j?.completedDeliveryDate||''}" disabled aria-label="担当編集者が記録する納品日"><div style="font-size:10px;color:var(--t3);margin-top:3px">先方OK後に担当編集者が記録します。納品日が未記録の案件には報酬が発生しません。</div></div><div class="fg"></div></div>
 	<div class="frow" id="jf-thumb">
   <div class="fg"><div class="fl">🖼 サムネイル納品日</div><input type="date" id="j-thumbnail" value="${j?.thumbnailDate||''}"></div>
   <div class="fg"></div>
@@ -12560,7 +12795,7 @@ function setJobBiz(k,init){
   setTxt('jl-unit',cfg.lbl.unit);setTxt('jl-wpay',cfg.lbl.wpay);setTxt('jl-profit',cfg.lbl.profit);
   setTxt('jl-monthly',cfg.lbl.monthly||'月額（円）');
   const shw=(id,v)=>{const e=document.getElementById(id);if(e)e.style.display=v?'':'none';};
-  shw('jf-scope',cfg.show.scope);shw('jf-drafts',cfg.show.d1||cfg.show.d2);shw('jf-thumb',cfg.show.thumb);
+  shw('jf-scope',cfg.show.scope);shw('jf-drafts',cfg.show.d1);shw('jf-client-draft',cfg.show.d2);shw('jf-thumb',cfg.show.thumb);
   shw('jf-wpay',cfg.show.wpay);shw('jf-profit',cfg.show.wpay);shw('jf-subs',cfg.show.subs);shw('jf-monthly',cfg.show.monthly);
   if(!init){
     const st=document.getElementById('j-stat');
@@ -12605,6 +12840,21 @@ function updSubPrices(){
   }
   updJobProfit();
 }
+function _paymentRecipientHint(workerId,record={}){
+  const recipient=_paymentRecipientForRecord(record,workerId);
+  if(!workerId)return'支払先：作業担当者を選択してください';
+  if(!recipient.ok)return`支払保留：${recipient.reason}`;
+  if(recipient.route==='director_team')return`支払先：${_paymentWorkerName(recipient.payeeWorkerId)}（担当ディレクター）`;
+  return`支払先：${_paymentWorkerName(recipient.payeeWorkerId)}`;
+}
+function updSubPaymentRecipients(){
+  document.querySelectorAll('#j-sub-cont .j-sub-row').forEach(row=>{
+    const workerId=row.querySelector('.j-sub-worker')?.value||'',hint=row.querySelector('.j-sub-payment-recipient');
+    if(!hint)return;
+    const recipient=resolvePaymentRecipient(workerId);hint.textContent=_paymentRecipientHint(workerId,{});hint.style.color=recipient.ok?'var(--t2)':'var(--red)';
+  });
+  updSubPrices();
+}
 function updJobProfit(){
   const u=parseInt(document.getElementById('j-unit')?.value)||0;
   const w=parseInt(document.getElementById('j-wpay')?.value)||0;
@@ -12622,6 +12872,7 @@ function mkSubRow(s,ph,bk,originalIndex=-1){
   const _bk=bk||_curJobBiz();
   const _bc=bizCfgOf(_bk);
   const st=s.status||_bc.statuses[0];
+  const draftSetter=Object.keys(s||{}).length?_editorDraftDateSetter(s):'creator';
   return`<div class="j-sub-row" data-sub-id="${esc(s.id||'')}" data-original-index="${Number.isInteger(originalIndex)?originalIndex:-1}" style="background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);padding:10px;margin-bottom:8px">
   <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
     <div class="chk${s.done?' done':''}" onclick="this.classList.toggle('done');updSubPrices()" style="flex-shrink:0"></div>
@@ -12633,7 +12884,7 @@ function mkSubRow(s,ph,bk,originalIndex=-1){
       <select class="j-sub-status" style="font-size:12px;padding:4px 6px">${bizStatOpts(_bk,st)}</select>
     </div>
     <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">担当者</div>
-      <select class="j-sub-worker" style="font-size:12px;padding:4px 6px">
+      <select class="j-sub-worker" style="font-size:12px;padding:4px 6px" onchange="updSubPaymentRecipients()">
         <option value="">未設定</option>
         <option value="__self"${s.workerId===SELF_WID?' selected':''}>mono.create社内対応</option>
         ${(S.workers||[]).map(w=>`<option value="${w.id}"${s.workerId===w.id?' selected':''}>${esc(w.name)}</option>`).join('')}
@@ -12648,24 +12899,33 @@ function mkSubRow(s,ph,bk,originalIndex=-1){
     </div>
     <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">支払（円）</div>
       <input class="j-sub-pay" type="number" value="${s.workerPay||''}" placeholder="0" style="font-size:12px;padding:4px 6px" oninput="updSubPrices()">
+      <div class="j-sub-payment-recipient" style="font-size:10px;line-height:1.45;margin-top:3px;color:${_paymentRecipientForRecord(s,s.workerId).ok?'var(--t2)':'var(--red)'}">${esc(_paymentRecipientHint(s.workerId,s))}</div>
     </div>
   </div>
 	  <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
     <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">共有日</div>
       <input class="j-sub-shared" type="date" value="${s.sharedDate||''}" style="font-size:12px;padding:4px 6px">
     </div>
+    <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">編集者初稿の設定者</div>
+      <select class="j-sub-editor-setter" style="font-size:12px;padding:4px 6px" onchange="changeEditorDraftDateSetter(this)"><option value="creator" ${draftSetter==='creator'?'selected':''}>案件追加者が設定</option><option value="editor" ${draftSetter==='editor'?'selected':''}>担当編集者が設定</option></select>
+    </div>
     <div><div class="j-sub-d1-lbl" style="font-size:10px;color:var(--t3);margin-bottom:2px">${_bc.lbl.d1||'初稿(社内)'}</div>
-      <input class="j-sub-editor" type="date" value="${s.editorDraftDate||''}" style="font-size:12px;padding:4px 6px">
+      <input class="j-sub-editor" type="date" value="${s.editorDraftDate||''}" style="font-size:12px;padding:4px 6px" ${draftSetter==='editor'?'disabled':''}>
     </div>
     <div><div class="j-sub-d2-lbl" style="font-size:10px;color:var(--t3);margin-bottom:2px">${_bc.lbl.d2||'クライアント提出'}</div>
       <input class="j-sub-client" type="date" value="${s.clientDraftDate||''}" style="font-size:12px;padding:4px 6px">
     </div>
-    <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">納品期限</div>
-      <input class="j-sub-deliver" type="date" value="${s.deliveryDate||''}" style="font-size:12px;padding:4px 6px">
-    </div>
-	    <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">支払日</div>
-	      <input class="j-sub-payout" type="date" value="${s.payoutDate||''}" style="font-size:12px;padding:4px 6px">
-	    </div>
+	<div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">納期（予定）</div>
+	  <input class="j-sub-deliver" type="date" value="${s.deliveryDate||''}" style="font-size:12px;padding:4px 6px">
+	</div>
+	<div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">納品日（担当編集者が記録）</div>
+	  <input type="date" value="${s.completedDeliveryDate||''}" style="font-size:12px;padding:4px 6px" disabled>
+	  <div style="font-size:10px;color:var(--t3);margin-top:3px">未記録の案件には報酬が発生しません。</div>
+	</div>
+	    <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">請求書提出日</div><input class="j-sub-invoice" type="date" value="${s.invoiceDate||''}" style="font-size:12px;padding:4px 6px"></div>
+	    <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">支払期日</div><input class="j-sub-due" type="date" value="${s.dueDate||''}" style="font-size:12px;padding:4px 6px"></div>
+	    <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">入金予定日</div><input class="j-sub-payment" type="date" value="${s.paymentDate||''}" style="font-size:12px;padding:4px 6px"></div>
+	    <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">支払日</div><input class="j-sub-payout" type="date" value="${s.payoutDate||''}" style="font-size:12px;padding:4px 6px"></div>
 	  </div>
 	  ${_videoAttachmentEditorHtml(s.attachments||[],'addSubVideoAttachmentRow(this)')}
 	</div>`;
@@ -12700,6 +12960,7 @@ function addSubWorker(btn){
   _appendWorkerOpt(w);
   const thisSel=row.querySelector('.j-sub-worker');
   if(thisSel)thisSel.value=w.id;
+  updSubPaymentRecipients();
   inp.value='';
   toast(`担当者「${name}」を追加しました`);
 }
@@ -12715,6 +12976,7 @@ function saveJob(){
   if(!title){toast('タイトルを入力してください','err');return;}
   if(_isOwner()&&!document.getElementById('j-invoice')?.value){toast('請求書提出日を入力してください（請求書ページで使います）','warn');return;}
   const current=EID?S.jobs.find(j=>j.id===EID):null;
+  const previousDirectorSettlementTargets=_directorSettlementTargetsForJob(current);
   const requestedStatus=document.getElementById('j-stat').value;
   if(current?.portalJobId&&requestedStatus!==current.status&&EDITOR_OWNED_VIDEO_STATUSES.has(requestedStatus)){toast('この進捗は担当編集者本人が編集者ポータルから更新してください','warn');return;}
   const oldSubs=current?.subtasks||[];
@@ -12724,40 +12986,60 @@ function saveJob(){
   if(parentAttachmentRead.error){toast(parentAttachmentRead.error,'warn');return;}
   const subAttachmentReads=subEls.map(el=>canManageMaterials?_readVideoAttachments(el.querySelector('.video-attachment-list')):{error:'',items:[]});
   const subAttachmentError=subAttachmentReads.find(result=>result.error);if(subAttachmentError){toast(subAttachmentError.error,'warn');return;}
+  const parentEditorDraftDateSetter=document.getElementById('j-editor-draft-setter')?.value||_editorDraftDateSetter(current),parentEditorDraftDate=document.getElementById('j-editor-draft')?.value||null;
+  if(!subEls.length&&bizCfgOf(document.getElementById('j-biz')?.value||jobBiz(current)).show.d1&&parentEditorDraftDateSetter==='creator'&&!parentEditorDraftDate){toast('案件追加者が設定する場合は、編集者初稿日を入力してください','warn');return;}
+  const currentBiz=document.getElementById('j-biz')?.value||jobBiz(current),videoScheduleRequired=['edit','haken'].includes(currentBiz);
+  if(videoScheduleRequired&&!subEls.length&&!document.getElementById('j-deliver')?.value){toast('納期（予定）を入力してください','warn');return;}
+  for(const el of subEls){
+    const label=el.querySelector('.j-sub-inp')?.value.trim()||'サブ案件';
+    if((el.querySelector('.j-sub-editor-setter')?.value||'editor')==='creator'&&!el.querySelector('.j-sub-editor')?.value){toast(`「${label}」の編集者初稿日を入力してください`,'warn');return;}
+    if(videoScheduleRequired&&!el.querySelector('.j-sub-deliver')?.value){toast(`「${label}」の納期（予定）を入力してください`,'warn');return;}
+    const dateError=_jobScheduleError({sharedDate:el.querySelector('.j-sub-shared')?.value||'',editorDraftDate:el.querySelector('.j-sub-editor')?.value||'',clientDraftDate:el.querySelector('.j-sub-client')?.value||'',deliveryDate:el.querySelector('.j-sub-deliver')?.value||''});
+    if(dateError){toast(`「${label}」：${dateError}`,'warn');return;}
+  }
   const parsedSubtasks=subEls.map((el,i)=>{
     const inp=el.querySelector('.j-sub-inp');const chk=el.querySelector('.chk');
     const price=parseInt(el.querySelector('.j-sub-price')?.value)||0;
     const pay=parseInt(el.querySelector('.j-sub-pay')?.value)||0;
     const savedId=String(el.dataset.subId||''),savedIndex=Number(el.dataset.originalIndex);
     const previous=(savedId?oldSubs.find(sub=>String(sub?.id||'')===savedId):Number.isInteger(savedIndex)&&savedIndex>=0?oldSubs[savedIndex]:null)||{};
+    const workerId=el.querySelector('.j-sub-worker')?.value||null,billingSnapshot=_paymentRecipientSnapshot(workerId,previous);
     return{
       ...previous,id:previous.id||uid(),
       title:inp?.value.trim()||'',done:chk?.classList.contains('done')||false,
       unitPrice:price,workerPay:pay,
       status:el.querySelector('.j-sub-status')?.value||'未着手',
-      workerId:el.querySelector('.j-sub-worker')?.value||null,
+      workerId,...billingSnapshot,
       sharedDate:el.querySelector('.j-sub-shared')?.value||null,
+      editorDraftDateSetter:el.querySelector('.j-sub-editor-setter')?.value||_editorDraftDateSetter(previous),
       editorDraftDate:el.querySelector('.j-sub-editor')?.value||null,
       clientDraftDate:el.querySelector('.j-sub-client')?.value||null,
       deliveryDate:el.querySelector('.j-sub-deliver')?.value||null,
+      invoiceDate:el.querySelector('.j-sub-invoice')?.value||null,
+      dueDate:el.querySelector('.j-sub-due')?.value||null,
+      paymentDate:el.querySelector('.j-sub-payment')?.value||null,
       payoutDate:el.querySelector('.j-sub-payout')?.value||null,
       attachments:canManageMaterials?subAttachmentReads[i].items:_videoAttachments(previous.attachments),
     };
   }).filter(s=>s.title);
   const subtasks=_isOwner()?parsedSubtasks:oldSubs;
+  const aggregateDraftSetter=subtasks.length?(subtasks.every(sub=>_editorDraftDateSetter(sub)==='creator')?'creator':subtasks.every(sub=>_editorDraftDateSetter(sub)==='editor')?'editor':'mixed'):parentEditorDraftDateSetter;
+  const aggregateDraftDate=subtasks.length?(subtasks.map(sub=>sub.editorDraftDate).filter(Boolean).sort()[0]||null):parentEditorDraftDate;
   const hasPricedSubs=subtasks.some(s=>s.unitPrice>0||s.workerPay>0);
   const unitPrice=_isOwner()?(hasPricedSubs?subtasks.reduce((s,sub)=>s+(sub.unitPrice||0),0):(parseInt(document.getElementById('j-unit')?.value)||0)):(Number(current?.unitPrice)||0);
   const selWorkerIds=_jobModalWorkerIds();
   const onlySelf=selWorkerIds.length===0||selWorkerIds.every(id=>id===SELF_WID);
   const workerPay=_isOwner()?(hasPricedSubs?subtasks.filter(s=>s.workerId!==SELF_WID).reduce((s,sub)=>s+(sub.workerPay||0),0):(onlySelf?0:parseInt(document.getElementById('j-wpay')?.value)||0)):(Number(current?.workerPay)||0);
   const isTrial=document.getElementById('j-trial-val')?.value==='1';
-  const data={title,biz:document.getElementById('j-biz')?.value||'edit',monthlyFee:_isOwner()?(parseInt(document.getElementById('j-monthly')?.value)||0):(Number(current?.monthlyFee)||0),jobType:document.getElementById('j-type')?.value||'edit',clientId:document.getElementById('j-cl').value||null,workerIds:selWorkerIds,workerId:selWorkerIds[0]||null,scope:document.getElementById('j-scope').value||null,status:requestedStatus,isTrial,unitPrice,profit:_isOwner()?unitPrice:(Number(current?.profit)||unitPrice),workerPay,sharedDate:document.getElementById('j-shared').value||null,editorDraftDate:document.getElementById('j-editor-draft').value||null,clientDraftDate:document.getElementById('j-client-draft').value||null,thumbnailDate:document.getElementById('j-thumbnail')?.value||null,deliveryDate:document.getElementById('j-deliver').value||null,invoiceDate:_isOwner()?(document.getElementById('j-invoice')?.value||null):(current?.invoiceDate||null),dueDate:_isOwner()?(document.getElementById('j-due')?.value||null):(current?.dueDate||null),paymentDate:_isOwner()?(document.getElementById('j-payin')?.value||null):(current?.paymentDate||null),paidAt:_isOwner()?(document.getElementById('j-paid-val')?.value||null):(current?.paidAt||null),payoutDate:_isOwner()?(document.getElementById('j-payout')?.value||null):(current?.payoutDate||null),salesRep:_isOwner()?(document.getElementById('j-sales-rep')?.value||null):(current?.salesRep||null),salesPay:_isOwner()?(parseInt(document.getElementById('j-sales-pay')?.value)||0):(Number(current?.salesPay)||0),notes:document.getElementById('j-notes').value.trim(),opsChecklist:readOpsChecklist(),subtasks,attachments:canManageMaterials?parentAttachmentRead.items:_videoAttachments(current?.attachments),updatedAt:Date.now(),updatedBy:_myEmail()};
+  const primaryWorkerId=selWorkerIds[0]||null,billingSnapshot=_paymentRecipientSnapshot(primaryWorkerId,current||{});
+  const data={title,biz:document.getElementById('j-biz')?.value||'edit',monthlyFee:_isOwner()?(parseInt(document.getElementById('j-monthly')?.value)||0):(Number(current?.monthlyFee)||0),jobType:document.getElementById('j-type')?.value||'edit',clientId:document.getElementById('j-cl').value||null,workerIds:selWorkerIds,workerId:primaryWorkerId,...billingSnapshot,scope:document.getElementById('j-scope').value||null,status:requestedStatus,isTrial,unitPrice,profit:_isOwner()?unitPrice:(Number(current?.profit)||unitPrice),workerPay,sharedDate:document.getElementById('j-shared').value||null,editorDraftDateSetter:aggregateDraftSetter,editorDraftDate:aggregateDraftDate,clientDraftDate:document.getElementById('j-client-draft').value||null,thumbnailDate:document.getElementById('j-thumbnail')?.value||null,deliveryDate:document.getElementById('j-deliver').value||null,invoiceDate:_isOwner()?(document.getElementById('j-invoice')?.value||null):(current?.invoiceDate||null),dueDate:_isOwner()?(document.getElementById('j-due')?.value||null):(current?.dueDate||null),paymentDate:_isOwner()?(document.getElementById('j-payin')?.value||null):(current?.paymentDate||null),paidAt:_isOwner()?(document.getElementById('j-paid-val')?.value||null):(current?.paidAt||null),payoutDate:_isOwner()?(document.getElementById('j-payout')?.value||null):(current?.payoutDate||null),salesRep:_isOwner()?(document.getElementById('j-sales-rep')?.value||null):(current?.salesRep||null),salesPay:_isOwner()?(parseInt(document.getElementById('j-sales-pay')?.value)||0):(Number(current?.salesPay)||0),notes:document.getElementById('j-notes').value.trim(),opsChecklist:readOpsChecklist(),subtasks,attachments:canManageMaterials?parentAttachmentRead.items:_videoAttachments(current?.attachments),updatedAt:Date.now(),updatedBy:_myEmail()};
   const entersOperationalCompletion=opsRequiresChecklist(data.biz,data.status)&&!opsRequiresChecklist(jobBiz(current),current?.status);
   if(entersOperationalCompletion&&data.opsChecklist.length<opsChecklistDef(data.biz).length){toast('公開・運用・完了へ進む前に「運用完了チェック」をすべて確認してください','warn');return;}
+  let savedJob=null;
   if(EID){
     const j=S.jobs.find(j=>j.id===EID);
     const prevStatus=j?.status;
-    if(j)Object.assign(j,data);
+    if(j){Object.assign(j,data);savedJob=j;}
     // 完了に変更された瞬間に収益自動記帳
     if(prevStatus!=='完了'&&data.status==='完了'&&data.unitPrice>0){
       const profit=data.unitPrice-(data.workerPay||0);
@@ -12769,8 +13051,13 @@ function saveJob(){
       }
     }
   }
-  else S.jobs.unshift({id:uid(),...data,createdAt:new Date().toISOString()});
+  else{savedJob={id:uid(),...data,createdAt:new Date().toISOString()};S.jobs.unshift(savedJob);}
   save();closeModal();render();toast('案件を保存しました');
+  const syncRecords=(savedJob?.subtasks||[]).length?savedJob.subtasks:[savedJob];
+  if(syncRecords.some(record=>record&&record.workerId&&record.workerId!==SELF_WID&&!['完了','キャンセル'].includes(String(record.status||savedJob?.status||'')))){
+    syncLegacyAssignedSubtasksToPortal(savedJob).catch(error=>console.warn('assigned legacy case sync failed',error));
+  }
+  _refreshDirectorSettlementTargets([...previousDirectorSettlementTargets,..._directorSettlementTargetsForJob(savedJob)]).catch(error=>{console.warn('director invoice authorization refresh failed',error);toast('案件は保存しましたが、担当ディレクターの請求対象を更新できませんでした','warn');});
   // ※ GcalへのアプリデータWriteは行わない（読み戻し重複防止）
 }
 
@@ -13154,7 +13441,7 @@ function confirmDelClient(id){
   const c=S.clients.find(c=>c.id===id);if(c)c.deleted=true;
   save();closeModal();render();toast('クライアントを削除しました');
 }
-function delJob(id){const j=S.jobs.find(j=>j.id===id);if(j)j.deleted=true;save();closeModal();render();toast('案件を削除しました');}
+function delJob(id){const j=S.jobs.find(j=>j.id===id),targets=_directorSettlementTargetsForJob(j);if(j)j.deleted=true;save();closeModal();render();void _refreshDirectorSettlementTargets(targets).catch(error=>{console.warn('director invoice refresh after job deletion',error);toast('案件は削除しました。ディレクター請求の再計算を確認してください','warn')});toast('案件を削除しました');}
 function delLog(id){const l=S.logs.find(l=>l.id===id);if(l)l.deleted=true;save();render();toast('記録を削除しました');}
 // ===POMO===
 let _pomoInterval=null,_pomoSec=0,_pomoRunning=false,_pomoMode='work',_pomoTaskId=null;
@@ -16304,7 +16591,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260828-21';
+const APP_VERSION='20260828-22';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -16378,6 +16665,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260828-21"></script>
+<script src="./manager-features.js?v=20260828-22"></script>
 </body>
 </html>

@@ -6,7 +6,7 @@ const path = require('node:path');
 const features = fs.readFileSync(path.resolve(__dirname, '..', 'editor-features.js'), 'utf8');
 
 test('each assigned parent case offers a collapsed-group draft date control only for unfinished children', () => {
-  assert.match(features, /function groupDraftEligibleJobs\(group\)\{return\(group\?\.jobs\|\|\[\]\)\.filter\(job=>activeJob\(job\)&&!job\.previewLegacy&&!job\.editorDraftDate\)\}/);
+  assert.match(features, /function groupDraftEligibleJobs\(group\)\{return\(group\?\.jobs\|\|\[\]\)\.filter\(job=>activeJob\(job\)&&!job\.previewLegacy&&editorSetsDraftDate\(job\)&&!job\.editorDraftDate\)\}/);
   assert.match(features, /サブ案件の編集者初稿日をまとめて設定/);
   assert.match(features, /初稿日が未設定のサブ案件 \$\{targets\.length\}件/);
   assert.match(features, /設定済みの日付は変更しません/);
@@ -15,6 +15,8 @@ test('each assigned parent case offers a collapsed-group draft date control only
   assert.match(features, /onclick="saveGroupEditorDraftDate\(this\)"/);
   assert.match(features, /@media\(max-width:760px\)\{\.group-draft-panel\{align-items:stretch;flex-direction:column\}/);
   assert.match(features, /id="job-editor-draft-\$\{jid\}"/);
+  assert.match(features, /draftLocked=!editorSetsDraftDate\(j\)/);
+  assert.match(features, /案件追加者が設定します。/);
   assert.match(features, /onclick="saveJobProgress\('\$\{jid\}'\)"/);
 });
 

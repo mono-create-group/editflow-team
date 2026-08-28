@@ -93,10 +93,23 @@ service cloud.firestore {
         && validOptionalIsoDate(request.resource.data.get('editorDraftDate', ''))
         && validOptionalIsoDate(request.resource.data.get('clientDraftDate', ''))
         && validOptionalIsoDate(request.resource.data.get('thumbnailDate', ''))
+        && delivery != ''
         && validOptionalIsoDate(delivery)
         && validCompletedDeliveryDate()
-        && delivery != ''
         && request.resource.data.get('deadline', delivery) == delivery;
+    }
+
+    // New cases explicitly choose who sets the editor's first-draft date.
+    // Missing values are treated as editor-owned only for legacy documents.
+    function validEditorDraftDateAssignment(data) {
+      let setter = data.get('editorDraftDateSetter', 'editor');
+      return setter in ['creator', 'editor']
+        && (setter != 'creator' || data.get('editorDraftDate', '') != '');
+    }
+
+    function editorDraftDateChangeAllowed() {
+      return resource.data.get('editorDraftDateSetter', 'editor') == 'editor'
+        || request.resource.data.get('editorDraftDate', '') == resource.data.get('editorDraftDate', '');
     }
 
     function accessEnforced() {
@@ -763,7 +776,7 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly([
             'recordType','businessType','boardJobId','title','caseName','parentCaseId','parentCaseName',
             'clientId','clientDisplay','accountId','accountDisplay','deadline','requestUrl','sourceUrl',
-            'sharedDate','editorDraftDate','clientDraftDate','thumbnailDate','deliveryDate',
+            'sharedDate','editorDraftDate','editorDraftDateSetter','clientDraftDate','thumbnailDate','deliveryDate',
             'instructions','urgent','status','progress','evidenceUrl','blocker',
             'workDate','startTime','endTime','submittedByUid','editorUid',
             'editorEmail','editorName','directorUid','source','createdAt','updatedAt','history',
@@ -792,9 +805,55 @@ service cloud.firestore {
           && request.resource.data.instructions.size() <= 3000
           && validJobStatus(request.resource.data.status)
           && validJobSchedule()
+          && validEditorDraftDateAssignment(request.resource.data)
           && validCompletedJobEvidence()
           && validReviewWorkflow(request.resource.data)
           && validProgressEvents(request.resource.data)
+          && validAttachments(request.resource.data)
+          && request.resource.data.history is list
+          && request.resource.data.history.size() == 1;
+        // A manager can expose an already assigned legacy child case to the
+        // assigned editor.  The payload is deliberately free of every price,
+        // invoice, and settlement field; those remain in the private ledger.
+        allow create: if portalManager(uid)
+          && approved(uid)
+          && (hasRole(uid, '動画編集者') || hasRole(uid, '動画編集ディレクター'))
+          && request.resource.data.keys().hasOnly([
+            'recordType','businessType','title','caseName','parentCaseId','parentCaseName',
+            'clientId','clientDisplay','accountId','accountDisplay','deadline','requestUrl','sourceUrl',
+            'sharedDate','editorDraftDate','editorDraftDateSetter','clientDraftDate','thumbnailDate','deliveryDate',
+            'instructions','urgent','status','progress','evidenceUrl','blocker',
+            'workDate','startTime','endTime','submittedByUid','editorUid',
+            'editorEmail','editorName','directorUid','source','createdAt','updatedAt','history',
+            'attachments','legacyParentId','legacySubtaskId'
+          ])
+          && request.resource.data.recordType == 'editor_portal_job'
+          && request.resource.data.get('source', '') == 'legacy_sync'
+          && request.resource.data.submittedByUid == uid
+          && request.resource.data.editorUid == uid
+          && request.resource.data.editorEmail == get(accessPath(uid)).data.get('email', '')
+          && request.resource.data.get('businessType', '') in ['dispatch','edit_agency']
+          && request.resource.data.title is string
+          && request.resource.data.title.size() > 0
+          && request.resource.data.title.size() <= 120
+          && request.resource.data.get('parentCaseId', '') is string
+          && request.resource.data.get('parentCaseId', '').size() > 0
+          && request.resource.data.get('parentCaseId', '').size() <= 160
+          && request.resource.data.get('parentCaseName', '') is string
+          && request.resource.data.get('parentCaseName', '').size() > 0
+          && request.resource.data.get('parentCaseName', '').size() <= 120
+          && request.resource.data.get('legacyParentId', '') is string
+          && request.resource.data.get('legacyParentId', '').size() > 0
+          && request.resource.data.get('legacySubtaskId', '') is string
+          && request.resource.data.get('legacySubtaskId', '').size() > 0
+          && request.resource.data.clientDisplay is string
+          && request.resource.data.clientDisplay.size() > 0
+          && request.resource.data.instructions is string
+          && request.resource.data.instructions.size() <= 3000
+          && validJobStatus(request.resource.data.status)
+          && validJobSchedule()
+          && validEditorDraftDateAssignment(request.resource.data)
+          && validCompletedJobEvidence()
           && validAttachments(request.resource.data)
           && request.resource.data.history is list
           && request.resource.data.history.size() == 1;
@@ -823,13 +882,14 @@ service cloud.firestore {
           && request.resource.data.get('lastProgressChangedByRole', '担当編集者') == '担当編集者'
           && request.resource.data.get('progressMilestones', []) is list
           && request.resource.data.get('history', []) is list
+          && editorDraftDateChangeAllowed()
           && (validEditorReviewTransition() || validEditorDeliveryCompletion())
           && validEditorWorkflowStatus()
           && preservesFinalJob()
           && validJobSchedule();
         allow update: if directorFor(uid)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'title','clientDisplay','deadline','sharedDate','editorDraftDate',
+            'title','clientDisplay','deadline','sharedDate','editorDraftDate','editorDraftDateSetter',
             'clientDraftDate','thumbnailDate','deliveryDate','instructions','urgent','status',
             'correctionReason','updatedAt','updatedBy','history','ownPay',
             'payableApproved','payableApprovedAt','payableMonth',
@@ -840,6 +900,7 @@ service cloud.firestore {
             || !(request.resource.data.status in ['初稿提出済み','修正稿提出済み','D確認OK','完了'])
             || validManagerReviewTransition())
           && validJobSchedule()
+          && validEditorDraftDateAssignment(request.resource.data)
           && validAttachments(request.resource.data)
           && validCompletedJobEvidence()
           && validManagerReviewTransition()
@@ -855,7 +916,7 @@ service cloud.firestore {
               && validCompletedJobEvidence()));
         allow update: if owner()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'title','clientDisplay','deadline','sharedDate','editorDraftDate',
+            'title','clientDisplay','deadline','sharedDate','editorDraftDate','editorDraftDateSetter',
             'clientDraftDate','thumbnailDate','deliveryDate','instructions','urgent','status',
             'correctionReason','updatedAt','updatedBy','history','ownPay',
             'payableApproved','payableApprovedAt','payableMonth',
@@ -867,6 +928,7 @@ service cloud.firestore {
             || !(request.resource.data.status in ['初稿提出済み','修正稿提出済み','D確認OK','完了'])
             || validManagerReviewTransition())
           && validJobSchedule()
+          && validEditorDraftDateAssignment(request.resource.data)
           && validAttachments(request.resource.data)
           && validCompletedJobEvidence()
           && validManagerReviewTransition()
@@ -1118,7 +1180,7 @@ service cloud.firestore {
       allow create: if videoManager()
         && request.resource.data.keys().hasOnly([
           'businessType','title','caseName','parentCaseId','parentCaseName','clientId','clientName','accountId','accountName',
-          'summary','instructions','requestUrl','sourceUrl','attachments','editorDraftDate',
+          'summary','instructions','requestUrl','sourceUrl','attachments','editorDraftDate','editorDraftDateSetter',
           'clientDraftDate','thumbnailDate','deliveryDate','urgent','status',
           'audience','eligibleUids','directorUid','createdByUid','createdByName',
           'createdAt','updatedAt','assignedUid','assignedName','assignedAt'
@@ -1132,13 +1194,15 @@ service cloud.firestore {
         && request.resource.data.get('parentCaseName', '') is string
         && request.resource.data.get('parentCaseName', '').size() <= 120
         && request.resource.data.status == 'open'
+        && validEditorDraftDateAssignment(request.resource.data)
         && validAttachments(request.resource.data)
         && request.resource.data.eligibleUids is list
         && request.resource.data.get('assignedUid', '') == ''
         && (owner() || request.resource.data.directorUid == request.auth.uid);
       allow update: if videoManager()
         && (owner() || resource.data.get('directorUid', '') == request.auth.uid)
-        && validAttachments(request.resource.data);
+        && validAttachments(request.resource.data)
+        && validEditorDraftDateAssignment(request.resource.data);
       allow update: if canSeeBoard(resource.data)
         && resource.data.status == 'open'
         && resource.data.get('assignedUid', '') == ''

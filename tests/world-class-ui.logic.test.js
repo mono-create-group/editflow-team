@@ -20,7 +20,7 @@ test('each editorial journey leads with one visually distinct primary action', (
   assert.match(editor, /class="btn primary job-primary"/);
   assert.match(features, /claim-button\{width:100%;min-height:52px/);
   assert.match(features, /最後の紫ボタンで受けてください/);
-  assert.match(index, /const headerPrimary=VIDEO_TAB==='overview'&&attentionTotal/);
+  assert.match(index, /const headerPrimary=managementKey\?managementActions:\(VIDEO_TAB==='overview'&&attentionTotal/);
   assert.match(index, /<span>未割当<\/span>/);
   assert.match(index, /const utilityActions=`\$\{VIDEO_TAB==='overview'&&attentionTotal\?addJobAction:''\}/);
   assert.match(index, /managerOpenBoardForm\?managerOpenBoardForm\(\):openJobModal\(\)/);
@@ -115,7 +115,7 @@ test('workflow ownership is explicit for editors and management', () => {
   assert.match(index, /編集者提出 → D確認 → 先方提出 → 修正指示 → 再D確認/);
   assert.match(index, /DのOKを記録/);
   assert.match(index, /クライアントへの提出を記録/);
-  assert.match(index, /先方からOKが出たら、担当編集者が実納品日と納品の証跡URLを記録して完了にします/);
+  assert.match(index, /先方からOKが出たら、担当編集者が納品日と納品の証跡URLを記録して完了にします/);
 });
 
 test('management progress uses an explicit current-state label and readable non-colour cues', () => {

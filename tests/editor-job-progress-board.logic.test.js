@@ -53,8 +53,12 @@ test('progress board explains the current step without rewriting saved data', ()
   assert.deepEqual({...context.state({status:'確認待ち'}, 'client_review')}, {state:'active',label:'返事待ち'});
   assert.deepEqual({...context.state({status:'D確認OK'}, 'client_submission')}, {state:'active',label:'先方へ提出する'});
   assert.deepEqual({...context.state({status:'完了'}, 'delivered')}, {state:'done',label:'納品完了'});
-  assert.equal(context.next({status:'確認待ち'}), 'クライアントの返事待ち（OKなら担当編集者が実納品日を記録／修正なら編集者へ戻す）');
+  assert.equal(context.next({status:'確認待ち'}), 'クライアントの返事待ち（OKなら担当編集者が納品日を記録／修正なら編集者へ戻す）');
   assert.deepEqual({...context.state({status:'確認待ち',progressEvents:[{type:'editor_submitted',status:'修正稿提出済み'}]}, 'editor_work')}, {state:'done',label:'修正稿を提出済み'});
+  assert.deepEqual({...context.state({status:'進行中'}, 'director_review')}, {state:'waiting',label:'初稿提出後'});
+  assert.deepEqual({...context.state({status:'修正中'}, 'director_review')}, {state:'waiting',label:'修正稿提出後'});
+  assert.deepEqual({...context.state({status:'進行中'}, 'client_review')}, {state:'waiting',label:'クライアント提出後'});
+  assert.doesNotMatch(index, /label:key==='director_review'\?'稿の提出後'/);
 });
 
 test('progress board groups collapsed child cases with a readable current-status summary', () => {
@@ -69,5 +73,5 @@ test('management copy names the next person and separates editor and director ac
   assert.match(index, /次に対応する人 <b>/);
   assert.match(index, /紫色が現在地です/);
   assert.match(index, /class="video-progress-next">次：/);
-  assert.match(index, /ディレクターまたはオーナーがD確認・先方提出・修正指示を更新し、先方OK後の実納品は担当編集者が記録します/);
+  assert.match(index, /ディレクターまたはオーナーがD確認・先方提出・修正指示を更新します。先方OK後は担当編集者が納品日と証跡URLを記録します/);
 });
