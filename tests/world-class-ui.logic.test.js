@@ -30,7 +30,8 @@ test('each editorial journey leads with one visually distinct primary action', (
   assert.match(index, /const utilityActions=`\$\{VIDEO_TAB==='overview'&&attentionTotal\?addJobAction:''\}/);
   assert.match(index, /managerOpenBoardForm\?managerOpenBoardForm\(\):openJobModal\(\)/);
   assert.match(manager, /id="manager-board-publish" class="manager-operation-disclosure"/);
-  assert.match(manager, /必要なときだけ開く操作/);
+  assert.match(manager, /id="manager-overview-actions"/);
+  assert.match(manager, /class="ref-manager-panel"/);
 });
 
 test('editor home gives one primary action a textual priority, current state, next step, and deadline', () => {

@@ -76,3 +76,14 @@ test('375 and 390 pixel owner pages do not retain desktop minimum widths', () =>
   assert.match(css, /@media\(max-width:390px\)/);
   assert.match(css, /#main,#video-workspace,\.board-wrap,\.board-col,\.client-card,\.profit-group-list,\.profit-group-card,\.manager-operation-body,\.manager-board-subcase-scroll\{width:100%;min-width:0;max-width:100%;overflow-x:hidden\}/);
 });
+
+test('reference global navigation is icon-only, tooltipped, and keeps 48px mobile targets', () => {
+  assert.match(css, /\.ref-global-tabs\{position:relative;z-index:30;display:flex;justify-content:center;max-width:100%;overflow:visible/);
+  assert.match(css, /\.ref-primary-tabs>button,\.ref-more-tabs>summary\{[^}]*flex:0 0 50px[^}]*min-height:50px/);
+  assert.match(css, /\.ref-global-tabs svg\{display:block;width:24px;height:24px/);
+  assert.match(css, /button\[data-tooltip\]:hover::after,\.ref-primary-tabs>button\[data-tooltip\]:focus-visible::after/);
+  assert.match(css, /\.ref-more-tabs-menu\{[^}]*grid-template-columns:repeat\(2,minmax\(130px,1fr\)\)/);
+  assert.match(css, /@media\(max-width:700px\)\{[\s\S]*?\.ref-owner-page\{margin:0 0 78px\}/);
+  assert.match(css, /@media\(max-width:700px\)\{[\s\S]*?\.ref-topbar-module\{min-width:44px;min-height:44px/);
+  assert.match(css, /\.ref-primary-tabs>button,\.ref-more-tabs>summary\{flex-basis:48px;width:48px;min-width:48px;min-height:48px\}/);
+});

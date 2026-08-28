@@ -87,12 +87,12 @@ test('legacy video operations keep child cases inside parent details in every op
 
 test('manager video workspace has accessible case context, next action, and responsive kanban primitives', () => {
   assert.match(html, /href="app-ui\.css"/);
-  assert.match(html, /class="app-breadcrumb"/);
+  assert.match(html, /class="ref-breadcrumb"/);
   assert.match(html, /class="ref-workspace-body"/);
   assert.match(html, /class="ref-next-action"/);
   assert.match(html, /class="app-context-switch" role="tablist"/);
-  assert.match(html, /class="app-view-tabs app-view-tabs-parity" role="tablist"/);
+  assert.match(html, /class="ref-global-tabs" aria-label="案件管理ページ"/);
   assert.match(html, /class="app-kanban"/);
-  assert.match(html, /aria-selected="\$\{VIDEO_TAB===k\}"/);
+  assert.match(html, /aria-current="page"/);
   assert.match(html, /function _videoCaseSummary\(job\)/);
 });

@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260829-04"></script>
+<script src="./billing-terms.js?v=20260829-05"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -986,7 +986,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260829-04">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260829-05">
 </head>
 <body class="owner-yellow-ui">
 
@@ -2698,6 +2698,10 @@ let PVMT='board'; // projects main tab (board/list/profit/payment/worker/priorit
 let PBIZ='edit'; // 案件管理の事業タブ(編集代行/編集者派遣/HP制作/AI顧問/自動化ツール制作)
 let PWORK=sessionStorage.getItem('mc_work_space')||'video'; // top-level workspace; legacy PBIZ remains the data route
 let VIDEO_TAB=sessionStorage.getItem('mc_video_tab')||'overview';
+if(['videoedit','videohaken'].includes(V)&&VIDEO_TAB!=='overview'){
+  VIDEO_TAB='overview';
+  sessionStorage.setItem('mc_video_tab',VIDEO_TAB);
+}
 let VIDEO_PROGRESS_SCOPE=sessionStorage.getItem('mc_video_progress_scope')==='completed'?'completed':'active';
 let VIDEO_QUERY='';
 let VIDEO_STATUS='';
@@ -3092,7 +3096,12 @@ function revGoalStats(g){
 document.addEventListener('click',e=>{
   const nv=e.target.closest('[data-view]');
   if(nv&&(nv.classList.contains('nav-item')||nv.classList.contains('mnav-item'))){
-    V=nv.dataset.view;CP_EDIT_MODE=false;
+    const nextView=nv.dataset.view;
+    if(nextView==='videoedit'||nextView==='videohaken'){
+      VIDEO_TAB='overview';VIDEO_RENDER_LIMIT=50;
+      sessionStorage.setItem('mc_video_tab',VIDEO_TAB);
+    }
+    V=nextView;CP_EDIT_MODE=false;
     document.querySelectorAll('.nav-item,.mnav-item').forEach(el=>el.classList.toggle('active',el.dataset.view===V));
     closeDrawer();
     render();
@@ -6870,7 +6879,47 @@ function rVideoNotificationCenter(biz=PBIZ){
   </details>`;
 }
 
-function _videoReferenceWorkspace({biz,all,active,title,addJobAction}){
+function _videoReferenceTopbar(){
+  return`<div class="ref-workspace-topbar">
+    <button type="button" class="ref-topbar-module" aria-label="案件一覧" title="案件一覧" onclick="setVideoTab('manage-board')"><span aria-hidden="true">▣</span><b>案件</b><span aria-hidden="true">⌄</span></button>
+    <div class="ref-topbar-search"><span aria-hidden="true">⌕</span><input aria-label="案件を検索" value="${esc(VIDEO_QUERY)}" placeholder="案件を検索" oninput="setVideoQuery(this.value)"></div>
+    <div class="ref-topbar-tools"><button class="ref-icon-button" type="button" aria-label="通知" title="通知" onclick="setVideoTab('queue')">♢</button><button class="ref-icon-button" type="button" aria-label="ヘルプ" title="使い方ガイド" onclick="setV('guide')">?</button><button class="ref-icon-button" type="button" aria-label="管理画面" title="案件一覧" onclick="setVideoTab('manage-board')">⚙</button><span class="ref-user-avatar" title="${esc(FB_USER?.displayName||FB_USER?.email||'オーナー')}">${esc(String(FB_USER?.displayName||'オ').trim().slice(0,1)||'オ')}</span></div>
+  </div>`;
+}
+function _videoReferenceTabLabel(label){
+  return String(label||'').replace(/^[^\p{L}\p{N}]+/u,'').trim()||'案件管理';
+}
+const VIDEO_MANAGEMENT_LABELS={board:'案件一覧',deadline:'今日明日期限',listing:'掲載中',list:'リスト',clients:'クライアント一覧',profit:'利益',payment:'支払い',invoice:'請求書',completed:'完了済み',worker:'編集者別',priority:'優先度表'};
+function _videoReferenceTabIcon(key){
+  const common='fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"';
+  const paths={
+    overview:'<path d="M12 3 3 19h18L12 3Zm0 5v5m0 3h.01"/>',
+    progress:'<path d="M5 6h14M5 12h9M5 18h6m6-3 3 3-3 3"/>',
+    board:'<path d="M4 5h4v14H4zM10 5h4v9h-4zM16 5h4v11h-4z"/>',
+    queue:'<path d="M4 5h16v12H4zM4 14h5l2 3h2l2-3h5"/>',
+    'manage-board':'<path d="M3 7h7l2-2h9v14H3zM7 11h3v3H7zm7 0h3v3h-3z"/>',
+    'manage-deadline':'<path d="M5 4v3m14-3v3M4 8h16v12H4zM8 12h4v4H8z"/>',
+    'manage-listing':'<path d="m4 13 12-6v10L4 13Zm12-2h3m-3 4h3M7 14l1 5"/>',
+    'manage-list':'<path d="M6 3h9l4 4v14H6zM15 3v5h4M9 12h7M9 16h7"/>',
+    'manage-clients':'<path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7-1a3 3 0 1 0 0-6m-14 17v-2a6 6 0 0 1 12 0v2m2-8a5 5 0 0 1 5 5v2"/>',
+    'manage-profit':'<path d="M4 19V5m0 14h16M7 15l4-5 3 3 5-7M15 6h4v4"/>',
+    'manage-payment':'<path d="M3 6h18v12H3zM3 10h18M7 15h4m7-2v5m-2-2 2 2 2-2"/>',
+    'manage-invoice':'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Zm3 5h6m-6 4h6m-6 4h3"/>',
+    'manage-completed':'<path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm-4-9 3 3 6-7"/>',
+    'manage-worker':'<path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7-1a3 3 0 1 0 0-6M2 21v-2a7 7 0 0 1 14 0v2m1-8a5 5 0 0 1 5 5v2"/>',
+    'manage-priority':'<path d="M5 20v-6h3v6H5Zm6 0V9h3v11h-3Zm6 0V4h3v16h-3Z"/>'
+  };
+  return`<svg viewBox="0 0 24 24" aria-hidden="true" ${common}>${paths[key]||paths['manage-board']}</svg>`;
+}
+function _videoReferenceTabs(tabs){
+  const coreKeys=['manage-board','manage-profit','manage-payment','manage-completed','manage-worker'];
+  let primary=coreKeys.map(key=>tabs.find(([tabKey])=>tabKey===key)).filter(Boolean);
+  if(!primary.length)primary=tabs.slice(0,5);
+  const primaryKeys=new Set(primary.map(([key])=>key)),extra=tabs.filter(([key])=>!primaryKeys.has(key));
+  const iconButton=([key,label])=>{const name=_videoReferenceTabLabel(label);return`<button type="button" aria-label="${esc(name)}" title="${esc(name)}" data-tooltip="${esc(name)}" ${VIDEO_TAB===key?'aria-current="page"':''} onclick="setVideoTab('${key}')">${_videoReferenceTabIcon(key)}<span class="app-sr-only">${esc(name)}</span></button>`};
+  return`<nav class="ref-global-tabs" aria-label="案件管理ページ"><div class="ref-primary-tabs">${primary.map(iconButton).join('')}</div>${extra.length?`<details class="ref-more-tabs" ${extra.some(([key])=>key===VIDEO_TAB)?'data-active="true"':''}><summary aria-label="その他のページ" title="その他のページ">${_videoReferenceTabIcon('manage-list')}<span class="app-sr-only">その他のページ</span></summary><div class="ref-more-tabs-menu">${extra.map(([key,label])=>{const name=_videoReferenceTabLabel(label);return`<button type="button" ${VIDEO_TAB===key?'aria-current="page"':''} onclick="setVideoTab('${key}')">${_videoReferenceTabIcon(key)}<span>${esc(name)}</span></button>`}).join('')}</div></details>`:''}</nav>`;
+}
+function _videoReferenceWorkspace({biz,all,active,title,addJobAction,tabs}){
   const filtered=_videoFiltered(biz,all),filteredActive=filtered.filter(j=>!['完了','キャンセル'].includes(j.status));
   const focus=_videoSortJobs(filteredActive)[0]||_videoSortJobs(filtered)[0]||_videoSortJobs(active)[0]||_videoSortJobs(all)[0];
   if(!focus)return`<section class="ref-workspace-empty card"><b>案件がまだありません</b><span>右上の「案件を掲載」から、最初の案件を登録できます。</span>${addJobAction||''}</section>`;
@@ -6891,11 +6940,8 @@ function _videoReferenceWorkspace({biz,all,active,title,addJobAction}){
     return`<div class="ref-chat-message"><span class="ref-avatar">${esc((item.by||assignee||'M').slice(0,1))}</span><div><b>${esc(item.by||assignee)}</b><small>${esc(at)}</small><p>${esc(text)}</p></div></div>`;
   }).join(''):`<div class="ref-chat-empty">まだ案件内の更新履歴はありません。</div>`;
   return`<section class="ref-workspace" aria-label="案件詳細ワークスペース">
-    <div class="ref-workspace-topbar">
-      <button type="button" class="ref-topbar-module" onclick="setVideoTab('board')"><span aria-hidden="true">▣</span><b>案件</b><span aria-hidden="true">⌄</span></button>
-      <div class="ref-topbar-search"><span aria-hidden="true">⌕</span><input aria-label="案件を検索" value="${esc(VIDEO_QUERY)}" placeholder="案件を検索" oninput="setVideoQuery(this.value)"></div>
-      <div class="ref-topbar-tools"><button class="ref-icon-button" type="button" aria-label="通知" title="通知" onclick="setVideoTab('queue')">♢</button><button class="ref-icon-button" type="button" aria-label="ヘルプ" title="使い方ガイド" onclick="setV('guide')">?</button><button class="ref-icon-button" type="button" aria-label="管理画面" title="従来の管理機能" onclick="setVideoTab('manage-board')">⚙</button><span class="ref-user-avatar" title="${esc(FB_USER?.displayName||FB_USER?.email||'オーナー')}">${esc(String(FB_USER?.displayName||'オ').trim().slice(0,1)||'オ')}</span></div>
-    </div>
+    ${_videoReferenceTopbar()}
+    ${_videoReferenceTabs(tabs)}
     <div class="ref-workspace-body">
       <main class="ref-case-main">
         <div class="ref-breadcrumb"><button type="button" onclick="setVideoTab('board')">案件一覧</button><span>›</span><span>${esc(client)}</span></div>
@@ -6931,7 +6977,7 @@ function rVideoOperations(showBusinessSwitcher=false,biz=PBIZ){
   const operationTabs=[['overview','要対応'],['progress','編集進行ボード'],['board','工程ボード'],['queue','対応キュー']];
   // 旧画面の管理機能は別画面へ隔離せず、同じ新ワークスペースから直接開く。
   // 集計や保存処理は従来の renderer を再利用し、旧データと二重管理しない。
-  const managementTabs=_isScopedVideoDirectorAccess()?[]:BIZ_CFG[biz].tabs.filter(_canOpenProjectTab).map(k=>[`manage-${k}`,k==='worker'?BIZ_CFG[biz].lbl.member:PTAB_LBL[k]]);
+  const managementTabs=_isScopedVideoDirectorAccess()?[]:BIZ_CFG[biz].tabs.filter(_canOpenProjectTab).map(k=>[`manage-${k}`,VIDEO_MANAGEMENT_LABELS[k]||(k==='worker'?BIZ_CFG[biz].lbl.member:PTAB_LBL[k])]);
   const tabs=[...operationTabs,...managementTabs];
   if(!tabs.some(([k])=>k===VIDEO_TAB)){VIDEO_TAB='overview';sessionStorage.setItem('mc_video_tab',VIDEO_TAB);}
   const managementKey=VIDEO_TAB.startsWith('manage-')?VIDEO_TAB.slice(7):'';
@@ -6949,7 +6995,7 @@ function rVideoOperations(showBusinessSwitcher=false,biz=PBIZ){
   }
   const attentionTotal=new Set([...overdue,...blocked,...review,...unassigned].map(j=>`${j._source}:${j._portalUid||''}:${j.id}`)).size;
   const addJobAction=_videoCanEdit()?(biz==='edit'?(_isScopedVideoDirectorAccess()?'<button class="btn btn-p" onclick="managerOpenBoardForm()">＋ 案件を掲載</button>':'<button class="btn btn-p" onclick="window.managerOpenBoardForm?managerOpenBoardForm():openJobModal()">＋ 案件を掲載</button>'):_isScopedVideoDirectorAccess()?'':'<button class="btn btn-p" onclick="openJobModal()">＋ 派遣案件</button>'):'';
-  const overview=_videoReferenceWorkspace({biz,all,active,title,addJobAction});
+  const overview=_videoReferenceWorkspace({biz,all,active,title,addJobAction,tabs});
   const ownerAcceptancePreview=_isOwner()&&biz==='edit'?'<a class="btn btn-p btn-sm" href="./editor.html?demo=editor" target="_blank" rel="noopener">編集者の受託画面を確認（デモ）</a>':'';
   const acceptanceNote=biz==='edit'&&_isOwner()?'<div style="font-size:11px;color:var(--t2);margin:-2px 0 10px;padding:8px 10px;border-radius:8px;background:var(--card2)">この管理画面は案件を掲載する側です。編集者は「案件を探す」から「この案件を受ける」を押します。</div>':'';
   const roleNote=_isOwner()?'全案件の優先順位・請求・配置を管理します。':'担当する編集者と案件だけを確認・判断します。';
@@ -6969,9 +7015,9 @@ function rVideoOperations(showBusinessSwitcher=false,biz=PBIZ){
     const renderer={board:rProjBoard,deadline:rProjDeadline,listing:rProjListing,list:()=>rProjList(clients),clients:rProjClients,profit:rProjProfit,payment:rProjPayment,invoice:rProjInvoice,completed:rProjCompleted,worker:rProjWorker,priority:rProjPriority}[managementKey];
     workspaceBody=renderer?renderer():rProjBoard();
   }
-  const tabButtons=tabs.map(([k,l])=>`<button class="btn btn-sm" role="tab" aria-selected="${VIDEO_TAB===k}" aria-controls="video-workspace" onclick="setVideoTab('${k}')">${l}</button>`).join('');
   if(VIDEO_TAB==='overview')return`${showBusinessSwitcher?rBizBar():''}<div id="video-workspace" class="ref-owner-page">${overview}</div>`;
-  return`${showBusinessSwitcher?rBizBar():''}<div id="video-workspace"><div class="app-breadcrumb"><span>動画編集事業</span><span>${biz==='haken'?'編集者派遣':'編集代行'}</span><span>${tabs.find(x=>x[0]===VIDEO_TAB)?.[1]||'要対応'}</span></div>${screenSwitch}<header class="app-header"><div class="app-header-copy"><h1>${title}</h1><p>${roleNote} ${description}</p></div><div class="app-header-actions">${headerPrimary}${utilityActions&&!managementKey?`<details><summary class="btn btn-g btn-sm">その他</summary><div style="position:absolute;right:0;z-index:20;display:grid;gap:6px;padding:8px;margin-top:6px;border:1px solid var(--border);border-radius:10px;background:var(--card);box-shadow:var(--shadow-lg)">${utilityActions}</div></details>`:''}</div></header>${acceptanceNote}${rVideoNotificationCenter(biz)}<div class="app-view-tabs app-view-tabs-parity" role="tablist" aria-label="動画案件の表示">${tabButtons}</div>${workspaceBody}</div>`;
+  const currentLabel=_videoReferenceTabLabel(tabs.find(x=>x[0]===VIDEO_TAB)?.[1]||'案件管理');
+  return`${showBusinessSwitcher?rBizBar():''}<div id="video-workspace" class="ref-owner-page"><section class="ref-workspace ref-renderer-workspace" aria-label="${esc(currentLabel)}">${_videoReferenceTopbar()}${_videoReferenceTabs(tabs)}<main class="ref-renderer-main"><div class="ref-renderer-heading"><div><small>動画編集事業 › ${biz==='haken'?'編集者派遣':'編集代行'}</small><h2>${esc(currentLabel)}</h2></div><div class="ref-renderer-actions">${screenSwitch}${headerPrimary}${utilityActions&&!managementKey?`<details><summary class="btn btn-g btn-sm">その他</summary><div class="ref-utility-menu">${utilityActions}</div></details>`:''}</div></div><section class="ref-renderer-content">${workspaceBody}</section></main></section></div>`;
 }
 
 function rVideoEditProjects(){PWORK='video';PBIZ='edit';sessionStorage.setItem('mc_work_space','video');return rProjectWorkspace(false);}
@@ -16856,7 +16902,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260829-04';
+const APP_VERSION='20260829-05';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -16930,6 +16976,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260829-04"></script>
+<script src="./manager-features.js?v=20260829-05"></script>
 </body>
 </html>
