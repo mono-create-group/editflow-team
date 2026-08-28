@@ -48,7 +48,8 @@ test('editor display name is explicitly aligned with Chatwork and self-editable'
 
 test('empty portal states explain zero data and keep the traditional invoice path available', () => {
   assert.match(features, /権限エラーではありません。管理者が編集代行案件を掲載/);
-  assert.match(features, /このアカウントの担当案件は0件です/);
+  assert.match(features, /進行中の担当案件は0件です/);
+  assert.match(features, /完了済みの担当案件は0件です/);
   assert.match(editor, /従来どおり入力できます/);
   assert.match(editor, /管理者の報酬確定を待たずに通常の請求書を作成できます/);
 });

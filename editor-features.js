@@ -1,10 +1,10 @@
 (function(){
   'use strict';
 
-  const PORTAL_APP_VERSION='20260828-04';
+  const PORTAL_APP_VERSION='20260828-05';
   const feature={
     board:[],catalog:[],manuals:[],schedules:[],release:null,
-    messages:new Map(),messageUnsubs:new Map(),unsubs:[],startedFor:'',serverVersion:''
+    messages:new Map(),messageUnsubs:new Map(),unsubs:[],startedFor:'',serverVersion:'',jobsListMode:'active'
   };
   const original={
     navHtml,render,startPortal,jobForm,jobsHtml,jobCard,createJob,dashboardHtml,logout
@@ -64,6 +64,7 @@
       .manual-body{white-space:pre-wrap;font-size:12px;color:var(--t2);margin:9px 0}.manual-meta{font-size:10px;color:var(--t3)}
       .privacy-note{display:flex;gap:8px;align-items:flex-start;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:10px;font-size:11px;color:var(--t2)}
       .catalog-empty{border:1px dashed var(--border);border-radius:9px;padding:14px;color:var(--t2);font-size:11px}
+      .job-list-tabs{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 10px}.job-list-tab{min-width:132px;justify-content:center;border:1.5px solid var(--border);background:var(--card);color:var(--t2)}.job-list-tab.active{border-color:#7c3aed;background:#f5f3ff;color:#5b21b6;box-shadow:0 3px 12px rgba(124,58,237,.13)}.job-list-tab .accept-count{margin-left:2px;background:#7c3aed}.job-list-tab:not(.active) .accept-count{background:#94a3b8}
       @media(max-width:980px){.availability-calendar{grid-template-columns:repeat(2,minmax(0,1fr))}.availability-bulk-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
       @media(max-width:760px){.feature-grid,.feature-grid.two,.availability-calendar,.availability-bulk-grid{grid-template-columns:1fr}.update-banner{top:65px;align-items:flex-start;flex-wrap:wrap}.update-banner .btn{width:auto}.availability-day{display:grid;grid-template-columns:70px minmax(0,1fr);gap:7px}.availability-day-head{display:block}.availability-day>.field,.availability-day>.availability-time{margin-top:0}.availability-day .field.full{grid-column:1/-1}}
     `;document.head.appendChild(style);
@@ -97,7 +98,15 @@
     return`<div class="card"><div class="section-title"><h2>編集者派遣の案件を登録</h2><span>入力内容は自動で一時保存</span></div><div class="form-grid" oninput="saveCaseDraft()" onchange="saveCaseDraft()"><div class="field"><label for="new-client-id">クライアント *</label><select id="new-client-id" onchange="updateAccountOptions()"><option value="">クライアントを選択</option>${catalog.map(x=>`<option value="${esc(x.id)}" ${x.id===d.clientId?'selected':''}>${esc(x.name)}</option>`).join('')}</select></div><div class="field"><label for="new-account-id">アカウント名 *</label><select id="new-account-id" data-selected="${esc(d.accountId||'')}"><option value="">アカウントを選択</option>${accounts.map(x=>`<option value="${esc(x.id)}" ${x.id===d.accountId?'selected':''}>${esc(x.name)}</option>`).join('')}</select></div><div class="field full"><label for="new-case">案件・バッチ名</label><input id="new-case" maxlength="120" value="${esc(d.caseName||'')}" placeholder="例：2026年9月分"></div><div class="field"><label for="new-title">個別動画・案件名 *</label><input id="new-title" maxlength="120" value="${esc(d.title||'')}" placeholder="例：ショート動画 03"></div><div class="field"><label for="new-shared">受注日</label><input id="new-shared" type="date" value="${esc(sharedDate)}"></div><div class="field"><label for="new-deadline">納品日 *</label><input id="new-deadline" type="date" value="${esc(deliveryDate)}"></div><details class="optional-box"><summary>初稿日など詳しい日程を入力</summary><div class="form-grid" style="margin-top:8px"><div class="field"><label for="new-editor-draft">編集者 初稿</label><input id="new-editor-draft" type="date" value="${esc(d.editorDraftDate||'')}"></div><div class="field"><label for="new-client-draft">クライアント提出 初稿</label><input id="new-client-draft" type="date" value="${esc(d.clientDraftDate||'')}"></div><div class="field"><label for="new-thumbnail">サムネイル納品日</label><input id="new-thumbnail" type="date" value="${esc(d.thumbnailDate||'')}"></div></div></details><div class="field"><label class="check"><input id="new-urgent" type="checkbox" ${d.urgent?'checked':''}> 緊急案件として登録</label></div><div class="field"><label for="new-request">依頼内容URL</label><input id="new-request" type="url" value="${esc(d.requestUrl||'')}" placeholder="https://"></div><div class="field"><label for="new-source">素材URL</label><input id="new-source" type="url" value="${esc(d.sourceUrl||'')}" placeholder="https://"></div><div class="field full"><label for="new-instructions">依頼内容・編集指示 *</label><textarea id="new-instructions" maxlength="3000">${esc(d.instructions||'')}</textarea></div></div><div class="actions"><button class="btn primary job-primary" type="button" onclick="createJob()">編集者派遣に案件を登録</button></div></div>`;
   }
 
-  function jobsExtended(){return`${pageHead('担当案件','受託・進捗・質問・納品をここで完結')}<ol class="flow"><li><b>STEP 1</b>案件を受ける／登録</li><li><b>STEP 2</b>日程と指示を確認</li><li><b>STEP 3</b>質問・初稿・修正</li><li><b>STEP 4</b>納品証跡を登録</li></ol>${jobFormExtended()}<section class="section"><div class="section-title"><h2>案件一覧</h2><span>${jobs.length}件</span></div><div class="job-list">${sortNewest(jobs).map(jobCard).join('')||'<div class="card empty"><b>このアカウントの担当案件は0件です</b><br><span class="muted">権限エラーではありません。「案件を探す」から受託するか、編集者派遣の案件を登録すると表示されます。</span></div>'}</div></section>`}
+  function editorJobBucket(job){return['完了','キャンセル'].includes(String(job?.status||''))?'completed':'active'}
+  function setEditorJobsListMode(mode){feature.jobsListMode=mode==='completed'?'completed':'active';render()}
+  function jobsExtended(){
+    const active=jobs.filter(j=>editorJobBucket(j)==='active'),completed=jobs.filter(j=>editorJobBucket(j)==='completed'),showCompleted=feature.jobsListMode==='completed',visible=showCompleted?completed:active;
+    const empty=showCompleted
+      ?'<div class="card empty"><b>完了済みの担当案件は0件です</b><br><span class="muted">案件を納品完了にすると、ここへ移動します。</span></div>'
+      :'<div class="card empty"><b>進行中の担当案件は0件です</b><br><span class="muted">権限エラーではありません。「案件を探す」から受託するか、編集者派遣の案件を登録すると表示されます。</span></div>';
+    return`${pageHead('担当案件','受託・進捗・質問・納品をここで完結')}<ol class="flow"><li><b>STEP 1</b>案件を受ける／登録</li><li><b>STEP 2</b>日程と指示を確認</li><li><b>STEP 3</b>質問・初稿・修正</li><li><b>STEP 4</b>納品証跡を登録</li></ol>${jobFormExtended()}<section class="section"><div class="section-title"><h2>${showCompleted?'完了した案件':'進行中の案件'}</h2><span>${visible.length}件</span></div><div class="job-list-tabs" role="tablist" aria-label="担当案件の表示切り替え"><button type="button" data-preview-safe class="btn job-list-tab ${showCompleted?'':'active'}" role="tab" aria-selected="${!showCompleted}" onclick="setEditorJobsListMode('active')">進行中 <span class="accept-count">${active.length}</span></button><button type="button" data-preview-safe class="btn job-list-tab ${showCompleted?'active':''}" role="tab" aria-selected="${showCompleted}" onclick="setEditorJobsListMode('completed')">完了 <span class="accept-count">${completed.length}</span></button></div><div class="job-list">${sortNewest(visible).map(jobCard).join('')||empty}</div></section>`;
+  }
 
   function boardHtml(){
     const list=feature.board.filter(x=>x.status==='open').sort(byUpdated);
@@ -297,6 +306,7 @@
   window.openEditorNotification=openEditorNotification;
   window.markEditorNotificationsRead=markEditorNotificationsRead;
   window.saveEditorDraftDate=saveEditorDraftDate;
+  window.setEditorJobsListMode=setEditorJobsListMode;
 
   const originalRenderBody=render;
   render=function(){
