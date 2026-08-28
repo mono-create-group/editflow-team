@@ -105,6 +105,14 @@ test('job cards keep supporting edits behind details and expose one primary acti
   assert.ok(html.indexOf('</style>') < html.indexOf('href="app-ui.css"'), 'shared CSS must load after portal overrides');
 });
 
+test('workflow timeline reserves a separate rail so labels never cross the connector', () => {
+  assert.match(features, /\.editor-timeline-step\{position:relative;min-width:0;padding:25px 8px 0;text-align:center/);
+  assert.match(features, /\.editor-timeline-step:before\{[^}]*left:50%;top:4px;[^}]*transform:translateX\(-50%\)/);
+  assert.match(features, /\.editor-timeline-step:not\(:last-child\):after\{[^}]*left:50%;right:-50%;top:9px/);
+  assert.match(features, /\.editor-timeline-step\{min-height:44px;padding:7px 5px 9px 32px;text-align:left\}/);
+  assert.match(features, /\.editor-timeline-step:not\(:last-child\):after\{left:13px;right:auto;top:23px;width:2px;height:calc\(100% - 7px\)\}/);
+});
+
 test('parent grouping uses a stable id, then client account and case name, and never merges unnamed jobs', () => {
   assert.match(features, /parentCaseId\|\|job\?\.linkedLegacyJobId\|\|job\?\.parentJobId\|\|job\?\.caseId/);
   assert.match(features, /case:\$\{type\}\|\$\{client\}\|\$\{account\}\|\$\{caseName\}/);

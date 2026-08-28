@@ -37,6 +37,14 @@ test('mobile navigation is a five-item bottom bar in editor and main app', () =>
   assert.match(index, /#mob-nav\{\s*display:none;position:fixed;bottom:0/);
 });
 
+test('secondary editor navigation opens as a bounded readable menu', () => {
+  assert.match(features, /\.editor-nav-desktop\{position:relative;overflow:visible;flex-wrap:wrap\}/);
+  assert.match(features, /\.editor-nav-more-menu\{position:absolute;[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(features, /\.editor-nav-more-menu \.btn\{width:100%;min-width:0;min-height:44px;justify-content:flex-start/);
+  assert.match(features, /\.editor-nav-more-menu\{position:fixed;top:auto;right:12px;bottom:calc\(66px \+ env\(safe-area-inset-bottom\)\);left:12px/);
+  assert.match(features, /max-height:min\(62dvh,460px\);grid-template-columns:repeat\(2,minmax\(0,1fr\)\);overflow-y:auto/);
+});
+
 test('notifications contain stable deep-link data and open the target context', () => {
   assert.match(index, /data-notification-target=/);
   assert.match(index, /data-notification-section=/);
