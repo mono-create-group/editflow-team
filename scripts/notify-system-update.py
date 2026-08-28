@@ -58,6 +58,18 @@ def history_has_marker(history_text: str, marker: str) -> bool:
     return any(marker in str(item.get("body", "")) for item in history if isinstance(item, dict))
 
 
+def history_has_verified_notice(history_text: str, marker: str) -> bool:
+    try:
+        history = json.loads(history_text) if history_text else []
+    except json.JSONDecodeError:
+        return False
+    return any(
+        marker in str(item.get("body", "")) and AI_DISCLOSURE in str(item.get("body", ""))
+        for item in history
+        if isinstance(item, dict)
+    )
+
+
 def build_message(version: str, app_url: str) -> str:
     marker = f"システム更新 {version}"
     return (
@@ -96,10 +108,15 @@ def main() -> int:
             raise RuntimeError(f"invalid existing room id: {room_id!r}")
         history_text = request(token, "GET", f"/rooms/{room_id}/messages?force=1")
         if history_has_marker(history_text, marker):
-            print(f"room {room_id}: version already announced")
+            if not history_has_verified_notice(history_text, marker):
+                raise RuntimeError(f"room {room_id}: version marker exists without AI disclosure")
+            print(f"room {room_id}: version already announced and verified")
             continue
         request(token, "POST", f"/rooms/{room_id}/messages", {"body": message, "self_unread": "0"})
-        print(f"room {room_id}: notification sent")
+        posted_history = request(token, "GET", f"/rooms/{room_id}/messages?force=1")
+        if not history_has_verified_notice(posted_history, marker):
+            raise RuntimeError(f"room {room_id}: notification was not confirmed in history")
+        print(f"room {room_id}: notification sent and verified")
     return 0
 
 

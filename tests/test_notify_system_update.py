@@ -23,6 +23,13 @@ class NotificationHistoryTest(unittest.TestCase):
         self.assertFalse(MODULE.history_has_marker("", "システム更新 1"))
         self.assertFalse(MODULE.history_has_marker("not-json", "システム更新 1"))
 
+    def test_verified_notice_requires_marker_and_ai_disclosure_in_same_message(self):
+        marker = "システム更新 20260828-06"
+        valid = json.dumps([{"body": f"{marker}\n{MODULE.AI_DISCLOSURE}"}], ensure_ascii=False)
+        split = json.dumps([{"body": marker}, {"body": MODULE.AI_DISCLOSURE}], ensure_ascii=False)
+        self.assertTrue(MODULE.history_has_verified_notice(valid, marker))
+        self.assertFalse(MODULE.history_has_verified_notice(split, marker))
+
     def test_fixed_release_message_has_marker_url_and_ai_disclosure(self):
         message = MODULE.build_message("20260828-06", "https://example.com/app/")
         self.assertIn("[title]システム更新 20260828-06[/title]", message)
