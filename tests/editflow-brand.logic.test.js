@@ -21,8 +21,9 @@ test('service worker precaches the EditFlow logo',()=>{
   assert.match(read('sw.js'),/\.\/editflow-logo\.svg/);
 });
 
-test('application instructions describe the yellow acceptance action',()=>{
+test('application workspace presents one visually distinct acceptance action',()=>{
   const features=read('editor-features.js');
-  assert.match(features,/黄色の「この案件を受ける」/);
+  assert.match(features,/class="application-confirm"/);
+  assert.match(features,/class="btn primary claim-button"[^>]+>この案件を受ける<\/button>/);
   assert.doesNotMatch(features,/最後の紫ボタン/);
 });

@@ -19,7 +19,10 @@ test('each editorial journey leads with one visually distinct primary action', (
   assert.match(features, /editor-primary-action\{border:2px solid/);
   assert.match(editor, /class="btn primary job-primary"/);
   assert.match(features, /claim-button\{width:100%;min-height:52px/);
-  assert.match(features, /黄色の「この案件を受ける」を押してください/);
+  assert.match(features, /<section class="application-workspace" aria-label="案件応募ワークスペース">/);
+  assert.match(features, /<aside class="application-confirm">/);
+  assert.equal((features.match(/onclick="claimBoardJob/g) || []).length, 1, 'the application detail has one claim CTA');
+  assert.match(features, /この案件を受ける<\/button>/);
   assert.doesNotMatch(features, /最後の紫ボタン/);
   assert.match(index, /const headerPrimary=managementKey\?managementActions:\(VIDEO_TAB==='overview'&&attentionTotal/);
   assert.match(index, /<span>未割当<\/span>/);
@@ -64,10 +67,13 @@ test('notifications contain stable deep-link data and open the target context', 
   assert.match(index, /内容を開く/);
 });
 
-test('parent cases and child cases are collapsible without hiding child detail', () => {
-  assert.match(features, /<details class="card editor-case-group">/);
+test('assigned parent cases keep details while board child cases use a selected table row', () => {
+  assert.match(features, /<details[^>]+class="card editor-case-group">/);
   assert.match(features, /editor-case-group>summary/);
   assert.match(features, /group\.jobs\.map\(jobCard\)/);
+  assert.match(features, /class="application-subcase-table" role="table" aria-label="子案件一覧"/);
+  assert.match(features, /class="application-subcase-row \$\{item\.id===selected\.id\?'active':''\}/);
+  assert.match(features, /onclick="selectBoardJob\('\$\{esc\(item\.id\)\}'\)"/);
   assert.match(index, /<details class="video-subcase-list"/);
   assert.match(index, /video-subcase-children/);
   assert.match(index, /class="video-progress-parent-state">現在：/);

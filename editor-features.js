@@ -1,9 +1,9 @@
 (function(){
   'use strict';
 
-  const PORTAL_APP_VERSION='20260829-01';
+  const PORTAL_APP_VERSION='20260829-02';
   const feature={
-    board:[],catalog:[],manuals:[],schedules:[],release:null,
+    board:[],boardSelectedId:'',boardSearch:'',catalog:[],manuals:[],schedules:[],release:null,
     messages:new Map(),messageUnsubs:new Map(),messageLoading:new Set(),openMessageJobIds:new Set(),groupDraftSaving:new Set(),unsubs:[],startedFor:'',serverVersion:'',jobsListMode:'active',jobsTypeFilter:'all',lastSuggestionCode:'',
     dmPeers:[],dmThreads:[],dmMessages:[],dmActivePeerUid:'',dmActiveThreadId:'',dmThreadUnsub:null,dmMessageUnsub:null,dmLoading:false,dmError:'',dmStartedFor:'',dmInitialSnapshot:false,dmSeenMessages:new Map(),
     pushStatus:null,pushStatusFor:'',pushStatusLoading:false
@@ -30,6 +30,31 @@
     (Array.isArray(job?.attachments)?job.attachments:[]).slice(0,20).forEach(item=>add(item?.type||'資料',item?.title||item?.name||'名称未設定',item?.url||item?.href));
     add('提出','提出した内容',job?.evidenceUrl);
     return items.length?`<div class="editor-resource-list" aria-label="素材・資料">${items.map(item=>`<a class="editor-resource-link" href="${esc(item.url)}" target="_blank" rel="noopener noreferrer"><span>${esc(item.type)}</span><b>${esc(item.title)}</b><span aria-hidden="true">↗</span></a>`).join('')}</div>`:'';
+  }
+  function applicationIcon(name){
+    const paths={
+      calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/>',
+      document:'<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v5h5M9 13h6M9 17h6"/>',
+      media:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m7 15 3-3 3 3 2-2 3 3M8 9h.01"/>',
+      check:'<path d="m5 12 4 4L19 6"/>',
+      clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'
+    };
+    return`<svg class="application-icon application-icon-${name}" viewBox="0 0 24 24" aria-hidden="true">${paths[name]||paths.document}</svg>`;
+  }
+  function hydrateEditorVisualMarks(){
+    document.querySelectorAll('.application-info dt').forEach((label,index)=>{
+      if(label.querySelector('.application-icon'))return;
+      const text=label.textContent||'';
+      label.insertAdjacentHTML('afterbegin',applicationIcon(/初稿|納期|日程/.test(text)?'calendar':index===2?'check':'document'));
+    });
+    document.querySelectorAll('.notification-item').forEach(item=>{
+      const copy=item.querySelector('.notification-copy'),read=item.querySelector('.notification-read');
+      if(copy&&!item.querySelector('.notification-visual-icon')){
+        const text=copy.textContent||'',kind=/初稿|納期|日程/.test(text)?'calendar':/連絡|DM|チャット/.test(text)?'check':'document';
+        copy.insertAdjacentHTML('beforebegin',`<span class="notification-visual-icon">${applicationIcon(kind)}</span>`);
+      }
+      if(read&&!read.querySelector('.application-icon'))read.innerHTML=`${applicationIcon('check')}<span class="app-sr-only">既読</span>`;
+    });
   }
   function notificationReadKey(){return`editor_notification_read_${user?.uid||'guest'}`}
   function notificationReadIds(){try{return new Set(JSON.parse(localStorage.getItem(notificationReadKey())||'[]'))}catch(_){return new Set()}}
@@ -225,6 +250,14 @@
   }
   function setEditorJobsListMode(mode){feature.jobsListMode=mode==='completed'?'completed':'active';render()}
   function setEditorJobsTypeFilter(type){feature.jobsTypeFilter=['all','agency','dispatch'].includes(type)?type:'all';render()}
+  function selectBoardJob(jid){
+    if(!feature.board.some(item=>item?.id===jid&&item.status==='open'))return;
+    feature.boardSelectedId=jid;render();
+  }
+  function filterEditorBoardSearch(value){
+    feature.boardSearch=String(value||'').slice(0,120);
+    if(view==='board')render();
+  }
   function jobsExtended(){
     const active=jobs.filter(j=>editorJobBucket(j)==='active'),completed=jobs.filter(j=>editorJobBucket(j)==='completed'),showCompleted=feature.jobsListMode==='completed',source=showCompleted?completed:active,visible=source.filter(j=>feature.jobsTypeFilter==='all'||editorJobType(j)===feature.jobsTypeFilter),ordered=showCompleted?sortNewest(visible):editorJobSortByDeadline(visible);
     const empty=showCompleted
@@ -234,10 +267,26 @@
   }
 
   function boardHtml(){
-    const list=feature.board.filter(x=>x.status==='open').sort(byUpdated).map(x=>({...x,clientDisplay:x.clientDisplay||x.clientName||'',accountDisplay:x.accountDisplay||x.accountName||'',businessType:'edit_agency'}));
-    const empty=`<div class="card empty"><b>現在、募集中の編集代行案件はありません</b><br><span class="muted">ここに出るのは、管理者が募集を開始した案件だけです。すでに担当している案件は「担当案件」で確認できます。</span><div class="actions" style="justify-content:center"><button class="btn primary" type="button" onclick="setView('jobs')">担当案件を開く</button></div></div>`;
-    const previewNote=ADMIN_PREVIEW?'<div class="privacy-note"><b>オーナーの確認画面</b><span>このページは「募集中の案件」だけを表示します。登録済みの案件全体は、管理画面の「編集代行案件」で確認してください。</span></div>':'';
-    return`${pageHead('募集中の案件','管理者が募集を開始した編集代行案件を表示します。')}<div class="accept-howto"><span style="font-size:20px">✅</span><div><b>日程と内容を確認し、黄色の「この案件を受ける」を押してください</b><span>受託後は、担当案件へ自動で移動します。</span></div></div>${previewNote}<div class="privacy-note"><b>この画面に出る案件</b><span>${isExternal()?'担当ディレクターが募集した案件だけです。':'全員向けに公開された案件と、あなた宛ての案件だけです。'} クライアントへの請求額と利益は表示しません。</span></div><section class="section"><div class="editor-job-list">${editorGroupJobs(list).map(group=>`<details class="card editor-case-group"><summary><span><b>${esc(group.title)}</b><small>${esc([group.client,group.account].filter(Boolean).join(' / ')||'クライアント・アカウント未設定')}</small></span><span class="editor-case-group-count">募集中 ${group.jobs.length}件</span></summary><div class="editor-case-group-body">${group.jobs.map(x=>{const requested=x.audience==='designated'||Array.isArray(x.eligibleUids)&&x.eligibleUids.length===1;return`<article class="card board-card"><div class="job-top"><div><div class="job-title">${esc(x.title||'案件名未設定')}</div><div class="job-meta">初稿 ${esc(x.editorDraftDate||'未設定')} / 納品 ${esc(x.deliveryDate||'未設定')}</div></div>${requested?'<span class="pill red">編集リクエスト</span>':x.urgent?'<span class="pill red">緊急</span>':'<span class="pill">募集中</span>'}</div><details><summary>日程・案件内容を確認する</summary><div class="job-body">${esc(x.summary||x.instructions||'案件内容は未設定です。')}</div>${x.instructions&&x.summary?`<div class="muted">${esc(x.instructions)}</div>`:''}${editorResourceLinks(x)}</details><button class="btn primary claim-button" type="button" onclick="claimBoardJob('${esc(x.id)}')">この案件を受ける</button></article>`}).join('')}</div></details>`).join('')||empty}</div></section>`;
+    const all=feature.board.filter(x=>x.status==='open').sort(byUpdated).map(x=>({...x,clientDisplay:x.clientDisplay||x.clientName||'',accountDisplay:x.accountDisplay||x.accountName||'',businessType:'edit_agency'}));
+    const query=feature.boardSearch.trim().toLocaleLowerCase('ja-JP');
+    const list=query?all.filter(item=>[item.title,item.caseName,item.parentCaseName,item.clientName,item.accountName,item.summary,item.instructions].join(' ').toLocaleLowerCase('ja-JP').includes(query)):all;
+    const selected=list.find(item=>item.id===feature.boardSelectedId)||list[0]||null;
+    const empty=`<div class="card empty board-empty"><b>現在、募集中の編集代行案件はありません</b><br><span class="muted">ここに出るのは、管理者が募集を開始した案件だけです。すでに担当している案件は「担当案件」で確認できます。</span><div class="actions" style="justify-content:center"><button class="btn primary" type="button" onclick="setView('jobs')">担当案件を開く</button></div></div>`;
+    if(!selected)return`${boardWorkspaceHeader()}${empty}`;
+    const requested=selected.audience==='designated'||Array.isArray(selected.eligibleUids)&&selected.eligibleUids.length===1;
+    const dates=[['編集者初稿',selected.editorDraftDate],['クライアント初稿',selected.clientDraftDate],['納期（予定）',selected.deliveryDate]].filter(([,date])=>date);
+    const resources=editorResourceLinks(selected)||'<div class="board-resource-empty">素材・資料は受託後に案件詳細から確認できます。</div>';
+    const groupTitle=selected.caseName||selected.parentCaseName||'募集中の案件';
+    const applicantNote=isExternal()?'担当ディレクターの募集案件です。':'公開中の編集代行案件です。';
+    const siblingKey=selected.parentCaseId||selected.parentCaseName||selected.caseName||selected.id;
+    const siblings=all.filter(item=>(item.parentCaseId||item.parentCaseName||item.caseName||item.id)===siblingKey);
+    const subcaseTable=`<section class="application-subcases"><div class="application-section-head"><div><h3>子案件</h3><span>${siblings.length}件</span></div><button type="button" data-preview-safe class="btn small application-resource-jump" aria-label="素材・資料へ" onclick="document.querySelector('.application-resources')?.scrollIntoView({behavior:'smooth'})">${applicationIcon('media')}<span>素材・資料へ</span></button></div><div class="application-subcase-table" role="table" aria-label="子案件一覧"><div class="application-subcase-row application-subcase-head" role="row"><span>案件名</span><span>状況</span><span>編集者初稿</span><span>納期（予定）</span></div>${siblings.map(item=>`<button type="button" data-preview-safe class="application-subcase-row ${item.id===selected.id?'active':''}" role="row" aria-current="${item.id===selected.id?'true':'false'}" onclick="selectBoardJob('${esc(item.id)}')"><b>${esc(item.title||'案件名未設定')}</b><span><i class="application-table-status">${item.id===selected.id?'確認中':'募集中'}</i></span><span>${esc(item.editorDraftDate||'未設定')}</span><span>${esc(item.deliveryDate||'未設定')}</span></button>`).join('')}</div></section>`;
+    return`${boardWorkspaceHeader()}<section class="application-workspace" aria-label="案件応募ワークスペース"><main class="application-detail application-detail-wide"><div class="application-detail-head"><div class="application-breadcrumb">案件一覧 <span>›</span> ${esc(groupTitle)}</div><div class="application-title-row"><div><h2>${esc(groupTitle)}</h2><p>${esc([selected.clientName,selected.accountName].filter(Boolean).join(' / ')||'クライアント・アカウント未設定')}</p></div><div class="application-title-tools"><span class="application-status ${requested||selected.urgent?'attention':''}">${requested?'編集リクエスト':selected.urgent?'緊急':'募集中'}</span><button type="button" data-preview-safe class="btn small" onclick="document.querySelector('.application-subcases')?.scrollIntoView({behavior:'smooth'})">子案件を見る</button></div></div></div><div class="application-info-grid"><section class="application-info"><h3>案件情報</h3><dl><div><dt>親案件</dt><dd>${esc(groupTitle)}</dd></div><div><dt>案件種別</dt><dd>編集代行</dd></div><div><dt>募集状況</dt><dd>編集者を募集中</dd></div></dl></section><section class="application-info"><h3>選択中の子案件</h3><dl>${dates.map(([label,date])=>`<div><dt>${esc(label)}</dt><dd>${esc(date)}</dd></div>`).join('')||'<div><dt>日程</dt><dd>未設定</dd></div>'}</dl></section></div>${subcaseTable}<section class="application-instructions"><h3>${esc(selected.title||'案件名未設定')}の編集内容</h3><p>${esc(selected.summary||selected.instructions||'案件内容は未設定です。')}</p>${selected.instructions&&selected.summary?`<p class="application-instruction-more">${esc(selected.instructions)}</p>`:''}</section><section class="application-resources"><div><h3>素材・資料</h3><span>リンクを開いて確認</span></div>${resources}</section></main><aside class="application-confirm"><div class="application-confirm-head"><span>応募前の確認</span><b>3項目</b></div><ol><li><span>1</span><div><b>日程を確認</b><p>初稿日と納期（予定）に対応できることを確認します。</p></div></li><li><span>2</span><div><b>素材・指示を確認</b><p>必要な素材と編集内容を確認してから応募します。</p></div></li><li><span>3</span><div><b>受託後に開始</b><p>受託後は担当案件に自動で追加されます。</p></div></li></ol><div class="application-privacy"><b>表示されない情報</b><span>クライアント請求額と利益は表示しません。</span></div><button class="btn primary claim-button" type="button" onclick="claimBoardJob('${esc(selected.id)}')">この案件を受ける</button><small>${applicantNote}</small></aside></section>`;
+  }
+
+  function boardWorkspaceHeader(){
+    const preview=ADMIN_PREVIEW?'<span class="application-preview-chip">確認モード</span>':'';
+    return`<div class="application-page-head"><div><div class="application-breadcrumb">案件 <span>›</span> 募集中の案件</div><h1>案件を探す</h1><p>日程・素材を確認して受託。</p></div><div class="application-header-marks" aria-label="応募前に確認する項目">${applicationIcon('calendar')}${applicationIcon('media')}${applicationIcon('check')}${preview}</div></div>`;
   }
 
   function scheduleHtml(){
@@ -692,6 +741,8 @@
   window.saveGroupEditorDraftDate=saveGroupEditorDraftDate;
   window.setEditorJobsListMode=setEditorJobsListMode;
   window.setEditorJobsTypeFilter=setEditorJobsTypeFilter;
+  window.selectBoardJob=selectBoardJob;
+  window.filterEditorBoardSearch=filterEditorBoardSearch;
   window.submitEditorJobAction=submitEditorJobAction;
   window.completeEditorDelivery=completeEditorDelivery;
   window.enableEditorDeviceNotifications=enableEditorDeviceNotifications;
@@ -709,7 +760,7 @@
     if(user&&access?.approved){
       let body;
       if(view==='notifications')body=notificationsHtml();else if(view==='dm')body=dmHtml();else if(view==='board')body=boardHtml();else if(view==='schedule')body=scheduleHtml();else if(view==='manuals')body=manualsHtml();else if(view==='suggestion')body=suggestionHtml();else if(view==='mobile-setup')body=mobileSetupHtml();
-      if(body){accountHtml();$('#app').innerHTML=adminPreviewBanner()+navHtml()+body;injectStyles();mountUpdateBanner();mountPushSetupBanner();applyAdminPreviewReadOnly();return}
+      if(body){accountHtml();$('#app').innerHTML=adminPreviewBanner()+navHtml()+body;hydrateEditorVisualMarks();injectStyles();mountUpdateBanner();mountPushSetupBanner();applyAdminPreviewReadOnly();return}
     }
     originalRenderBody();
   };

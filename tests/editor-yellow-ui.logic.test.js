@@ -10,7 +10,10 @@ const required=[
   '.editor-yellow-ui .dm-person.active', '.editor-yellow-ui .dm-compose',
   '.editor-yellow-ui .device-notification-card', '.editor-yellow-ui .push-setup-banner',
   '.editor-yellow-ui .brand-logo', '.editor-yellow-ui .editor-sidebar-brand',
-  '.editor-yellow-ui .editor-more-popover',
+  '.editor-yellow-ui .editor-more-popover', '.editor-yellow-ui .application-workspace',
+  '.editor-yellow-ui .application-list', '.editor-yellow-ui .application-detail', '.editor-yellow-ui .application-confirm',
+  '.editor-yellow-ui .notification-item', '.editor-yellow-ui .notification-read',
+  '.editor-yellow-ui .availability-day .availability-time',
   '@media(max-width:760px)', '@media(max-width:375px)'
 ];
 for(const selector of required){if(!css.includes(selector))throw new Error(`missing yellow editor selector: ${selector}`)}
@@ -24,4 +27,16 @@ for(const token of ['.editor-yellow-ui .brand-logo','background:#fff;box-shadow:
   if(!css.includes(token))throw new Error(`reference application styling missing: ${token}`);
 }
 if(css.includes('box-shadow:3px 3px 0 #171a1f!important'))throw new Error('application CTA must not use the former black hard shadow');
+const features=fs.readFileSync(path.join(__dirname,'..','editor-features.js'),'utf8');
+for(const token of ['function selectBoardJob(jid)','function filterEditorBoardSearch(value)','function applicationIcon(name)','function hydrateEditorVisualMarks()','class="application-workspace"','class="application-confirm"','application-resource-jump','onclick="claimBoardJob(\'${esc(selected.id)}\')"']){
+  if(!features.includes(token))throw new Error(`application workspace behavior missing: ${token}`);
+}
+if(!css.includes('.application-subcase-row.application-subcase-head{display:none!important}'))throw new Error('mobile application table header must be hidden');
+if(!css.includes('grid-template-columns:repeat(2,minmax(0,1fr))!important'))throw new Error('mobile availability time inputs must remain a two-column pair');
+if(!css.includes('.application-confirm li>span:after{content:"✓"'))throw new Error('application checks must use compact visual marks');
+for(const token of ['.application-info dt .application-icon','.notification-visual-icon','.availability-bulk .btn.primary']){
+  if(!css.includes(token))throw new Error(`visual icon or yellow CTA styling missing: ${token}`);
+}
+if(!css.includes('@media(max-width:420px){.editor-yellow-ui .application-resource-jump'))throw new Error('mobile resource jump must become a 44px icon button');
+if(!css.includes('.application-confirm .claim-button{order:1;min-height:48px'))throw new Error('mobile application CTA must follow the confirmation heading');
 console.log('editor yellow UI static logic test: ok');

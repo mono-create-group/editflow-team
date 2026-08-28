@@ -19,18 +19,18 @@
     @media(max-width:420px){.metric{grid-column:span 12}.who{max-width:46%}.btn{width:100%}.nav .btn,.actions .btn,.topbar .btn{width:auto}.actions .job-primary{width:100%}}
   </style>
   <link rel="stylesheet" href="app-ui.css">
-  <link rel="stylesheet" href="editor-yellow-ui.css?v=20260829-01">
+  <link rel="stylesheet" href="editor-yellow-ui.css?v=20260829-02">
 </head>
 <body class="editor-yellow-ui">
   <a class="app-skip-link" href="#app">メイン画面へ移動</a>
-  <div class="shell"><header class="topbar"><div class="topbar-in"><div class="brand"><img class="brand-logo" src="./editflow-logo.svg" alt="EditFlow"></div><div id="account" class="who"></div><button id="logout-btn" class="btn small" type="button" onclick="logout()" hidden>サインアウト</button></div></header><main id="app"><div class="card empty"><div class="spinner"></div>読み込み中です</div></main></div>
+  <div class="shell"><header class="topbar"><div class="topbar-in"><div class="brand"><img class="brand-logo" src="./editflow-logo.svg" alt="EditFlow"></div><button class="editor-top-section" type="button" onclick="setView('board')">案件 <span aria-hidden="true">⌄</span></button><label class="editor-workspace-search"><span aria-hidden="true">⌕</span><input id="editor-global-search" type="search" autocomplete="off" placeholder="案件を検索" oninput="filterEditorBoardSearch(this.value)" aria-label="案件名・クライアント名で検索"></label><div class="editor-top-tools" aria-label="操作"><button class="editor-top-icon" type="button" onclick="setView('notifications')" aria-label="通知"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 10a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></button><button class="editor-top-icon" type="button" onclick="setView('guide')" aria-label="ヘルプ"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.8 2.1c-.8.5-1.3.9-1.3 1.9M12 17h.01"/></svg></button><button class="editor-top-icon" type="button" onclick="setView('settings')" aria-label="設定"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.3 2.3-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.2h-3.2v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1L6 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H4.7v-3.2h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9L6 7.8 8.3 5.5l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1 1.5v.2h3.2v-.2a1.7 1.7 0 0 0 1-1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 2.3 2.3-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.2V14h-.2a1.7 1.7 0 0 0-1.4 1z"/></svg></button></div><div id="account" class="who"></div><button id="logout-btn" class="btn small" type="button" onclick="logout()" hidden>サインアウト</button></div></header><main id="app"><div class="card empty"><div class="spinner"></div>読み込み中です</div></main></div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="https://accounts.google.com/gsi/client" async></script>
   <script>window.portalSdkLoadFailed=function(){const app=document.getElementById('app');if(app)app.innerHTML='<div class="login-wrap"><div class="card notice danger"><b>サインインの準備を読み込めませんでした。</b><p style="font-size:14px">通信状態を確認し、ページを再読み込みしてください。</p><button class="btn primary" type="button" onclick="location.reload()">ページを再読み込み</button></div></div>'}</script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" onerror="portalSdkLoadFailed()"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js" onerror="portalSdkLoadFailed()"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js" onerror="portalSdkLoadFailed()"></script>
-  <script src="./billing-terms.js?v=20260829-01"></script>
+  <script src="./billing-terms.js?v=20260829-02"></script>
   <!-- PDF libraries are loaded only when an editor creates a PDF. -->
   <script>
   const PAGE_PARAMS=new URLSearchParams(location.search);
@@ -400,8 +400,8 @@
   if(!DEMO&&'serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(error=>console.warn('service worker',error));
   </script>
   <script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
-  <script src="./editor-push.js?v=20260829-01"></script>
-  <script src="./direct-messages.js?v=20260829-01"></script>
-  <script src="./editor-features.js?v=20260829-01"></script>
+  <script src="./editor-push.js?v=20260829-02"></script>
+  <script src="./direct-messages.js?v=20260829-02"></script>
+  <script src="./editor-features.js?v=20260829-02"></script>
 </body>
 </html>

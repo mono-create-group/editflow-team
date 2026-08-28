@@ -40,13 +40,17 @@ test('cards show the repeatable editor, director, client, and delivery timeline 
   assert.match(features, /mono\.create FB中です。確認・修正指示をお待ちください。/);
 });
 
-test('board cards reveal details before their full-width acceptance call to action', () => {
-  assert.match(features, /<summary>日程・案件内容を確認する<\/summary>/);
+test('the application board uses a selected detail workspace with one acceptance action', () => {
+  assert.match(features, /<section class="application-workspace" aria-label="案件応募ワークスペース">/);
+  assert.match(features, /class="application-subcase-row \$\{item\.id===selected\.id\?'active':''\}/);
+  assert.match(features, /onclick="selectBoardJob\('\$\{esc\(item\.id\)\}'\)"/);
+  assert.match(features, /onclick="claimBoardJob\('\$\{esc\(selected\.id\)\}'\)"/);
+  assert.equal((features.match(/onclick="claimBoardJob/g) || []).length, 1, 'the selected workspace has one claim CTA');
   assert.match(features, /claim-button\{width:100%;min-height:52px/);
   assert.match(features, /現在、募集中の編集代行案件はありません/);
   assert.match(features, /ここに出るのは、管理者が募集を開始した案件だけ/);
-  assert.match(features, /オーナーの確認画面/);
-  assert.match(features, /担当案件を開く/);
+  assert.match(features, /応募前の確認/);
+  assert.match(features, /受託後は担当案件に自動で追加されます。/);
   assert.match(features, /db\.runTransaction/);
 });
 
@@ -76,13 +80,15 @@ test('past dates in review or revision states are labelled as exempt rather than
   assert.match(features, /exempt\?'期限経過・超過対象外'/);
 });
 
-test('parent cases are collapsed and preserve independent child cards', () => {
+test('assigned jobs retain collapsible parent details while the application board uses selectable rows', () => {
   assert.match(features, /function editorJobParent\(job\)/);
   assert.match(features, /function editorGroupJobs\(list\)/);
-  assert.match(features, /<details class="card editor-case-group">/);
+  assert.match(features, /<details[^>]+class="card editor-case-group">/);
   assert.match(features, /親案件を開くと、担当している子案件を確認・更新できます。/);
   assert.match(features, /editorGroupJobs\(ordered\)\.map\(group=>editorGroupHtml\(group\)\)/);
   assert.match(features, /group\.jobs\.map\(jobCard\)/);
+  assert.match(features, /application-subcase-table" role="table" aria-label="子案件一覧"/);
+  assert.match(features, /function selectBoardJob\(jid\)/);
 });
 
 test('mobile navigation and notification links keep the editor focused on one next action', () => {
@@ -123,11 +129,15 @@ test('secondary navigation stays hidden until the Other menu is opened', () => {
   assert.match(features, /\.editor-nav-more\[open\]>\.editor-nav-more-menu\{display:grid\}/);
 });
 
-test('job cards keep supporting edits behind details and expose one primary action path', () => {
+test('application selection replaces old board disclosures while assigned jobs keep their details', () => {
   const html = fs.readFileSync(path.resolve(__dirname, '..', 'editor.html'), 'utf8');
+  const boardSource = features.slice(features.indexOf('function boardHtml()'), features.indexOf('function boardWorkspaceHeader()'));
   assert.match(features, /<details class="job-detail"[^>]*><summary>案件の詳細・連絡を開く<\/summary>/);
-  assert.match(features, /<details><summary>日程・案件内容を確認する<\/summary>/);
-  assert.match(features, /class="btn primary claim-button"/);
+  assert.match(boardSource, /application-detail application-detail-wide/);
+  assert.match(boardSource, /application-confirm/);
+  assert.match(boardSource, /application-subcase-row/);
+  assert.doesNotMatch(boardSource, /<details/);
+  assert.match(boardSource, /class="btn primary claim-button"/);
   assert.match(features, /editor-primary-action/);
   assert.doesNotMatch(features, /legacyJobCardExtendedUnused/);
   assert.equal((features.match(/function jobCardExtended\(job\)/g) || []).length, 1);
