@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const PORTAL_APP_VERSION='20260828-09';
+  const PORTAL_APP_VERSION='20260828-10';
   const feature={
     board:[],catalog:[],manuals:[],schedules:[],release:null,
     messages:new Map(),messageUnsubs:new Map(),unsubs:[],startedFor:'',serverVersion:'',jobsListMode:'active',jobsTypeFilter:'all'
@@ -40,7 +40,7 @@
   }
   function editorDeadlineLabel(job,baseDate=localDate()){
     const next=editorDeadline(job,baseDate);if(!next.date)return'次の締切：未設定';
-    const d=dateAtNoon(next.date),weekday=WEEKDAY_LABELS[(d.getDay()+6)%7],relative=next.days<0?`${Math.abs(next.days)}日超過`:next.days===0?'本日':next.days===1?'明日':`あと${next.days}日`;
+    const d=dateAtNoon(next.date),weekday=WEEKDAY_LABELS[(d.getDay()+6)%7],exempt=next.days<0&&editorDeadlineExemptStatus(job?.status),relative=exempt?'期限経過・超過対象外':next.days<0?`${Math.abs(next.days)}日超過`:next.days===0?'本日':next.days===1?'明日':`あと${next.days}日`;
     return`次の締切：${next.label} ${next.date.slice(5).replace('-','/')}（${weekday}）・${relative}`;
   }
   function editorJobSortByDeadline(list){return[...list].sort((a,b)=>{const ad=editorDeadline(a).days,bd=editorDeadline(b).days,an=ad===null?Infinity:ad,bn=bd===null?Infinity:bd;return an-bn||byUpdated(a,b)})}

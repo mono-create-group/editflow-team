@@ -66,6 +66,11 @@ test('overdue helper excludes review and delivered statuses while retaining acti
   assert.equal(context.check({ deliveryDate: '2026-08-20', status: '進行中' }, '2026-08-28'), true);
 });
 
+test('past dates in review or revision states are labelled as exempt rather than overdue', () => {
+  assert.match(features, /exempt=next\.days<0&&editorDeadlineExemptStatus\(job\?\.status\)/);
+  assert.match(features, /exempt\?'期限経過・超過対象外'/);
+});
+
 test('parent cases are collapsed and preserve independent child cards', () => {
   assert.match(features, /function editorJobParent\(job\)/);
   assert.match(features, /function editorGroupJobs\(list\)/);
