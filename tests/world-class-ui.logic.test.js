@@ -61,6 +61,7 @@ test('parent cases and child cases are collapsible without hiding child detail',
   assert.match(features, /group\.jobs\.map\(jobCard\)/);
   assert.match(index, /<details class="video-subcase-list"/);
   assert.match(index, /video-subcase-children/);
+  assert.match(index, /class="video-progress-parent-state">現在：/);
 });
 
 test('tabs expose selection semantics to assistive technology', () => {
@@ -96,8 +97,10 @@ test('the management progress board becomes a vertical, labelled stage layout on
 
 test('workflow ownership is explicit for editors and management', () => {
   assert.match(features, /D確認待ちです。ディレクターが確認します。/);
-  assert.match(features, /クライアント確認中です。修正指示が届くまでお待ちください。/);
-  assert.match(index, /編集者提出 → D確認 → クライアント提出 → 修正指示 → 再D確認/);
+  assert.match(features, /mono\.create FB中です。確認・修正指示をお待ちください。/);
+  assert.match(features, /先方確認中です。修正指示またはOKの連絡をお待ちください。/);
+  assert.match(index, /class="video-progress-current">現在：/);
+  assert.match(index, /編集者提出 → D確認 → 先方提出 → 修正指示 → 再D確認/);
   assert.match(index, /DのOKを記録/);
   assert.match(index, /クライアントへの提出を記録/);
   assert.match(index, /クライアントOK・納品を記録/);

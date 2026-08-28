@@ -57,9 +57,23 @@ test('workflow keeps repeatable director and client review rounds without rewrit
   vm.runInContext(`${functionSource('_videoWorkflow')}\nthis.workflow=_videoWorkflow;`, context);
   assert.deepEqual({...context.workflow({status:'D確認OK'})}, {round:1,stage:'client_submission'});
   assert.deepEqual({...context.workflow({status:'修正中'})}, {round:2,stage:'editing'});
+  assert.deepEqual({...context.workflow({status:'FB待ち'})}, {round:1,stage:'director_review'});
+  assert.deepEqual({...context.workflow({status:'確認待ち'})}, {round:1,stage:'client_review'});
   assert.deepEqual({...context.workflow({workflow:{round:3,stage:'director_review'},status:'修正稿提出済み'})}, {round:3,stage:'director_review'});
   assert.match(html, /function advancePortalWorkflow\(portalUid,id,action\)/);
   assert.match(html, /progressEvents:/);
+});
+
+test('video status labels keep stored legacy values while showing unambiguous labels', () => {
+  const labels = html.match(/const VIDEO_STATUS_LABELS=\{[^\n]+\};\nfunction videoStatusLabel\([^\n]+/)?.[0];
+  assert.ok(labels, 'videoStatusLabel must preserve stored values');
+  const context = {};
+  vm.createContext(context);
+  vm.runInContext(`${labels}\nthis.label=videoStatusLabel;`, context);
+  assert.equal(context.label('修正中'), '修正中');
+  assert.equal(context.label('FB待ち'), 'mono.create FB中');
+  assert.equal(context.label('確認待ち'), '先方確認中');
+  assert.match(html, /<option value="\$\{esc\(x\)\}"/);
 });
 
 test('legacy video operations keep child cases inside parent details in every operational list', () => {

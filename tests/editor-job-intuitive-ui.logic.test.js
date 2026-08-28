@@ -36,7 +36,8 @@ test('cards show the repeatable editor, director, client, and delivery timeline 
   assert.match(features, /function submitEditorJobAction\(jid,status\)/);
   assert.match(features, /編集者進行中:\['初稿提出済み','初稿を提出します','初稿を提出した'\]/);
   assert.match(features, /提出・納品URLを入力してください/);
-  assert.match(features, /クライアント確認中です。修正指示が届くまでお待ちください。/);
+  assert.match(features, /先方確認中です。修正指示またはOKの連絡をお待ちください。/);
+  assert.match(features, /mono\.create FB中です。確認・修正指示をお待ちください。/);
 });
 
 test('board cards reveal details before their full-width acceptance call to action', () => {
@@ -143,8 +144,10 @@ test('dashboard priority work and notifications retain parent case context', () 
   assert.match(features, /function editorNotificationTitle\(job\)/);
   assert.match(features, /editorGroupJobs\(priority\)\.map\(group=>editorGroupHtml\(group,'priority'\)\)/);
   assert.match(features, /title:editorNotificationTitle\(j\)/);
-  assert.match(features, /function editorWorkflowLabel\(stage\)/);
-  assert.match(features, /director_review:'ディレクター確認中'/);
+  assert.match(features, /function editorWorkflowLabel\(stage,status=''/);
+  assert.match(features, /director_review:'D確認待ち'/);
+  assert.match(features, /status==='FB待ち'\)return'mono\.create FB中'/);
+  assert.match(features, /status==='確認待ち'\)return'先方確認中'/);
   assert.match(features, /確認・修正 \$\{review\}件/);
 });
 
@@ -160,8 +163,8 @@ test('editor workflow hides manager-owned actions and keeps waiting states read-
   assert.match(features, /function editorAllowedStatuses\(job\)/);
   assert.match(features, /if\(editorWorkflow\(job\)\.stage!=='editing'\)return null/);
   assert.match(features, /director_review:'D確認待ちです。ディレクターが確認します。'/);
-  assert.match(features, /client_submission:'ディレクターがクライアントへ提出中です。'/);
-  assert.match(features, /client_review:'クライアント確認中です。修正指示が届くまでお待ちください。'/);
+  assert.match(features, /client_submission:'ディレクターが先方へ提出中です。'/);
+  assert.match(features, /client_review:'先方確認中です。修正指示またはOKの連絡をお待ちください。'/);
   assert.match(html, /function editorCanSaveStatus\(job,status\)/);
   assert.match(html, /if\(!editorCanSaveStatus\(j,status\)\)return rejectStatusChange/);
   assert.match(html, /\['初稿提出済み','修正稿提出済み'\]\.includes\(status\)\?EDITOR_MILESTONE_BY_STATUS/);
@@ -175,7 +178,8 @@ test('demo-style repeat flow infers editor wait states from legacy statuses', ()
   vm.createContext(context);
   vm.runInContext(`${workflowSource}\n${waitSource}\nthis.wait=editorWaitMessage;`, context);
   assert.match(context.wait({ status: '初稿提出済み' }), /D確認待ち/);
-  assert.match(context.wait({ status: 'D確認OK' }), /ディレクターがクライアントへ提出中/);
-  assert.match(context.wait({ status: '確認待ち' }), /クライアント確認中/);
+  assert.match(context.wait({ status: 'D確認OK' }), /ディレクターが先方へ提出中/);
+  assert.match(context.wait({ status: 'FB待ち' }), /mono\.create FB中/);
+  assert.match(context.wait({ status: '確認待ち' }), /先方確認中/);
   assert.equal(context.wait({ status: '修正中' }), '');
 });
