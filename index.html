@@ -956,6 +956,7 @@ a{color:inherit;text-decoration:none}
 
 /* ─── DAILY COMPANY GOAL GATE ─── */
 .company-gate{max-width:600px;margin:8vh auto;background:var(--card);border:1.5px solid var(--border);border-radius:18px;padding:24px;box-shadow:var(--shadow-lg)}.company-gate h1{font-size:23px;margin:0 0 8px}.company-gate-kicker{font-size:11px;font-weight:800;letter-spacing:.08em;color:var(--purple);margin-bottom:5px}.company-gate-goal{padding:15px;background:var(--pdim);border-left:4px solid var(--purple);border-radius:10px;font-size:13px;line-height:1.65;margin:16px 0}.company-gate-form{display:grid;gap:12px}.company-gate-form label{font-size:12px;font-weight:700;color:var(--t2)}.company-gate-form input[type=number]{width:100%;min-height:48px;margin-top:5px;font-size:19px;font-variant-numeric:tabular-nums}.company-gate-check{display:flex;align-items:center;gap:9px;min-height:44px}.company-gate-check input{width:22px;height:22px}.company-gate .btn{min-height:48px}@media(max-width:700px){.company-gate{margin:12px;padding:18px}.company-gate h1{font-size:20px}}
+.role-preview-banner{position:sticky;top:0;z-index:55;display:flex;align-items:center;gap:10px;margin:0 0 14px;padding:11px 13px;border:2px solid #7c3aed;border-radius:11px;background:#f5f3ff;box-shadow:0 7px 20px rgba(91,33,182,.14)}.role-preview-banner>div{flex:1;min-width:0}.role-preview-banner b{display:block;color:#4c1d95;font-size:13px}.role-preview-banner span{display:block;color:#6d28d9;font-size:10.5px;line-height:1.55}.role-preview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.role-preview-card{border:1px solid var(--border);border-left:4px solid var(--purple);border-radius:10px;padding:11px;background:var(--card2)}.role-preview-card b{font-size:13px}.role-preview-card p{margin:4px 0 9px;color:var(--t2);font-size:10.5px;line-height:1.6}.role-preview-members{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}@media(max-width:700px){.role-preview-grid{grid-template-columns:1fr}.role-preview-banner{align-items:flex-start;flex-wrap:wrap}}
 
 </style>
 </head>
@@ -1604,7 +1605,7 @@ function _clearSensitiveLocalState(){
   try{_lsSaveState(S);}catch(_){}
 }
 function _coreAccessAllowed(){
-  if(_isOwner())return true;
+  if(_isActualOwner())return true;
   const rs=(APP_ACCESS&&Array.isArray(APP_ACCESS.roles))?APP_ACCESS.roles:[];
   // 動画編集者だけのメンバーは専用ポータルへ分離し、兼任者は追加された社内役割の画面も利用する。
   return APP_ACCESS?.approved===true&&rs.some(r=>r!=='動画編集者'&&APP_ROLES.includes(r));
@@ -1629,7 +1630,7 @@ async function resolveAppAccess(){
     // 許可リスト→rules→static の順に公開するため、正規スタッフはここへ到達しない。
     ACCESS_CONTROL={...ACCESS_CONTROL,configured:false,enforced:true,phase:'denied',compatibilityEmails:[],readDenied:true};
   }
-  if(_isOwner()){
+  if(_isActualOwner()){
     APP_ACCESS={uid:FB_USER.uid,email:_myEmail(),roles:APP_ROLES.slice(),approved:true,owner:true};
     ACCESS_RESOLVED=true;return APP_ACCESS;
   }
@@ -3267,7 +3268,7 @@ function companyGateRecord(){const td=today();let shared=null;try{shared=JSON.pa
 function companyTaskPerformance(){const tasks=(S.tasks||[]).filter(t=>!t.deleted&&t.dueDate===today()),done=tasks.filter(t=>t.done).length;return{done,total:tasks.length,rate:tasks.length?Math.round(done/tasks.length*100):0};}
 function companyGatePassed(){const r=companyGateRecord();return!!(r&&r.goalConfirmed&&r.taskPerformanceRecorded);}
 function submitCompanyGate(){const confirmed=!!document.getElementById('company-goal-confirm')?.checked;if(!confirmed)return toast('社内目標を確認してチェックしてください','warn');const td=today(),p=companyTaskPerformance(),old=companyGateRecord()||{},record={...old,date:td,goalConfirmed:true,taskPerformanceRecorded:true,taskPerformanceRate:p.rate,taskPerformanceRecordedAt:new Date().toISOString(),confirmedAt:Date.now()};if(!S.dailyOpenReviews)S.dailyOpenReviews={};S.dailyOpenReviews[td]=record;try{localStorage.setItem('mono_daily_open_gate_'+td,JSON.stringify(record));}catch(_){}save();render();toast('本日のタスク達成率を記録しました');}
-function rCompanyGate(){const r=companyGateRecord(),p=companyTaskPerformance(),target=Number(S.settings?.target||0),rev=thisMonthRev();return`<section class="company-gate" role="dialog" aria-labelledby="company-gate-title"><div class="company-gate-kicker">MONO.CREATE DAILY GOAL</div><h1 id="company-gate-title">社内目標とタスク達成率を確認</h1><div style="font-size:12px;color:var(--t2);line-height:1.6">社内目標の確認と、既存タスクから自動計算した達成率の記録が完了するまで社内アプリは開きません。</div><div class="company-gate-goal"><b>本日の社内目標</b><br>利益につながる最重要業務を優先し、今月の目標達成へ前進する。${target?`<br>今月の収益目標 ¥${target.toLocaleString()} / 現在 ¥${rev.toLocaleString()}`:''}</div><div class="company-gate-goal"><b>今日のタスク達成率 ${p.rate}%</b><br>完了 ${p.done}件 / 対象 ${p.total}件</div><div class="company-gate-form"><label class="company-gate-check"><input id="company-goal-confirm" type="checkbox" ${r?.goalConfirmed?'checked':''}>社内目標を確認しました</label><button class="btn btn-p" onclick="submitCompanyGate()">タスク達成率を記録して社内アプリを開く</button></div></section>`;}
+function rCompanyGate(){const r=companyGateRecord(),p=companyTaskPerformance(),target=Number(S.settings?.target||0),rev=thisMonthRev();return`<section class="company-gate" role="dialog" aria-labelledby="company-gate-title"><div class="company-gate-kicker">MONO.CREATE DAILY GOAL</div><h1 id="company-gate-title">社内目標とタスク達成率を確認</h1><div style="font-size:12px;color:var(--t2);line-height:1.6">社内目標の確認と、既存タスクから自動計算した達成率の記録が完了するまで社内アプリは開きません。</div><div class="company-gate-goal"><b>本日の社内目標</b><br>利益につながる最重要業務を優先し、今月の目標達成へ前進する。${target?`<br>今月の収益目標 ¥${target.toLocaleString()} / 現在 ¥${rev.toLocaleString()}`:''}</div><div class="company-gate-goal"><b>今日のタスク達成率 ${p.rate}%</b><br>完了 ${p.done}件 / 対象 ${p.total}件</div><div class="company-gate-form"><label class="company-gate-check"><input id="company-goal-confirm" type="checkbox" ${r?.goalConfirmed?'checked':''}>社内目標を確認しました</label><button class="btn btn-p" onclick="submitCompanyGate()">タスク達成率を記録して社内アプリを開く</button>${_isActualOwner()?'<button class="btn btn-g" onclick="openRolePreviewChooser()">役職別の実データ画面を確認</button>':''}</div></section>`;}
 function render(){
   try{
     if(FB_USER&&!ACCESS_RESOLVED){
@@ -3288,13 +3289,13 @@ function render(){
     }
     const side=document.getElementById('sidebar');if(side)side.style.display='';
     const main=document.getElementById('main');if(main)main.style.maxWidth='';
-    if(FB_USER&&_coreAccessAllowed()&&!companyGatePassed()){
+    if(FB_USER&&_coreAccessAllowed()&&!_rolePreviewActive()&&!companyGatePassed()){
       document.getElementById('view').innerHTML=rCompanyGate();
       if(side)side.style.display='none';
       return;
     }
     // ロックチェック（朝8時以降・朝ジャーナル未完了、または19時以降・夜の記録未完了）
-    if(checkDailyLock()){
+    if(!_rolePreviewActive()&&checkDailyLock()){
       const _lh=new Date().getHours();
       const _td=today();
       const _hasMorning=S.journals.some(j=>j.date===_td&&(j.type==='morning'||!j.type)&&(j.topPriority||j.focusBlock||j.notToDo||j.decisions||j.obstacle||j.commitment||j.mood||j.content||j.gratitude||j.win));
@@ -3350,10 +3351,11 @@ function render(){
       const CHROME_VIEWS=['settings','customize','dashboard','tasks','aichat','habits','accounts','igaccounts'];
       html=(((BUILTIN_VIEWS.some(v=>v.id===V)||CHROME_VIEWS.includes(V))&&views[V])?views[V]:rProjects)();
     }
-    document.getElementById('view').innerHTML=rHpFeeReminder()+rDraftReminder()+html;
+    document.getElementById('view').innerHTML=rolePreviewBanner()+rHpFeeReminder()+rDraftReminder()+html;
     renderNav();
     document.querySelectorAll('.nav-item,.mnav-item').forEach(el=>el.classList.toggle('active',el.dataset.view===V));
     renderGcalUI();
+    applyRolePreviewReadOnly();
   }catch(e){
     console.error('render error:',e);
     const v=document.getElementById('view');
@@ -11044,8 +11046,38 @@ ${secTitle('サインインしたアカウント一覧')}
 </div>
 ${list.length?rows:`<div class="empty"><div class="empty-icon">👥</div><div class="empty-title">まだ記録がありません</div><div style="font-size:12px;color:var(--t3);margin-top:4px">メンバーがサインインすると、ここに自動で表示されます。</div></div>`}`;
 }
+function rolePreviewCardsHtml(){
+  if(!_isActualOwner())return'';
+  const records=(ACCESS_RECORDS||[]).filter(x=>x.approved===true);
+  return APP_ROLES.map(role=>{
+    const members=records.filter(x=>role==='動画編集者'?rolesGrantVideoEditor(x.roles||[]):(x.roles||[]).includes(role));
+    const memberButtons=members.map(m=>{
+      const label=esc(m.name||m.email||m.id);
+      if(role==='動画編集者')return`<button class="btn btn-g btn-xs" onclick="rolePreviewOpenEditor('${esc(m.id)}')">${label}の本人画面</button>`;
+      const ownPortal=role==='動画編集ディレクター'?`<button class="btn btn-g btn-xs" onclick="rolePreviewOpenEditor('${esc(m.id)}')">${label}の本人画面</button>`:'';
+      return`<button class="btn btn-p btn-xs" onclick="rolePreviewStart('${role}','${esc(m.id)}')">${label}として確認</button>${ownPortal}`;
+    }).join('');
+    const generic=role==='動画編集者'?'':`<button class="btn btn-g btn-xs" onclick="rolePreviewStart('${role}')">役職だけで確認</button>`;
+    return`<article class="role-preview-card"><b>${esc(role)}</b><p>${esc(ROLE_PREVIEW_DESCRIPTIONS[role]||'')}</p><div class="role-preview-members">${memberButtons||'<span style="font-size:10.5px;color:var(--t3)">登録メンバーなし</span>'}${generic}</div></article>`;
+  }).join('');
+}
+function rolePreviewSettingsHtml(){
+  if(!_isActualOwner())return'';
+  return`${secTitle('🧭 役職別の実データ画面を確認')}<div class="card" style="margin-bottom:16px"><div style="font-size:12px;color:var(--t2);line-height:1.7;margin-bottom:12px"><b>デモデータは使いません。</b>現在の案件・クライアント・スケジュール・請求状況を残したまま、役職ごとの表示範囲へ切り替えます。確認中は誤変更を防ぐため保存・承認・削除を無効にします。</div><div class="role-preview-grid">${rolePreviewCardsHtml()}</div></div>`;
+}
+function memberAccessRecord(m){
+  const uid=_accessUidForEmail(m?.email||'');
+  return uid?(ACCESS_RECORDS||[]).find(x=>x.id===uid)||null:null;
+}
+function memberDisplayName(m){return memberAccessRecord(m)?.name||m?.name||'';}
+function openRolePreviewChooser(){
+  if(!_isActualOwner())return toast('オーナーのみ利用できます','err');
+  openModal(`<div class="mhdr"><div class="mtitle">役職別の実データ画面を確認</div><button class="mclose" onclick="closeModal()">✕</button></div><div style="font-size:12px;color:var(--t2);line-height:1.7;margin-bottom:12px">現在登録されている案件などを使い、各役職の表示範囲を確認します。デモデータは使いません。</div><div class="role-preview-grid">${rolePreviewCardsHtml()}</div>`);
+}
 function rSettings(){
   return`<div class="ph"><div class="ph-title">設定</div></div>
+
+${rolePreviewSettingsHtml()}
 
 ${secTitle('👤 アカウントとデータ管理')}
 <div class="card" style="margin-bottom:16px">
@@ -11067,7 +11099,7 @@ ${_isOwner()?`${secTitle('🔑 サインインしたメンバー・権限')}
     <b>オーナー: ${esc(_myEmail())}</b><br>
     メンバーはGoogleログイン後に承認し、役割ごとに閲覧範囲を分けます。<br>
     <span style="color:var(--t3)">動画編集者だけを設定したメンバーは専用ポータルのみを使用します。ほかの役割も設定した兼任者は、その役割の閲覧範囲と編集者ポータルを併用します。</span><br>
-    <span style="color:var(--pl);font-weight:700">動画編集ディレクターには動画編集者の権限も自動で含まれます。登録後も一覧の「編集」から、名前・役割・担当者をいつでも変更できます。</span>
+    <span style="color:var(--pl);font-weight:700">動画編集ディレクターには動画編集者の権限も自動で含まれます。登録後も一覧の「編集」から、Chatwork表示名・役割・担当者をいつでも変更できます。</span>
   </div>
   ${ACCESS_REQUESTS.length?`<div style="margin:0 0 14px"><div style="font-size:12px;font-weight:800;margin-bottom:7px">承認待ち ${ACCESS_REQUESTS.length}件</div>${ACCESS_REQUESTS.map(r=>`<div style="padding:10px;background:var(--card2);border:1px solid var(--border);border-radius:9px;margin-bottom:7px"><div style="font-weight:700;font-size:13px">${esc(r.name||'名前未登録')}</div><div style="font-size:11px;color:var(--t3);margin-bottom:7px">${esc(r.email||'')}</div><div style="display:flex;gap:5px;flex-wrap:wrap">${APP_ROLES.map(role=>`<label style="font-size:10.5px"><input class="ar-role" data-uid="${esc(r.id)}" type="checkbox" value="${role}"> ${role}</label>`).join('')}</div><select id="ar-worker-${esc(r.id)}" style="margin-top:7px"><option value="">担当者を紐付け（編集者のみ必須）</option>${(S.workers||[]).filter(w=>!w.deleted).map(w=>`<option value="${w.id}">${esc(w.name)}</option>`).join('')}</select><div style="display:flex;gap:6px;margin-top:7px"><button class="btn btn-p btn-sm" onclick="mrApproveRequest('${esc(r.id)}')">承認</button><button class="btn btn-g btn-sm" onclick="mrRejectRequest('${esc(r.id)}')">却下</button></div></div>`).join('')}</div>`:''}
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
@@ -11079,7 +11111,7 @@ ${_isOwner()?`${secTitle('🔑 サインインしたメンバー・権限')}
   ${(S.memberRoles||[]).filter(m=>m&&!m.deleted).length?`<div style="display:flex;flex-direction:column;gap:6px">
     ${(S.memberRoles||[]).filter(m=>m&&!m.deleted).sort((a,b)=>(a.email||'').localeCompare(b.email||'')).map(m=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--card2);border-radius:8px">
       <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.name||'（名前未登録）')}</div>
+        <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(memberDisplayName(m)||'（名前未登録）')}</div>
         <div style="font-size:11px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.email||'')} ・ ${esc(memberRolesOf(m).join(' / ')||'未設定')}${m.workerId?` ・ ${(S.workers||[]).find(w=>w.id===m.workerId)?.name||'担当者未登録'}`:''}</div>
       </div>
       <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
@@ -12769,6 +12801,28 @@ const NAV_CATS=[
 const ADMIN_EMAILS=['nakamurakouta512@gmail.com','mono.create.group@gmail.com'];
 const OWNER_NAME='中村航汰';
 const APP_ROLES=['動画編集者','動画編集ディレクター','AIコンサルタント','AIエンジニア','Webデザイナー','営業','SNSマーケター'];
+const ROLE_PREVIEW_START_VIEW={
+  '動画編集ディレクター':'videoedit','AIコンサルタント':'videoedit','AIエンジニア':'videoedit',
+  'Webデザイナー':'hpprojects','営業':'salesleads','SNSマーケター':'posts'
+};
+const ROLE_PREVIEW_DESCRIPTIONS={
+  '動画編集者':'本人の案件受託・担当案件・スケジュール・マニュアル・目安箱・請求書',
+  '動画編集ディレクター':'編集代行・派遣・編集者・クライアント・スケジュール・マニュアル・請求書の管理と本人ポータル',
+  'AIコンサルタント':'動画案件、ドキュメント、議事録など許可された社内資料',
+  'AIエンジニア':'動画案件、ドキュメント、担当業務の確認',
+  'Webデザイナー':'HP案件、維持費、ドキュメント',
+  '営業':'営業リスト、商談、問い合わせ、クライアント、許可された案件・資料',
+  'SNSマーケター':'投稿管理、動画案件、クライアント、ドキュメント・議事録'
+};
+const ROLE_VIEW_ACCESS={
+  '動画編集ディレクター':['guide','videoedit','videohaken','videoclients','workers','videoschedules','videomanuals','videoinvoices'],
+  'AIコンサルタント':['guide','videoedit','videohaken','docs','minutes','bizinfo'],
+  'AIエンジニア':['guide','videoedit','videohaken','docs','tasks','bizinfo'],
+  'Webデザイナー':['guide','hpprojects','docs','tasks','hpfee'],
+  '営業':['guide','videoedit','videohaken','hpprojects','salesleads','pipeline','inquiries','crm','docs','minutes','posts'],
+  'SNSマーケター':['guide','videoedit','videohaken','posts','docs','minutes','crm']
+};
+let ROLE_PREVIEW=null;
 let APP_ACCESS=null;          // access/{uid}: Firestoreルールと同じ役割の正本
 let ACCESS_RESOLVED=false;
 let ACCESS_REQUESTS=[];
@@ -12794,11 +12848,14 @@ function memberRolesOf(m){
   if(m.role==='full')return APP_ROLES.filter(x=>x!=='動画編集者');
   return[];
 }
-function myRoles(){if(_isOwner())return APP_ROLES.slice();if(APP_ACCESS&&Array.isArray(APP_ACCESS.roles))return APP_ACCESS.roles.filter(x=>APP_ROLES.includes(x));return memberRolesOf(_myProfile());}
+function _isActualOwner(){return ADMIN_EMAILS.includes(_myEmail());}
+function _rolePreviewActive(){return!!(ROLE_PREVIEW&&_isActualOwner()&&APP_ROLES.includes(ROLE_PREVIEW.role));}
+function rolePreviewUid(){return _rolePreviewActive()&&ROLE_PREVIEW.uid?ROLE_PREVIEW.uid:(typeof FB_USER!=='undefined'&&FB_USER?FB_USER.uid:'');}
+function myRoles(){if(_rolePreviewActive())return[ROLE_PREVIEW.role];if(_isActualOwner())return APP_ROLES.slice();if(APP_ACCESS&&Array.isArray(APP_ACCESS.roles))return APP_ACCESS.roles.filter(x=>APP_ROLES.includes(x));return memberRolesOf(_myProfile());}
 function rolesGrantVideoEditor(roles){return Array.isArray(roles)&&(roles.includes('動画編集者')||roles.includes('動画編集ディレクター'));}
 function hasAppRole(role){const roles=myRoles();return _isOwner()||roles.includes(role)||(role==='動画編集者'&&rolesGrantVideoEditor(roles));}
 function _myEmail(){try{return((typeof FB_USER!=='undefined'&&FB_USER&&FB_USER.email)||'').toLowerCase();}catch(_){return'';}}
-function _isOwner(){return ADMIN_EMAILS.includes(_myEmail());}  // オーナー=会長。設定はオーナーのみ閲覧可
+function _isOwner(){return _isActualOwner()&&!_rolePreviewActive();}  // 権限確認中は選択役職のUI境界を使う
 function _canViewFinancials(){return _isOwner();}
 function _canOpenProjectTab(tab){
   if(tab==='listing'||tab==='profit'||tab==='payment'||tab==='invoice')return _canViewFinancials();
@@ -12810,30 +12867,56 @@ function _financialAccessDenied(label){
 function myRole(){
   const em=_myEmail();
   if(!em)return 'none';
-  if(ADMIN_EMAILS.includes(em))return 'full';    // 会長は常にフル
+  if(_isActualOwner()&&!_rolePreviewActive())return 'full';
   const rs=myRoles();
   if(rs.length===1&&rs[0]==='動画編集者')return 'editor';
   if(!APP_ACCESS||APP_ACCESS.approved!==true)return 'none';
   return rs.includes('営業')&&rs.length===1?'sales':'staff';
 }
+function rolePreviewMember(uid){return(ACCESS_RECORDS||[]).find(x=>x.id===uid&&x.approved===true)||null;}
+function rolePreviewStart(role,uid=''){
+  if(!_isActualOwner())return toast('オーナーのみ利用できます','err');
+  if(!APP_ROLES.includes(role))return toast('役職を確認できません','err');
+  if(role==='動画編集者')return rolePreviewOpenEditor(uid);
+  const fallback=role==='動画編集ディレクター'?(ACCESS_RECORDS||[]).find(x=>x.approved===true&&(x.roles||[]).includes(role)):null;
+  const member=uid?rolePreviewMember(uid):fallback;
+  ROLE_PREVIEW={role,uid:member?.id||'',name:member?.name||member?.email||role,workerId:member?.workerId||''};
+  V=ROLE_PREVIEW_START_VIEW[role]||'guide';
+  closeModal();render();toast(`${ROLE_PREVIEW.name}／${role}の実データ画面へ切り替えました`);
+}
+function rolePreviewStop(){
+  if(!_isActualOwner())return;
+  ROLE_PREVIEW=null;V='settings';render();toast('オーナー画面へ戻りました');
+}
+function rolePreviewOpenEditor(uid){
+  if(!_isActualOwner())return toast('オーナーのみ利用できます','err');
+  const member=rolePreviewMember(uid);
+  if(!member||!rolesGrantVideoEditor(member.roles||[]))return toast('編集者またはディレクターを選択してください','warn');
+  window.open(`./editor.html?previewUid=${encodeURIComponent(member.id)}`,'_blank','noopener');
+}
+function rolePreviewBanner(){
+  if(!_rolePreviewActive())return'';
+  return`<div class="role-preview-banner"><div><b>実データで権限確認中：${esc(ROLE_PREVIEW.name)}／${esc(ROLE_PREVIEW.role)}</b><span>現在登録されている案件などを表示しています。誤変更を防ぐため、この確認モードでは保存・承認・削除を無効にしています。</span></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-g btn-sm" onclick="openRolePreviewChooser()">別の役職を確認</button><button class="btn btn-p btn-sm role-preview-exit" onclick="rolePreviewStop()">オーナー画面へ戻る</button></div></div>`;
+}
+function applyRolePreviewReadOnly(){
+  if(!_rolePreviewActive())return;
+  document.querySelectorAll('#view input,#view select,#view textarea,#modal input,#modal select,#modal textarea').forEach(el=>{el.disabled=true;el.setAttribute('aria-disabled','true')});
+  document.querySelectorAll('#view button,#modal button').forEach(btn=>{
+    const code=btn.getAttribute('onclick')||'',safe=/rolePreview(Start|Stop|OpenEditor)|openRolePreviewChooser|\b(?:open[A-Z_][A-Za-z0-9_]*|closeModal|setV|render)\s*\(|\bV\s*=/.test(code);
+    if(!safe){btn.disabled=true;btn.title='実データ確認モードでは保存・変更できません';}
+  });
+}
+document.addEventListener('click',()=>{if(_rolePreviewActive())setTimeout(applyRolePreviewReadOnly,0)},true);
 const ROLE_SALES_CATS=['start','sales','info'];
 function _salesAllowedViews(){const vs=[];NAV_CATS.forEach(c=>{if(ROLE_SALES_CATS.includes(c.id))vs.push(...c.views);});return vs;}
 function isViewAllowed(v){
   if(myRole()==='editor')return v==='editorportal'; // UI fail-closed; shared Firestore doc is not row-level security.
   if(_isOwner())return true;
   const rs=myRoles();
-  const allow={
-    '動画編集ディレクター':['guide','videoedit','videohaken','videoclients','workers','videoschedules','videomanuals','videoinvoices'],
-    'AIコンサルタント':['guide','videoedit','videohaken','docs','minutes','bizinfo'],
-    'AIエンジニア':['guide','videoedit','videohaken','docs','tasks','bizinfo'],
-    'Webデザイナー':['guide','hpprojects','docs','tasks','hpfee'],
-    '営業':['guide','videoedit','videohaken','hpprojects','salesleads','pipeline','inquiries','crm','docs','minutes','posts'],
-    'SNSマーケター':['guide','videoedit','videohaken','posts','docs','minutes','crm']
-  };
   if(v==='settings'||v==='accounts'||v==='igaccounts'||v==='revenue'||v==='bizboard')return false;
   if(v.startsWith('cp_'))return false;
-  if(v.startsWith('doc_')||v.startsWith('bidoc_')||v.startsWith('tp_'))return rs.some(r=>(allow[r]||[]).includes('docs'));
-  return rs.some(r=>(allow[r]||[]).includes(v));
+  if(v.startsWith('doc_')||v.startsWith('bidoc_')||v.startsWith('tp_'))return rs.some(r=>(ROLE_VIEW_ACCESS[r]||[]).includes('docs'));
+  return rs.some(r=>(ROLE_VIEW_ACCESS[r]||[]).includes(v));
 }
 function _accessUidForEmail(email){
   const em=String(email||'').toLowerCase();
@@ -12990,9 +13073,9 @@ function mrValidateRoleSelection(roles,workerId){
 function mrEditMember(id){
   if(!_isOwner())return toast('権限がありません','err');
   const m=(S.memberRoles||[]).find(x=>x&&x.id===id&&!x.deleted);if(!m)return toast('メンバーが見つかりません','warn');
-  const roles=memberRolesOf(m),workers=(S.workers||[]).filter(w=>w&&!w.deleted);
+  const roles=memberRolesOf(m),workers=(S.workers||[]).filter(w=>w&&!w.deleted),displayName=memberDisplayName(m);
   openModal(`<div class="mhdr"><div><div class="mtitle">メンバー権限を編集</div><div style="font-size:11px;color:var(--t3);margin-top:3px">${esc(m.email||'')}</div></div><button class="mclose" onclick="closeModal()">✕</button></div>
-  <div class="fg"><div class="fl">表示名</div><input id="mre-name" value="${esc(m.name||'')}" placeholder="社内アプリで表示する名前"></div>
+  <div class="fg"><div class="fl">Chatwork表示名</div><input id="mre-name" maxlength="80" value="${esc(displayName)}" placeholder="Chatworkと同じ名前"><div style="font-size:10.5px;color:var(--pl);margin-top:5px">本人確認の取り違えを防ぐため、Chatworkの表示名と完全に揃えてください。</div></div>
   <div class="fg"><div class="fl">役割（複数選択可）</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:7px">${APP_ROLES.map(role=>`<label style="display:flex;align-items:center;gap:7px;padding:9px 10px;background:var(--card2);border:1px solid var(--border);border-radius:9px;font-size:12px;font-weight:650"><input class="mre-role" type="checkbox" value="${role}" ${roles.includes(role)?'checked':''}> ${role}</label>`).join('')}</div></div>
   <div class="fg"><div class="fl">担当編集者</div><select id="mre-worker"><option value="">担当者を紐付けない</option>${workers.map(w=>`<option value="${w.id}" ${m.workerId===w.id?'selected':''}>${esc(w.name)}</option>`).join('')}</select><div style="font-size:10.5px;color:var(--t3);margin-top:5px">「動画編集者」または「動画編集ディレクター」を選ぶ場合は必須です。</div></div>
   <div class="mfooter"><button class="btn btn-red" onclick="closeModal();mrRemoveMember('${m.id}')">削除</button><span style="flex:1"></span><button class="btn btn-g" onclick="closeModal()">キャンセル</button><button class="btn btn-p" onclick="mrSaveMemberEdit('${m.id}')">変更を保存</button></div>`);
@@ -13003,6 +13086,7 @@ async function mrSaveMemberEdit(id){
   const name=(document.getElementById('mre-name')?.value||'').trim();
   const roles=[...document.querySelectorAll('.mre-role:checked')].map(x=>x.value).filter(x=>APP_ROLES.includes(x));
   const workerId=document.getElementById('mre-worker')?.value||null;
+  if(!name)return toast('Chatwork表示名を入力してください','warn');
   const roleError=mrValidateRoleSelection(roles,workerId);if(roleError)return toast(roleError,'warn');
   const nextWorkerId=rolesGrantVideoEditor(roles)?workerId:null;
   const em=String(m.email||'').trim().toLowerCase(),targetUid=_accessUidForEmail(em);
@@ -13090,8 +13174,9 @@ function _gateOnboardHTML(){
     <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:2px">はじめまして 👋</div>
     <div style="font-size:12px;color:var(--t3);margin-bottom:8px">最初に、あなたの情報を登録してください。</div>
     <div class="who">${esc((FB_USER&&FB_USER.email)||'')}</div>
-    <div class="fl">名前</div>
-    <input id="ob-name" value="${esc(name)}" placeholder="例: 中村航汰" autocomplete="name">
+    <div class="fl">Chatwork表示名</div>
+    <input id="ob-name" value="${esc(name)}" placeholder="Chatworkと同じ名前" autocomplete="name">
+    <div class="note" style="margin:5px 0 10px;color:var(--pl);text-align:left">案件担当者を正しく確認できるよう、Chatworkで現在使っている表示名と完全に同じ名前を入力してください。</div>
     <div class="fl">職種（複数選択可）</div>
     <div class="jobs">${JOB_OPTIONS.map(j=>`<div class="ob-job${jobs.includes(j)?' sel':''}" data-job="${esc(j)}" onclick="this.classList.toggle('sel')">${esc(j)}</div>`).join('')}</div>
     <button class="prim" onclick="obSave()">この内容で始める</button>
@@ -15750,7 +15835,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260827-03';
+const APP_VERSION='20260828-01';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -15824,6 +15909,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260827-03"></script>
+<script src="./manager-features.js?v=20260828-01"></script>
 </body>
 </html>

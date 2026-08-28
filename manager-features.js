@@ -10,7 +10,7 @@
   function legacyClients(){const rows=((S&&S.clients)||[]).filter(x=>!x.deleted).map(c=>({...c,_clientSource:'projects',sourceRecordId:c.id}));((S&&S.crmClients)||[]).filter(x=>!x.deleted).forEach(c=>{const found=rows.find(x=>nameKey(x.name)===nameKey(c.name));if(found){found._crmRecordId=c.id;found.accounts=mergeAccounts(found.accounts||[],c.accounts||[]);found.contact=found.contact||c.contact||'';found.phone=found.phone||c.phone||'';found.email=found.email||c.email||'';found.instagram=found.instagram||c.instagram||'';found.contractNote=found.contractNote||c.contractNote||'';found.bu=found.bu||c.bu||'';found.crmStatus=c.status||''}else rows.push({...c,id:`crm:${c.id}`,_clientSource:'crm',sourceRecordId:c.id,notes:c.contractNote||c.note||'',crmStatus:c.status||'',isTrial:['見込み','商談中'].includes(c.status)})});return rows}
   const legacyWorkers=()=>((S&&S.workers)||[]).filter(x=>!x.deleted);
   const linkedWorker=e=>legacyWorkers().find(w=>w.id===e?.workerId);
-  const editorName=e=>linkedWorker(e)?.name||e?.name||e?.email||'編集者';
+  const editorName=e=>e?.name||linkedWorker(e)?.name||e?.email||'編集者';
   const catalogsFor=uid=>state.catalog.get(uid)||[];
   const editorOptions=()=>state.editors.filter(x=>rolesGrantVideoEditor(x.roles||[])).map(x=>`<option value="${esc(x.id)}">${esc(editorName(x))} / ${x.editorKind==='external'?'外部':'直接'}</option>`).join('');
   const timestamp=v=>v&&typeof v.toMillis==='function'?v.toMillis():Number(v||0);
@@ -52,8 +52,9 @@
     if(_isOwner())state.unsubs.push(fbDb.collection('editor_suggestions').orderBy('createdAt','desc').limit(100).onSnapshot(q=>{state.suggestions=q.docs.map(d=>({id:d.id,...d.data()}));renderSafe()},e=>console.warn('suggestions',e?.code||e)));
   }
 
-  const managedEditors=()=>state.editors.filter(x=>rolesGrantVideoEditor(x.roles||[]));
-  const managedJobs=()=>(PORTAL_JOBS||[]).filter(j=>_isOwner()||j.directorUid===FB_USER?.uid);
+  const activeManagerUid=()=>typeof rolePreviewUid==='function'?rolePreviewUid():(FB_USER?.uid||'');
+  const managedEditors=()=>state.editors.filter(x=>rolesGrantVideoEditor(x.roles||[])).filter(x=>!isDirector()||x.id===activeManagerUid()||x.directorUid===activeManagerUid());
+  const managedJobs=()=>(PORTAL_JOBS||[]).filter(j=>_isOwner()||j._portalUid===activeManagerUid()||j.directorUid===activeManagerUid());
   const portalJobBiz=j=>j.businessType==='dispatch'||(!j.businessType&&j.source==='direct_client')?'haken':j.businessType==='edit_agency'||(!j.businessType&&j.source==='job_board')?'edit':'edit';
   function page(title,description,body){return`<div class="ph"><div><div class="ph-title">${title}</div><div style="font-size:12px;color:var(--t2)">${description}</div></div></div><div class="card">${body}</div>`}
   function empty(message){return`<div style="padding:14px;text-align:center;color:var(--t3);font-size:12px">${message}</div>`}

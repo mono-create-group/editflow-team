@@ -205,7 +205,15 @@ service cloud.firestore {
     match /access/{uid} {
       allow read: if owner() || self(uid) || (videoManager()
         && resource.data.get('directorUid', '') == request.auth.uid);
-      allow create, update: if owner();
+      allow create: if owner();
+      allow update: if owner() || (self(uid)
+        && resource.data.approved == true
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 80
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name','updatedAt'
+        ]));
       allow delete: if false;
     }
 

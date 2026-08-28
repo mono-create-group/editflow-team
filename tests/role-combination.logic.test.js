@@ -14,7 +14,7 @@ test('editor role can be combined with a core staff role', () => {
   const context = {
     APP_ROLES: ['動画編集者','動画編集ディレクター','AIコンサルタント','AIエンジニア','Webデザイナー','営業','SNSマーケター'],
     APP_ACCESS: null,
-    _isOwner: () => false,
+    _isActualOwner: () => false,
   };
   vm.createContext(context);
   vm.runInContext(`${fn}\nthis.allowed=_coreAccessAllowed;`, context);

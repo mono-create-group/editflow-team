@@ -130,6 +130,9 @@ async function expectAllowed(label, promise) {
     await expectAllowed('hybrid editor uses core staff data through the additional role', getDoc(doc(hybrid1, 'shared', 'mcapp')));
     await expectAllowed('hybrid editor also uses own editor portal', getDoc(doc(hybrid1, 'editor_portals', 'hybrid1', 'editor_jobs', 'own1')));
     await expectDenied('hybrid editor still cannot read another editor portal', getDoc(doc(hybrid1, 'editor_portals', 'external1', 'editor_jobs', 'done1')));
+    await expectAllowed('editor changes only own Chatwork display name', updateDoc(doc(direct1, 'access', 'direct1'), { name: 'Direct Chatwork', updatedAt: 2 }));
+    await expectDenied('editor cannot change own roles while renaming', updateDoc(doc(direct1, 'access', 'direct1'), { name: 'Direct Chatwork', roles: ['動画編集者', '営業'], updatedAt: 3 }));
+    await expectDenied('editor cannot rename another account', updateDoc(doc(direct1, 'access', 'direct2'), { name: 'Wrong', updatedAt: 2 }));
 
     await expectAllowed('video director receives editor board access', getDoc(doc(dir1, 'editor_job_board', 'direct-open')));
     await expectAllowed('video director creates a job in own editor portal', setDoc(doc(dir1, 'editor_portals', 'dir1', 'editor_jobs', 'director-own'), portalJob('dir1')));

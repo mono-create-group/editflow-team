@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const PORTAL_APP_VERSION='20260827-03';
+  const PORTAL_APP_VERSION='20260828-01';
   const feature={
     board:[],catalog:[],manuals:[],schedules:[],release:null,
     messages:new Map(),messageUnsubs:new Map(),unsubs:[],startedFor:'',serverVersion:''
@@ -71,7 +71,7 @@
   }
 
   function navHtmlExtended(){
-    const items=[['guide','使い方ガイド'],['dashboard','概要'],['board','案件を探す'],['jobs','担当案件'],['schedule','スケジュール'],['manuals','マニュアル'],['suggestion','匿名目安箱'],['invoices','請求書'],['settings','請求者設定']];
+    const items=[['guide','使い方ガイド'],['dashboard','概要'],['board','案件を探す'],['jobs','担当案件'],['schedule','スケジュール'],['manuals','マニュアル'],['suggestion','匿名目安箱'],['invoices','請求書'],['settings','登録情報']];
     const open=feature.board.filter(x=>x.status==='open').length;
     return`<nav class="nav" aria-label="編集者メニュー">${items.map(([k,l])=>`<button type="button" class="btn ${k==='board'?'accept-entry ':''}${view===k?'active':''}" onclick="setView('${k}')">${k==='board'?'🔍 ':''}${l}${k==='board'&&open?` <span class="accept-count">${open}</span>`:''}</button>`).join('')}</nav>`;
   }
@@ -79,7 +79,7 @@
   function dashboardExtended(){
     const base=original.dashboardHtml();
     const open=feature.board.filter(x=>x.status==='open').length;
-    const availability=feature.schedules.find(x=>x.id===user?.uid);
+    const availability=feature.schedules.find(x=>x.id===portalUid());
     const intro=`<section class="section"><div class="feature-grid two"><div class="card notice"><b>${isExternal()?'外部編集者':'mono.create 直接契約編集者'}</b><div class="muted">${isExternal()?'担当ディレクターの案件・支払いのみ表示します。':'クライアント請求額・利益・他の編集者の報酬は表示しません。'}</div></div><div class="card" style="border:2px solid ${open?'#7c3aed':'var(--border)'}"><div class="muted">受けられる編集代行案件</div><b style="font-size:24px">${open}</b><div class="muted">${availability?.available?`稼働可 ${esc(availability.fromDate||'')} 〜 ${esc(availability.toDate||'')}`:'スケジュール未登録'}</div>${open?'<div class="actions"><button class="btn primary small" onclick="setView(\'board\')">🔍 案件を探す</button></div>':''}</div></div></section>`;
     return base+intro;
   }
@@ -90,15 +90,15 @@
     return`<div class="card"><div class="section-title"><h2>編集者派遣の案件を登録</h2><span>入力内容は自動で一時保存</span></div><div class="form-grid" oninput="saveCaseDraft()" onchange="saveCaseDraft()"><div class="field"><label for="new-client-id">クライアント *</label><select id="new-client-id" onchange="updateAccountOptions()"><option value="">クライアントを選択</option>${catalog.map(x=>`<option value="${esc(x.id)}" ${x.id===d.clientId?'selected':''}>${esc(x.name)}</option>`).join('')}</select></div><div class="field"><label for="new-account-id">アカウント名 *</label><select id="new-account-id" data-selected="${esc(d.accountId||'')}"><option value="">アカウントを選択</option>${accounts.map(x=>`<option value="${esc(x.id)}" ${x.id===d.accountId?'selected':''}>${esc(x.name)}</option>`).join('')}</select></div><div class="field full"><label for="new-case">案件・バッチ名</label><input id="new-case" maxlength="120" value="${esc(d.caseName||'')}" placeholder="例：2026年9月分"></div><div class="field"><label for="new-title">個別動画・案件名 *</label><input id="new-title" maxlength="120" value="${esc(d.title||'')}" placeholder="例：ショート動画 03"></div><div class="field"><label for="new-shared">受注日</label><input id="new-shared" type="date" value="${esc(sharedDate)}"></div><div class="field"><label for="new-deadline">納品日 *</label><input id="new-deadline" type="date" value="${esc(deliveryDate)}"></div><details class="optional-box"><summary>初稿日など詳しい日程を入力</summary><div class="form-grid" style="margin-top:8px"><div class="field"><label for="new-editor-draft">編集者 初稿</label><input id="new-editor-draft" type="date" value="${esc(d.editorDraftDate||'')}"></div><div class="field"><label for="new-client-draft">クライアント提出 初稿</label><input id="new-client-draft" type="date" value="${esc(d.clientDraftDate||'')}"></div><div class="field"><label for="new-thumbnail">サムネイル納品日</label><input id="new-thumbnail" type="date" value="${esc(d.thumbnailDate||'')}"></div></div></details><div class="field"><label class="check"><input id="new-urgent" type="checkbox" ${d.urgent?'checked':''}> 緊急案件として登録</label></div><div class="field"><label for="new-request">依頼内容URL</label><input id="new-request" type="url" value="${esc(d.requestUrl||'')}" placeholder="https://"></div><div class="field"><label for="new-source">素材URL</label><input id="new-source" type="url" value="${esc(d.sourceUrl||'')}" placeholder="https://"></div><div class="field full"><label for="new-instructions">依頼内容・編集指示 *</label><textarea id="new-instructions" maxlength="3000">${esc(d.instructions||'')}</textarea></div></div><div class="actions"><button class="btn primary job-primary" type="button" onclick="createJob()">編集者派遣に案件を登録</button></div></div>`;
   }
 
-  function jobsExtended(){return`${pageHead('担当案件','受託・進捗・質問・納品をここで完結')}<ol class="flow"><li><b>STEP 1</b>案件を受ける／登録</li><li><b>STEP 2</b>日程と指示を確認</li><li><b>STEP 3</b>質問・初稿・修正</li><li><b>STEP 4</b>納品証跡を登録</li></ol>${jobFormExtended()}<section class="section"><div class="section-title"><h2>案件一覧</h2><span>${jobs.length}件</span></div><div class="job-list">${sortNewest(jobs).map(jobCard).join('')||'<div class="card empty">担当案件はありません</div>'}</div></section>`}
+  function jobsExtended(){return`${pageHead('担当案件','受託・進捗・質問・納品をここで完結')}<ol class="flow"><li><b>STEP 1</b>案件を受ける／登録</li><li><b>STEP 2</b>日程と指示を確認</li><li><b>STEP 3</b>質問・初稿・修正</li><li><b>STEP 4</b>納品証跡を登録</li></ol>${jobFormExtended()}<section class="section"><div class="section-title"><h2>案件一覧</h2><span>${jobs.length}件</span></div><div class="job-list">${sortNewest(jobs).map(jobCard).join('')||'<div class="card empty"><b>このアカウントの担当案件は0件です</b><br><span class="muted">権限エラーではありません。「案件を探す」から受託するか、編集者派遣の案件を登録すると表示されます。</span></div>'}</div></section>`}
 
   function boardHtml(){
     const list=feature.board.filter(x=>x.status==='open').sort(byUpdated);
-    return`${pageHead('案件を探す','mono.createから募集中の編集代行案件')}<div class="accept-howto"><span style="font-size:20px">✅</span><div><b>内容と日程を確認し、紫のボタンを押してください</b><span>案件内容・初稿日・納品日を確認 → 「この案件を受ける」 → 「担当案件」に自動反映</span></div></div><div class="privacy-note"><b>表示範囲</b><span>${isExternal()?'担当ディレクターから届いた案件のみです。':'公開案件と、ご自身宛ての案件のみです。'} クライアント請求額と利益は保存も表示もしません。</span></div><section class="section"><div class="feature-grid">${list.map(x=>`<article class="card board-card"><div class="job-top"><div><div class="job-title">${esc(x.title||'')}</div><div class="job-meta">${esc(x.clientName||'')} / ${esc(x.accountName||'')}</div></div>${x.urgent?'<span class="pill red">緊急</span>':'<span class="pill">募集中</span>'}</div>${x.caseName?`<div class="muted">${esc(x.caseName)}</div>`:''}<div class="scope-line"><span class="scope-chip">初稿 ${esc(x.editorDraftDate||'未設定')}</span><span class="scope-chip">納品 ${esc(x.deliveryDate||'未設定')}</span></div><div class="job-body">${esc(x.summary||x.instructions||'')}</div><div class="actions"><button class="btn primary claim-button" onclick="claimBoardJob('${esc(x.id)}')">✓ この案件を受ける</button></div></article>`).join('')||'<div class="card empty">現在受けられる案件はありません</div>'}</div></section>`;
+    return`${pageHead('案件を探す','mono.createから募集中の編集代行案件')}<div class="accept-howto"><span style="font-size:20px">✅</span><div><b>内容と日程を確認し、紫のボタンを押してください</b><span>案件内容・初稿日・納品日を確認 → 「この案件を受ける」 → 「担当案件」に自動反映</span></div></div><div class="privacy-note"><b>表示範囲</b><span>${isExternal()?'担当ディレクターから届いた案件のみです。':'公開案件と、ご自身宛ての案件のみです。'} クライアント請求額と利益は保存も表示もしません。</span></div><section class="section"><div class="feature-grid">${list.map(x=>`<article class="card board-card"><div class="job-top"><div><div class="job-title">${esc(x.title||'')}</div><div class="job-meta">${esc(x.clientName||'')} / ${esc(x.accountName||'')}</div></div>${x.urgent?'<span class="pill red">緊急</span>':'<span class="pill">募集中</span>'}</div>${x.caseName?`<div class="muted">${esc(x.caseName)}</div>`:''}<div class="scope-line"><span class="scope-chip">初稿 ${esc(x.editorDraftDate||'未設定')}</span><span class="scope-chip">納品 ${esc(x.deliveryDate||'未設定')}</span></div><div class="job-body">${esc(x.summary||x.instructions||'')}</div><div class="actions"><button class="btn primary claim-button" onclick="claimBoardJob('${esc(x.id)}')">✓ この案件を受ける</button></div></article>`).join('')||'<div class="card empty"><b>現在公開中の案件は0件です</b><br><span class="muted">権限エラーではありません。管理者が編集代行案件を掲載すると、ここに表示されます。</span></div>'}</div></section>`;
   }
 
   function scheduleHtml(){
-    const mine=feature.schedules.find(x=>x.id===user?.uid)||{},days=scheduleDaysForWeek(mine),start=days[0].date,end=days[6].date;
+    const mine=feature.schedules.find(x=>x.id===portalUid())||{},days=scheduleDaysForWeek(mine),start=days[0].date,end=days[6].date;
     const dayCards=days.map((d,i)=>`<article class="availability-day"><div class="availability-day-head"><b>${WEEKDAY_LABELS[i]}曜日</b><span>${esc(d.date.slice(5).replace('-','/'))}</span></div><div class="field"><label for="av-status-${i}">対応</label><select id="av-status-${i}"><option value="available" ${d.status==='available'?'selected':''}>編集可能</option><option value="consult" ${d.status==='consult'?'selected':''}>要相談</option><option value="unavailable" ${d.status==='unavailable'?'selected':''}>不可</option></select></div><div class="availability-time"><div class="field"><label for="av-start-${i}">開始</label><input id="av-start-${i}" type="time" value="${esc(d.startTime)}"></div><div class="field"><label for="av-end-${i}">終了</label><input id="av-end-${i}" type="time" value="${esc(d.endTime)}"></div></div><div class="field"><label for="av-capacity-${i}">受託可能本数</label><input id="av-capacity-${i}" type="number" min="0" max="20" value="${Number(d.capacity||0)}"></div><div class="field"><label for="av-type-${i}">案件種別</label><select id="av-type-${i}"><option value="both" ${d.workType==='both'?'selected':''}>両方</option><option value="short" ${d.workType==='short'?'selected':''}>ショート</option><option value="long" ${d.workType==='long'?'selected':''}>ロング</option></select></div><div class="field full"><label for="av-note-${i}">業務上の補足</label><textarea id="av-note-${i}" maxlength="80" placeholder="例：18時以降">${esc(d.note)}</textarea></div></article>`).join('');
     const team=feature.schedules.slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''))).map(x=>{const xd=scheduleDaysForWeek(x),open=xd.filter(d=>d.status!=='unavailable'),capacity=open.reduce((n,d)=>n+Number(d.capacity||0),0);return`<article class="card availability-card ${open.length?'':'unavailable'}"><b>${esc(x.name||'編集者')}</b><div class="availability-hours">${open.length?`${open.length}日 / ${capacity}本`:'今週は受託不可'}</div><div class="muted">${esc(start)} 〜 ${esc(end)}</div><div class="team-day-chips">${xd.map((d,i)=>`<span class="team-day-chip ${d.status==='available'?'on':d.status==='consult'?'consult':''}">${WEEKDAY_LABELS[i]} ${statusLabel(d.status)}${d.capacity?` ${Number(d.capacity)}本`:''}</span>`).join('')}</div></article>`}).join('');
     return`${pageHead('編集可能スケジュール',`今週の1週間（${start} 〜 ${end}）だけを入力`)}<div class="card availability-bulk"><b>一括登録</b><div class="muted">曜日を選び、同じ内容をまとめて反映できます。</div><div class="availability-bulk-days">${WEEKDAY_LABELS.map((label,i)=>`<label><input class="av-bulk-day" type="checkbox" value="${i}" checked> ${label}</label>`).join('')}</div><div class="availability-bulk-grid"><div class="field"><label for="av-bulk-status">対応</label><select id="av-bulk-status"><option value="available">編集可能</option><option value="consult">要相談</option><option value="unavailable">不可</option></select></div><div class="field"><label for="av-bulk-start">開始</label><input id="av-bulk-start" type="time"></div><div class="field"><label for="av-bulk-end">終了</label><input id="av-bulk-end" type="time"></div><div class="field"><label for="av-bulk-capacity">本数</label><input id="av-bulk-capacity" type="number" min="0" max="20" value="0"></div><div class="field"><label for="av-bulk-type">種別</label><select id="av-bulk-type"><option value="both">両方</option><option value="short">ショート</option><option value="long">ロング</option></select></div><div class="field"><label for="av-bulk-note">補足</label><input id="av-bulk-note" maxlength="80" placeholder="例：18時以降"></div></div><div class="actions"><button class="btn small" type="button" onclick="toggleAllAvailabilityDays(true)">7日すべて選択</button><button class="btn primary small" type="button" onclick="applyAvailabilityBulk()">選んだ日に反映</button></div></div><div class="availability-calendar">${dayCards}</div><label class="availability-routine"><input id="av-routine" type="checkbox" ${mine.routineEnabled?'checked':''}><span><b>毎週のルーティンとして保存</b><br>次週以降は同じ曜日・時間・本数を自動入力します。変更がある週だけ直せます。</span></label><div class="actions"><button class="btn primary" type="button" onclick="saveAvailability()">今週の1週間を保存</button></div><div class="card notice" style="margin-top:10px"><b>入力しない情報</b><p class="muted">他の編集者も閲覧できるため、通院・家族・私用などプライベートな理由は入力しないでください。</p></div><section class="section"><div class="section-title"><h2>チームの今週の稼働目安</h2><span>${feature.schedules.length}名</span></div><div class="feature-grid">${team||'<div class="card empty">スケジュールはまだありません</div>'}</div></section>`;
@@ -114,7 +114,7 @@
 
   function messageBlock(job){
     const list=(feature.messages.get(job.id)||[]).slice().sort((a,b)=>stamp(a.createdAt)-stamp(b.createdAt));
-    return`<div class="message-thread"><div class="section-title"><h2>案件内チャット</h2><span>ここの履歴を正本として保存</span></div>${list.map(x=>`<div class="message ${x.byUid===user?.uid?'mine':''}"><div class="message-head"><span>${esc(x.byName||'メンバー')} ・ ${esc(x.kind||'メッセージ')}</span><span>${x.createdAt&&typeof x.createdAt.toDate==='function'?x.createdAt.toDate().toLocaleString('ja-JP'):''}</span></div><div class="message-body">${esc(x.body||'')}</div>${safeUrl(x.url||'')?`<a class="safe-link" href="${esc(safeUrl(x.url))}" target="_blank" rel="noopener">添付URLを開く</a>`:''}</div>`).join('')||'<div class="muted">まだメッセージはありません</div>'}<div class="form-grid" style="margin-top:8px"><div class="field"><label for="msg-kind-${job.id}">種類</label><select id="msg-kind-${job.id}"><option>質問</option><option>回答</option><option>初稿提出</option><option>修正指示</option><option>修正稿提出</option><option>納品</option><option>連絡</option></select></div><div class="field"><label for="msg-url-${job.id}">関連URL</label><input id="msg-url-${job.id}" type="url" placeholder="https://"></div><div class="field full"><label for="msg-body-${job.id}">メッセージ</label><textarea id="msg-body-${job.id}" maxlength="2000"></textarea></div></div><div class="actions"><button class="btn primary small" onclick="sendJobMessage('${job.id}')">メッセージを送信</button></div></div>`;
+    return`<div class="message-thread"><div class="section-title"><h2>案件内チャット</h2><span>ここの履歴を正本として保存</span></div>${list.map(x=>`<div class="message ${x.byUid===portalUid()?'mine':''}"><div class="message-head"><span>${esc(x.byName||'メンバー')} ・ ${esc(x.kind||'メッセージ')}</span><span>${x.createdAt&&typeof x.createdAt.toDate==='function'?x.createdAt.toDate().toLocaleString('ja-JP'):''}</span></div><div class="message-body">${esc(x.body||'')}</div>${safeUrl(x.url||'')?`<a class="safe-link" href="${esc(safeUrl(x.url))}" target="_blank" rel="noopener">添付URLを開く</a>`:''}</div>`).join('')||'<div class="muted">まだメッセージはありません</div>'}<div class="form-grid" style="margin-top:8px"><div class="field"><label for="msg-kind-${job.id}">種類</label><select id="msg-kind-${job.id}"><option>質問</option><option>回答</option><option>初稿提出</option><option>修正指示</option><option>修正稿提出</option><option>納品</option><option>連絡</option></select></div><div class="field"><label for="msg-url-${job.id}">関連URL</label><input id="msg-url-${job.id}" type="url" placeholder="https://"></div><div class="field full"><label for="msg-body-${job.id}">メッセージ</label><textarea id="msg-body-${job.id}" maxlength="2000"></textarea></div></div><div class="actions"><button class="btn primary small" onclick="sendJobMessage('${job.id}')">メッセージを送信</button></div></div>`;
   }
 
   function jobCardExtended(job){
@@ -134,7 +134,7 @@
     original.render();
     injectStyles();
     const who=document.querySelector('#account b');if(who&&!document.querySelector('#account .role-chip'))who.insertAdjacentHTML('afterend',`<span class="role-chip">${isExternal()?'外部編集者':'直接契約編集者'}</span>`);
-    mountUpdateBanner();syncMessageSubscriptions();
+    mountUpdateBanner();syncMessageSubscriptions();applyAdminPreviewReadOnly();
   }
 
   function stopFeatures(){
@@ -146,17 +146,17 @@
   function mergeManuals(items){feature.manuals=uniqById([...feature.manuals,...items]);render()}
 
   function startFeatures(){
-    if(DEMO||!user||!access?.approved||feature.startedFor===user.uid)return;
-    stopFeatures();feature.startedFor=user.uid;
-    const root=db.collection('editor_portals').doc(user.uid);
+    if(DEMO||!user||!access?.approved||feature.startedFor===portalUid())return;
+    stopFeatures();feature.startedFor=portalUid();
+    const root=db.collection('editor_portals').doc(portalUid());
     feature.unsubs.push(root.collection('client_catalog').onSnapshot(q=>{feature.catalog=q.docs.map(d=>({id:d.id,...d.data()}));render()},()=>toast('クライアント一覧を読み込めません')));
     const boardQueries=isExternal()&&assignedDirectorUid()
       ?[db.collection('editor_job_board').where('directorUid','==',assignedDirectorUid())]
-      :[db.collection('editor_job_board').where('audience','==','direct'),db.collection('editor_job_board').where('eligibleUids','array-contains',user.uid)];
+      :[db.collection('editor_job_board').where('audience','==','direct'),db.collection('editor_job_board').where('eligibleUids','array-contains',portalUid())];
     boardQueries.forEach(q=>feature.unsubs.push(q.onSnapshot(s=>mergeBoard(s.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.status==='open')),e=>console.warn('board',e?.code||e))));
     feature.unsubs.push(db.collection('editor_schedules').onSnapshot(q=>{feature.schedules=q.docs.map(d=>({id:d.id,...d.data()}));render()},e=>console.warn('schedules',e?.code||e)));
     feature.unsubs.push(db.collection('editor_manuals').where('audience','==','all').onSnapshot(q=>mergeManuals(q.docs.map(d=>({id:d.id,...d.data()}))),e=>console.warn('manuals',e?.code||e)));
-    feature.unsubs.push(db.collection('editor_manuals').where('allowedUids','array-contains',user.uid).onSnapshot(q=>mergeManuals(q.docs.map(d=>({id:d.id,...d.data()}))),e=>console.warn('manuals assigned',e?.code||e)));
+    feature.unsubs.push(db.collection('editor_manuals').where('allowedUids','array-contains',portalUid()).onSnapshot(q=>mergeManuals(q.docs.map(d=>({id:d.id,...d.data()}))),e=>console.warn('manuals assigned',e?.code||e)));
     feature.unsubs.push(db.collection('system').doc('releases_current').onSnapshot(d=>{feature.release=d.exists?d.data():null;render()},e=>console.warn('release',e?.code||e)));
   }
 
@@ -164,7 +164,7 @@
     if(DEMO||!db||!user)return;
     const ids=new Set(jobs.map(x=>x.id));
     feature.messageUnsubs.forEach((unsub,jid)=>{if(!ids.has(jid)){try{unsub()}catch(_){}feature.messageUnsubs.delete(jid);feature.messages.delete(jid)}});
-    jobs.forEach(j=>{if(feature.messageUnsubs.has(j.id))return;const u=db.collection('editor_portals').doc(user.uid).collection('editor_jobs').doc(j.id).collection('messages').orderBy('createdAt','asc').limit(200).onSnapshot(q=>{feature.messages.set(j.id,q.docs.map(d=>({id:d.id,...d.data()})));render()},e=>console.warn('messages',e?.code||e));feature.messageUnsubs.set(j.id,u)});
+    jobs.forEach(j=>{if(feature.messageUnsubs.has(j.id))return;const u=db.collection('editor_portals').doc(portalUid()).collection('editor_jobs').doc(j.id).collection('messages').orderBy('createdAt','asc').limit(200).onSnapshot(q=>{feature.messages.set(j.id,q.docs.map(d=>({id:d.id,...d.data()})));render()},e=>console.warn('messages',e?.code||e));feature.messageUnsubs.set(j.id,u)});
   }
 
   async function createDispatchJob(){
@@ -264,7 +264,7 @@
     if(user&&access?.approved){
       let body;
       if(view==='board')body=boardHtml();else if(view==='schedule')body=scheduleHtml();else if(view==='manuals')body=manualsHtml();else if(view==='suggestion')body=suggestionHtml();
-      if(body){accountHtml();$('#app').innerHTML=navHtml()+body;injectStyles();mountUpdateBanner();return}
+      if(body){accountHtml();$('#app').innerHTML=adminPreviewBanner()+navHtml()+body;injectStyles();mountUpdateBanner();applyAdminPreviewReadOnly();return}
     }
     originalRenderBody();
   };

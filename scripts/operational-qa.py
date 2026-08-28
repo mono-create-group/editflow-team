@@ -152,6 +152,26 @@ def static_contract_checks() -> None:
     else:
         ok("owner and director operations features")
 
+    role_preview_markers = [
+        "役職別の実データ画面を確認", "rolePreviewStart", "rolePreviewOpenEditor",
+        "デモデータは使いません", "applyRolePreviewReadOnly",
+    ]
+    absent = [marker for marker in role_preview_markers if marker not in index]
+    if absent:
+        fail(f"real-data role preview missing: {', '.join(absent)}")
+    else:
+        ok("owner real-data role preview is available and read-only")
+
+    editor_name_markers = [
+        "PREVIEW_UID_PARAM", "applyAdminPreviewReadOnly", "Chatwork表示名",
+        "saveDisplayName", "Chatworkと同じ名前",
+    ]
+    absent = [marker for marker in editor_name_markers if marker not in editor]
+    if absent:
+        fail(f"editor preview/name controls missing: {', '.join(absent)}")
+    else:
+        ok("editor actual-data preview and Chatwork-aligned name controls")
+
     overdue_exclusions = ["完了", "キャンセル", "初稿提出済み", "修正稿提出済み", "D確認OK", "確認待ち", "修正中"]
     require_values("manager overdue exclusions",
                    quoted_set_values(index, "VIDEO_OVERDUE_EXCLUDED_STATUSES"),
