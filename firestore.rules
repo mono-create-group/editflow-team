@@ -223,15 +223,29 @@ service cloud.firestore {
     // Once Stage 2 marks shared/mcapp, stale owner/core tabs must not put the
     // removed legacy amount fields back by saving an old `jobs` payload. A
     // current client deliberately changes the nonce on every permitted jobs
-    // write. Updates that leave jobs untouched remain available to owner/core.
+    // write and acknowledges the current restore token. Updates that leave
+    // jobs untouched remain available to owner/core.
     function migratedLegacyJobsWriteAllowed() {
       let nonce = request.resource.data.get('legacyFinanceWriteNonce', '');
+      let ack = request.resource.data.get('legacyFinanceRestoreAck', '');
+      let restoreToken = resource.data.get('ledgerRestoreToken', '');
       return !('ownerLegacyFinanceMigrationAt' in resource.data)
         || request.resource.data.get('jobs', null) == resource.data.get('jobs', null)
         || (nonce is string
           && nonce.size() > 0
           && nonce.size() <= 160
-          && nonce != resource.data.get('legacyFinanceWriteNonce', ''));
+          && nonce != resource.data.get('legacyFinanceWriteNonce', '')
+          && restoreToken is string
+          && restoreToken.size() > 0
+          && restoreToken.size() <= 160
+          && ack is string
+          && ack.size() > 0
+          && ack.size() <= 160
+          && ack == restoreToken
+          // A v24-v28 merge inherits the stored acknowledgement but replaces
+          // this nonce with a bare UUID. Only a client that received the
+          // current token can produce the required token-prefixed nonce.
+          && nonce.matches('^' + restoreToken + ':[A-Za-z0-9-]+$'));
     }
 
     function videoManager() {

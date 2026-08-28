@@ -56,7 +56,7 @@ function buildPlan(source,existingById=new Map()){
     const snapshot=result.snapshot,existing=existingById.get(snapshot.legacyJobId);
     if(seenIds.has(snapshot.legacyJobId)){plan.conflicts.push({index,id:snapshot.legacyJobId,reason:'duplicate_legacy_job_id'});return}
     seenIds.add(snapshot.legacyJobId);
-    if(existing){if(sameSnapshot(existing,snapshot))plan.alreadyMigrated.push({index,id:snapshot.legacyJobId});else plan.conflicts.push({index,id:snapshot.legacyJobId,reason:'existing_ledger_mismatch'});return}
+    if(existing){if(sameSnapshot(existing,snapshot))plan.alreadyMigrated.push({index,id:snapshot.legacyJobId,snapshot});else plan.conflicts.push({index,id:snapshot.legacyJobId,reason:'existing_ledger_mismatch'});return}
     plan.candidates.push({index,id:snapshot.legacyJobId,snapshot});
   });
   return plan;
@@ -114,7 +114,7 @@ async function readLive(admin){
 }
 async function applyLive(admin,live,plan,{clearSharedFinance,migratedBy}){
   if(plan.conflicts.length)throw new Error(`ledger不一致または重複IDが ${plan.conflicts.length} 件あるため中止しました`);
-  if(plan.candidates.length>400)throw new Error('1回の安全上限（400件）を超えました。対象を分割してください');
+  if(plan.candidates.length>400||(clearSharedFinance&&plan.alreadyMigrated.length>400))throw new Error('1回の安全上限（400件）を超えました。対象を分割してください');
   const beforeJobs=decodeJobs(live.source);
   // Clear is always a second pass: the current dry-run must prove every
   // legacy snapshot already exists and exactly matches before removal.
@@ -126,14 +126,19 @@ async function applyLive(admin,live,plan,{clearSharedFinance,migratedBy}){
     const fresh=await tx.get(live.sharedRef);if(!fresh.exists)throw new Error('shared/mcapp が途中で消えたため中止しました');
     const freshJobs=decodeJobs(fresh.data());
     if(JSON.stringify(freshJobs)!==JSON.stringify(beforeJobs))throw new Error('shared/mcapp.jobs が確認後に変わりました。再度dry-runしてください');
-    // Firestore transactions require every read before every write.  Read and
-    // validate all candidate ledgers first, then create only missing records.
-    const candidateRefs=plan.candidates.map(row=>live.db.collection(LEGACY_COLLECTION).doc(row.id));
+    // Firestore transactions require every read before every write. Stage 1
+    // validates candidates before create; Stage 2 re-reads every immutable
+    // ledger and compares it with the fresh shared row before removing money.
+    const verificationRows=clearSharedFinance?plan.alreadyMigrated:plan.candidates;
+    const candidateRefs=verificationRows.map(row=>live.db.collection(LEGACY_COLLECTION).doc(row.id));
     const currentSnapshots=candidateRefs.length?await tx.getAll(...candidateRefs):[];
     const missing=[];
-    for(let index=0;index<plan.candidates.length;index++){
-      const row=plan.candidates[index],current=currentSnapshots[index];
+    for(let index=0;index<verificationRows.length;index++){
+      const row=verificationRows[index],current=currentSnapshots[index];
+      const freshResult=snapshotForJob(freshJobs[row.index]);
+      if(!freshResult.snapshot||freshResult.snapshot.legacyJobId!==row.id||!sameSnapshot(freshResult.snapshot,row.snapshot))throw new Error(`shared ${row.id} が確認後に変わりました`);
       if(current.exists){if(!sameSnapshot(current.data(),row.snapshot))throw new Error(`ledger ${row.id} が確認後に変わりました`);continue}
+      if(clearSharedFinance)throw new Error(`ledger ${row.id} が消去直前に見つからないため中止しました`);
       missing.push({row,ref:candidateRefs[index]});
     }
     for(const {row,ref} of missing){
@@ -146,6 +151,7 @@ async function applyLive(admin,live,plan,{clearSharedFinance,migratedBy}){
 async function applyRestoreLive(admin,live,snapshots,{restoredBy}){
   if(snapshots.length>400)throw new Error('1回の安全上限（400件）を超えました。対象を分割してください');
   const beforeJobs=decodeJobs(live.source),ids=snapshots.map(snapshot=>snapshot.legacyJobId),refs=ids.map(id=>live.db.collection(LEGACY_COLLECTION).doc(id));
+  const ledgerRestoreToken=typeof crypto.randomUUID==='function'?crypto.randomUUID():crypto.randomBytes(24).toString('hex');
   await live.db.runTransaction(async tx=>{
     const fresh=await tx.get(live.sharedRef);if(!fresh.exists)throw new Error('shared/mcapp が途中で消えたため中止しました');
     const freshJobs=decodeJobs(fresh.data());
@@ -158,7 +164,7 @@ async function applyRestoreLive(admin,live,snapshots,{restoredBy}){
       if(!sameSnapshot(current.data(),snapshots[index]))throw new Error(`ledger_backup_mismatch:${ids[index]}`);
     }
     const restored=restoreJobs(freshJobs,snapshots);
-    tx.update(live.sharedRef,{jobs:JSON.stringify(restored),ownerLegacyFinanceRestoreAt:admin.firestore.FieldValue.serverTimestamp(),ownerLegacyFinanceRestoreBy:restoredBy});
+    tx.update(live.sharedRef,{jobs:JSON.stringify(restored),ownerLegacyFinanceRestoreAt:admin.firestore.FieldValue.serverTimestamp(),ownerLegacyFinanceRestoreBy:restoredBy,ledgerRestoreToken,ledgerRestoreAt:admin.firestore.FieldValue.serverTimestamp()});
     for(const ref of refs)tx.delete(ref);
   });
   return{restored:snapshots.length};

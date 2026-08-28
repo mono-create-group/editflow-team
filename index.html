@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#000000">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260828-28"></script>
+<script src="./billing-terms.js?v=20260828-29"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -1362,6 +1362,7 @@ const TEAM_LEDGER_RESTORE_KEY='mc_team_ledger_restore_token';
 let TEAM_SHARE_OK=null;      // null=未判定 / true=共有有効 / false=個人モード
 let _teamUnsub=null;
 let _teamCloudLoaded=false;  // shared/mcapp の初回読込前は共有データを絶対に保存しない
+let _teamLedgerRestoreAck=''; // 最後にサーバーから受信した移行/復元token
 let _teamKnownCounts={};     // 起動中に確認したクラウド件数。主要台帳の空上書きを防ぐ
 window._teamSnap=window._teamSnap||{};
 function _entSig(e){const o={};for(const k in e){if(k!=='updatedAt')o[k]=e[k];}return JSON.stringify(o);}
@@ -1512,8 +1513,12 @@ function _teamSave(){
   if(!_teamCloudLoaded){console.warn('team share save skipped: cloud snapshot is not loaded');return;}
   // 金額移行後は、旧タブが金額入りjobsを書き戻さないよう、
   // 最新版だけが更新できる使い捨てnonceを毎回送る。
-  const financeWriteNonce=(()=>{try{return crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${crypto.getRandomValues(new Uint32Array(4)).join('-')}`;}catch(_){return`${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;}})();
-  const payload={ts:firebase.firestore.FieldValue.serverTimestamp(),by:FB_USER.uid,legacyFinanceWriteNonce:financeWriteNonce};
+  const financeWriteId=(()=>{try{return crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${crypto.getRandomValues(new Uint32Array(4)).join('-')}`;}catch(_){return`${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;}})();
+  // Prefix every current-client nonce with the restore token it actually
+  // received. Older clients overwrite the nonce with a bare UUID, so they can
+  // never inherit a persisted acknowledgement and pass the post-migration rule.
+  const financeWriteNonce=`${_teamLedgerRestoreAck}:${financeWriteId}`;
+  const payload={ts:firebase.firestore.FieldValue.serverTimestamp(),by:FB_USER.uid,legacyFinanceWriteNonce:financeWriteNonce,legacyFinanceRestoreAck:_teamLedgerRestoreAck};
   // salesLeadsは分割格納(shared/mcapp_leads_0..3)へ移行済み。本体にはマーカーのみ置く
   // (旧クライアントはマーカーをJSON解釈できず無害スキップ。他キーは従来どおり)
   TEAM_KEYS.forEach(k=>{
@@ -1536,7 +1541,7 @@ function _teamSave(){
 function fbSetupTeamSync(){
   if(!FB_USER)return;
   if(_teamUnsub){_teamUnsub();_teamUnsub=null;}
-  _teamCloudLoaded=false;_teamKnownCounts={};
+  _teamCloudLoaded=false;_teamLedgerRestoreAck='';_teamKnownCounts={};
   _teamUnsub=fbDb.collection('shared').doc('mcapp').onSnapshot(doc=>{
     if(TEAM_SHARE_OK!==true){TEAM_SHARE_OK=true;renderAuthUI();}
     if(!doc.exists){_teamCloudLoaded=true;_teamSave();return;}
@@ -1561,13 +1566,24 @@ function fbSetupTeamSync(){
       const merged=mergeTeamArr(S[k]||[],remote,k);
       if(JSON.stringify(merged)!==JSON.stringify(S[k]||[])){S[k]=merged;changed=true;}
     });
-    if(replaceLedgers&&replacedLedgerCount===TEAM_LEDGER_KEYS.length){try{localStorage.setItem(TEAM_LEDGER_RESTORE_KEY,restoreToken);}catch(_){}}
-    _teamCloudLoaded=true;
+    const ledgerRestoreFullyApplied=!replaceLedgers||replacedLedgerCount===TEAM_LEDGER_KEYS.length;
     // 経営ボード(bizBoard): オブジェクト全体を「新しい方優先」で取り込む。
     // 種データ(_seed)は updatedAt=0 なので、実データ(updatedAt>0)が常に勝ち、種で上書きされない。
     // 取り込みで内容が入れ替わる直前に、現在の実データを必ずローカルへバックアップ(誤消失の復元用)。
     if(typeof d.bizBoard==='string'){const rb=_teamDecode(d.bizBoard);if(rb&&(rb.updatedAt||0)>((S.bizBoard&&S.bizBoard.updatedAt)||0)){bizBackup('cloud-adopt');S.bizBoard=rb;changed=true;}}
-    if(changed){_teamSnapRebase();_lsSaveState(S);renderSyncSafe();}
+    // Persist the sanitized local state before remembering/acknowledging the
+    // token. If the tab closes or storage fails, the next snapshot repeats the
+    // authoritative replacement instead of trusting an old local ledger.
+    let ledgerLocalStateSafe=true;
+    if(changed||replaceLedgers){_teamSnapRebase();ledgerLocalStateSafe=_lsSaveState(S);}
+    const ledgerRestoreReady=ledgerRestoreFullyApplied&&ledgerLocalStateSafe;
+    if(replaceLedgers&&ledgerRestoreReady){try{localStorage.setItem(TEAM_LEDGER_RESTORE_KEY,restoreToken);}catch(_){ledgerLocalStateSafe=false;}}
+    // A migrated jobs write is unlocked only after every protected ledger was
+    // decoded, replaced, and safely persisted. If any step fails, keep the
+    // acknowledgement empty so Firestore rejects a stale jobs payload.
+    _teamLedgerRestoreAck=ledgerRestoreReady&&ledgerLocalStateSafe?restoreToken:'';
+    _teamCloudLoaded=true;
+    if(changed)renderSyncSafe();
   },e=>{const c=e&&e.code;if(c==='permission-denied'&&TEAM_SHARE_OK!==false){TEAM_SHARE_OK=false;renderAuthUI();}console.warn('team share sync:',c||e);});
   // salesLeads分割doc(mcapp_leads_0..3)の購読。各shardは部分集合なのでid+updatedAtでマージ(削除しない)
   _slShardUnsubs.forEach(u=>{try{u();}catch(_){}});
@@ -16782,7 +16798,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260828-28';
+const APP_VERSION='20260828-29';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -16856,6 +16872,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260828-28"></script>
+<script src="./manager-features.js?v=20260828-29"></script>
 </body>
 </html>

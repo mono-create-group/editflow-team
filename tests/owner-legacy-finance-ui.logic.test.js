@@ -27,6 +27,14 @@ test('a verified migration can replace stale shared finance without weakening or
   assert.ok(source.indexOf("incoming.status==='案件掲載中'")<source.indexOf('const verifiedFinanceMigration='));
   assert.match(source,/\(cur\.unitPrice\|\|0\)>0&&!\(\(incoming\.unitPrice\|\|0\)>0\)/);
   assert.match(source,/ledgerRestoreToken/);
+  assert.match(source,/legacyFinanceRestoreAck:_teamLedgerRestoreAck/);
+  assert.match(source,/const financeWriteNonce=`\$\{_teamLedgerRestoreAck\}:\$\{financeWriteId\}`/);
+  assert.match(source,/const ledgerRestoreFullyApplied=!replaceLedgers\|\|replacedLedgerCount===TEAM_LEDGER_KEYS\.length/);
+  assert.match(source,/const ledgerRestoreReady=ledgerRestoreFullyApplied&&ledgerLocalStateSafe/);
+  assert.match(source,/_teamLedgerRestoreAck=ledgerRestoreReady&&ledgerLocalStateSafe\?restoreToken:''/);
+  const persist=source.indexOf('ledgerLocalStateSafe=_lsSaveState(S)');
+  const remember=source.indexOf('localStorage.setItem(TEAM_LEDGER_RESTORE_KEY,restoreToken)',persist);
+  assert.ok(persist>=0&&remember>persist,'sanitized state must persist before the restore token is remembered');
 });
 
 test('migrated finance is immutable in the legacy modal while operational fields stay available',()=>{

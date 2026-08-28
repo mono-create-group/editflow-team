@@ -70,6 +70,40 @@ test('apply transaction reads every candidate ledger before it creates any ledge
   assert.deepEqual(events,['get:shared','getAll:2','create:legacy-1','create:legacy-2']);
 });
 
+test('clear stage revalidates every immutable ledger inside the transaction before removing shared amounts',async()=>{
+  const original=[{...parent,id:'legacy-1'},{...parent,id:'legacy-2',subtasks:[]}];
+  const first=tool.buildPlan(source(original));
+  const ledgers=new Map(first.candidates.map(row=>[row.id,{...row.snapshot,migratedAt:1,migratedBy:'owner'}]));
+  const plan=tool.buildPlan(source(original),ledgers);
+  const events=[],sharedRef={kind:'shared'},writes=[];
+  const db={
+    collection(name){return{doc(id){return{kind:name,id};}}},
+    async runTransaction(callback){
+      let readAll=false;
+      return callback({
+        async get(ref){events.push(`get:${ref.kind}`);return{exists:true,data:()=>source(original)};},
+        async getAll(...refs){events.push(`getAll:${refs.length}`);readAll=true;return refs.map(ref=>({exists:true,data:()=>ledgers.get(ref.id)}));},
+        create(){throw new Error('clear stage must never create a ledger');},
+        update(ref,data){assert.equal(readAll,true);events.push('update');writes.push(data);}
+      });
+    }
+  };
+  const admin={firestore:{FieldValue:{serverTimestamp:()=>({server:true})}}};
+  await tool.applyLive(admin,{db,sharedRef,source:source(original)},plan,{clearSharedFinance:true,migratedBy:'test'});
+  assert.deepEqual(events,['get:shared','getAll:2','update']);
+  const cleaned=JSON.parse(writes[0].jobs);
+  assert.equal(cleaned.every(job=>job.ownerFinanceId===job.id),true);
+  assert.equal(cleaned.some(job=>tool.AMOUNT_KEYS.some(key=>Object.hasOwn(job,key))),false);
+
+  const missingDb={...db,async runTransaction(callback){return callback({
+    async get(){return{exists:true,data:()=>source(original)};},
+    async getAll(...refs){return refs.map((ref,index)=>({exists:index!==0,data:()=>ledgers.get(ref.id)}));},
+    create(){throw new Error('unexpected create');},
+    update(){throw new Error('clear must stop before update');}
+  });}};
+  await assert.rejects(()=>tool.applyLive(admin,{db:missingDb,sharedRef,source:source(original)},plan,{clearSharedFinance:true,migratedBy:'test'}),/消去直前に見つからない/);
+});
+
 test('restore reads every ledger before writes and restores only amounts while retaining operational fields',async()=>{
   const original=[{...parent,id:'legacy-1',status:'案件掲載中'},{...parent,id:'legacy-2',subtasks:[],status:'案件掲載中'}],migration=tool.buildPlan(source(original)),snapshots=migration.candidates.map(row=>row.snapshot);
   const cleared=tool.cleanupJobs(original,migration).map((job,index)=>({...job,status:index===0?'修正中':'完了',deliveryDate:`2026-09-0${index+1}`,notes:'restore must keep this'}));
@@ -88,7 +122,8 @@ test('restore reads every ledger before writes and restores only amounts while r
   };
   const admin={firestore:{FieldValue:{serverTimestamp:()=>({server:true})}}};
   await tool.applyRestoreLive(admin,{db,sharedRef,source:source(cleared)},snapshots,{restoredBy:'test'});
-  assert.deepEqual(events,['get:shared','getAll:2','update','delete:legacy-1','delete:legacy-2']);
+  await tool.applyRestoreLive(admin,{db,sharedRef,source:source(cleared)},snapshots,{restoredBy:'test'});
+  assert.deepEqual(events,['get:shared','getAll:2','update','delete:legacy-1','delete:legacy-2','get:shared','getAll:2','update','delete:legacy-1','delete:legacy-2']);
   const restored=JSON.parse(writes[0].jobs);
   assert.equal(restored[0].status,'修正中');
   assert.equal(restored[0].deliveryDate,'2026-09-01');
@@ -96,6 +131,9 @@ test('restore reads every ledger before writes and restores only amounts while r
   assert.equal(restored[0].unitPrice,6000);
   assert.equal(restored[0].subtasks[0].workerPay,2000);
   assert.equal(Object.hasOwn(restored[0],'ownerFinanceId'),false);
+  assert.match(writes[0].ledgerRestoreToken,/^[0-9a-f-]{32,}$/i);
+  assert.notEqual(writes[0].ledgerRestoreToken,writes[1].ledgerRestoreToken);
+  assert.deepEqual(writes[0].ledgerRestoreAt,{server:true});
 });
 
 test('restore fails closed when current amount keys or owner ledger links are not exactly in the cleared state',()=>{
