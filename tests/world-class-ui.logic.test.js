@@ -28,6 +28,14 @@ test('each editorial journey leads with one visually distinct primary action', (
   assert.match(manager, /必要なときだけ開く操作/);
 });
 
+test('editor home gives one primary action a textual priority, current state, next step, and deadline', () => {
+  assert.match(features, /class="editor-action-kicker">最優先/);
+  assert.match(features, /class="editor-deadline-chip">\$\{esc\(editorDeadlineLabel\(next\)\)\}<\/span>/);
+  assert.match(features, /class="editor-current-state"><span>現在の進捗<\/span>/);
+  assert.match(features, /class="editor-next-instruction"><span>次にすること<\/span>/);
+  assert.match(features, /onclick="openEditorJob\('\$\{esc\(next\.id\)\}'\)">この案件を開く/);
+});
+
 test('mobile navigation is a five-item bottom bar in editor and main app', () => {
   // Four direct destinations plus the "more" disclosure keeps the bar at five touch targets.
   assert.match(features, /const mobile=\[\['dashboard','ホーム'\],\['jobs','案件'\],\['board','探す'\],\['notifications','通知'\]\]/);
@@ -86,6 +94,8 @@ test('375px and 390px layouts forbid page-level horizontal scrolling', () => {
   assert.match(features, /@media\(max-width:760px\)/);
   assert.match(editor, /<meta name="viewport" content="width=device-width,?initial-scale=1/);
   assert.match(index, /<meta name="viewport" content="width=device-width,?initial-scale=1/);
+  assert.match(features, /\.editor-primary-action,\.editor-case-group,\.editor-job-card,.board-card,.job-submit-panel\{min-width:0;overflow-wrap:anywhere\}/);
+  assert.match(features, /\.editor-primary-action \.section-title\{flex-wrap:wrap\}/);
 });
 
 test('the management progress board becomes a vertical, labelled stage layout on mobile', () => {
@@ -104,4 +114,12 @@ test('workflow ownership is explicit for editors and management', () => {
   assert.match(index, /DのOKを記録/);
   assert.match(index, /クライアントへの提出を記録/);
   assert.match(index, /クライアントOK・納品を記録/);
+});
+
+test('management progress uses an explicit current-state label and readable non-colour cues', () => {
+  assert.match(index, /\.video-progress-info \.video-progress-current\{[^}]*font-size:14px[^}]*font-weight:900[^}]*border:1\.5px solid #7c3aed/);
+  assert.match(index, /\.video-progress-stage\{[^}]*min-height:72px[^}]*font-size:14px[^}]*font-weight:850/);
+  assert.match(index, /\.video-progress-stage\.active\{border:2px solid #7c3aed/);
+  assert.match(index, /\.video-progress-head\{[^}]*font-size:14px[^}]*font-weight:850/);
+  assert.match(index, /\.video-progress-board \.video-subcase-head\{align-items:flex-start;flex-direction:column\}/);
 });

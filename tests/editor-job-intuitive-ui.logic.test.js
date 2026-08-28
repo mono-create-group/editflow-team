@@ -99,6 +99,25 @@ test('mobile navigation and notification links keep the editor focused on one ne
   assert.equal((features.match(/function jobCardExtended\(job\)/g) || []).length, 1);
 });
 
+test('editor cards state the current progress, next step, and deadline in words rather than color alone', () => {
+  assert.match(features, /class="editor-job-status-line" aria-label="現在の工程"/);
+  assert.match(features, />現在の進捗<\/span><b>\$\{esc\(editorWorkflowLabel\(editorWorkflow\(j\)\.stage,j\.status\)\)\}<\/b>/);
+  assert.match(features, /function editorNextOwner\(job\)/);
+  assert.match(features, /class="editor-next-owner">次の担当：<b>\$\{esc\(editorNextOwner\(j\)\)\}<\/b>/);
+  assert.match(features, /x\.state==='current'\?'いまここ'/);
+  assert.match(features, /class="deadline-summary/);
+  assert.match(features, /class="job-next-action"><b>次にすること：<\/b>/);
+  assert.match(features, /class="job-waiting"><b>現在の状況：<\/b>/);
+});
+
+test('editor portal keeps supporting actions folded while preserving accessible 44px controls', () => {
+  assert.match(features, /<details class="job-detail"><summary>案件の詳細・連絡を開く<\/summary>/);
+  assert.match(features, /<details class="card dispatch-create"><summary>＋ 編集者派遣の案件を追加<\/summary>/);
+  assert.match(features, /\.editor-timeline-step\{min-height:44px/);
+  assert.match(features, /\.editor-timeline-step b,\.editor-timeline-step span\{display:inline;font-size:14px/);
+  assert.match(features, /\.editor-case-group>summary\{min-height:76px/);
+});
+
 test('secondary navigation stays hidden until the Other menu is opened', () => {
   assert.match(features, /\.editor-nav-more-menu\{[^}]*display:none/);
   assert.match(features, /\.editor-nav-more\[open\]>\.editor-nav-more-menu\{display:grid\}/);
