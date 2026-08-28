@@ -17,7 +17,7 @@ test('owner can preview every role with current data in read-only mode', () => {
   assert.match(index, /役職別の実データ画面を確認/);
   assert.match(index, /デモデータは使いません/);
   assert.match(index, /function applyRolePreviewReadOnly/);
-  assert.match(index, /実データで権限確認中/);
+  assert.match(index, /確認中は誤変更を防ぐため保存・承認・削除を無効にします/);
   assert.match(manager, /activeManagerUid/);
   assert.match(manager, /x\.directorUid===activeManagerUid\(\)/);
 });
@@ -59,8 +59,8 @@ test('editor display name is explicitly aligned with Chatwork and self-editable'
 });
 
 test('empty portal states explain zero data and keep the traditional invoice path available', () => {
-  assert.match(features, /権限エラーではありません。管理者が編集代行案件を掲載/);
-  assert.match(features, /進行中の担当案件は0件です/);
+  assert.match(features, /ここに出るのは、管理者が募集を開始した案件だけ/);
+  assert.match(features, /進行中の担当案件はありません/);
   assert.match(features, /完了済みの担当案件は0件です/);
   assert.match(editor, /従来どおり入力できます/);
   assert.match(editor, /管理者の報酬確定を待たずに通常の請求書を作成できます/);

@@ -32,12 +32,14 @@ test('legacy assignment status counts parent and subcase assignments', () => {
 });
 
 test('management roster keeps loading, permission, job, and Chatwork states explicit', () => {
-  assert.match(source, /権限正常/);
-  assert.match(source, /案件0件/);
-  assert.match(source, /連携待ち/);
+  assert.match(source, /利用可能/);
+  assert.match(source, /案件なし/);
+  assert.match(source, /設定中/);
   assert.match(source, /Chatwork名不一致/);
   assert.match(source, /Chatwork名確認待ち/);
   assert.match(source, /chatworkNameVerifiedAt/);
   assert.match(source, /managerOpenChatworkNameCheck/);
+  assert.match(source, /onclick="managerOpenChatworkNameCheck\('\$\{esc\(e\.id\)\}'\)"/);
+  assert.doesNotMatch(source, /rosterHtmlWithCopy/);
   assert.match(source, /state\.loaded\.portalJobs\.has\(editor\.id\)/);
 });

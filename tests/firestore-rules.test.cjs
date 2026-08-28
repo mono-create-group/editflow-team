@@ -14,6 +14,7 @@ const {
   addDoc,
   runTransaction,
   serverTimestamp,
+  deleteField,
 } = require('firebase/firestore');
 
 const root = path.resolve(__dirname, '..');
@@ -35,6 +36,21 @@ function portalJob(uid, overrides = {}) {
   };
 }
 
+function manualInvoice(uid, overrides = {}) {
+  return {
+    recordType: 'editor_invoice', editorUid: uid, editorEmail: `${uid}@example.com`, editorName: uid,
+    month: '2026-09', jobIds: ['done1'], lines: [{ title: '案件1', amount: 5000 }],
+    issuer: { name: uid }, recipientName: 'mono.create', documentType: 'invoice',
+    subtotal: 5000, taxByRate: {}, tax: 0, withholding: 0, withholdingStatus: 'none', total: 5000,
+    status: '下書き', invoiceNumber: 'TEST-001', issueDate: '2026-09-01', dueDate: '2026-09-30',
+    retentionUntil: '2027-09-30', version: 1, idempotencyKey: `manual-${uid}`, file: {},
+    ownerShareStatus: 'not_shared', createdAt: 1, updatedAt: 1, history: [],
+    submittedAt: null, reviewReason: '', supersedesInvoiceId: '',
+    authorizationId: 'manual', authorizationRevision: 0,
+    ...overrides,
+  };
+}
+
 function boardJob(overrides = {}) {
   return {
     businessType: 'edit_agency', title: '公開案件', caseName: '9月分', clientId: 'c1', clientName: 'クライアントA',
@@ -44,6 +60,15 @@ function boardJob(overrides = {}) {
     deliveryDate: '2026-09-10', urgent: false, status: 'open', audience: 'direct',
     eligibleUids: [], directorUid: '', createdByUid: 'owner', createdByName: 'owner',
     createdAt: 1, updatedAt: 1, assignedUid: '', assignedName: '', assignedAt: null,
+    ...overrides,
+  };
+}
+
+function clientCatalog(overrides = {}) {
+  return {
+    sourceClientId: 'legacy-client-1', name: 'クライアントA', formerNames: [],
+    accounts: [{ id: 'a1', name: 'アカウントA' }], active: true, manualIds: [],
+    updatedAt: 1, updatedBy: 'owner',
     ...overrides,
   };
 }
@@ -86,6 +111,7 @@ async function expectAllowed(label, promise) {
         ['direct2', { uid: 'direct2', email: 'direct2@example.com', approved: true, roles: ['動画編集者'], editorKind: 'direct' }],
         ['external1', { uid: 'external1', email: 'external1@example.com', approved: true, roles: ['動画編集者'], editorKind: 'external', directorUid: 'dir1', invoiceRecipientName: 'Dir 1' }],
         ['external2', { uid: 'external2', email: 'external2@example.com', approved: true, roles: ['動画編集者'], editorKind: 'external', directorUid: 'dir2', invoiceRecipientName: 'Dir 2' }],
+        ['externalHybrid', { uid: 'externalHybrid', email: 'externalHybrid@example.com', approved: true, roles: ['動画編集者', 'Webデザイナー'], editorKind: 'external', directorUid: 'dir1', invoiceRecipientName: 'Dir 1' }],
         ['hybrid1', { uid: 'hybrid1', email: 'hybrid1@example.com', approved: true, roles: ['動画編集者', 'Webデザイナー'], editorKind: 'direct' }],
         ['dir1', { uid: 'dir1', email: 'dir1@example.com', approved: true, roles: ['動画編集ディレクター'] }],
         ['dir2', { uid: 'dir2', email: 'dir2@example.com', approved: true, roles: ['動画編集ディレクター'] }],
@@ -96,22 +122,40 @@ async function expectAllowed(label, promise) {
       await setDoc(doc(db, 'editor_job_board', 'external-one'), boardJob({ audience: 'director_team', directorUid: 'dir1', eligibleUids: ['external1'] }));
       await setDoc(doc(db, 'editor_job_board', 'external-two'), boardJob({ audience: 'director_team', directorUid: 'dir2', eligibleUids: ['external2'] }));
       await setDoc(doc(db, 'editor_portals', 'external1', 'editor_jobs', 'done1'), portalJob('external1', { directorUid: 'dir1', status: '完了', evidenceUrl: 'https://example.com/delivery' }));
+      // This legacy fixture simulates a historically saved external job with a
+      // mono.create settlement field. The external editor must fail closed
+      // until an owner removes/migrates it out of this readable document.
+      await setDoc(doc(db, 'editor_portals', 'external1', 'editor_jobs', 'priced1'), portalJob('external1', { directorUid: 'dir1', ownPay: 5000, payableApproved: true, payableApprovedAt: 1, payableMonth: '2026-09' }));
       await setDoc(doc(db, 'editor_portals', 'external2', 'editor_jobs', 'done2'), portalJob('external2', { directorUid: 'dir2', status: '完了', evidenceUrl: 'https://example.com/delivery' }));
       await setDoc(doc(db, 'editor_portals', 'hybrid1', 'editor_jobs', 'own1'), portalJob('hybrid1'));
-      await setDoc(doc(db, 'editor_portals', 'external1', 'client_catalog', 'c1'), { name: 'クライアントA', accounts: [{ id: 'a1', name: 'アカウントA' }], active: true, manualIds: [], updatedAt: 1, updatedBy: 'owner' });
+      await setDoc(doc(db, 'editor_portals', 'direct1', 'editor_jobs', 'priced-direct1'), portalJob('direct1', { ownPay: 5000, payableApproved: true, payableApprovedAt: 1, payableMonth: '2026-09' }));
+      await setDoc(doc(db, 'editor_portals', 'external1', 'client_catalog', 'c1'), clientCatalog({ sourceClientId: '', formerNames: [] }));
       await setDoc(doc(db, 'editor_manuals', 'global'), { title: '全体', scope: 'global', scopeLabel: '全体', clientId: '', accountId: '', version: '1', body: '本文', url: '', required: true, audience: 'all', allowedUids: [], directorUid: '', updatedAt: 1, updatedBy: 'owner' });
       await setDoc(doc(db, 'editor_manuals', 'assigned'), { title: '個別', scope: 'client', scopeLabel: '個別', clientId: 'c1', accountId: '', version: '1', body: '本文', url: '', required: false, audience: 'assigned', allowedUids: ['external1'], directorUid: 'dir1', updatedAt: 1, updatedBy: 'dir1' });
-      await setDoc(doc(db, 'editor_portals', 'external1', 'editor_invoices', 'inv1'), { recordType: 'editor_invoice', editorUid: 'external1', editorEmail: 'external1@example.com', status: '提出済み' });
+      await setDoc(doc(db, 'editor_portals', 'external1', 'editor_invoices', 'inv1'), manualInvoice('external1', { status: '提出済み' }));
+      await setDoc(doc(db, 'editor_portals', 'direct1', 'editor_invoices', 'inv1'), manualInvoice('direct1'));
+      await setDoc(doc(db, 'editor_portals', 'dir1', 'editor_invoices', 'inv1'), manualInvoice('dir1'));
+      await setDoc(doc(db, 'editor_portals', 'external1', 'invoice_authorizations', 'auth1'), { recordType: 'invoice_authorization', editorUid: 'external1', month: '2026-09', jobIds: ['done1'], lines: [{ title: '案件1', amount: 5000 }], subtotal: 5000, tax: 0, total: 5000, revision: 1, invoiceVersion: 1, invoiceDocumentId: 'inv1', active: true });
+      await setDoc(doc(db, 'editor_portals', 'direct1', 'invoice_authorizations', 'auth1'), { recordType: 'invoice_authorization', editorUid: 'direct1', month: '2026-09', jobIds: ['done1'], lines: [{ title: '案件1', amount: 5000 }], subtotal: 5000, tax: 0, total: 5000, revision: 1, invoiceVersion: 1, invoiceDocumentId: 'inv1', active: true });
+      await setDoc(doc(db, 'editor_portals', 'dir1', 'invoice_authorizations', 'auth1'), { recordType: 'invoice_authorization', editorUid: 'dir1', month: '2026-09', jobIds: ['done1'], lines: [{ title: '案件1', amount: 5000 }], subtotal: 5000, tax: 0, total: 5000, revision: 1, invoiceVersion: 1, invoiceDocumentId: 'inv1', active: true });
+      await setDoc(doc(db, 'editor_portals', 'external1', 'editor_invoices', 'inv1', 'events', 'e1'), { type: 'created', byUid: 'external1' });
+      await setDoc(doc(db, 'editor_portals', 'external1', 'invoice_authorizations', 'auth1', 'events', 'e1'), { type: 'approved', byUid: 'dir1' });
       await setDoc(doc(db, 'shared', 'mcapp'), { clientPrice: 999999, profit: 999999 });
     });
 
     const direct1 = env.authenticatedContext('direct1', claims('direct1@example.com')).firestore();
     const direct2 = env.authenticatedContext('direct2', claims('direct2@example.com')).firestore();
     const external1 = env.authenticatedContext('external1', claims('external1@example.com')).firestore();
+    const externalHybrid = env.authenticatedContext('externalHybrid', claims('externalHybrid@example.com')).firestore();
     const hybrid1 = env.authenticatedContext('hybrid1', claims('hybrid1@example.com')).firestore();
     const dir1 = env.authenticatedContext('dir1', claims('dir1@example.com')).firestore();
     const dir2 = env.authenticatedContext('dir2', claims('dir2@example.com')).firestore();
     const owner = env.authenticatedContext('owner', claims('mono.create.group@gmail.com')).firestore();
+
+    await expectAllowed('owner archives legacy external settlement before removing it from the portal job', setDoc(doc(owner, 'external_compensation_archive', 'external1-priced1'), { editorUid: 'external1', directorUid: 'dir1', sourceJobId: 'priced1', ownPay: 5000, payableApproved: true, payableMonth: '2026-09', archivedAt: 1 }));
+    await expectDenied('external editor cannot read owner-only settlement archive', getDoc(doc(external1, 'external_compensation_archive', 'external1-priced1')));
+    await expectDenied('director cannot read mono.create settlement archive', getDoc(doc(dir1, 'external_compensation_archive', 'external1-priced1')));
+    await expectDenied('direct editor cannot read external settlement archive', getDoc(doc(direct1, 'external_compensation_archive', 'external1-priced1')));
 
     await expectAllowed('owner publishes edit-agency board job', setDoc(doc(owner, 'editor_job_board', 'owner-new'), boardJob({ createdByUid: 'owner' })));
     await expectAllowed('director publishes own edit-agency board job', setDoc(doc(dir1, 'editor_job_board', 'dir-new'), boardJob({ audience: 'director_team', directorUid: 'dir1', eligibleUids: ['external1'], createdByUid: 'dir1' })));
@@ -122,12 +166,15 @@ async function expectAllowed(label, promise) {
     await expectAllowed('external editor sees own director board', getDoc(doc(external1, 'editor_job_board', 'external-one')));
     await expectDenied('external editor cannot see another director board', getDoc(doc(external1, 'editor_job_board', 'external-two')));
     await expectAllowed('editor reads own portal', getDoc(doc(external1, 'editor_portals', 'external1', 'editor_jobs', 'done1')));
+    await expectDenied('external editor is fail-closed from a legacy priced portal job', getDoc(doc(external1, 'editor_portals', 'external1', 'editor_jobs', 'priced1')));
+    await expectAllowed('director can audit a legacy priced external portal job for migration', getDoc(doc(dir1, 'editor_portals', 'external1', 'editor_jobs', 'priced1')));
     await expectDenied('editor cannot read another portal', getDoc(doc(external1, 'editor_portals', 'external2', 'editor_jobs', 'done2')));
     await expectAllowed('director reads assigned external editor', getDoc(doc(dir1, 'editor_portals', 'external1', 'editor_jobs', 'done1')));
     await expectDenied('director cannot read another director editor', getDoc(doc(dir1, 'editor_portals', 'external2', 'editor_jobs', 'done2')));
     await expectAllowed('owner reads every portal', getDoc(doc(owner, 'editor_portals', 'external2', 'editor_jobs', 'done2')));
     await expectDenied('editor cannot read shared financial monolith', getDoc(doc(direct1, 'shared', 'mcapp')));
     await expectAllowed('hybrid editor uses core staff data through the additional role', getDoc(doc(hybrid1, 'shared', 'mcapp')));
+    await expectDenied('external editor with a legacy second role cannot read shared financial monolith', getDoc(doc(externalHybrid, 'shared', 'mcapp')));
     await expectAllowed('hybrid editor also uses own editor portal', getDoc(doc(hybrid1, 'editor_portals', 'hybrid1', 'editor_jobs', 'own1')));
     await expectDenied('hybrid editor still cannot read another editor portal', getDoc(doc(hybrid1, 'editor_portals', 'external1', 'editor_jobs', 'done1')));
     await expectAllowed('editor changes only own Chatwork display name', updateDoc(doc(direct1, 'access', 'direct1'), { name: 'Direct Chatwork', updatedAt: 2 }));
@@ -142,7 +189,13 @@ async function expectAllowed(label, promise) {
     await expectDenied('editor cannot store private schedule reason', setDoc(doc(direct1, 'editor_schedules', 'direct1'), weeklySchedule({ privateReason: '通院' })));
     await expectDenied('editor cannot save more than one week', setDoc(doc(direct1, 'editor_schedules', 'direct1'), weeklySchedule({ days: [...weeklySchedule().days, weeklySchedule().days[0]] })));
     await expectAllowed('editors see team availability', getDoc(doc(external1, 'editor_schedules', 'direct1')));
-    await expectAllowed('owner shares existing client source id', setDoc(doc(owner, 'editor_portals', 'external1', 'client_catalog', 'c2'), { sourceClientId: 'legacy-client-1', name: 'クライアントB', accounts: [{ id: 'a2', name: 'アカウントB' }], active: true, manualIds: [], updatedAt: 1, updatedBy: 'owner' }));
+    await expectAllowed('owner synchronizes direct-editor catalog with rename trail', setDoc(doc(owner, 'editor_portals', 'direct1', 'client_catalog', 'master-c1'), clientCatalog({ formerNames: ['旧クライアントA'], accounts: [{ id: 'a1', name: '新アカウントA', formerNames: ['旧アカウントA'] }] })));
+    await expectAllowed('owner explicitly shares a catalog with an external editor', setDoc(doc(owner, 'editor_portals', 'external1', 'client_catalog', 'master-c1'), clientCatalog({ formerNames: ['旧クライアントA'] })));
+    await expectDenied('direct editor cannot auto-sync a master catalog', setDoc(doc(direct1, 'editor_portals', 'direct1', 'client_catalog', 'master-c2'), clientCatalog({ sourceClientId: 'legacy-client-2' })));
+    await expectDenied('external editor cannot receive a company catalog through automatic sync', setDoc(doc(external1, 'editor_portals', 'external1', 'client_catalog', 'master-c1'), clientCatalog({ formerNames: ['旧クライアントA'] })));
+    await expectDenied('catalog rejects non-list formerNames', setDoc(doc(owner, 'editor_portals', 'direct1', 'client_catalog', 'bad-former-type'), clientCatalog({ formerNames: '旧クライアントA' })));
+    await expectDenied('catalog rejects excessive formerNames', setDoc(doc(owner, 'editor_portals', 'direct1', 'client_catalog', 'bad-former-count'), clientCatalog({ formerNames: Array.from({ length: 101 }, (_, i) => `旧名${i}`) })));
+    await expectAllowed('director explicitly shares a catalog with own external editor', setDoc(doc(dir1, 'editor_portals', 'external1', 'client_catalog', 'c2'), clientCatalog({ name: 'クライアントB', accounts: [{ id: 'a2', name: 'アカウントB' }], formerNames: ['旧クライアントB'] })));
     await expectAllowed('editor reads own catalog', getDoc(doc(external1, 'editor_portals', 'external1', 'client_catalog', 'c1')));
     await expectDenied('editor cannot read another catalog', getDoc(doc(direct1, 'editor_portals', 'external1', 'client_catalog', 'c1')));
     await expectAllowed('global manual is visible', getDoc(doc(direct1, 'editor_manuals', 'global')));
@@ -152,9 +205,24 @@ async function expectAllowed(label, promise) {
     await expectAllowed('anonymous suggestion stores no identity', addDoc(collection(direct1, 'editor_suggestions'), { category: '業務改善', message: '改善案', replyCode: 'abc', status: '未確認', createdAt: serverTimestamp() }));
     await expectDenied('suggestion rejects submitter UID', addDoc(collection(direct1, 'editor_suggestions'), { category: '業務改善', message: '改善案', replyCode: '', status: '未確認', submitterUid: 'direct1', createdAt: serverTimestamp() }));
 
-    await expectAllowed('director can set own external editor pay', updateDoc(doc(dir1, 'editor_portals', 'external1', 'editor_jobs', 'done1'), { ownPay: 5000, payableApproved: true, payableApprovedAt: 2, payableMonth: '2026-09', updatedAt: 2, updatedBy: 'dir1' }));
-    await expectDenied('director cannot set another team pay', updateDoc(doc(dir1, 'editor_portals', 'external2', 'editor_jobs', 'done2'), { ownPay: 5000, payableApproved: true, payableApprovedAt: 2, payableMonth: '2026-09', updatedAt: 2, updatedBy: 'dir1' }));
-    await expectAllowed('director sees assigned invoice', getDoc(doc(dir1, 'editor_portals', 'external1', 'editor_invoices', 'inv1')));
+    await expectDenied('director cannot write mono.create settlement fields into an external portal job', updateDoc(doc(dir1, 'editor_portals', 'external1', 'editor_jobs', 'done1'), { ownPay: 5000, payableApproved: true, payableApprovedAt: 2, payableMonth: '2026-09', updatedAt: 2, updatedBy: 'dir1' }));
+    await expectDenied('owner cannot write mono.create settlement fields into an external portal job', updateDoc(doc(owner, 'editor_portals', 'external1', 'editor_jobs', 'done1'), { ownPay: 5000, payableApproved: true, payableApprovedAt: 2, payableMonth: '2026-09', updatedAt: 2, updatedBy: 'owner' }));
+    await expectDenied('external editor cannot remove own legacy settlement fields', updateDoc(doc(external1, 'editor_portals', 'external1', 'editor_jobs', 'priced1'), { ownPay: deleteField(), payableApproved: deleteField(), payableApprovedAt: deleteField(), payableMonth: deleteField(), updatedAt: 2, updatedBy: 'external1' }));
+    await expectDenied('director cannot remove an external editor legacy settlement fields', updateDoc(doc(dir1, 'editor_portals', 'external1', 'editor_jobs', 'priced1'), { ownPay: deleteField(), payableApproved: deleteField(), payableApprovedAt: deleteField(), payableMonth: deleteField(), updatedAt: 2, updatedBy: 'dir1' }));
+    await expectAllowed('owner can safely migrate a legacy priced external job by removing every amount field', updateDoc(doc(owner, 'editor_portals', 'external1', 'editor_jobs', 'priced1'), { ownPay: deleteField(), payableApproved: deleteField(), payableApprovedAt: deleteField(), payableMonth: deleteField(), updatedAt: 2, updatedBy: 'owner' }));
+    await expectDenied('direct editor cannot remove own legacy settlement fields', updateDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_jobs', 'priced-direct1'), { ownPay: deleteField(), payableApproved: deleteField(), payableApprovedAt: deleteField(), payableMonth: deleteField(), updatedAt: 2, updatedBy: 'direct1' }));
+    await expectAllowed('owner can migrate a direct editor legacy settlement before changing contract kind', updateDoc(doc(owner, 'editor_portals', 'direct1', 'editor_jobs', 'priced-direct1'), { ownPay: deleteField(), payableApproved: deleteField(), payableApprovedAt: deleteField(), payableMonth: deleteField(), updatedAt: 2, updatedBy: 'owner' }));
+    await expectAllowed('external editor can read the job after its amount fields are removed', getDoc(doc(external1, 'editor_portals', 'external1', 'editor_jobs', 'priced1')));
+    await expectDenied('external editor cannot read own mono.create invoice', getDoc(doc(external1, 'editor_portals', 'external1', 'editor_invoices', 'inv1')));
+    await expectDenied('external editor cannot read own mono.create invoice events', getDoc(doc(external1, 'editor_portals', 'external1', 'editor_invoices', 'inv1', 'events', 'e1')));
+    await expectDenied('external editor cannot read own mono.create invoice authorization', getDoc(doc(external1, 'editor_portals', 'external1', 'invoice_authorizations', 'auth1')));
+    await expectDenied('external editor cannot read own mono.create invoice authorization events', getDoc(doc(external1, 'editor_portals', 'external1', 'invoice_authorizations', 'auth1', 'events', 'e1')));
+    await expectDenied('external editor cannot create a mono.create invoice', setDoc(doc(external1, 'editor_portals', 'external1', 'editor_invoices', 'external-create'), manualInvoice('external1', { idempotencyKey: 'manual-external-create' })));
+    await expectAllowed('direct editor keeps own mono.create invoice access', getDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_invoices', 'inv1')));
+    await expectAllowed('direct editor keeps own invoice authorization access', getDoc(doc(direct1, 'editor_portals', 'direct1', 'invoice_authorizations', 'auth1')));
+    await expectAllowed('video director keeps own direct-editor invoice access', getDoc(doc(dir1, 'editor_portals', 'dir1', 'editor_invoices', 'inv1')));
+    await expectAllowed('video director keeps own direct-editor invoice authorization access', getDoc(doc(dir1, 'editor_portals', 'dir1', 'invoice_authorizations', 'auth1')));
+    await expectAllowed('director sees assigned external invoice for migration and audit', getDoc(doc(dir1, 'editor_portals', 'external1', 'editor_invoices', 'inv1')));
     await expectDenied('other director cannot see invoice', getDoc(doc(dir2, 'editor_portals', 'external1', 'editor_invoices', 'inv1')));
 
     await expectAllowed('first editor atomically claims board', runTransaction(direct1, async (tx) => {

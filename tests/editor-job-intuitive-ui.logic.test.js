@@ -34,6 +34,7 @@ test('cards show the repeatable editor, director, client, and delivery timeline 
   assert.match(features, /quickJobStatus\(jid,status\)/);
   assert.match(features, /D確認待ちです。ディレクターが確認します。/);
   assert.match(features, /function submitEditorJobAction\(jid,status\)/);
+  assert.match(features, /編集者進行中:\['初稿提出済み','初稿を提出します','初稿を提出した'\]/);
   assert.match(features, /提出・納品URLを入力してください/);
   assert.match(features, /クライアント確認中です。修正指示が届くまでお待ちください。/);
 });
@@ -41,7 +42,10 @@ test('cards show the repeatable editor, director, client, and delivery timeline 
 test('board cards reveal details before their full-width acceptance call to action', () => {
   assert.match(features, /<summary>日程・案件内容を確認する<\/summary>/);
   assert.match(features, /claim-button\{width:100%;min-height:52px/);
-  assert.match(features, /担当案件を見る／派遣案件を追加/);
+  assert.match(features, /現在、募集中の編集代行案件はありません/);
+  assert.match(features, /ここに出るのは、管理者が募集を開始した案件だけ/);
+  assert.match(features, /オーナーの確認画面/);
+  assert.match(features, /担当案件を開く/);
   assert.match(features, /db\.runTransaction/);
 });
 
@@ -49,7 +53,7 @@ test('only active editorial work is counted as overdue', () => {
   assert.match(features, /function editorDeadlineExemptStatus\(status\)\{return isJobDeadlineExemptStatus\(status\)\}/);
   assert.match(features, /function editorWorkIsOverdue\(job,baseDate=localDate\(\)\)/);
   assert.match(features, /days<0&&editorDeadlineExemptStatus\(j\.status\)/);
-  assert.match(features, /確認待ち・修正・納品済みは超過に含めません/);
+  assert.match(features, /確認待ち・修正中・納品済みの案件は、期限超過として表示しません/);
 });
 
 test('overdue helper excludes review and delivered statuses while retaining active work', () => {
@@ -92,6 +96,11 @@ test('mobile navigation and notification links keep the editor focused on one ne
   assert.match(features, /data-case-key/);
   assert.match(features, /editor-readonly-status/);
   assert.equal((features.match(/function jobCardExtended\(job\)/g) || []).length, 1);
+});
+
+test('secondary navigation stays hidden until the Other menu is opened', () => {
+  assert.match(features, /\.editor-nav-more-menu\{[^}]*display:none/);
+  assert.match(features, /\.editor-nav-more\[open\]>\.editor-nav-more-menu\{display:grid\}/);
 });
 
 test('job cards keep supporting edits behind details and expose one primary action path', () => {
@@ -137,6 +146,13 @@ test('dashboard priority work and notifications retain parent case context', () 
   assert.match(features, /function editorWorkflowLabel\(stage\)/);
   assert.match(features, /director_review:'ディレクター確認中'/);
   assert.match(features, /確認・修正 \$\{review\}件/);
+});
+
+test('anonymous suggestion returns a visible copyable reply code without a blocking prompt', () => {
+  assert.match(features, /lastSuggestionCode/);
+  assert.match(features, /返信コードを控えてください/);
+  assert.match(features, /copySuggestionCode/);
+  assert.doesNotMatch(features, /prompt\([^\n]*返信コード/);
 });
 
 test('editor workflow hides manager-owned actions and keeps waiting states read-only', () => {

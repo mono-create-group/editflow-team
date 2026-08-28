@@ -143,7 +143,7 @@ def static_contract_checks() -> None:
     manager_feature_markers = [
         "編集者管理", "契約区分と担当ディレクター", "既存クライアントを編集者へ共有",
         "legacyClients", "legacyWorkers", "crmClients", "sourceClientId", "_clientSource",
-        "編集可能スケジュール", "マニュアル保管庫", "外部編集者の支払い確定",
+        "編集可能スケジュール", "マニュアル保管庫", "外部編集者の金額はディレクターが管理",
         "編集者からの請求書", "匿名目安箱",
     ]
     missing_manager_markers = [marker for marker in manager_feature_markers if marker not in manager_features]
@@ -239,8 +239,8 @@ def static_contract_checks() -> None:
         ok("owner app load keeps existing portal and legacy case records unchanged")
 
     guide_markers = [
-        "最初に覚える3つ", "いつ使う？", "まず最初に",
-        "操作の順番", "完了の目印", "GUIDE_PAGE_CHECKS", "GUIDE_PAGE_TIPS",
+        "最初に覚える3つ", "このページですること", "最初にすること",
+        "操作の順番", "終わったか確認する方法", "GUIDE_PAGE_CHECKS", "GUIDE_PAGE_TIPS",
     ]
     absent = [marker for marker in guide_markers if marker not in index]
     if absent:
@@ -250,7 +250,7 @@ def static_contract_checks() -> None:
     editor_guide_markers = [
         "最初の1回だけすること", "毎週月曜日にすること",
         "案件を受ける2つの方法", "案件を受けた後の順番",
-        "確認待ち", "修正中", "期限超過には数えません",
+        "確認待ち", "修正中", "期限超過として表示しません",
     ]
     absent = [marker for marker in editor_guide_markers if marker not in editor]
     if absent:

@@ -15,7 +15,7 @@ test('editors can only submit initial and revision work with evidence', () => {
   const context = {};
   vm.createContext(context);
   vm.runInContext(`${fn}\nthis.check=editorMilestoneError;`, context);
-  assert.equal(context.check('進行中', '初稿提出済み', ''), '初稿・修正稿の提出時は証跡URLを登録してください');
+  assert.equal(context.check('進行中', '初稿提出済み', ''), '初稿・修正稿を提出するときは、提出した内容のURLを入力してください');
   assert.equal(context.check('進行中', '初稿提出済み', 'https://example.com/draft'), '');
   assert.match(context.check('進行中', 'D確認OK', 'https://example.com/draft'), /ディレクターまたは管理者/);
   assert.match(context.check('初稿提出済み', 'D確認OK', 'https://example.com/draft'), /ディレクターまたは管理者/);
@@ -33,6 +33,8 @@ test('only initial and revision milestones are editor-owned', () => {
   assert.match(editor, /\['初稿提出済み','修正稿提出済み'\]\.includes\(status\)/);
   assert.match(editor, /この工程はディレクターまたは管理者が更新します/);
   assert.match(editor, /担当編集者が更新する進捗/);
+  assert.match(editor, /初稿の提出を記録しました/);
+  assert.match(editor, /修正稿の提出を記録しました/);
 });
 
 test('Firestore accepts editor milestones and prevents manager proxy completion', () => {

@@ -35,8 +35,22 @@ test('editing an approved member updates access before local state', () => {
   const end = index.indexOf('async function mrRemoveMember(id)', start);
   const body = index.slice(start, end);
   assert.match(body, /collection\('access'\)\.doc\(targetUid\)\.set/);
-  assert.match(body, /nextWorkerId=rolesGrantVideoEditor\(roles\)\?workerId:null/);
-  assert.match(body, /name,roles,workerId:nextWorkerId,approved:true/);
+  assert.match(body, /grantsEditor=rolesGrantVideoEditor\(roles\),nextWorkerId=grantsEditor\?workerId:null/);
+  assert.match(body, /name,roles,workerId:nextWorkerId,editorKind,directorUid,invoiceRecipientName:[\s\S]*?approved:true/);
   assert.ok(body.indexOf("collection('access')") < body.indexOf('Object.assign(m,'), 'cloud access must save before local state');
   assert.match(body, /return toast\('権限を保存できませんでした/);
+});
+
+test('member editor exposes external-editor ownership and saves the director boundary', () => {
+  const start = index.indexOf('function mrEditMember(id)');
+  const end = index.indexOf('async function mrRemoveMember(id)', start);
+  const body = index.slice(start, end);
+  assert.match(body, /id="mre-kind"/);
+  assert.match(body, /mono\.create直接編集者/);
+  assert.match(body, /ディレクター配下の外部編集者/);
+  assert.match(body, /id="mre-director"/);
+  assert.match(body, /外部編集者にはクライアント単価・利益に加え、mono\.createから担当ディレクターへの依頼単価・請求額も表示しません/);
+  assert.match(body, /editorKind,directorUid,invoiceRecipientName/);
+  assert.match(body, /外部編集者は担当ディレクターを選択してください/);
+  assert.match(index, /function _canViewFinancials\(\)\{return _isOwner\(\);\}/);
 });

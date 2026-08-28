@@ -107,6 +107,10 @@ service cloud.firestore {
       return approved(uid) && get(accessPath(uid)).data.roles.hasAny([role]);
     }
 
+    function editorKind(uid) {
+      return get(accessPath(uid)).data.get('editorKind', 'direct');
+    }
+
     function self(uid) {
       return signedIn() && request.auth.uid == uid;
     }
@@ -134,6 +138,10 @@ service cloud.firestore {
     function coreStaff() {
       return signedIn()
         && !pureEditor(request.auth.uid)
+        // A director's external editor may also hold a legacy second role.
+        // That must never unlock the financial monolith through coreStaff.
+        && (!exists(accessPath(request.auth.uid))
+          || editorKind(request.auth.uid) != 'external')
         && (
           // Compatibility phase preserves the current app while every existing
           // member is assigned a UID-backed role. Explicitly revoked accounts
@@ -160,8 +168,24 @@ service cloud.firestore {
         && hasRole(request.auth.uid, '動画編集ディレクター'));
     }
 
-    function editorKind(uid) {
-      return get(accessPath(uid)).data.get('editorKind', 'direct');
+    // An external editor is employed by a video director, not by mono.create.
+    // Their portal must therefore never become a transport for the director's
+    // mono.create settlement amount.
+    function externalEditor(uid) {
+      // Judge the portal owner, not the caller. A director updating an
+      // external editor's job is not `self(uid)`, but the target still must
+      // remain free of mono.create settlement fields.
+      return approved(uid) && editorKind(uid) == 'external';
+    }
+
+    // Firestore Rules cannot redact individual fields. If a legacy external
+    // portal job contains any settlement field, fail closed for that editor
+    // until an owner removes/migrates those fields into a director-only record.
+    function containsExternalSettlement(data) {
+      return 'ownPay' in data
+        || 'payableApproved' in data
+        || 'payableApprovedAt' in data
+        || 'payableMonth' in data;
     }
 
     function directorFor(uid) {
@@ -172,6 +196,41 @@ service cloud.firestore {
 
     function portalManager(uid) {
       return owner() || directorFor(uid);
+    }
+
+    // Master auto-sync is limited to mono.create-direct editors in the UI.
+    // The owner may still share one catalog explicitly, and a director may
+    // share only with an external editor assigned to that director.
+    function catalogManager(uid) {
+      return owner()
+        || (videoManager()
+          && exists(accessPath(uid))
+          && editorKind(uid) == 'external'
+          && get(accessPath(uid)).data.get('directorUid', '') == request.auth.uid);
+    }
+
+    // Master-client synchronization carries a former-name trail so a rename
+    // does not create a second catalog entry. Keep that trail bounded and
+    // typed; Firestore Rules cannot iterate a list's entries, so the UI also
+    // normalizes each value before this write reaches the rule.
+    function validClientCatalogDocument() {
+      return request.resource.data.keys().hasOnly([
+          'sourceClientId','name','formerNames','accounts','active','manualIds','updatedAt','updatedBy'
+        ])
+        && request.resource.data.get('sourceClientId', '') is string
+        && request.resource.data.get('sourceClientId', '').size() <= 160
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 100
+        && request.resource.data.get('formerNames', []) is list
+        && request.resource.data.get('formerNames', []).size() <= 100
+        && request.resource.data.accounts is list
+        && request.resource.data.accounts.size() <= 100
+        && request.resource.data.get('active', true) is bool
+        && request.resource.data.get('manualIds', []) is list
+        && request.resource.data.get('manualIds', []).size() <= 100
+        && request.resource.data.get('updatedBy', '') is string
+        && request.resource.data.get('updatedBy', '').size() <= 320;
     }
 
     function approvedMember() {
@@ -344,8 +403,8 @@ service cloud.firestore {
         || (
           reviewStage(resource.data) == 'editing'
           && reviewStage(request.resource.data) == 'editing'
-          && request.resource.data.status in ['受注済み', '進行中', '初稿完成', '修正中']
-          && resource.data.status in ['受注済み', '進行中', '初稿完成', '修正中']
+          && request.resource.data.status in ['未着手', '受注済み', '進行中', '編集者進行中', '初稿完成', '修正中']
+          && resource.data.status in ['未着手', '受注済み', '進行中', '編集者進行中', '初稿完成', '修正中']
         )
         || (
           reviewStage(resource.data) == 'editing'
@@ -496,7 +555,9 @@ service cloud.firestore {
       allow delete: if false;
 
       match /editor_jobs/{jobId} {
-        allow read: if portalManager(uid) || editor(uid);
+        allow read: if portalManager(uid)
+          || (editor(uid)
+            && (!externalEditor(uid) || !containsExternalSettlement(resource.data)));
         allow create: if editor(uid)
           && request.resource.data.keys().hasOnly([
             'recordType','businessType','boardJobId','title','caseName',
@@ -531,6 +592,17 @@ service cloud.firestore {
           && validProgressEvents(request.resource.data)
           && request.resource.data.history is list
           && request.resource.data.history.size() == 1;
+        // One-time owner migration before (or after) a contract-kind change.
+        // Keep this branch deliberately small so it stays below the Firestore
+        // Rules expression limit while allowing only removal of settlement
+        // fields. The target can still be a direct editor at this point.
+        allow update: if owner()
+          && containsExternalSettlement(resource.data)
+          && !containsExternalSettlement(request.resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'ownPay','payableApproved','payableApprovedAt','payableMonth',
+            'updatedAt','updatedBy'
+          ]);
         allow update: if editor(uid)
           && validJobStatus(request.resource.data.status)
           && validCompletedJobEvidence()
@@ -565,6 +637,9 @@ service cloud.firestore {
           && validCompletedJobEvidence()
           && validManagerReviewTransition()
           && preservesFinalJob()
+          // Director-managed external editors are settled privately. Never
+          // write the mono.create-to-director amount into their readable job.
+          && (!externalEditor(uid) || !containsExternalSettlement(request.resource.data))
           && (!('ownPay' in request.resource.data) || request.resource.data.ownPay >= 0)
           && (!('payableApproved' in request.resource.data) || request.resource.data.payableApproved != true
             || (request.resource.data.status == '完了'
@@ -588,6 +663,9 @@ service cloud.firestore {
           && validCompletedJobEvidence()
           && validManagerReviewTransition()
           && preservesFinalJob()
+          // Allows an owner to remove legacy amount fields, but blocks new
+          // amount fields on every external editor portal job.
+          && (!externalEditor(uid) || !containsExternalSettlement(request.resource.data))
           && (!('ownPay' in request.resource.data) || request.resource.data.ownPay >= 0)
           && (!('payableApproved' in request.resource.data) || request.resource.data.payableApproved != true
             || (request.resource.data.status == '完了'
@@ -625,7 +703,7 @@ service cloud.firestore {
       }
 
       match /invoice_authorizations/{authorizationId} {
-        allow read: if portalManager(uid) || editor(uid);
+        allow read: if portalManager(uid) || (editor(uid) && !externalEditor(uid));
         allow create, update: if portalManager(uid)
           && request.resource.data.recordType == 'invoice_authorization'
           && request.resource.data.editorUid == uid
@@ -644,15 +722,15 @@ service cloud.firestore {
         allow delete: if false;
 
         match /events/{eventId} {
-          allow read: if portalManager(uid) || editor(uid);
+          allow read: if portalManager(uid) || (editor(uid) && !externalEditor(uid));
           allow create: if portalManager(uid);
           allow update, delete: if false;
         }
       }
 
       match /editor_invoices/{invoiceId} {
-        allow read: if portalManager(uid) || editor(uid);
-        allow create: if editor(uid)
+        allow read: if portalManager(uid) || (editor(uid) && !externalEditor(uid));
+        allow create: if editor(uid) && !externalEditor(uid)
           && request.resource.data.keys().hasOnly([
             'recordType','editorUid','editorEmail','editorName','month','jobIds',
             'lines','issuer','recipientName','documentType','subtotal','taxByRate',
@@ -680,7 +758,7 @@ service cloud.firestore {
           && request.resource.data.subtotal >= 0
           && request.resource.data.tax >= 0
           && request.resource.data.total == request.resource.data.subtotal + request.resource.data.tax;
-        allow update: if editor(uid)
+        allow update: if editor(uid) && !externalEditor(uid)
           && resource.data.status == '下書き'
           && (validInvoiceAuthorization(uid, invoiceId) || validManualInvoice(uid))
           && validInvoiceStatus(request.resource.data.status)
@@ -703,9 +781,9 @@ service cloud.firestore {
         allow delete: if false;
 
         match /events/{eventId} {
-          allow read: if portalManager(uid) || editor(uid);
+          allow read: if portalManager(uid) || (editor(uid) && !externalEditor(uid));
           allow create: if portalManager(uid)
-            || (editor(uid) && request.resource.data.byUid == uid);
+            || (editor(uid) && !externalEditor(uid) && request.resource.data.byUid == uid);
           allow update, delete: if false;
         }
       }
@@ -736,15 +814,8 @@ service cloud.firestore {
 
       match /client_catalog/{clientId} {
         allow read: if portalManager(uid) || editor(uid);
-        allow create, update: if portalManager(uid)
-          && request.resource.data.keys().hasOnly([
-            'sourceClientId','name','accounts','active','manualIds','updatedAt','updatedBy'
-          ])
-          && request.resource.data.name is string
-          && request.resource.data.name.size() > 0
-          && request.resource.data.name.size() <= 100
-          && request.resource.data.accounts is list
-          && request.resource.data.accounts.size() <= 100;
+        allow create, update: if catalogManager(uid)
+          && validClientCatalogDocument();
         allow delete: if false;
       }
 
@@ -864,6 +935,15 @@ service cloud.firestore {
         && request.resource.data.message is string
         && request.resource.data.message.size() > 0
         && request.resource.data.message.size() <= 2000;
+      allow delete: if false;
+    }
+
+    // Owner-only quarantine for legacy external-editor settlement fields.
+    // Migration order: archive the settlement here, then remove it from the
+    // editor-visible portal job. Directors and external editors must not read
+    // this collection because it reflects mono.create-to-director amounts.
+    match /external_compensation_archive/{archiveId} {
+      allow read, create, update: if owner();
       allow delete: if false;
     }
 

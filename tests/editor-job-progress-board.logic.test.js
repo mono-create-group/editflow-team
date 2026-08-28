@@ -29,7 +29,7 @@ test('management progress board tracks initial, revision, director check, and de
     assert.match(index, new RegExp(marker));
   }
   assert.match(index, /\['progress','編集進行ボード'\]/);
-  assert.match(index, /VIDEO_TAB==='progress'\?_videoProgressBoard\(all\)/);
+  assert.match(index, /VIDEO_TAB==='progress'\?_videoProgressBoard\(_videoSortJobs\(all\)\)/);
   assert.match(index, /video-progress-row/);
   assert.match(index, /progressMilestones:Array\.isArray\(j\.progressMilestones\)/);
 });
@@ -46,4 +46,11 @@ test('progress board infers legacy status without rewriting saved data', () => {
   assert.deepEqual({...context.state({status:'D確認OK'}, 'director_approved')}, {state:'done',label:'完了'});
   assert.deepEqual({...context.state({status:'完了'}, 'client_approved_delivered')}, {state:'done',label:'完了'});
   assert.deepEqual({...context.state({status:'進行中',progressMilestones:[{key:'initial_submitted'}]}, 'initial_submitted')}, {state:'done',label:'完了'});
+});
+
+test('management copy names the next person and separates editor and director actions', () => {
+  assert.match(index, /いまの状況 <b>/);
+  assert.match(index, /次に対応する人 <b>/);
+  assert.match(index, /編集者は初稿・修正稿を提出し、ディレクターまたはオーナーがD確認以降を更新します/);
+  assert.match(index, /編集者は初稿・修正稿を提出します。ディレクターまたはオーナーがD確認、クライアントへの提出、修正指示、納品を更新します/);
 });

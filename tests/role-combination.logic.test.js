@@ -57,6 +57,16 @@ test('video director has a visible route to the editor self-service portal', () 
   assert.match(index, /editorportal:rEditorPortal/);
 });
 
+test('guide uses concrete, editor-facing labels instead of internal wording', () => {
+  assert.match(index, /このページですること/);
+  assert.match(index, /最初にすること/);
+  assert.match(index, /終わったか確認する方法/);
+  assert.match(index, /このページを使える人：/);
+  assert.doesNotMatch(index, /guide-page-label">いつ使う？/);
+  assert.doesNotMatch(index, /guide-page-first"><span class="guide-page-label">まず最初に/);
+  assert.doesNotMatch(index, /guide-page-done"><b>完了の目印/);
+});
+
 test('Firestore treats only editor-only accounts as isolated', () => {
   const body = rules.match(/function pureEditor\(uid\) \{([\s\S]*?)\n\s*\}/)?.[1] || '';
   assert.match(body, /roles\.hasAny\(\['動画編集者'\]\)/);
