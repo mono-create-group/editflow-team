@@ -99,6 +99,7 @@ test('375px and 390px layouts forbid page-level horizontal scrolling', () => {
 });
 
 test('the management progress board becomes a vertical, labelled stage layout on mobile', () => {
+  assert.match(index, /@media\(min-width:701px\) and \(max-width:820px\)\{\.video-progress-head\{display:none\}/);
   assert.match(index, /\.video-progress-head\{display:none\}\.video-progress-row\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(index, /\.video-progress-info\{grid-column:1\/-1/);
   assert.match(index, /\.video-progress-stage::before\{content:attr\(data-label\)/);
@@ -109,7 +110,8 @@ test('workflow ownership is explicit for editors and management', () => {
   assert.match(features, /D確認待ちです。ディレクターが確認します。/);
   assert.match(features, /mono\.create FB中です。確認・修正指示をお待ちください。/);
   assert.match(features, /先方確認中です。修正指示またはOKの連絡をお待ちください。/);
-  assert.match(index, /class="video-progress-current">現在：/);
+  assert.match(index, /class="video-progress-current">いま：/);
+  assert.match(index, /class="video-progress-next">次：/);
   assert.match(index, /編集者提出 → D確認 → 先方提出 → 修正指示 → 再D確認/);
   assert.match(index, /DのOKを記録/);
   assert.match(index, /クライアントへの提出を記録/);

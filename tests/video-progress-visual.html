@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>編集進行ボード 表示確認</title>
+</head>
+<body>
+  <main style="max-width:1180px;margin:0 auto;padding:24px">
+    <h1 style="font-size:22px;margin-bottom:6px">編集進行ボード</h1>
+    <p style="margin-bottom:16px;color:#64748b">表示確認用データです。保存・通信は行いません。</p>
+    <div class="card" style="margin-bottom:9px;background:var(--card2);font-size:14px;line-height:1.6;color:var(--t2)"><b>紫色が現在地です。</b>案件名の下に「いま」と「次」を表示します。修正はクライアントから指示が来たときだけ編集者へ戻ります。</div>
+    <div class="video-progress-board">
+      <div class="video-progress-head" aria-hidden="true"><span>案件</span><span>編集者の作業</span><span>D確認</span><span>クライアントへ提出</span><span>クライアント確認</span><span>納品</span></div>
+      <div id="progress-fixture"></div>
+    </div>
+  </main>
+  <script>
+  (async()=>{
+    const source=await fetch('../index.html').then(response=>response.text());
+    const css=source.match(/<style>([^]*?)<\/style>/)?.[1]||'';
+    const style=document.createElement('style');style.textContent=css;document.head.appendChild(style);
+    const start=source.indexOf('function _videoWorkflow(job)');
+    const end=source.indexOf('\nfunction _videoProgressRows',start);
+    const helpers=(0,eval)(`(()=>{${source.slice(start,end)};return{state:_videoProgressStepState,next:_videoProgressNextAction};})()`);
+    const steps=[['editor_work','編集者の作業'],['director_review','D確認'],['client_submission','クライアントへ提出'],['client_review','クライアント確認'],['delivered','納品']];
+    const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    const job={title:'9月分 和光市デンタルオフィス / サブ案件01',status:'確認待ち',clientDisplay:'itsuba.net 河戸様',assignee:'三浦 みゆう',deadline:'2026-09-11'};
+    document.getElementById('progress-fixture').innerHTML=`<article class="video-progress-row"><div class="video-progress-info"><b>${esc(job.title)}</b><span class="video-progress-current">いま：先方確認中</span><span class="video-progress-next">次：${esc(helpers.next(job))}</span><span>${esc(job.clientDisplay)} ・ ${esc(job.assignee)}</span><span>期限 ${esc(job.deadline)}</span></div>${steps.map(([key,label])=>{const value=helpers.state(job,key);return`<div class="video-progress-stage ${value.state}" data-label="${label}"><span aria-hidden="true">${value.state==='done'?'✓':value.state==='active'?'●':'○'}</span><span>${esc(value.label)}</span></div>`}).join('')}</article>`;
+  })();
+  </script>
+</body>
+</html>
