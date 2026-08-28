@@ -12,6 +12,9 @@ const {
   updateDoc,
   collection,
   addDoc,
+  getDocs,
+  query,
+  where,
   runTransaction,
   serverTimestamp,
   deleteField,
@@ -85,6 +88,15 @@ function weeklySchedule(overrides = {}) {
     fromDate: dates[0], toDate: dates[6], hoursPerWeek: 20, capacity: 5,
     workType: 'both', available: true, note: '', updatedAt: serverTimestamp(),
     ...overrides,
+  };
+}
+
+function directThread(firstUid, secondUid, ownerUid = '') {
+  const [participantA, participantB] = [firstUid, secondUid].sort();
+  return {
+    participantA, participantB, participants: [participantA, participantB], ownerUid,
+    createdAt: serverTimestamp(), updatedAt: serverTimestamp(), lastMessageAt: null,
+    lastMessagePreview: '', lastSenderUid: '', lastSenderName: '',
   };
 }
 
@@ -181,6 +193,36 @@ async function expectAllowed(label, promise) {
     await expectDenied('editor cannot change own roles while renaming', updateDoc(doc(direct1, 'access', 'direct1'), { name: 'Direct Chatwork', roles: ['動画編集者', '営業'], updatedAt: 3 }));
     await expectDenied('editor cannot rename another account', updateDoc(doc(direct1, 'access', 'direct2'), { name: 'Wrong', updatedAt: 2 }));
 
+    // Direct-message directory and conversation boundaries. These query shapes
+    // are the only access-directory list queries the Slack-style DM surface
+    // may use: owner lists approved people; a director lists own externals.
+    await expectAllowed('owner can load approved DM peer directory', getDocs(query(collection(owner, 'access'), where('approved', '==', true))));
+    await expectAllowed('director can load only own external DM peers', getDocs(query(collection(dir1, 'access'), where('directorUid', '==', 'dir1'))));
+    await expectDenied('direct editor cannot enumerate access directory', getDocs(query(collection(direct1, 'access'), where('approved', '==', true))));
+    await expectAllowed('direct editor can read only own access record', getDoc(doc(direct1, 'access', 'direct1')));
+    await expectDenied('direct editor cannot read director access record', getDoc(doc(direct1, 'access', 'dir1')));
+
+    await expectAllowed('owner starts a DM with a direct editor', setDoc(doc(owner, 'direct_threads', 'dm-owner-direct1'), directThread('owner', 'direct1', 'owner')));
+    await expectAllowed('direct editor reads own owner DM', getDoc(doc(direct1, 'direct_threads', 'dm-owner-direct1')));
+    await expectDenied('unrelated director cannot read direct editor owner DM', getDoc(doc(dir1, 'direct_threads', 'dm-owner-direct1')));
+    await expectAllowed('participant updates only latest-message summary', updateDoc(doc(direct1, 'direct_threads', 'dm-owner-direct1'), { updatedAt: serverTimestamp(), lastMessageAt: serverTimestamp(), lastMessagePreview: '確認しました。', lastSenderUid: 'direct1', lastSenderName: 'Direct 1' }));
+    await expectDenied('nonparticipant cannot update DM summary', updateDoc(doc(dir1, 'direct_threads', 'dm-owner-direct1'), { updatedAt: serverTimestamp(), lastMessageAt: serverTimestamp(), lastMessagePreview: '改ざん', lastSenderUid: 'dir1', lastSenderName: 'Dir 1' }));
+    await expectDenied('direct editor cannot start a DM with an unrelated director', setDoc(doc(direct1, 'direct_threads', 'dm-direct1-dir1'), directThread('direct1', 'dir1')));
+    await expectAllowed('director starts a DM with own external editor', setDoc(doc(dir1, 'direct_threads', 'dm-dir1-external1'), directThread('dir1', 'external1')));
+    await expectAllowed('external editor reads own director DM', getDoc(doc(external1, 'direct_threads', 'dm-dir1-external1')));
+    await expectAllowed('owner starts a DM with an external editor', setDoc(doc(owner, 'direct_threads', 'dm-owner-external1'), directThread('owner', 'external1', 'owner')));
+    await expectDenied('other director cannot start a DM with another teams external editor', setDoc(doc(dir2, 'direct_threads', 'dm-dir2-external1'), directThread('dir2', 'external1')));
+    await expectAllowed('direct editor appends a text-only message', setDoc(doc(direct1, 'direct_threads', 'dm-owner-direct1', 'messages', 'm1'), { senderUid: 'direct1', senderName: 'Direct 1', body: '確認しました。', createdAt: serverTimestamp() }));
+    await expectDenied('participant cannot forge another sender', setDoc(doc(owner, 'direct_threads', 'dm-owner-direct1', 'messages', 'm-forged'), { senderUid: 'direct1', senderName: 'Direct 1', body: 'なりすまし', createdAt: serverTimestamp() }));
+    await expectDenied('message rejects case or money fields', setDoc(doc(direct1, 'direct_threads', 'dm-owner-direct1', 'messages', 'm-sensitive'), { senderUid: 'direct1', senderName: 'Direct 1', body: '確認しました。', ownPay: 5000, createdAt: serverTimestamp() }));
+    await expectDenied('message is append-only', updateDoc(doc(direct1, 'direct_threads', 'dm-owner-direct1', 'messages', 'm1'), { body: '書き換え' }));
+    await expectAllowed('editor stores only own read receipt', setDoc(doc(direct1, 'direct_threads', 'dm-owner-direct1', 'reads', 'direct1'), { readerUid: 'direct1', lastReadAt: serverTimestamp(), updatedAt: serverTimestamp() }));
+    await expectDenied('owner cannot read editors private read receipt', getDoc(doc(owner, 'direct_threads', 'dm-owner-direct1', 'reads', 'direct1')));
+    await expectDenied('owner cannot forge editors read receipt', setDoc(doc(owner, 'direct_threads', 'dm-owner-direct1', 'reads', 'direct1'), { readerUid: 'direct1', lastReadAt: serverTimestamp(), updatedAt: serverTimestamp() }));
+    await expectDenied('generic participants-only DM list cannot bypass current relationship checks', getDocs(query(collection(direct1, 'direct_threads'), where('participants', 'array-contains', 'direct1'))));
+    await expectAllowed('direct editor lists own owner conversations with an ownerUid filter', getDocs(query(collection(direct1, 'direct_threads'), where('participants', 'array-contains', 'direct1'), where('ownerUid', '!=', ''))));
+    await expectAllowed('owner lists owner conversations with own ownerUid filter', getDocs(query(collection(owner, 'direct_threads'), where('participants', 'array-contains', 'owner'), where('ownerUid', '==', 'owner'))));
+
     await expectAllowed('video director receives editor board access', getDoc(doc(dir1, 'editor_job_board', 'direct-open')));
     await expectAllowed('video director creates a job in own editor portal', setDoc(doc(dir1, 'editor_portals', 'dir1', 'editor_jobs', 'director-own'), portalJob('dir1')));
     await expectAllowed('video director saves own weekly editor schedule', setDoc(doc(dir1, 'editor_schedules', 'dir1'), weeklySchedule({ name: 'Dir 1' })));
@@ -239,6 +281,19 @@ async function expectAllowed(label, promise) {
       tx.set(doc(direct2, 'editor_portals', 'direct2', 'editor_jobs', 'direct-open'), portalJob('direct2', { businessType: 'edit_agency', boardJobId: 'direct-open', source: 'job_board' }));
       return snap;
     }));
+
+    // Moving an external editor to another director instantly invalidates the
+    // old director pair, including historic thread, message and read paths.
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'access', 'external1'), { directorUid: 'dir2' }, { merge: true });
+    });
+    await expectDenied('former director cannot read a moved external editors old DM', getDoc(doc(dir1, 'direct_threads', 'dm-dir1-external1')));
+    await expectDenied('former director cannot append to a moved external editors old DM', setDoc(doc(dir1, 'direct_threads', 'dm-dir1-external1', 'messages', 'after-move'), { senderUid: 'dir1', senderName: 'Dir 1', body: '旧所属から送信', createdAt: serverTimestamp() }));
+    await expectDenied('former director cannot read a moved external editors receipt', getDoc(doc(dir1, 'direct_threads', 'dm-dir1-external1', 'reads', 'dir1')));
+    await expectDenied('new director cannot read old thread when not a participant', getDoc(doc(dir2, 'direct_threads', 'dm-dir1-external1')));
+    await expectAllowed('new director can start a DM after external editor moves', setDoc(doc(dir2, 'direct_threads', 'dm-dir2-external1'), directThread('dir2', 'external1')));
+    await expectAllowed('owner DM remains readable after external editor moves', getDoc(doc(owner, 'direct_threads', 'dm-owner-external1')));
+    await expectAllowed('external editor keeps owner DM after director move', getDoc(doc(external1, 'direct_threads', 'dm-owner-external1')));
 
     process.stdout.write('PASSED Firestore role boundary suite\n');
   } finally {

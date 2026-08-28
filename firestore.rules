@@ -280,6 +280,13 @@ service cloud.firestore {
         || (data.progressEvents is list && data.progressEvents.size() <= 200);
     }
 
+    // 添付はURL・種別・表示名をクライアントで正規化する。Rulesでは配列の各mapを
+    // 反復検査できないため、保存件数と「編集者はこのキーを更新できない」境界をここで固定する。
+    function validAttachments(data) {
+      return !('attachments' in data)
+        || (data.attachments is list && data.attachments.size() <= 20);
+    }
+
     function reviewEvents(data) {
       return data.get('progressEvents', []);
     }
@@ -488,8 +495,31 @@ service cloud.firestore {
         || (from == '支払処理中' && to == '支払済み');
     }
 
+    // DM peer directory. Editors may discover the owners, and an external
+    // editor may discover only the director assigned in their own access row.
+    function dmDirectoryVideoMember(uid) {
+      return approved(uid)
+        && get(accessPath(uid)).data.roles.hasAny(['動画編集者','動画編集ディレクター']);
+    }
+
+    function dmDirectoryOwner(uid) {
+      return exists(accessPath(uid))
+        && get(accessPath(uid)).data.get('email', '') in [
+          'nakamurakouta512@gmail.com', 'mono.create.group@gmail.com'
+        ];
+    }
+
+    function dmDirectoryPeer(uid) {
+      return signedIn() && dmDirectoryVideoMember(request.auth.uid)
+        && (dmDirectoryOwner(uid)
+          || (get(accessPath(request.auth.uid)).data.get('editorKind', 'direct') == 'external'
+            && get(accessPath(request.auth.uid)).data.get('directorUid', '') == uid
+            && dmDirectoryVideoMember(uid)
+            && get(accessPath(uid)).data.roles.hasAny(['動画編集ディレクター'])));
+    }
+
     match /access/{uid} {
-      allow read: if owner() || self(uid) || (videoManager()
+      allow read: if owner() || self(uid) || dmDirectoryPeer(uid) || (videoManager()
         && resource.data.get('directorUid', '') == request.auth.uid);
       allow create: if owner();
       allow update: if owner() || (self(uid)
@@ -537,6 +567,144 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Private 1:1 conversations.  These records intentionally contain no
+    // client, job, payout or invoice fields.  An owner can talk with every
+    // approved video editor/director; a director can additionally talk with
+    // only the external editors assigned to that director.
+    function dmVideoMember(uid) {
+      return approved(uid)
+        && get(accessPath(uid)).data.roles.hasAny(['動画編集者','動画編集ディレクター']);
+    }
+
+    function dmOwnerUid(uid) {
+      return exists(accessPath(uid))
+        && get(accessPath(uid)).data.get('email', '') in [
+          'nakamurakouta512@gmail.com', 'mono.create.group@gmail.com'
+        ];
+    }
+
+    function dmExternalFor(externalUid, directorUid) {
+      return dmVideoMember(externalUid)
+        && dmVideoMember(directorUid)
+        && get(accessPath(externalUid)).data.get('editorKind', 'direct') == 'external'
+        && get(accessPath(externalUid)).data.get('directorUid', '') == directorUid
+        && get(accessPath(directorUid)).data.roles.hasAny(['動画編集ディレクター']);
+    }
+
+    function dmAllowedPair(a, b, ownerUid) {
+      return (ownerUid == a && dmOwnerUid(a) && dmVideoMember(b))
+        || (ownerUid == b && dmOwnerUid(b) && dmVideoMember(a))
+        || (ownerUid == '' && (dmExternalFor(a, b) || dmExternalFor(b, a)));
+    }
+
+    function validDmThread(data) {
+      return data.keys().hasOnly([
+          'participantA','participantB','participants','ownerUid','createdAt','updatedAt',
+          'lastMessageAt','lastMessagePreview','lastSenderUid','lastSenderName'
+        ])
+        && data.participantA is string && data.participantB is string
+        && data.participantA.size() > 0 && data.participantB.size() > 0
+        && data.participantA < data.participantB
+        && data.participants is list && data.participants.size() == 2
+        && data.participants[0] == data.participantA && data.participants[1] == data.participantB
+        && data.ownerUid is string
+        && (data.ownerUid == '' || data.ownerUid == data.participantA || data.ownerUid == data.participantB)
+        && data.lastMessagePreview is string && data.lastMessagePreview.size() <= 120
+        && data.lastSenderUid is string && data.lastSenderUid.size() <= 128
+        && data.lastSenderName is string && data.lastSenderName.size() <= 100;
+    }
+
+    function dmParticipant(data) {
+      // A director/external conversation is live only while the current
+      // access-directory relationship still matches.  This closes historic
+      // threads immediately when an external editor moves to another director.
+      // Owner conversations remain available because their owner identity was
+      // validated on creation and is immutable afterwards.
+      let participants = data.get('participants', []);
+      let participantA = data.get('participantA', '');
+      let participantB = data.get('participantB', '');
+      let ownerUid = data.get('ownerUid', '');
+      return signedIn()
+        && request.auth.uid in participants
+        && (ownerUid != ''
+          || dmAllowedPair(participantA, participantB, ''));
+    }
+
+    // List queries are intentionally narrower than single-thread reads.
+    // Current director/external conversations require a relationship lookup,
+    // which Firestore cannot prove from an array-contains query.  The client
+    // opens those deterministic IDs individually.  Only owner conversations
+    // are listable, with a query that explicitly includes ownerUid.
+    function dmListableOwnerConversation(data) {
+      return signedIn()
+        && request.auth.uid in data.get('participants', [])
+        && data.get('ownerUid', '') != ''
+        && (owner()
+          ? data.get('ownerUid', '') == request.auth.uid
+          : dmVideoMember(request.auth.uid));
+    }
+
+    match /direct_threads/{threadId} {
+      allow get: if dmParticipant(resource.data);
+      allow list: if dmListableOwnerConversation(resource.data);
+      allow create: if dmParticipant(request.resource.data)
+        && validDmThread(request.resource.data)
+        && (
+          // The owner may bootstrap an owner/editor conversation even before
+          // the owner has an access-directory document.
+          (owner() && request.resource.data.ownerUid == request.auth.uid
+            && ((request.resource.data.participantA == request.auth.uid
+                && dmVideoMember(request.resource.data.participantB))
+              || (request.resource.data.participantB == request.auth.uid
+                && dmVideoMember(request.resource.data.participantA))))
+          || dmAllowedPair(
+            request.resource.data.participantA,
+            request.resource.data.participantB,
+            request.resource.data.ownerUid
+          )
+        );
+      // Participants can only touch the current-message summary.  The pair,
+      // owner relation and creation time never change after creation.
+      allow update: if dmParticipant(resource.data)
+        && validDmThread(request.resource.data)
+        && request.resource.data.participantA == resource.data.participantA
+        && request.resource.data.participantB == resource.data.participantB
+        && request.resource.data.participants == resource.data.participants
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'updatedAt','lastMessageAt','lastMessagePreview','lastSenderUid','lastSenderName'
+        ])
+        && request.resource.data.lastSenderUid == request.auth.uid;
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if dmParticipant(get(/databases/$(database)/documents/direct_threads/$(threadId)).data);
+        allow create: if dmParticipant(get(/databases/$(database)/documents/direct_threads/$(threadId)).data)
+          && request.resource.data.keys().hasOnly(['senderUid','senderName','body','createdAt'])
+          && request.resource.data.senderUid == request.auth.uid
+          && request.resource.data.senderName is string
+          && request.resource.data.senderName.size() > 0
+          && request.resource.data.senderName.size() <= 100
+          && request.resource.data.body is string
+          && request.resource.data.body.size() > 0
+          && request.resource.data.body.size() <= 2000;
+        allow update, delete: if false;
+      }
+
+      // A read receipt is private to its owner.  It cannot alter messages or
+      // another participant's unread state.
+      match /reads/{uid} {
+        allow read: if self(uid)
+          && dmParticipant(get(/databases/$(database)/documents/direct_threads/$(threadId)).data);
+        allow create, update: if self(uid)
+          && dmParticipant(get(/databases/$(database)/documents/direct_threads/$(threadId)).data)
+          && request.resource.data.keys().hasOnly(['readerUid','lastReadAt','updatedAt'])
+          && request.resource.data.readerUid == uid;
+        allow delete: if false;
+      }
+    }
+
     // Existing monolith data. A video editor is denied even when another role was
     // accidentally added; the app also prevents that combination at assignment time.
     match /shared/{document=**} {
@@ -566,7 +734,7 @@ service cloud.firestore {
             'instructions','urgent','status','progress','evidenceUrl','blocker',
             'workDate','startTime','endTime','submittedByUid','editorUid',
             'editorEmail','editorName','directorUid','source','createdAt','updatedAt','history',
-            'workflow','progressEvents','parentJobId','parentJobTitle'
+            'workflow','progressEvents','parentJobId','parentJobTitle','attachments'
           ])
           && request.resource.data.recordType == 'editor_portal_job'
           && request.resource.data.submittedByUid == uid
@@ -590,6 +758,7 @@ service cloud.firestore {
           && validCompletedJobEvidence()
           && validReviewWorkflow(request.resource.data)
           && validProgressEvents(request.resource.data)
+          && validAttachments(request.resource.data)
           && request.resource.data.history is list
           && request.resource.data.history.size() == 1;
         // One-time owner migration before (or after) a contract-kind change.
@@ -627,13 +796,14 @@ service cloud.firestore {
             'clientDraftDate','thumbnailDate','deliveryDate','instructions','urgent','status',
             'correctionReason','updatedAt','updatedBy','history','ownPay',
             'payableApproved','payableApprovedAt','payableMonth',
-            'workflow','progressEvents'
+            'workflow','progressEvents','attachments'
           ])
           && validJobStatus(request.resource.data.status)
           && (request.resource.data.status == resource.data.status
             || !(request.resource.data.status in ['初稿提出済み','修正稿提出済み','D確認OK','完了'])
             || validManagerReviewTransition())
           && validJobSchedule()
+          && validAttachments(request.resource.data)
           && validCompletedJobEvidence()
           && validManagerReviewTransition()
           && preservesFinalJob()
@@ -653,13 +823,14 @@ service cloud.firestore {
             'correctionReason','updatedAt','updatedBy','history','ownPay',
             'payableApproved','payableApprovedAt','payableMonth',
             'linkedLegacyJobId','integratedAt','integratedBy',
-            'workflow','progressEvents'
+            'workflow','progressEvents','attachments'
           ])
           && validJobStatus(request.resource.data.status)
           && (request.resource.data.status == resource.data.status
             || !(request.resource.data.status in ['初稿提出済み','修正稿提出済み','D確認OK','完了'])
             || validManagerReviewTransition())
           && validJobSchedule()
+          && validAttachments(request.resource.data)
           && validCompletedJobEvidence()
           && validManagerReviewTransition()
           && preservesFinalJob()
@@ -835,7 +1006,7 @@ service cloud.firestore {
       allow create: if videoManager()
         && request.resource.data.keys().hasOnly([
           'businessType','title','caseName','clientId','clientName','accountId','accountName',
-          'summary','instructions','requestUrl','sourceUrl','editorDraftDate',
+          'summary','instructions','requestUrl','sourceUrl','attachments','editorDraftDate',
           'clientDraftDate','thumbnailDate','deliveryDate','urgent','status',
           'audience','eligibleUids','directorUid','createdByUid','createdByName',
           'createdAt','updatedAt','assignedUid','assignedName','assignedAt'
@@ -845,11 +1016,13 @@ service cloud.firestore {
         && request.resource.data.title.size() > 0
         && request.resource.data.title.size() <= 120
         && request.resource.data.status == 'open'
+        && validAttachments(request.resource.data)
         && request.resource.data.eligibleUids is list
         && request.resource.data.get('assignedUid', '') == ''
         && (owner() || request.resource.data.directorUid == request.auth.uid);
       allow update: if videoManager()
-        && (owner() || resource.data.get('directorUid', '') == request.auth.uid);
+        && (owner() || resource.data.get('directorUid', '') == request.auth.uid)
+        && validAttachments(request.resource.data);
       allow update: if canSeeBoard(resource.data)
         && resource.data.status == 'open'
         && resource.data.get('assignedUid', '') == ''

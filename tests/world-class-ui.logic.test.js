@@ -38,10 +38,10 @@ test('editor home gives one primary action a textual priority, current state, ne
 
 test('mobile navigation is a five-item bottom bar in editor and main app', () => {
   // Four direct destinations plus the "more" disclosure keeps the bar at five touch targets.
-  assert.match(features, /const mobile=\[\['dashboard','ホーム'\],\['jobs','案件'\],\['board','探す'\],\['notifications','通知'\]\]/);
+  assert.match(features, /const mobile=\[\['dashboard','ホーム'\],\['jobs','案件'\],\['dm','DM'\],\['notifications','通知'\]\]/);
   assert.match(features, /<details class="editor-nav-more">/);
   assert.equal(mobileNavItems(index), 5);
-  assert.match(features, /@media\(max-width:760px\)\{\.editor-nav-desktop\{display:none\}\.editor-nav-mobile\{position:fixed;left:0;right:0;bottom:0/);
+  assert.match(features, /@media\(max-width:760px\)\{[^}]*\}\.editor-nav-desktop\{display:none\}\.editor-nav-mobile\{position:fixed;left:0;right:0;bottom:0/);
   assert.match(index, /#mob-nav\{\s*display:none;position:fixed;bottom:0/);
 });
 
@@ -83,7 +83,7 @@ test('keyboard focus and touch targets meet the minimum interaction contract', (
   assert.match(`${editor}\n${features}`, /:focus-visible/);
   assert.match(index, /:focus-visible/);
   assert.match(editor, /\.btn\{min-height:44px/);
-  assert.match(features, /\.editor-nav-mobile \.btn\{min-width:0;min-height:44px/);
+  assert.match(features, /\.editor-nav-mobile \.editor-nav-button,\.editor-nav-mobile \.editor-nav-more summary\{min-width:0;min-height:44px/);
   assert.match(index, /\.video-toolbar \[role=tab\]\{min-height:44px/);
 });
 
