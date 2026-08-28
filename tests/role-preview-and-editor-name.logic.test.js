@@ -37,6 +37,8 @@ test('editor display name is explicitly aligned with Chatwork and self-editable'
   assert.match(editor, /function saveDisplayName\(\)/);
   assert.match(editor, /collection\('access'\)\.doc\(user\.uid\)\.update\(\{name,updatedAt:/);
   assert.match(index, /本人確認の取り違えを防ぐため、Chatworkの表示名と完全に揃えてください/);
+  assert.match(index, /function rolePreviewEditMemberName\(uid\)/);
+  assert.match(index, /function rolePreviewSaveMemberName\(uid\)/);
   assert.match(rules, /affectedKeys\(\)\.hasOnly\(\[\s*'name','updatedAt'/);
 });
 

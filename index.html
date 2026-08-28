@@ -11053,7 +11053,7 @@ function rolePreviewCardsHtml(){
     const members=records.filter(x=>role==='動画編集者'?rolesGrantVideoEditor(x.roles||[]):(x.roles||[]).includes(role));
     const memberButtons=members.map(m=>{
       const label=esc(m.name||m.email||m.id);
-      if(role==='動画編集者')return`<button class="btn btn-g btn-xs" onclick="rolePreviewOpenEditor('${esc(m.id)}')">${label}の本人画面</button>`;
+      if(role==='動画編集者')return`<button class="btn btn-g btn-xs" onclick="rolePreviewOpenEditor('${esc(m.id)}')">${label}の本人画面</button><button class="btn btn-g btn-xs" onclick="rolePreviewEditMemberName('${esc(m.id)}')">名前を編集</button>`;
       const ownPortal=role==='動画編集ディレクター'?`<button class="btn btn-g btn-xs" onclick="rolePreviewOpenEditor('${esc(m.id)}')">${label}の本人画面</button>`:'';
       return`<button class="btn btn-p btn-xs" onclick="rolePreviewStart('${role}','${esc(m.id)}')">${label}として確認</button>${ownPortal}`;
     }).join('');
@@ -11073,6 +11073,24 @@ function memberDisplayName(m){return memberAccessRecord(m)?.name||m?.name||'';}
 function openRolePreviewChooser(){
   if(!_isActualOwner())return toast('オーナーのみ利用できます','err');
   openModal(`<div class="mhdr"><div class="mtitle">役職別の実データ画面を確認</div><button class="mclose" onclick="closeModal()">✕</button></div><div style="font-size:12px;color:var(--t2);line-height:1.7;margin-bottom:12px">現在登録されている案件などを使い、各役職の表示範囲を確認します。デモデータは使いません。</div><div class="role-preview-grid">${rolePreviewCardsHtml()}</div>`);
+}
+function rolePreviewEditMemberName(uid){
+  if(!_isActualOwner()||_rolePreviewActive())return toast('オーナー画面から変更してください','warn');
+  const member=rolePreviewMember(uid);if(!member)return toast('メンバーが見つかりません','warn');
+  openModal(`<div class="mhdr"><div><div class="mtitle">Chatwork表示名を変更</div><div style="font-size:11px;color:var(--t3);margin-top:3px">${esc(member.email||'')}</div></div><button class="mclose" onclick="closeModal()">✕</button></div><div class="fg"><div class="fl">Chatwork表示名 *</div><input id="role-preview-member-name" maxlength="80" value="${esc(member.name||'')}" placeholder="Chatworkと同じ名前"><div style="font-size:10.5px;color:var(--pl);margin-top:5px">Chatworkで現在使っている表示名を、そのまま入力してください。</div></div><div class="mfooter"><button class="btn btn-g" onclick="closeModal();openRolePreviewChooser()">キャンセル</button><button class="btn btn-p" onclick="rolePreviewSaveMemberName('${esc(member.id)}')">名前を保存</button></div>`);
+}
+async function rolePreviewSaveMemberName(uid){
+  if(!_isActualOwner()||_rolePreviewActive())return toast('オーナー画面から変更してください','warn');
+  const member=rolePreviewMember(uid),name=(document.getElementById('role-preview-member-name')?.value||'').trim();
+  if(!member)return toast('メンバーが見つかりません','warn');
+  if(!name)return toast('Chatwork表示名を入力してください','warn');
+  try{
+    await fbDb.collection('access').doc(uid).update({name,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    member.name=name;
+    const legacy=(S.memberRoles||[]).find(x=>x&&!x.deleted&&String(x.email||'').toLowerCase()===String(member.email||'').toLowerCase());
+    if(legacy){legacy.name=name;legacy.updatedAt=Date.now();save();}
+    closeModal();openRolePreviewChooser();toast(`${name} に変更しました`);
+  }catch(e){console.warn('member name update failed',e);toast('表示名を変更できませんでした','err');}
 }
 function rSettings(){
   return`<div class="ph"><div class="ph-title">設定</div></div>
@@ -15835,7 +15853,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260828-01';
+const APP_VERSION='20260828-02';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -15909,6 +15927,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260828-01"></script>
+<script src="./manager-features.js?v=20260828-02"></script>
 </body>
 </html>
