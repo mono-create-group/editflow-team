@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260829-02"></script>
+<script src="./billing-terms.js?v=20260829-03"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -986,7 +986,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260829-02">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260829-03">
 </head>
 <body class="owner-yellow-ui">
 
@@ -6870,6 +6870,59 @@ function rVideoNotificationCenter(biz=PBIZ){
   </details>`;
 }
 
+function _videoReferenceWorkspace({biz,all,active,title,addJobAction}){
+  const filtered=_videoFiltered(biz,all),filteredActive=filtered.filter(j=>!['完了','キャンセル'].includes(j.status));
+  const focus=_videoSortJobs(filteredActive)[0]||_videoSortJobs(filtered)[0]||_videoSortJobs(active)[0]||_videoSortJobs(all)[0];
+  if(!focus)return`<section class="ref-workspace-empty card"><b>案件がまだありません</b><span>右上の「案件を掲載」から、最初の案件を登録できます。</span>${addJobAction||''}</section>`;
+  const click=focus._source==='portal'?`openPortalJobModal(${JSON.stringify(focus._portalUid)},${JSON.stringify(focus.id)})`:`openJobModal(${JSON.stringify(focus.id)})`;
+  const subtasks=_videoSortJobs(focus.subtasks||[]);
+  const materials=_videoCaseMaterials(focus.attachments,focus).slice(0,5);
+  const history=[...(focus.progressEvents||[]),...(focus.statusHistory||[]),...(focus.progressMilestones||[])].slice(-4).reverse();
+  const client=focus.clientDisplay||'クライアント未設定',assignee=focus.assignee||'未割当';
+  const scheduled=focus.deadline||focus.deliveryDate||'未設定',editorDraft=focus.editorDraftDate||'未設定',clientDraft=focus.clientDraftDate||'未設定';
+  const financeJob=focus._source==='legacy'?focus._raw:(S.jobs||[]).find(j=>String(j.id||'')===String(focus._raw?.linkedLegacyJobId||''));
+  const revenue=_isOwner()&&financeJob?jobTotalIn(financeJob):0;
+  const payout=_isOwner()&&financeJob?jobTotalOut(financeJob):0;
+  const status=videoStatusLabel(focus.status||'未着手');
+  const statusBadge=SCOLBG[focus.status]||'bk';
+  const activity=history.length?history.map(item=>{
+    const at=item.at?new Date(Number(item.at)).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+    const text=item.note||item.label||item.type||item.status||'案件情報を更新しました';
+    return`<div class="ref-chat-message"><span class="ref-avatar">${esc((item.by||assignee||'M').slice(0,1))}</span><div><b>${esc(item.by||assignee)}</b><small>${esc(at)}</small><p>${esc(text)}</p></div></div>`;
+  }).join(''):`<div class="ref-chat-empty">まだ案件内の更新履歴はありません。</div>`;
+  return`<section class="ref-workspace" aria-label="案件詳細ワークスペース">
+    <div class="ref-workspace-topbar">
+      <button type="button" class="ref-topbar-module" onclick="setVideoTab('board')"><span aria-hidden="true">▣</span><b>案件</b><span aria-hidden="true">⌄</span></button>
+      <div class="ref-topbar-search"><span aria-hidden="true">⌕</span><input aria-label="案件を検索" value="${esc(VIDEO_QUERY)}" placeholder="案件名・クライアント名で検索" oninput="setVideoQuery(this.value)"></div>
+      <div class="ref-topbar-tools"><button class="ref-icon-button" type="button" aria-label="通知" title="通知" onclick="setVideoTab('queue')">♢</button><button class="ref-icon-button" type="button" aria-label="ヘルプ" title="使い方ガイド" onclick="setV('guide')">?</button><button class="ref-icon-button" type="button" aria-label="管理画面" title="従来の管理機能" onclick="setVideoTab('manage-board')">⚙</button><span class="ref-user-avatar" title="${esc(FB_USER?.displayName||FB_USER?.email||'オーナー')}">${esc(String(FB_USER?.displayName||'オ').trim().slice(0,1)||'オ')}</span></div>
+    </div>
+    <div class="ref-workspace-body">
+      <main class="ref-case-main">
+        <div class="ref-breadcrumb"><button type="button" onclick="setVideoTab('board')">案件一覧</button><span>›</span><span>${esc(client)}</span></div>
+        <section class="ref-case-head">
+          <div class="ref-case-title"><button class="ref-star" type="button" aria-label="注目案件">☆</button><h2>${esc(focus.title||title)}</h2><span class="badge ${statusBadge}">${esc(status)}</span></div>
+          <div class="ref-case-actions"><button class="btn btn-g btn-sm" onclick="${click}">編集</button><button class="btn btn-p btn-sm" onclick="${click}">案件を開く</button></div>
+        </section>
+        <section class="ref-next-action"><div><small>次にすること</small><b>${esc(_videoProgressNextAction(focus))}</b></div><button class="btn btn-p btn-sm" onclick="${click}">進捗を更新</button></section>
+        <section class="ref-case-summary">
+          <dl><div><dt>担当編集者</dt><dd>${esc(assignee)}</dd></div><div><dt>編集者初稿</dt><dd>${esc(editorDraft)}</dd></div><div><dt>クライアント初稿</dt><dd>${esc(clientDraft)}</dd></div><div><dt>納期（予定）</dt><dd>${esc(scheduled)}</dd></div><div><dt>納品日</dt><dd>${esc(focus.completedDeliveryDate||'未記録')}</dd></div></dl>
+          <div class="ref-subcase-count"><small>サブ案件</small><b>${subtasks.length}件</b></div>
+        </section>
+        <div class="ref-case-grid">
+          <section class="ref-panel"><div class="ref-panel-title"><b>サブ案件（${subtasks.length}件）</b><button class="btn btn-g btn-xs" onclick="${click}">すべて見る</button></div><div class="ref-subcase-table"><div class="ref-subcase-row ref-subcase-label"><span>案件名</span><span>ステータス</span><span>担当編集者</span><span>納期</span></div>${subtasks.slice(0,6).map(sub=>{const subClick=sub._portalChildJobId?`openPortalJobModal(${JSON.stringify(sub._portalChildPortalUid)},${JSON.stringify(sub._portalChildJobId)})`:focus._source==='portal'?`openPortalSubcaseDetail(${JSON.stringify(focus._portalUid)},${JSON.stringify(focus.id)},${JSON.stringify(String(sub.id||''))})`:`openLegacySubcaseDetail(${JSON.stringify(focus.id)},${JSON.stringify(String(sub.id||''))})`;return`<button type="button" class="ref-subcase-row" onclick="${subClick}"><span>${esc(sub.title||'サブ案件')}</span><span><i class="badge ${SCOLBG[sub.status]||'bk'}">${esc(videoStatusLabel(sub.status||'未着手'))}</i></span><span>${esc(sub.assignee||assignee)}</span><span>${esc(sub.deadline||sub.deliveryDate||'未設定')}</span></button>`}).join('')||'<div class="ref-no-subcase">サブ案件はありません。</div>'}</div></section>
+          <section class="ref-panel"><div class="ref-panel-title"><b>素材・資料</b><button class="btn btn-g btn-xs" onclick="${click}">すべて見る</button></div><div class="ref-material-list">${materials.map(m=>`<a href="${esc(m.url||m.href||'#')}" target="_blank" rel="noopener"><span>▧</span><b>${esc(m.label||m.name||m.title||'素材・資料')}</b></a>`).join('')||'<div class="ref-no-subcase">素材・資料はありません。</div>'}</div></section>
+        </div>
+        <section class="ref-panel ref-history"><div class="ref-panel-title"><b>提出・更新履歴</b></div><p>案件のステータス・進捗は、右側の案件内チャットに時系列で表示します。</p></section>
+      </main>
+      <aside class="ref-case-rail">
+        <section class="ref-chat-panel"><div class="ref-rail-heading"><b>案件内チャット</b><button class="btn btn-g btn-xs" onclick="${click}">詳細</button></div><div class="ref-chat-thread">${activity}</div><button class="ref-chat-open" type="button" onclick="${click}">案件の連絡・進捗を開く</button></section>
+        ${_isOwner()?`<section class="ref-finance-panel"><div class="ref-rail-heading"><b>売上・支払・利益</b><span>オーナーのみ</span></div><dl><div><dt>売上</dt><dd>¥${revenue.toLocaleString()}</dd></div><div><dt>支払</dt><dd>¥${payout.toLocaleString()}</dd></div><div><dt>利益</dt><dd>¥${(revenue-payout).toLocaleString()}</dd></div></dl><button class="btn btn-g btn-sm" onclick="setVideoTab('manage-profit')">利益ページを開く</button></section>`:''}
+        <div id="manager-overview-actions"></div>
+      </aside>
+    </div>
+  </section>`;
+}
+
 function rVideoOperations(showBusinessSwitcher=false,biz=PBIZ){
   biz=biz==='haken'?'haken':'edit';PBIZ=biz;
   if(VIDEO_STATUS&&!BIZ_CFG[biz].statuses.includes(VIDEO_STATUS))VIDEO_STATUS='';
@@ -6895,11 +6948,11 @@ function rVideoOperations(showBusinessSwitcher=false,biz=PBIZ){
     queue=[['期限超過',overdue,'var(--red)'],['停止中',blocked,'var(--amber)'],['確認・修正待ち',review,'var(--pl)'],['未割当',unassigned,'var(--red)']].map(([label,list,color])=>`<div class="card" style="border-left:3px solid ${color}"><div style="display:flex;justify-content:space-between"><b>${label}</b><span>${list.length}件</span></div>${_videoSortJobs(list).slice(0,20).map(_videoCard).join('')||'<div style="font-size:11px;color:var(--t3);padding-top:8px">該当なし</div>'}</div>`).join('');
   }
   const attentionTotal=new Set([...overdue,...blocked,...review,...unassigned].map(j=>`${j._source}:${j._portalUid||''}:${j.id}`)).size;
-  const overview=`<div class="app-attention-grid"><div class="app-attention-card danger"><strong>${overdue.length}</strong><span>期限超過</span></div><div class="app-attention-card warning"><strong>${blocked.length}</strong><span>停止中</span></div><div class="app-attention-card info"><strong>${review.length}</strong><span>確認・修正待ち</span></div><div class="app-attention-card"><strong>${unassigned.length}</strong><span>未割当</span></div></div><div class="app-metric-row"><div class="app-metric"><span>制作中</span><strong>${active.length}</strong></div><div class="app-metric"><span>サブ案件</span><strong>${subcaseCount}</strong></div><div class="app-metric"><span>${biz==='haken'?'編集者直接登録':'編集者受託'}</span><strong>${portalCount}</strong></div></div>`;
+  const addJobAction=_videoCanEdit()?(biz==='edit'?(_isScopedVideoDirectorAccess()?'<button class="btn btn-p" onclick="managerOpenBoardForm()">＋ 案件を掲載</button>':'<button class="btn btn-p" onclick="window.managerOpenBoardForm?managerOpenBoardForm():openJobModal()">＋ 案件を掲載</button>'):_isScopedVideoDirectorAccess()?'':'<button class="btn btn-p" onclick="openJobModal()">＋ 派遣案件</button>'):'';
+  const overview=_videoReferenceWorkspace({biz,all,active,title,addJobAction});
   const ownerAcceptancePreview=_isOwner()&&biz==='edit'?'<a class="btn btn-p btn-sm" href="./editor.html?demo=editor" target="_blank" rel="noopener">編集者の受託画面を確認（デモ）</a>':'';
   const acceptanceNote=biz==='edit'&&_isOwner()?'<div style="font-size:11px;color:var(--t2);margin:-2px 0 10px;padding:8px 10px;border-radius:8px;background:var(--card2)">この管理画面は案件を掲載する側です。編集者は「案件を探す」から「この案件を受ける」を押します。</div>':'';
   const roleNote=_isOwner()?'全案件の優先順位・請求・配置を管理します。':'担当する編集者と案件だけを確認・判断します。';
-  const addJobAction=_videoCanEdit()?(biz==='edit'?(_isScopedVideoDirectorAccess()?'<button class="btn btn-p" onclick="managerOpenBoardForm()">＋ 案件を掲載</button>':'<button class="btn btn-p" onclick="window.managerOpenBoardForm?managerOpenBoardForm():openJobModal()">＋ 案件を掲載</button>'):_isScopedVideoDirectorAccess()?'':'<button class="btn btn-p" onclick="openJobModal()">＋ 派遣案件</button>'):'';
   const managementActions=_videoCanEdit()&&!_isScopedVideoDirectorAccess()?`<button class="btn btn-p" onclick="openClientModal()">＋ クライアント追加</button><button class="btn btn-g" onclick="openJobModal()">＋ 案件追加</button>`:'';
   const legacyAddAction=_videoCanEdit()&&biz==='edit'&&!_isScopedVideoDirectorAccess()?'<button class="btn btn-g btn-sm" onclick="openJobModal()">従来形式で案件を直接登録</button>':'';
   const headerPrimary=managementKey?managementActions:(VIDEO_TAB==='overview'&&attentionTotal?`<button class="btn btn-p" onclick="setVideoTab('queue')">要対応 ${attentionTotal}件を確認</button>`:addJobAction);
@@ -6917,6 +6970,7 @@ function rVideoOperations(showBusinessSwitcher=false,biz=PBIZ){
     workspaceBody=renderer?renderer():rProjBoard();
   }
   const tabButtons=tabs.map(([k,l])=>`<button class="btn btn-sm" role="tab" aria-selected="${VIDEO_TAB===k}" aria-controls="video-workspace" onclick="setVideoTab('${k}')">${l}</button>`).join('');
+  if(VIDEO_TAB==='overview')return`${showBusinessSwitcher?rBizBar():''}<div id="video-workspace" class="ref-owner-page">${overview}</div>`;
   return`${showBusinessSwitcher?rBizBar():''}<div id="video-workspace"><div class="app-breadcrumb"><span>動画編集事業</span><span>${biz==='haken'?'編集者派遣':'編集代行'}</span><span>${tabs.find(x=>x[0]===VIDEO_TAB)?.[1]||'要対応'}</span></div>${screenSwitch}<header class="app-header"><div class="app-header-copy"><h1>${title}</h1><p>${roleNote} ${description}</p></div><div class="app-header-actions">${headerPrimary}${utilityActions&&!managementKey?`<details><summary class="btn btn-g btn-sm">その他</summary><div style="position:absolute;right:0;z-index:20;display:grid;gap:6px;padding:8px;margin-top:6px;border:1px solid var(--border);border-radius:10px;background:var(--card);box-shadow:var(--shadow-lg)">${utilityActions}</div></details>`:''}</div></header>${acceptanceNote}${rVideoNotificationCenter(biz)}<div class="app-view-tabs app-view-tabs-parity" role="tablist" aria-label="動画案件の表示">${tabButtons}</div>${workspaceBody}</div>`;
 }
 
@@ -16802,7 +16856,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260829-02';
+const APP_VERSION='20260829-03';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -16876,6 +16930,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260829-02"></script>
+<script src="./manager-features.js?v=20260829-03"></script>
 </body>
 </html>
