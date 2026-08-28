@@ -60,4 +60,6 @@ test('legacy synchronizer enforces target UID, missing-only writes, child prefer
   assert.match(index, /if\(record\?\.deleted\)return/);
   assert.match(index, /if\(hasChildren&&!String\(record\.id\|\|''\)\.trim\(\)\)/);
   assert.match(index, /if\(existing&&onlyMissing\)\{alreadyRows\.add\(item\.portalJobId\);continue;\}/);
+  assert.doesNotMatch(index, /const subId=[\s\S]{0,400}if\(!deliveryDate\)/);
+  assert.match(fs.readFileSync(path.join(root, 'firestore.rules'), 'utf8'), /delivery != '' \|\| legacyWithoutDeadline/);
 });

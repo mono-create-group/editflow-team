@@ -22,10 +22,10 @@ function fakeDb(){
 
 test('和光8件と清水7件を、みゆう本人のポータルだけへ重複なく同期する',async()=>{
   const db=fakeDb(),saved={count:0};
-  const makeChildren=(prefix,count)=>Array.from({length:count},(_,i)=>({id:`${prefix}-${String(i+1).padStart(3,'0')}`,title:`${prefix}動画${i+1}`,status:'進行中',deliveryDate:'2026-09-11',editorDraftDateSetter:'editor',workerId:'worker-miyuu'}));
+  const makeChildren=(prefix,count,deliveryDate)=>Array.from({length:count},(_,i)=>({id:`${prefix}-${String(i+1).padStart(3,'0')}`,title:`${prefix}動画${i+1}`,status:'進行中',deliveryDate,clientDraftDate:'2026-09-11',editorDraftDateSetter:'editor',workerId:'worker-miyuu'}));
   const parents=[
-    {id:'wako-sep',biz:'edit',title:'9月分_和光市デンタルオフィス',clientId:'itsuba',subtasks:makeChildren('WD-S',8)},
-    {id:'shimizu-sep',biz:'edit',title:'清水運輸グループ様_9月分',clientId:'itsuba',subtasks:makeChildren('SU-S',7)},
+    {id:'wako-sep',biz:'edit',title:'9月分_和光市デンタルオフィス',clientId:'itsuba',subtasks:makeChildren('WD-S',8,'')},
+    {id:'shimizu-sep',biz:'edit',title:'清水運輸グループ様_9月分',clientId:'itsuba',subtasks:makeChildren('SU-S',7,'2026-09-03')},
   ];
   const context={
     S:{jobs:parents,clients:[{id:'itsuba',name:'itsuba.net 河戸様'}]},fbDb:db,FB_USER:{uid:'owner'},SELF_WID:'self',
@@ -46,6 +46,7 @@ test('和光8件と清水7件を、みゆう本人のポータルだけへ重複
     assert.equal(doc.editorUid,'uid-miyuu');assert.equal(doc.submittedByUid,'uid-miyuu');assert.equal(doc.source,'legacy_sync');
     for(const forbidden of ['unitPrice','workerPay','ownPay','payableApproved','payableMonth'])assert.equal(Object.hasOwn(doc,forbidden),false,`${forbidden} must not reach Miyuu`);
   }
+  assert.equal([...db.docs.values()].filter(doc=>doc.legacyParentId==='wako-sep'&&doc.deliveryDate==='').length,8,'納期が未設定の旧和光案件も推測で日付を補完せず連携する');
   const second=[];for(const parent of parents)second.push(await context.sync(parent,{silent:true,targetUid:'uid-miyuu',onlyMissing:true}));
   assert.equal(second.reduce((n,row)=>n+row.synced,0),0);assert.equal(db.docs.size,15);
   assert.ok(parents.flatMap(parent=>parent.subtasks).every(child=>child.portalUid==='uid-miyuu'&&child.portalJobId));

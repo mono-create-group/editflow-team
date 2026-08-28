@@ -28,7 +28,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" onerror="portalSdkLoadFailed()"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js" onerror="portalSdkLoadFailed()"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js" onerror="portalSdkLoadFailed()"></script>
-  <script src="./billing-terms.js?v=20260828-22"></script>
+  <script src="./billing-terms.js?v=20260828-23"></script>
   <!-- PDF libraries are loaded only when an editor creates a PDF. -->
   <script>
   const PAGE_PARAMS=new URLSearchParams(location.search);
@@ -281,7 +281,7 @@
     const rejectStatusChange=message=>{const select=$('#job-status-'+jid);if(select)select.value=previousStatus;saveJobDraft(jid);return toast(message)};
     if(!editorCanSaveStatus(j,status))return rejectStatusChange('この工程はディレクターまたは管理者が更新します');
     const milestoneError=editorMilestoneError(previousStatus,status,evidence);if(milestoneError)return rejectStatusChange(milestoneError);
-    const dateError=scheduleError(schedule);if(!deliveryDate)return toast('納期（予定）を入力してください');if(dateError)return toast(dateError);
+    const dateError=scheduleError(schedule);if(!deliveryDate&&j.source!=='legacy_sync')return toast('納期（予定）を入力してください');if(dateError)return toast(dateError);
     const progress=$('#job-progress-'+jid).value.trim(),blocker=$('#job-blocker-'+jid).value.trim(),startTime=$('#job-start-'+jid).value,endTime=$('#job-end-'+jid).value;
     if(startTime&&endTime&&endTime<=startTime)return toast('終了時刻は開始時刻より後にしてください');
     if(status==='完了'&&blocker)return toast('完了にする前に停止理由を解消してください');
@@ -394,8 +394,8 @@
   if(!DEMO&&'serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(error=>console.warn('service worker',error));
   </script>
   <script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
-  <script src="./editor-push.js?v=20260828-22"></script>
-  <script src="./direct-messages.js?v=20260828-22"></script>
-  <script src="./editor-features.js?v=20260828-22"></script>
+  <script src="./editor-push.js?v=20260828-23"></script>
+  <script src="./direct-messages.js?v=20260828-23"></script>
+  <script src="./editor-features.js?v=20260828-23"></script>
 </body>
 </html>

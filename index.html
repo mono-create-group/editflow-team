@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#000000">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260828-22"></script>
+<script src="./billing-terms.js?v=20260828-23"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -6280,7 +6280,6 @@ async function syncLegacyAssignedSubtasksToPortal(jobOrId,{silent=false,targetUi
     if(setter==='creator'&&!draft){problems.push(`${record.title||'サブ案件'}：編集者初稿日が未入力`);return;}
     if(record.portalUid&&String(record.portalUid)!==String(access.id)){problems.push(`${record.title||'サブ案件'}：同期後に担当者が変更されています`);return;}
     const subId=String(record.id||parent.id),portalJobId=record.portalJobId||_legacyPortalJobId(parent.id,subId),deliveryDate=String(record.deliveryDate||parent.deliveryDate||''),at=Date.now();
-    if(!deliveryDate){problems.push(`${record.title||'サブ案件'}：納期（予定）が未入力`);return;}
     candidates.push({record,access,workerId,subId,portalJobId,setter,draft,status,deliveryDate,at});
   });
   if(!candidates.length){if(!silent&&problems.length)toast(problems[0],'warn');return{synced:0,skipped:problems.length,problems};}
@@ -16591,7 +16590,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260828-22';
+const APP_VERSION='20260828-23';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -16665,6 +16664,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260828-22"></script>
+<script src="./manager-features.js?v=20260828-23"></script>
 </body>
 </html>

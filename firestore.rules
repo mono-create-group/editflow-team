@@ -76,7 +76,8 @@ service cloud.firestore {
     }
 
     // `deliveryDate` remains the promised deadline.  The actual completion
-    // date is a separate, optional field so historical cases stay readable.
+    // date is separate.  Old synchronized cases may not have had a promised
+    // deadline, so only `legacy_sync` records may preserve an empty value.
     function validCompletedDeliveryDate() {
       return !('completedDeliveryDate' in request.resource.data)
         || validOptionalIsoDate(request.resource.data.completedDeliveryDate);
@@ -89,11 +90,12 @@ service cloud.firestore {
 
     function validJobSchedule() {
       let delivery = request.resource.data.get('deliveryDate', request.resource.data.get('deadline', ''));
+      let legacyWithoutDeadline = request.resource.data.get('source', '') == 'legacy_sync';
       return validOptionalIsoDate(request.resource.data.get('sharedDate', ''))
         && validOptionalIsoDate(request.resource.data.get('editorDraftDate', ''))
         && validOptionalIsoDate(request.resource.data.get('clientDraftDate', ''))
         && validOptionalIsoDate(request.resource.data.get('thumbnailDate', ''))
-        && delivery != ''
+        && (delivery != '' || legacyWithoutDeadline)
         && validOptionalIsoDate(delivery)
         && validCompletedDeliveryDate()
         && request.resource.data.get('deadline', delivery) == delivery;

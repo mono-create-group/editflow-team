@@ -234,6 +234,30 @@ async function expectAllowed(label, promise) {
 
     await expectAllowed('video director receives editor board access', getDoc(doc(dir1, 'editor_job_board', 'direct-open')));
     await expectAllowed('video director creates a job in own editor portal', setDoc(doc(dir1, 'editor_portals', 'dir1', 'editor_jobs', 'director-own'), portalJob('dir1')));
+    // Historical child cases can legitimately lack a planned delivery date.
+    // Only the manager-created legacy_sync path may preserve that blank value;
+    // new editor-created work must still include a promised delivery date.
+    const legacyUnscheduledExternalJob = portalJob('external1', {
+      source: 'legacy_sync', directorUid: 'dir1', deadline: '', deliveryDate: '',
+      parentCaseId: 'legacy-parent-miyuu', parentCaseName: '和光市デンタルオフィス様_9月分',
+      legacyParentId: 'legacy-parent-miyuu', legacySubtaskId: 'legacy-subtask-miyuu-1',
+    });
+    await expectAllowed('owner synchronizes an external legacy job with no planned delivery date', setDoc(
+      doc(owner, 'editor_portals', 'external1', 'editor_jobs', 'legacy-no-delivery-date'),
+      legacyUnscheduledExternalJob
+    ));
+    await expectAllowed('external editor saves progress on a legacy job while its delivery date stays blank', updateDoc(
+      doc(external1, 'editor_portals', 'external1', 'editor_jobs', 'legacy-no-delivery-date'),
+      {
+        progress: '編集作業中', lastProgressChangedByUid: 'external1',
+        lastProgressChangedByEmail: 'external1@example.com',
+        lastProgressChangedByRole: '担当編集者', updatedAt: 2,
+      }
+    ));
+    await expectDenied('editor cannot create a normal portal job without a planned delivery date', setDoc(
+      doc(external1, 'editor_portals', 'external1', 'editor_jobs', 'normal-no-delivery-date'),
+      portalJob('external1', { directorUid: 'dir1', deadline: '', deliveryDate: '' })
+    ));
     const editorDraftDateUpdate = (date) => ({
       editorDraftDate: date,
       lastProgressChangedByUid: 'direct1',
