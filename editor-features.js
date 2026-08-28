@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const PORTAL_APP_VERSION='20260828-02';
+  const PORTAL_APP_VERSION='20260828-03';
   const feature={
     board:[],catalog:[],manuals:[],schedules:[],release:null,
     messages:new Map(),messageUnsubs:new Map(),unsubs:[],startedFor:'',serverVersion:''
@@ -164,7 +164,7 @@
     if(DEMO||!db||!user)return;
     const ids=new Set(jobs.map(x=>x.id));
     feature.messageUnsubs.forEach((unsub,jid)=>{if(!ids.has(jid)){try{unsub()}catch(_){}feature.messageUnsubs.delete(jid);feature.messages.delete(jid)}});
-    jobs.forEach(j=>{if(feature.messageUnsubs.has(j.id))return;const u=db.collection('editor_portals').doc(portalUid()).collection('editor_jobs').doc(j.id).collection('messages').orderBy('createdAt','asc').limit(200).onSnapshot(q=>{feature.messages.set(j.id,q.docs.map(d=>({id:d.id,...d.data()})));render()},e=>console.warn('messages',e?.code||e));feature.messageUnsubs.set(j.id,u)});
+    jobs.filter(j=>!j.previewLegacy).forEach(j=>{if(feature.messageUnsubs.has(j.id))return;const u=db.collection('editor_portals').doc(portalUid()).collection('editor_jobs').doc(j.id).collection('messages').orderBy('createdAt','asc').limit(200).onSnapshot(q=>{feature.messages.set(j.id,q.docs.map(d=>({id:d.id,...d.data()})));render()},e=>console.warn('messages',e?.code||e));feature.messageUnsubs.set(j.id,u)});
   }
 
   async function createDispatchJob(){

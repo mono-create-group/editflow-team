@@ -29,6 +29,10 @@ test('owner can inspect an editor portal using that member actual portal data', 
   assert.match(editor, /collection\('editor_portals'\)\.doc\(portalUid\(\)\)/);
   assert.match(features, /feature\.startedFor===portalUid\(\)/);
   assert.match(features, /applyAdminPreviewReadOnly\(\)/);
+  assert.match(editor, /function buildLegacyPreviewJobs\(shared,member\)/);
+  assert.match(editor, /collection\('shared'\)\.doc\('mcapp'\)\.onSnapshot/);
+  assert.match(editor, /previewLegacy:true/);
+  assert.match(features, /jobs\.filter\(j=>!j\.previewLegacy\)/);
 });
 
 test('editor display name is explicitly aligned with Chatwork and self-editable', () => {
