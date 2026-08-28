@@ -1,0 +1,14 @@
+name = "editflow-editor-push"
+main = "src/index.js"
+compatibility_date = "2026-08-28"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[vars]
+# This worker is intentionally free-tier only.  The private VAPID key and the
+# Firebase service-account JSON must be added as Wrangler secrets, never here.
+FREE_TIER_ONLY = "true"
+FIREBASE_PROJECT_ID = "editflow-mono-create"
+FIRESTORE_DATABASE_ID = "(default)"
+EDITOR_PUSH_ALLOWED_ORIGINS = "https://mono-create-group.github.io,https://editflow-mono-create.firebaseapp.com,https://editflow-mono-create.web.app"
+WEB_PUSH_VAPID_SUBJECT = "mailto:mono.create.group@gmail.com"

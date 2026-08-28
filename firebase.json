@@ -1,4 +1,37 @@
 {
+  "hosting": {
+    "site": "editflow-mono-create",
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "firestore.rules",
+      "firestore.indexes.json",
+      "firestore-debug.log",
+      "package.json",
+      "package-lock.json",
+      "tests/**",
+      "scripts/**",
+      "push-worker/**",
+      "OPERATIONS.md",
+      ".git/**",
+      ".gitignore"
+    ],
+    "headers": [
+      {
+        "source": "/sw.js",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+          { "key": "Service-Worker-Allowed", "value": "/" }
+        ]
+      },
+      {
+        "source": "/editor.html",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
+        ]
+      }
+    ]
+  },
   "firestore": {
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"

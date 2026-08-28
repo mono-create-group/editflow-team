@@ -1,11 +1,12 @@
 (function(){
   'use strict';
 
-  const PORTAL_APP_VERSION='20260828-20';
+  const PORTAL_APP_VERSION='20260828-21';
   const feature={
     board:[],catalog:[],manuals:[],schedules:[],release:null,
     messages:new Map(),messageUnsubs:new Map(),messageLoading:new Set(),openMessageJobIds:new Set(),groupDraftSaving:new Set(),unsubs:[],startedFor:'',serverVersion:'',jobsListMode:'active',jobsTypeFilter:'all',lastSuggestionCode:'',
-    dmPeers:[],dmThreads:[],dmMessages:[],dmActivePeerUid:'',dmActiveThreadId:'',dmThreadUnsub:null,dmMessageUnsub:null,dmLoading:false,dmError:'',dmStartedFor:'',dmInitialSnapshot:false,dmSeenMessages:new Map()
+    dmPeers:[],dmThreads:[],dmMessages:[],dmActivePeerUid:'',dmActiveThreadId:'',dmThreadUnsub:null,dmMessageUnsub:null,dmLoading:false,dmError:'',dmStartedFor:'',dmInitialSnapshot:false,dmSeenMessages:new Map(),
+    pushStatus:null,pushStatusFor:'',pushStatusLoading:false
   };
   const original={
     navHtml,render,startPortal,jobForm,jobsHtml,jobCard,createJob,dashboardHtml,logout
@@ -40,7 +41,7 @@
   function editorJobType(job){return['dispatch','haken','direct_client'].includes(String(job?.businessType||job?.source||''))?'dispatch':'agency'}
   function editorJobTypeLabel(job){return editorJobType(job)==='dispatch'?'編集者派遣':'編集代行'}
   function editorDeadline(job,baseDate=localDate()){
-    const entries=[['編集者初稿',job?.editorDraftDate],['クライアント提出',job?.clientDraftDate],['納品',job?.deliveryDate||job?.deadline]].filter(([,date])=>!!date);
+    const entries=[['編集者初稿',job?.editorDraftDate],['クライアント初稿',job?.clientDraftDate],['納品期限',job?.deliveryDate||job?.deadline]].filter(([,date])=>!!date);
     if(!entries.length)return{label:'未設定',date:'',days:null};
     const future=entries.filter(([,date])=>date>=baseDate);
     const [label,date]=(future.length?future:entries.slice(-1)).sort((a,b)=>a[1].localeCompare(b[1]))[0];
@@ -110,7 +111,7 @@
       @media(max-width:760px){.group-draft-panel{align-items:stretch;flex-direction:column}.group-draft-panel .btn{width:100%;min-height:44px}}
       @media(max-width:760px){.editor-resource-list{grid-template-columns:1fr}}
       @media(pointer:coarse){.editor-job-card .btn.small,.notification-item,.editor-nav-more summary{min-height:44px}}
-    `;document.head.appendChild(style);
+    `;style.textContent+=`.editor-job-dates{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:10px 0}.editor-job-dates div{padding:8px 10px;border:1px solid #e2e8f0;border-radius:9px;background:#f8fafc;color:#475569;font-size:12px}.editor-job-dates span{display:block;font-size:10px;font-weight:800;color:#64748b}.editor-job-dates b{display:block;margin-top:2px;font-size:13px;color:#1e293b}.editor-job-dates .actual{border-color:#86efac;background:#ecfdf5}.push-setup-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1080px;margin:0 auto 14px;padding:12px 14px;border:2px solid #a78bfa;border-radius:12px;background:#faf5ff;color:#312e81}.push-setup-banner b{display:block;font-size:14px}.push-setup-banner span{display:block;margin-top:3px;color:#5b21b6;font-size:12px;line-height:1.5}.push-setup-card{max-width:760px;margin:0 auto}.push-setup-card h2{margin:0 0 7px}.push-setup-card ol{margin:14px 0;padding-left:22px;line-height:2}.push-setup-card li::marker{font-weight:850;color:#6d28d9}.push-status{margin:12px 0;padding:11px 12px;border-radius:9px;background:#f8fafc;color:#475569;line-height:1.55}.push-status.ready{background:#ecfdf5;color:#047857}.push-actions{display:flex;gap:8px;flex-wrap:wrap}@media(max-width:760px){.push-setup-banner{align-items:flex-start;flex-direction:column}.push-setup-banner .btn{width:100%}}`;document.head.appendChild(style);
   }
 
   function updateAccountOptions(){
@@ -121,7 +122,7 @@
   }
 
   function navHtmlExtended(){
-    const items=[['dashboard','ホーム'],['jobs','担当案件'],['board','案件を探す'],['dm','DM'],['notifications','通知'],['schedule','スケジュール'],['manuals','マニュアル'],['invoices',isExternal()?'支払い案内':'請求書'],['settings','登録情報'],['guide','使い方ガイド'],['suggestion','匿名目安箱']];
+    const items=[['dashboard','ホーム'],['jobs','担当案件'],['board','案件を探す'],['dm','DM'],['notifications','通知'],['schedule','スケジュール'],['manuals','マニュアル'],['invoices',isExternal()?'支払い案内':'請求書'],['settings','登録情報'],['mobile-setup','スマホ通知'],['guide','使い方ガイド'],['suggestion','匿名目安箱']];
     const work=[['dashboard','ホーム'],['jobs','担当案件'],['board','案件を探す']],communication=[['dm','DM'],['notifications','通知']],tools=[['schedule','スケジュール'],['manuals','マニュアル'],['invoices',isExternal()?'支払い案内':'請求書'],['settings','登録情報']];
     const mobile=[['dashboard','ホーム'],['jobs','案件'],['dm','DM'],['notifications','通知']];
     const open=feature.board.filter(x=>x.status==='open').length;
@@ -138,6 +139,7 @@
       settings:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.3 2.3-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.2h-3.2v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1L6 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H4.7v-3.2h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9L6 7.8 8.3 5.5l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5v-.2h3.2v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 2.3 2.3-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.2V14h-.2a1.7 1.7 0 0 0-1.4 1z"></path></svg>',
       guide:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9a2.5 2.5 0 1 1 3.8 2.1c-.8.5-1.3.9-1.3 1.9M12 17h.01"></path></svg>',
       suggestion:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v11H9l-4 4z"></path><path d="M8 9h8M8 12h5"></path></svg>'
+      ,"mobile-setup":'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2"></rect><path d="M10 18h4M12 6v7M9 10l3 3 3-3"></path></svg>'
     }[key]||'');
     const dmCount=dmUnreadCount();
     const button=([k,l])=>`<button type="button" class="btn editor-nav-button ${k==='board'?'accept-entry ':''}${k==='notifications'||k==='dm'?'notification-button ':''}${view===k?'active':''}" aria-current="${view===k?'page':'false'}" onclick="setView('${k}')"><span class="editor-nav-icon">${navIcon(k)}</span><span>${l}</span>${k==='board'&&open?` <span class="accept-count" aria-label="公開案件 ${open}件">${open}</span>`:''}${k==='notifications'&&noticeCount?` <span class="notification-count" aria-label="未対応通知 ${noticeCount}件">${noticeCount}</span>`:''}${k==='dm'&&dmCount?` <span class="notification-count" aria-label="未読DM ${dmCount}件">${dmCount}</span>`:''}</button>`;
@@ -164,8 +166,14 @@
   function jobFormExtended(){
     const d=readCaseDraft(),sharedDate=Object.prototype.hasOwnProperty.call(d,'sharedDate')?d.sharedDate:localDate(),deliveryDate=d.deliveryDate||d.deadline||'',catalog=feature.catalog.filter(x=>x.active!==false),accounts=accountItems(d.clientId||'');
     if(!catalog.length){const guidance=isExternal()?'担当ディレクターまたはオーナーが、この編集者へクライアントとアカウントを共有すると表示されます。':'オーナーがクライアントとアカウントを登録・同期すると、ここから「編集者派遣」の案件を追加できます。';return`<div class="card catalog-empty"><b>案件登録用のクライアントがまだ共有されていません。</b><div>${guidance}</div></div>`;}
-    return`<details class="card dispatch-create"><summary>＋ 編集者派遣の案件を追加</summary><p class="muted">派遣先クライアントから直接届いた案件だけを登録します。上の「案件を探す」で受ける編集代行案件は、ここには入力しません。</p><div class="form-grid" oninput="saveCaseDraft()" onchange="saveCaseDraft()"><div class="field"><label for="new-client-id">クライアント *</label><select id="new-client-id" onchange="updateAccountOptions()"><option value="">クライアントを選択</option>${catalog.map(x=>`<option value="${esc(x.id)}" ${x.id===d.clientId?'selected':''}>${esc(x.name)}</option>`).join('')}</select></div><div class="field"><label for="new-account-id">アカウント名 *</label><select id="new-account-id" data-selected="${esc(d.accountId||'')}"><option value="">アカウントを選択</option>${accounts.map(x=>`<option value="${esc(x.id)}" ${x.id===d.accountId?'selected':''}>${esc(x.name)}</option>`).join('')}</select></div><div class="field full"><label for="new-case">案件・バッチ名</label><input id="new-case" maxlength="120" value="${esc(d.caseName||'')}" placeholder="例：2026年9月分"></div><div class="field"><label for="new-title">個別動画・案件名 *</label><input id="new-title" maxlength="120" value="${esc(d.title||'')}" placeholder="例：ショート動画 03"></div><div class="field"><label for="new-shared">受注日</label><input id="new-shared" type="date" value="${esc(sharedDate)}"></div><div class="field"><label for="new-deadline">納品日 *</label><input id="new-deadline" type="date" value="${esc(deliveryDate)}"></div><details class="optional-box"><summary>初稿日など詳しい日程を入力</summary><div class="form-grid" style="margin-top:8px"><div class="field"><label for="new-editor-draft">編集者 初稿</label><input id="new-editor-draft" type="date" value="${esc(d.editorDraftDate||'')}"></div><div class="field"><label for="new-client-draft">クライアント提出 初稿</label><input id="new-client-draft" type="date" value="${esc(d.clientDraftDate||'')}"></div><div class="field"><label for="new-thumbnail">サムネイル納品日</label><input id="new-thumbnail" type="date" value="${esc(d.thumbnailDate||'')}"></div></div></details><div class="field"><label class="check"><input id="new-urgent" type="checkbox" ${d.urgent?'checked':''}> 緊急案件として登録</label></div><div class="field"><label for="new-request">依頼内容URL</label><input id="new-request" type="url" value="${esc(d.requestUrl||'')}" placeholder="https://"></div><div class="field"><label for="new-source">素材URL</label><input id="new-source" type="url" value="${esc(d.sourceUrl||'')}" placeholder="https://"></div><div class="field full"><label for="new-instructions">依頼内容・編集指示 *</label><textarea id="new-instructions" maxlength="3000">${esc(d.instructions||'')}</textarea></div></div><div class="actions"><button class="btn primary job-primary" type="button" onclick="createJob()">編集者派遣に案件を登録</button></div></details>`;
+    return`<details class="card dispatch-create"><summary>＋ 編集者派遣の案件を追加</summary><p class="muted">派遣先クライアントから直接届いた案件だけを登録します。親案件に「9月分」などを入れ、子案件に各動画名を追加してください。上の「案件を探す」で受ける編集代行案件は、ここには入力しません。</p><div class="form-grid"><div class="field"><label for="new-client-id">クライアント *</label><select id="new-client-id" onchange="updateAccountOptions()"><option value="">クライアントを選択</option>${catalog.map(x=>`<option value="${esc(x.id)}" ${x.id===d.clientId?'selected':''}>${esc(x.name)}</option>`).join('')}</select></div><div class="field"><label for="new-account-id">アカウント名 *</label><select id="new-account-id" data-selected="${esc(d.accountId||'')}"><option value="">アカウントを選択</option>${accounts.map(x=>`<option value="${esc(x.id)}" ${x.id===d.accountId?'selected':''}>${esc(x.name)}</option>`).join('')}</select></div><div class="field full"><label for="new-case">親案件名</label><input id="new-case" maxlength="120" value="${esc(d.caseName||'')}" placeholder="例：2026年9月分"></div><div class="field"><label for="new-shared">受注日</label><input id="new-shared" type="date" value="${esc(sharedDate)}"></div><div class="field"><label class="check"><input id="new-urgent" type="checkbox" ${d.urgent?'checked':''}> 緊急案件として登録</label></div><div class="field full" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>子案件</b><button class="btn small" type="button" onclick="editorAddDispatchSubcase()">＋ 子案件を追加</button></div><div id="new-dispatch-subcases" class="field full" style="display:grid;gap:9px">${dispatchSubcaseRowHtml(id(),{title:d.title||'',editorDraftDate:d.editorDraftDate||'',clientDraftDate:d.clientDraftDate||'',thumbnailDate:d.thumbnailDate||'',deliveryDate,requestUrl:d.requestUrl||'',sourceUrl:d.sourceUrl||'',instructions:d.instructions||''})}</div></div><div class="actions"><button class="btn primary job-primary" type="button" onclick="createJob()">編集者派遣に案件を登録</button></div></details>`;
   }
+
+  function dispatchSubcaseRowHtml(subcaseId=id(),value={}){return`<section class="dispatch-subcase" data-subcase-id="${esc(subcaseId)}" style="border:1px solid var(--border);border-radius:10px;padding:10px;background:var(--card2)"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px"><b>子案件</b><button type="button" class="btn small" onclick="editorRemoveDispatchSubcase(this)">削除</button></div><div class="form-grid"><div class="field full"><label>個別動画・案件名 *</label><input class="new-subcase-title" maxlength="120" value="${esc(value.title||'')}" placeholder="例：ショート動画 03"></div><div class="field"><label>編集者 初稿</label><input class="new-subcase-editor-draft" type="date" value="${esc(value.editorDraftDate||'')}"></div><div class="field"><label>クライアント 初稿</label><input class="new-subcase-client-draft" type="date" value="${esc(value.clientDraftDate||'')}"></div><div class="field"><label>サムネイル納品日</label><input class="new-subcase-thumbnail" type="date" value="${esc(value.thumbnailDate||'')}"></div><div class="field"><label>納品期限 *</label><input class="new-subcase-delivery" type="date" value="${esc(value.deliveryDate||'')}"></div><div class="field"><label>依頼内容URL</label><input class="new-subcase-request" type="url" value="${esc(value.requestUrl||'')}" placeholder="https://"></div><div class="field"><label>素材URL</label><input class="new-subcase-source" type="url" value="${esc(value.sourceUrl||'')}" placeholder="https://"></div><div class="field full"><label>依頼内容・編集指示 *</label><textarea class="new-subcase-instructions" maxlength="3000">${esc(value.instructions||'')}</textarea></div></div></section>`}
+  function dispatchSubcaseRows(){return[...document.querySelectorAll('#new-dispatch-subcases .dispatch-subcase')]}
+  function addDispatchSubcase(){const list=$('#new-dispatch-subcases');if(!list)return;if(dispatchSubcaseRows().length>=50)return toast('子案件は1回の登録につき50件までです');list.insertAdjacentHTML('beforeend',dispatchSubcaseRowHtml());list.lastElementChild?.querySelector('.new-subcase-title')?.focus()}
+  function removeDispatchSubcase(button){const rows=dispatchSubcaseRows();if(rows.length<=1)return toast('子案件は1件以上入力してください');button?.closest('.dispatch-subcase')?.remove()}
+  function readDispatchSubcases(){const rows=dispatchSubcaseRows();if(!rows.length)return{error:'子案件を1件以上入力してください',items:[]};const items=[];for(const row of rows){const title=row.querySelector('.new-subcase-title')?.value.trim()||'',schedule={sharedDate:$('#new-shared')?.value||'',editorDraftDate:row.querySelector('.new-subcase-editor-draft')?.value||'',clientDraftDate:row.querySelector('.new-subcase-client-draft')?.value||'',thumbnailDate:row.querySelector('.new-subcase-thumbnail')?.value||'',deliveryDate:row.querySelector('.new-subcase-delivery')?.value||''},instructions=row.querySelector('.new-subcase-instructions')?.value.trim()||'',requestUrl=row.querySelector('.new-subcase-request')?.value.trim()||'',sourceUrl=row.querySelector('.new-subcase-source')?.value.trim()||'';if(!title||!schedule.deliveryDate||!instructions)return{error:'すべての子案件に、案件名・納品期限・依頼内容を入力してください',items:[]};const dateError=scheduleError(schedule);if(dateError)return{error:`「${title}」：${dateError}`,items:[]};if((requestUrl&&!safeUrl(requestUrl))||(sourceUrl&&!safeUrl(sourceUrl)))return{error:`「${title}」：URLは https:// または http:// で入力してください`,items:[]};items.push({id:row.dataset.subcaseId||id(),title,schedule,instructions,requestUrl,sourceUrl})}return{error:'',items}}
 
   function editorJobBucket(job){return['完了','キャンセル'].includes(String(job?.status||''))?'completed':'active'}
   function editorGroupText(value){return String(value||'').normalize('NFKC').replace(/[\s\u3000]+/g,' ').trim()}
@@ -257,7 +265,7 @@
   function unreadNotificationItems(){const read=notificationReadIds();return notificationItems().filter(item=>!read.has(item.id))}
   function notificationsHtml(){
     const items=unreadNotificationItems();
-    return`${pageHead('通知','初稿日・納品日・案件内の連絡を確認')}${deviceNotificationHtml()}<div class="card"><div class="section-title"><h2>未読の通知</h2><span>${items.length}件</span></div><div class="notification-list">${items.map(x=>`<div data-preview-safe class="notification-item"><button type="button" class="notification-open" aria-label="${esc(`${x.title}、${x.detail}、${x.timing}`)}を開く" onclick="openEditorNotification('${esc(x.id)}','${esc(x.target)}','${esc(x.jobId||'')}')"><span class="app-sr-only">通知：</span><span class="notification-copy"><b>${esc(x.title)}</b><span>${esc(x.detail)}</span></span><span class="pill ${x.timing.includes('超過')?'red':''}">${esc(x.timing)}</span></button><button class="btn small notification-read" type="button" aria-label="${esc(x.title)}を既読にする" onclick="markEditorNotificationRead('${esc(x.id)}')">既読</button></div>`).join('')||'<div class="empty">未読の通知はありません</div>'}</div>${items.length?'<div class="actions"><button class="btn small" type="button" onclick="markEditorNotificationsRead()">すべて既読にする</button></div>':''}<div class="muted" style="margin-top:9px">既読にしても案件やメッセージは削除されません。案件の進捗は「担当案件」でいつでも確認できます。確認待ち・修正中・納品済みの案件は、期限超過として表示しません。</div></div>`;
+    return`${pageHead('通知','初稿日・納品期限・案件内の連絡を確認')}${deviceNotificationHtml()}<div class="card"><div class="section-title"><h2>未読の通知</h2><span>${items.length}件</span></div><div class="notification-list">${items.map(x=>`<div data-preview-safe class="notification-item"><button type="button" class="notification-open" aria-label="${esc(`${x.title}、${x.detail}、${x.timing}`)}を開く" onclick="openEditorNotification('${esc(x.id)}','${esc(x.target)}','${esc(x.jobId||'')}')"><span class="app-sr-only">通知：</span><span class="notification-copy"><b>${esc(x.title)}</b><span>${esc(x.detail)}</span></span><span class="pill ${x.timing.includes('超過')?'red':''}">${esc(x.timing)}</span></button><button class="btn small notification-read" type="button" aria-label="${esc(x.title)}を既読にする" onclick="markEditorNotificationRead('${esc(x.id)}')">既読</button></div>`).join('')||'<div class="empty">未読の通知はありません</div>'}</div>${items.length?'<div class="actions"><button class="btn small" type="button" onclick="markEditorNotificationsRead()">すべて既読にする</button></div>':''}<div class="muted" style="margin-top:9px">既読にしても案件やメッセージは削除されません。案件の進捗は「担当案件」でいつでも確認できます。確認待ち・修正中・納品済みの案件は、期限超過として表示しません。</div></div>`;
   }
   function openEditorNotification(id,target){
     const item=notificationItems().find(x=>x.id===id);if(item)markEditorNotificationRead(id,false);
@@ -275,7 +283,46 @@
   function markEditorNotificationRead(id,shouldRender=true){if(!id)return;const read=notificationReadIds();read.add(id);saveNotificationReadIds(read);if(shouldRender)render()}
   function markEditorNotificationsRead(){const read=notificationReadIds();notificationItems().forEach(x=>read.add(x.id));saveNotificationReadIds(read);render()}
 
+  function pushClient(){return window.EditorPush||null}
+  function pushStatusCopy(status){
+    if(status?.ready)return 'この端末は、アプリを閉じていてもDMの通知を受け取れる状態です。';
+    return status?.reason||'スマホ通知の状態を確認しています。';
+  }
+  async function refreshEditorPushStatus(shouldRender=false){
+    const api=pushClient(),uid=user?.uid||'';
+    if(DEMO||ADMIN_PREVIEW||!api||!db||!uid||feature.pushStatusLoading)return;
+    feature.pushStatusLoading=true;
+    try{feature.pushStatus=await api.status({db,uid});feature.pushStatusFor=uid}catch(error){console.warn('push status',error);feature.pushStatus={ready:false,reason:'通知の状態を確認できませんでした。'};feature.pushStatusFor=uid}finally{feature.pushStatusLoading=false}
+    if(shouldRender&&user?.uid===uid)render();
+  }
+  function pushSetupBannerHtml(){
+    if(ADMIN_PREVIEW||DEMO||feature.pushStatus?.ready)return '';
+    const copy=pushStatusCopy(feature.pushStatus);
+    return `<section class="push-setup-banner" aria-label="スマホ通知の設定"><div><b>スマホ通知の設定がまだ完了していません</b><span>${esc(copy)}</span></div><button class="btn primary small" type="button" onclick="setView('mobile-setup')">設定を開く</button></section>`;
+  }
+  function mobileSetupHtml(){
+    const status=feature.pushStatus,statusCopy=pushStatusCopy(status),canEnable=!!pushClient()&&!DEMO&&!ADMIN_PREVIEW;
+    const actions=status?.ready
+      ?`<div class="push-actions"><button class="btn small" type="button" onclick="refreshEditorPushSetup()">状態を再確認</button><button class="btn danger small" type="button" onclick="disableEditorPushNotifications()">この端末の通知をオフにする</button></div>`
+      :`<div class="push-actions"><button class="btn primary" type="button" ${canEnable?'':'disabled'} onclick="enableEditorPushNotifications()">通知を有効にする</button><button class="btn small" type="button" onclick="refreshEditorPushSetup()">状態を再確認</button></div>`;
+    return `${pageHead('スマホ通知の設定','iPhoneを閉じている間もDMの通知を受け取るための設定です。')}<section class="card push-setup-card"><h2>最初に一度だけ設定します</h2><ol><li>iPhoneでは Safari または Chrome でこのアプリを開き、サインインします。</li><li>共有メニューから「ホーム画面に追加」を選びます。</li><li>追加したアプリアイコンから、もう一度このアプリを開きます。</li><li>下の「通知を有効にする」を押して、通知を許可します。</li></ol><div class="push-status ${status?.ready?'ready':''}"><b>${status?.ready?'✓ 設定完了':'現在の状態'}</b><br>${esc(statusCopy)}</div>${actions}<p class="muted" style="margin:12px 0 0">通知本文にはDMや案件の内容を表示しません。通知を押すとアプリのDM画面を開きます。</p></section>`;
+  }
+  async function enableEditorPushNotifications(){
+    if(DEMO||ADMIN_PREVIEW)return toast('確認画面では通知を変更できません');
+    const api=pushClient();if(!api||!db||!user?.uid)return toast('通知の準備ができていません');
+    try{const status=await api.enable({db,uid:user.uid});feature.pushStatus=status;feature.pushStatusFor=user.uid;render();toast(status?.ready?'通知を有効にしました':'通知の登録を完了できませんでした')}catch(error){console.warn('push enable',error);await refreshEditorPushStatus(false);render();toast('通知を有効にできませんでした。SafariまたはChromeでホーム画面に追加してからお試しください')}
+  }
+  async function disableEditorPushNotifications(){
+    if(DEMO||ADMIN_PREVIEW)return toast('確認画面では通知を変更できません');
+    const api=pushClient();if(!api||!db||!user?.uid)return;
+    try{await api.disable({db,uid:user.uid});feature.pushStatus={ready:false,reason:'この端末の通知をオフにしました。'};feature.pushStatusFor=user.uid;render();toast('この端末の通知をオフにしました')}catch(error){console.warn('push disable',error);toast('通知をオフにできませんでした')}
+  }
+
   function deviceNotificationHtml(){
+    if(pushClient()){
+      const status=feature.pushStatus,copy=pushStatusCopy(status),action=status?.ready?'<button class="btn small" type="button" onclick="setView(\'mobile-setup\')">設定を確認</button>':'<button class="btn primary" type="button" onclick="setView(\'mobile-setup\')">スマホ通知を設定</button>';
+      return`<section class="card device-notification-card"><div><h2>スマホ通知</h2><p>${esc(copy)}</p></div>${action}</section>`;
+    }
     const supported=typeof Notification!=='undefined',permission=supported?Notification.permission:'unsupported',installed=!!(window.matchMedia?.('(display-mode: standalone)').matches||navigator.standalone);
     const copy=!supported?'このブラウザは端末通知に対応していません。':permission==='granted'?`端末通知はオンです。アプリを開いている間の新着DMを知らせます。${installed?'ホーム画面からアプリとして開けます。':'iPhoneはSafariの共有から「ホーム画面に追加」するとアプリのように開けます。'}`:permission==='denied'?'端末側で通知が拒否されています。SafariまたはChromeの設定から通知を許可してください。':'アプリを開いている間の新着DMを、端末通知で知らせます。';
     const action=permission==='default'?'<button class="btn primary" type="button" onclick="enableEditorDeviceNotifications()">端末通知をオンにする</button>':'';
@@ -343,7 +390,7 @@
   async function sendDirectMessage(event){
     event?.preventDefault?.();if(ADMIN_PREVIEW)return;const body=$('#dm-compose-body')?.value.trim()||'',peerUid=feature.dmActivePeerUid,api=dmApi();if(!body)return toast('メッセージを入力してください');if(!api||!peerUid)return toast('DMの相手を確認できません');
     const button=event?.submitter;if(button)button.disabled=true;
-    try{if(DEMO){feature.dmMessages.push({id:id(),senderUid:user.uid,senderName:editorDisplayName(),body,createdAt:now()});$('#dm-compose-body').value='';render();setTimeout(scrollDirectMessages,0);return toast('DMを送信しました')};const result=await api.send(peerUid,body);const input=$('#dm-compose-body');if(input)input.value='';await openDirectMessage(peerUid,result.threadId);toast('DMを送信しました')}catch(error){console.warn(error);toast('DMを送信できませんでした')}finally{if(button?.isConnected)button.disabled=false}
+    try{if(DEMO){feature.dmMessages.push({id:id(),senderUid:user.uid,senderName:editorDisplayName(),body,createdAt:now()});$('#dm-compose-body').value='';render();setTimeout(scrollDirectMessages,0);return toast('DMを送信しました')};const result=await api.send(peerUid,body);const input=$('#dm-compose-body');if(input)input.value='';await openDirectMessage(peerUid,result.threadId);toast('DMを送信しました');const push=pushClient();if(push&&result?.threadId&&user?.getIdToken){user.getIdToken().then(idToken=>push.dispatchDirectThread({threadId:result.threadId,idToken})).catch(error=>console.warn('dm push dispatch',error))}}catch(error){console.warn(error);toast('DMを送信できませんでした')}finally{if(button?.isConnected)button.disabled=false}
   }
   async function markAllDirectMessagesRead(){const api=dmApi(),ids=feature.dmThreads.filter(x=>x.unread).map(x=>x.id);if(!api||!ids.length)return;try{await api.markAllRead(ids);feature.dmThreads=feature.dmThreads.map(x=>({...x,unread:false}));render();toast('すべてのDMを既読にしました')}catch(error){console.warn(error);toast('DMを既読にできませんでした')}}
   function retryDirectMessages(){feature.dmStartedFor='';startDmFeatures(true);render()}
@@ -361,7 +408,7 @@
     const j={...job,...readJobDraft(job.id)},deliveryDate=j.deliveryDate||j.deadline||'',overdue=editorWorkIsOverdue(j),e=safeUrl(j.evidenceUrl),action=nextEditorJobAction(j),statuses=editorAllowedStatuses(j),timeline=editorTimelineState(j),deadline=editorDeadlineLabel(j),waiting=editorWaitMessage(j),jid=esc(j.id);
     const links=editorResourceLinks(j);
     const statusControl=waiting?`<div class="field"><label>ステータス</label><div class="editor-readonly-status" aria-label="ステータス ${esc(videoStatusLabel(j.status))}">${esc(videoStatusLabel(j.status))}（ディレクター・管理者が更新）</div><input id="job-status-${jid}" type="hidden" value="${esc(j.status||'')}"></div>`:`<div class="field"><label for="job-status-${jid}">ステータス</label><select id="job-status-${jid}">${statuses.map(x=>`<option value="${esc(x)}" ${x===j.status?'selected':''}>${esc(videoStatusLabel(x))}</option>`).join('')}</select></div>`;
-    const fields=`<div class="form-grid" oninput="saveJobDraft('${jid}')" onchange="saveJobDraft('${jid}')">${statusControl}<div class="field"><label for="job-shared-${jid}">受注日</label><input id="job-shared-${jid}" type="date" value="${esc(j.sharedDate||'')}"></div><div class="field"><label for="job-editor-draft-${jid}">編集者 初稿</label><input id="job-editor-draft-${jid}" type="date" value="${esc(j.editorDraftDate||'')}"></div><div class="field"><label for="job-client-draft-${jid}">クライアント提出 初稿</label><input id="job-client-draft-${jid}" type="date" value="${esc(j.clientDraftDate||'')}"></div><div class="field"><label for="job-thumbnail-${jid}">サムネイル納品日</label><input id="job-thumbnail-${jid}" type="date" value="${esc(j.thumbnailDate||'')}"></div><div class="field"><label for="job-delivery-${jid}">納品日 *</label><input id="job-delivery-${jid}" type="date" value="${esc(deliveryDate)}"></div><div class="field"><label for="job-workdate-${jid}">作業日</label><input id="job-workdate-${jid}" type="date" value="${esc(j.workDate||'')}"></div><div class="field"><label for="job-start-${jid}">開始時刻</label><input id="job-start-${jid}" type="time" value="${esc(j.startTime||'')}"></div><div class="field"><label for="job-end-${jid}">終了時刻</label><input id="job-end-${jid}" type="time" value="${esc(j.endTime||'')}"></div><div class="field full"><label for="job-progress-${jid}">進み具合のメモ</label><textarea id="job-progress-${jid}" maxlength="2000">${esc(j.progress||'')}</textarea></div><div class="field"><label for="job-evidence-${jid}">提出した内容のURL</label><input id="job-evidence-${jid}" type="url" value="${esc(j.evidenceUrl||'')}" placeholder="https://"></div><div class="field"><label for="job-blocker-${jid}">作業を止めている理由</label><input id="job-blocker-${jid}" maxlength="300" value="${esc(j.blocker||'')}"></div></div>`;
+    const fields=`<div class="form-grid" oninput="saveJobDraft('${jid}')" onchange="saveJobDraft('${jid}')">${statusControl}<div class="field"><label for="job-shared-${jid}">受注日</label><input id="job-shared-${jid}" type="date" value="${esc(j.sharedDate||'')}"></div><div class="field"><label for="job-editor-draft-${jid}">編集者 初稿</label><input id="job-editor-draft-${jid}" type="date" value="${esc(j.editorDraftDate||'')}"></div><div class="field"><label for="job-client-draft-${jid}">クライアント 初稿</label><input id="job-client-draft-${jid}" type="date" value="${esc(j.clientDraftDate||'')}"></div><div class="field"><label for="job-thumbnail-${jid}">サムネイル納品日</label><input id="job-thumbnail-${jid}" type="date" value="${esc(j.thumbnailDate||'')}"></div><div class="field"><label for="job-delivery-${jid}">納品期限 *</label><input id="job-delivery-${jid}" type="date" value="${esc(deliveryDate)}"></div><div class="field"><label for="job-workdate-${jid}">作業日</label><input id="job-workdate-${jid}" type="date" value="${esc(j.workDate||'')}"></div><div class="field"><label for="job-start-${jid}">開始時刻</label><input id="job-start-${jid}" type="time" value="${esc(j.startTime||'')}"></div><div class="field"><label for="job-end-${jid}">終了時刻</label><input id="job-end-${jid}" type="time" value="${esc(j.endTime||'')}"></div><div class="field full"><label for="job-progress-${jid}">進み具合のメモ</label><textarea id="job-progress-${jid}" maxlength="2000">${esc(j.progress||'')}</textarea></div><div class="field"><label for="job-evidence-${jid}">提出した内容のURL</label><input id="job-evidence-${jid}" type="url" value="${esc(j.evidenceUrl||'')}" placeholder="https://"></div><div class="field"><label for="job-blocker-${jid}">作業を止めている理由</label><input id="job-blocker-${jid}" maxlength="300" value="${esc(j.blocker||'')}"></div></div>`;
     return`<article id="editor-job-${jid}" data-job-id="${jid}" class="card job-card editor-job-card ${overdue?'notice danger':''}"><div class="job-top"><div><span class="pill">${editorJobTypeLabel(j)}</span><div class="job-title" style="margin-top:6px">${esc(j.title||'案件名未設定')}</div><div class="job-meta">${esc(j.clientDisplay||'クライアント未設定')} / ${esc(j.accountDisplay||'アカウント未設定')}</div></div>${statusPill(j.status)}</div><div class="editor-job-status-line" aria-label="現在の工程"><span>現在の進捗</span><b>${esc(editorWorkflowLabel(editorWorkflow(j).stage,j.status))}</b></div><div class="editor-next-owner">次の担当：<b>${esc(editorNextOwner(j))}</b></div>${j.correctionReason?`<div class="job-urgent-note danger"><b>差戻し内容</b><br>${esc(j.correctionReason)}</div>`:''}${j.blocker?`<div class="job-urgent-note danger"><b>停止・確認が必要です</b><br>${esc(j.blocker)}</div>`:''}<div class="deadline-summary ${overdue?'overdue':''}">${esc(deadline)}${overdue?'（作業中の案件）':''}</div><div class="editor-timeline" aria-label="編集進行の5段階">${timeline.map(x=>`<div class="editor-timeline-step ${x.state}"><b>${x.state==='done'?'完了':x.state==='current'?'いまここ':x.state==='optional'?'必要時':'未到達'}</b><span>${esc(x.label)}</span></div>`).join('')}</div>${waiting?`<div class="job-waiting"><b>現在の状況：</b>${esc(waiting)}</div>`:editorActionHtml(j,action,e)}<details class="job-detail" ${feature.openMessageJobIds.has(j.id)?'open':''} ontoggle="ensureJobMessages('${jid}',this.open)"><summary>案件の詳細・連絡を開く</summary>${j.instructions?`<div class="job-body">${esc(j.instructions)}</div>`:''}${links}${fields}<div class="actions"><button class="btn primary job-primary" type="button" onclick="saveJobProgress('${jid}')">変更を保存</button></div>${messageBlock(j)}</details></article>`;
   }
 
@@ -379,6 +426,25 @@
     if(!safeUrl(value))return toast('URLを確認してください');
     if(detail)detail.value=value;
     quickJobStatus(jid,status);
+  }
+
+  function editorDeliveryCompletionHtml(job){
+    const jid=esc(job.id),completed=job.completedDeliveryDate||localDate(),evidence=safeUrl(job.evidenceUrl||'');
+    return`<div class="job-submit-panel editor-delivery-panel"><div class="field"><label for="completed-delivery-date-${jid}">実納品日 *</label><input id="completed-delivery-date-${jid}" type="date" value="${esc(completed)}"></div><div class="field"><label for="completed-delivery-evidence-${jid}">納品の証跡URL *</label><input id="completed-delivery-evidence-${jid}" type="url" value="${esc(evidence)}" placeholder="https://"></div><button class="btn primary job-primary" type="button" onclick="completeEditorDelivery('${jid}')">納品を完了した</button></div><div class="muted" style="margin-top:6px">先方OK後、実際に納品が完了した日と納品先URLを記録して完了にします。</div>`;
+  }
+
+  async function completeEditorDelivery(jid){
+    if(ADMIN_PREVIEW)return toast('実データ確認モードでは変更できません');
+    const job=jobs.find(x=>x.id===jid);if(!job)return;
+    const flow=editorWorkflow(job);if(flow.stage!=='client_review'||String(job.status||'')!=='確認待ち')return toast('先方確認が完了するまで納品完了にはできません');
+    const completedDeliveryDate=$('#completed-delivery-date-'+jid)?.value||'',evidenceUrl=$('#completed-delivery-evidence-'+jid)?.value.trim()||'';
+    if(!completedDeliveryDate)return toast('実納品日を入力してください');
+    if(!safeUrl(evidenceUrl))return toast('納品の証跡URLを入力してください');
+    if(String(job.blocker||'').trim())return toast('停止理由を解消してから納品完了にしてください');
+    const at=now(),workflow={round:flow.round,stage:'delivered'},progressEvent={at,type:'editor_delivery_completed',byUid:user.uid,byEmail:user.email||'',byRole:'担当編集者',fromStage:'client_review',toStage:'delivered',status:'完了',completedDeliveryDate,evidenceUrl},historyEntry={at,type:'editor_delivery_completed',by:user.uid,byEmail:user.email||'',byName:editorDisplayName(),byRole:'担当編集者',status:'完了',completedDeliveryDate,evidenceUrl};
+    const data={status:'完了',completedDeliveryDate,evidenceUrl,blocker:'',workflow,progressEvents:[...(Array.isArray(job.progressEvents)?job.progressEvents:[]).slice(-98),progressEvent],lastProgressChangedByUid:user.uid,lastProgressChangedByEmail:user.email||'',lastProgressChangedByRole:'担当編集者',updatedAt:at,history:[...(Array.isArray(job.history)?job.history:[]).slice(-98),historyEntry]};
+    if(DEMO){Object.assign(job,data);clearJobDraft(jid);render();return toast('実納品日を記録し、案件を完了にしました')}
+    try{const ref=db.collection('editor_portals').doc(user.uid).collection('editor_jobs').doc(jid),event=ref.collection('events').doc(),batch=db.batch();batch.update(ref,data);batch.set(event,{at:firebase.firestore.FieldValue.serverTimestamp(),type:'editor_delivery_completed',byUid:user.uid,byEmail:user.email||'',byRole:'担当編集者',status:'完了',completedDeliveryDate,deliveryDate:job.deliveryDate||job.deadline||'',evidenceUrl});await batch.commit();clearJobDraft(jid);toast('実納品日を記録し、案件を完了にしました')}catch(error){console.warn(error);toast('納品完了を保存できませんでした')}
   }
 
   function nextEditorJobAction(job){
@@ -419,7 +485,16 @@
     injectStyles();
     document.body.classList.toggle('editor-slack-layout',!!(user&&access?.approved));
     const who=document.querySelector('#account b');if(who&&!document.querySelector('#account .role-chip'))who.insertAdjacentHTML('afterend',`<span class="role-chip">${isExternal()?'外部編集者':'直接契約編集者'}</span>`);
-    mountUpdateBanner();syncMessageSubscriptions();applyAdminPreviewReadOnly();
+    mountUpdateBanner();mountPushSetupBanner();syncMessageSubscriptions();applyAdminPreviewReadOnly();
+  }
+
+  function mountPushSetupBanner(){
+    document.getElementById('editor-push-setup-banner')?.remove();
+    if(!user||!access?.approved)return;
+    const html=pushSetupBannerHtml();if(!html)return;
+    const page=document.querySelector('#app .page-head')||document.querySelector('#app > main')||document.querySelector('#app');
+    if(!page)return;
+    page.insertAdjacentHTML('beforebegin',html.replace('class="push-setup-banner"','id="editor-push-setup-banner" class="push-setup-banner"'));
   }
 
   function stopFeatures(){
@@ -446,7 +521,7 @@
     feature.unsubs.push(db.collection('editor_manuals').where('audience','==','all').onSnapshot(q=>mergeManuals(q.docs.map(d=>({id:d.id,...d.data()}))),e=>console.warn('manuals',e?.code||e)));
     feature.unsubs.push(db.collection('editor_manuals').where('allowedUids','array-contains',portalUid()).onSnapshot(q=>mergeManuals(q.docs.map(d=>({id:d.id,...d.data()}))),e=>console.warn('manuals assigned',e?.code||e)));
     feature.unsubs.push(db.collection('system').doc('releases_current').onSnapshot(d=>{feature.release=d.exists?d.data():null;scheduleSnapshotRender()},e=>console.warn('release',e?.code||e)));
-    startDmFeatures();
+    startDmFeatures();refreshEditorPushStatus(true);
   }
 
   function syncMessageSubscriptions(){
@@ -470,18 +545,27 @@
   }
 
   async function createDispatchJob(){
-    const clientId=$('#new-client-id')?.value||'',accountId=$('#new-account-id')?.value||'',client=feature.catalog.find(x=>x.id===clientId),accountItem=accountItems(clientId).find(x=>x.id===accountId),title=$('#new-title')?.value.trim(),caseName=$('#new-case')?.value.trim()||'',deliveryDate=$('#new-deadline')?.value,instructions=$('#new-instructions')?.value.trim(),requestUrl=$('#new-request')?.value.trim()||'',sourceUrl=$('#new-source')?.value.trim()||'',schedule={sharedDate:$('#new-shared')?.value||'',editorDraftDate:$('#new-editor-draft')?.value||'',clientDraftDate:$('#new-client-draft')?.value||'',thumbnailDate:$('#new-thumbnail')?.value||'',deliveryDate};
-    if(!client||!accountItem||!title||!deliveryDate||!instructions)return toast('クライアント・アカウント・案件名・納品日・依頼内容は必須です');
-    const dateError=scheduleError(schedule);if(dateError)return toast(dateError);if((requestUrl&&!safeUrl(requestUrl))||(sourceUrl&&!safeUrl(sourceUrl)))return toast('URLは https:// または http:// で入力してください');
-    const jid=id(),at=now(),data={recordType:'editor_portal_job',businessType:'dispatch',title,caseName,clientId,clientDisplay:client.name,accountId,accountDisplay:accountItem.name,deadline:deliveryDate,...schedule,requestUrl,sourceUrl,instructions,urgent:!!$('#new-urgent')?.checked,status:'受注済み',workflow:{round:1,stage:'editing'},progressEvents:[],progress:'',evidenceUrl:'',blocker:'',workDate:'',startTime:'',endTime:'',submittedByUid:user.uid,editorUid:user.uid,editorEmail:user.email||'',editorName:editorDisplayName(),directorUid:assignedDirectorUid(),source:'direct_client',createdAt:at,updatedAt:at,history:[{at,type:'created',by:user.uid,status:'受注済み'}]};
-    if(DEMO){jobs.unshift({id:jid,...data});sessionStorage.removeItem(draftKey());render();return toast('編集者派遣に案件を登録しました')}
-    try{const ref=db.collection('editor_portals').doc(user.uid).collection('editor_jobs').doc(jid),ev=ref.collection('events').doc(),batch=db.batch();batch.set(ref,data);batch.set(ev,{at:firebase.firestore.FieldValue.serverTimestamp(),type:'created',byUid:user.uid,status:data.status,deliveryDate,businessType:'dispatch'});await batch.commit();sessionStorage.removeItem(draftKey());toast('編集者派遣に案件を登録しました')}catch(e){console.warn(e);toast('案件を登録できませんでした')}
+    if(feature.dispatchSubmitting)return;
+    const clientId=$('#new-client-id')?.value||'',accountId=$('#new-account-id')?.value||'',client=feature.catalog.find(x=>x.id===clientId),accountItem=accountItems(clientId).find(x=>x.id===accountId),requestedParentName=$('#new-case')?.value.trim()||'';
+    if(!client||!accountItem)return toast('クライアント・アカウントを選択してください');
+    const subcases=readDispatchSubcases();if(subcases.error)return toast(subcases.error);if(subcases.items.length>1&&!requestedParentName)return toast('複数の子案件は、親案件名を入力してください');
+    if(DEMO)return toast('プレビューでは案件を保存できません');
+    feature.dispatchSubmitting=true;
+    const parentCaseId=id(),parentCaseName=requestedParentName||subcases.items[0].title,at=now(),urgent=!!$('#new-urgent')?.checked;
+    try{
+      const root=db.collection('editor_portals').doc(user.uid).collection('editor_jobs'),batch=db.batch(),created=[];
+      subcases.items.forEach(subcase=>{
+        const data={recordType:'editor_portal_job',businessType:'dispatch',title:subcase.title,caseName:parentCaseName,parentCaseId,parentCaseName,clientId,clientDisplay:client.name,accountId,accountDisplay:accountItem.name,deadline:subcase.schedule.deliveryDate,...subcase.schedule,requestUrl:subcase.requestUrl,sourceUrl:subcase.sourceUrl,instructions:subcase.instructions,urgent,status:'受注済み',workflow:{round:1,stage:'editing'},progressEvents:[],progress:'',evidenceUrl:'',blocker:'',workDate:'',startTime:'',endTime:'',submittedByUid:user.uid,editorUid:user.uid,editorEmail:user.email||'',editorName:editorDisplayName(),directorUid:assignedDirectorUid(),source:'direct_client',createdAt:at,updatedAt:at,history:[{at,type:'created',by:user.uid,status:'受注済み'}]},ref=root.doc(subcase.id);
+        batch.set(ref,data);batch.set(ref.collection('events').doc(),{at:firebase.firestore.FieldValue.serverTimestamp(),type:'created',byUid:user.uid,status:data.status,deliveryDate:data.deliveryDate,businessType:'dispatch',parentCaseId});created.push({id:subcase.id,...data});
+      });
+      await batch.commit();jobs=[...created,...jobs.filter(job=>!created.some(item=>item.id===job.id))];sessionStorage.removeItem(draftKey());toast(`編集者派遣に${created.length}件を登録しました`);
+    }catch(e){console.warn(e);toast('案件を登録できませんでした')}finally{feature.dispatchSubmitting=false}
   }
 
   async function claimBoardJob(jid){
     const board=feature.board.find(x=>x.id===jid);if(!board||board.status!=='open')return toast('この案件はすでに受託済みです');
     if(!confirm(`「${board.title}」を受けますか？\n受託後は担当案件に追加されます。`))return;
-    const at=now(),portalRef=db?.collection('editor_portals').doc(user.uid).collection('editor_jobs').doc(jid),data={recordType:'editor_portal_job',businessType:'edit_agency',boardJobId:jid,title:board.title||'',caseName:board.caseName||'',clientId:board.clientId||'',clientDisplay:board.clientName||'',accountId:board.accountId||'',accountDisplay:board.accountName||'',deadline:board.deliveryDate||'',sharedDate:localDate(),editorDraftDate:board.editorDraftDate||'',clientDraftDate:board.clientDraftDate||'',thumbnailDate:board.thumbnailDate||'',deliveryDate:board.deliveryDate||'',requestUrl:board.requestUrl||'',sourceUrl:board.sourceUrl||'',attachments:Array.isArray(board.attachments)?board.attachments.slice(0,20):[],instructions:board.instructions||board.summary||'',urgent:!!board.urgent,status:'受注済み',workflow:{round:1,stage:'editing'},progressEvents:[],progress:'',evidenceUrl:'',blocker:'',workDate:'',startTime:'',endTime:'',submittedByUid:user.uid,editorUid:user.uid,editorEmail:user.email||'',editorName:editorDisplayName(),directorUid:board.directorUid||'',source:'job_board',createdAt:at,updatedAt:at,history:[{at,type:'claimed',by:user.uid,status:'受注済み'}]};
+    const at=now(),portalRef=db?.collection('editor_portals').doc(user.uid).collection('editor_jobs').doc(jid),data={recordType:'editor_portal_job',businessType:'edit_agency',boardJobId:jid,title:board.title||'',caseName:board.caseName||'',parentCaseId:board.parentCaseId||jid,parentCaseName:board.parentCaseName||board.caseName||board.title||'',clientId:board.clientId||'',clientDisplay:board.clientName||'',accountId:board.accountId||'',accountDisplay:board.accountName||'',deadline:board.deliveryDate||'',sharedDate:localDate(),editorDraftDate:board.editorDraftDate||'',clientDraftDate:board.clientDraftDate||'',thumbnailDate:board.thumbnailDate||'',deliveryDate:board.deliveryDate||'',requestUrl:board.requestUrl||'',sourceUrl:board.sourceUrl||'',attachments:Array.isArray(board.attachments)?board.attachments.slice(0,20):[],instructions:board.instructions||board.summary||'',urgent:!!board.urgent,status:'受注済み',workflow:{round:1,stage:'editing'},progressEvents:[],progress:'',evidenceUrl:'',blocker:'',workDate:'',startTime:'',endTime:'',submittedByUid:user.uid,editorUid:user.uid,editorEmail:user.email||'',editorName:editorDisplayName(),directorUid:board.directorUid||'',source:'job_board',createdAt:at,updatedAt:at,history:[{at,type:'claimed',by:user.uid,status:'受注済み'}]};
     if(DEMO){feature.board=feature.board.filter(x=>x.id!==jid);jobs.unshift({id:jid,...data});view='jobs';render();return toast('案件を受託し、担当案件に反映しました')}
     try{await db.runTransaction(async tx=>{const boardRef=db.collection('editor_job_board').doc(jid),snap=await tx.get(boardRef);if(!snap.exists||snap.data().status!=='open')throw new Error('already-claimed');tx.update(boardRef,{status:'assigned',assignedUid:user.uid,assignedName:editorDisplayName(),assignedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});tx.set(portalRef,data);tx.set(portalRef.collection('events').doc(),{at:firebase.firestore.FieldValue.serverTimestamp(),type:'claimed',byUid:user.uid,status:'受注済み',boardJobId:jid})});jobs=[{id:jid,...data},...jobs.filter(x=>x.id!==jid)];view='jobs';render();toast('案件を受託し、担当案件に反映しました')}catch(e){console.warn(e);toast(e?.message==='already-claimed'?'別の編集者が先に受託しました':'案件を受託できませんでした')}
   }
@@ -548,11 +632,26 @@
   const editorGuideBase=guideHtml;
   guideHtml=()=>{
     let html=editorGuideBase();
+    html=html
+      .replace('D確認・クライアント提出・納品完了はディレクターまたは管理者が更新します。','D確認・クライアント提出・先方確認はディレクターまたは管理者が更新します。先方OK後の実納品日は、担当編集者が納品先URLと一緒に記録します。')
+      .replace('案件内容・初稿日・納品日を確認します。','案件内容・初稿日・納品期限を確認します。')
+      .replace('案件名・納品日・指示を入力します。','親案件名と子案件名、編集者初稿、クライアント初稿、納品期限、指示を入力します。')
+      .replace('提出後は「D確認待ち」になります。D確認・クライアント提出・クライアント確認・納品完了は、ディレクターまたは管理者が更新します。','提出後は「D確認待ち」になります。D確認・クライアント提出・クライアント確認はディレクターまたは管理者が更新します。先方OK後、実際に納品した日と納品先URLは担当編集者が記録して完了にします。')
+      .replace('その後の確認・納品はディレクターまたは管理者が進めます。','その後の確認はディレクターまたは管理者が進めます。先方OK後の実納品は、担当編集者が記録します。');
     if(isExternal())html=html
       .replace(/<section class="card guide-detail"><h2>2\. 請求者設定<\/h2>[\s\S]*?<\/section>/,'<section class="card guide-detail"><h2>2. 支払い・契約の確認</h2><ol><li>金額と請求は担当ディレクターとの契約に従います。</li><li>このアプリに単価・請求額・利益は表示されません。</li><li>不明点は担当ディレクターへ確認します。</li></ol></section>')
       .replace(/<section class="card guide-detail"><h2>請求書<\/h2>[\s\S]*?<\/section>/,'<section class="card guide-detail"><h2>支払い案内</h2><ol><li>外部編集者はmono.createへ請求書を提出しません。</li><li>担当ディレクターがチーム分をまとめてmono.createへ請求します。</li><li>ご自身の支払いは担当ディレクターへ確認します。</li></ol><div class="actions"><button class="btn small" onclick="setView(\'invoices\')">支払い案内を開く</button></div></section>')
       .replace(/<div class="card"><b>請求書が作れない<\/b><span>[\s\S]*?<\/span><\/div>/,'<div class="card"><b>支払いを確認したい</b><span>担当ディレクターへ確認します。外部編集者の画面に単価や請求額は表示されません。</span></div>');
     return html;
+  };
+
+  const baseJobCardWithActualDelivery=jobCardExtended;
+  jobCardExtended=function(job){
+    const flow=editorWorkflow(job),dates=`<div class="editor-job-dates" aria-label="案件の日程"><div><span>編集者 初稿</span><b>${esc(job.editorDraftDate||'未設定')}</b></div><div><span>クライアント 初稿</span><b>${esc(job.clientDraftDate||'未設定')}</b></div><div><span>納品期限</span><b>${esc(job.deliveryDate||job.deadline||'未設定')}</b></div>${job.completedDeliveryDate?`<div class="actual"><span>実納品日</span><b>${esc(job.completedDeliveryDate)}</b></div>`:''}</div>`;
+    const completion=flow.stage==='client_review'&&String(job.status||'')==='確認待ち'?editorDeliveryCompletionHtml(job):'';
+    return baseJobCardWithActualDelivery(job)
+      .replace('</div><div class="editor-timeline"',`${dates}</div><div class="editor-timeline"`)
+      .replace('<details class="job-detail"',`${completion}<details class="job-detail"`);
   };
 
   navHtml=navHtmlExtended;
@@ -565,6 +664,8 @@
   startPortal=function(){original.startPortal();startFeatures()};
   logout=async function(){stopFeatures();return original.logout()};
   window.updateAccountOptions=updateAccountOptions;
+  window.editorAddDispatchSubcase=addDispatchSubcase;
+  window.editorRemoveDispatchSubcase=removeDispatchSubcase;
   window.claimBoardJob=claimBoardJob;
   window.sendJobMessage=sendJobMessage;
   window.toggleAllAvailabilityDays=toggleAllAvailabilityDays;
@@ -584,7 +685,11 @@
   window.setEditorJobsListMode=setEditorJobsListMode;
   window.setEditorJobsTypeFilter=setEditorJobsTypeFilter;
   window.submitEditorJobAction=submitEditorJobAction;
+  window.completeEditorDelivery=completeEditorDelivery;
   window.enableEditorDeviceNotifications=enableEditorDeviceNotifications;
+  window.enableEditorPushNotifications=enableEditorPushNotifications;
+  window.disableEditorPushNotifications=disableEditorPushNotifications;
+  window.refreshEditorPushSetup=()=>refreshEditorPushStatus(true);
   window.openDirectMessage=openDirectMessage;
   window.closeDirectMessage=closeDirectMessage;
   window.sendDirectMessage=sendDirectMessage;
@@ -595,8 +700,8 @@
   render=function(){
     if(user&&access?.approved){
       let body;
-      if(view==='notifications')body=notificationsHtml();else if(view==='dm')body=dmHtml();else if(view==='board')body=boardHtml();else if(view==='schedule')body=scheduleHtml();else if(view==='manuals')body=manualsHtml();else if(view==='suggestion')body=suggestionHtml();
-      if(body){accountHtml();$('#app').innerHTML=adminPreviewBanner()+navHtml()+body;injectStyles();mountUpdateBanner();applyAdminPreviewReadOnly();return}
+      if(view==='notifications')body=notificationsHtml();else if(view==='dm')body=dmHtml();else if(view==='board')body=boardHtml();else if(view==='schedule')body=scheduleHtml();else if(view==='manuals')body=manualsHtml();else if(view==='suggestion')body=suggestionHtml();else if(view==='mobile-setup')body=mobileSetupHtml();
+      if(body){accountHtml();$('#app').innerHTML=adminPreviewBanner()+navHtml()+body;injectStyles();mountUpdateBanner();mountPushSetupBanner();applyAdminPreviewReadOnly();return}
     }
     originalRenderBody();
   };

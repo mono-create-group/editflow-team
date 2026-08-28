@@ -23,7 +23,8 @@ test('embedded WebView users receive a browser-opening guide and a copyable port
   for (const signal of ['chatwork', 'line', 'wv', 'webview']) {
     assert.match(source.toLowerCase(), new RegExp(signal), `embedded browser signal ${signal} is checked`);
   }
-  assert.match(source, /standalone|display-mode|iphone|ipad/i, 'iOS PWA mode is checked independently of an in-app browser');
+  assert.match(source, /standalone/, 'an installed iPhone PWA is checked separately from embedded iOS WebViews');
+  assert.match(functionSource('isStandalonePortal'), /standalone|display-mode/i, 'iOS PWA mode is checked separately from an in-app browser');
   assert.match(editor, /外部ブラウザ(?:\(|（)?Safari|Chrome|Safari\/Chrome/);
   assert.match(editor, /URLをコピー|リンクをコピー|アドレスをコピー/);
   assert.match(editor, /navigator\.clipboard\.writeText|execCommand\('copy'\)/);
@@ -88,8 +89,29 @@ test('isEmbeddedAuthBrowser recognises in-app iOS contexts without rejecting reg
   assert.equal(check('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Chatwork/1.0 Mobile'), true);
   assert.equal(check('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Line/13.1.0 Mobile'), true);
   assert.equal(check('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148'), true);
+  assert.equal(check('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148', true), false);
   assert.equal(check('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Version/17.0 Mobile/15E148 Safari/604.1'), false);
   assert.equal(check('Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36'), false);
+});
+
+test('normal iPhone Safari and installed PWA can use sign-in, while embedded views cannot start OAuth', () => {
+  const login = functionSource('googleLogin');
+  assert.match(login, /isEmbeddedAuthBrowser\(\)/);
+  assert.match(login, /signInWithPopup/);
+  assert.match(login, /signInWithRedirect/);
+  assert.match(login, /canUseRedirectAuth\(\)/);
+  const screen = functionSource('loginScreen');
+  assert.match(screen, /isStandalonePortal\(\)/);
+  assert.match(screen, /isMobilePortal\(\)/);
+  assert.match(screen, /googleLogin\('redirect'\)/);
+});
+
+test('mobile browser guidance opens the same-origin Firebase login page for reliable redirect auth', () => {
+  assert.match(editor, /https:\/\/editflow-mono-create\.firebaseapp\.com\/editor\.html/);
+  const portalUrl = functionSource('portalLoginUrl');
+  assert.match(portalUrl, /PORTAL_AUTH_URL/);
+  assert.match(portalUrl, /canUseRedirectAuth\(\)/);
+  assert.match(functionSource('authBrowserHelpHtml'), /portalLoginUrl\(\)/);
 });
 
 test('withAuthTimeout resolves, rejects, and releases a short timeout without leaving a hanging promise', async () => {

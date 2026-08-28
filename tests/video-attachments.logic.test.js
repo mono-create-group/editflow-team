@@ -61,8 +61,8 @@ test('parent and child attachment editors, read-only viewer, and cards are wired
 });
 
 test('published work keeps materials after an editor accepts it', () => {
-  assert.match(managerFeatures, /mb-attachment-list/);
-  assert.match(managerFeatures, /attachments:attachmentRead\.items/);
+  assert.match(managerFeatures, /mb-subcase-attachments-/);
+  assert.match(managerFeatures, /attachments:subcase\.attachments/);
   assert.match(editorFeatures, /attachments:Array\.isArray\(board\.attachments\)\?board\.attachments\.slice\(0,20\):\[\]/);
   assert.match(editorFeatures, /function editorResourceLinks\(job\)/);
 });

@@ -115,7 +115,7 @@ test('workflow ownership is explicit for editors and management', () => {
   assert.match(index, /編集者提出 → D確認 → 先方提出 → 修正指示 → 再D確認/);
   assert.match(index, /DのOKを記録/);
   assert.match(index, /クライアントへの提出を記録/);
-  assert.match(index, /クライアントOK・納品を記録/);
+  assert.match(index, /先方からOKが出たら、担当編集者が実納品日と納品の証跡URLを記録して完了にします/);
 });
 
 test('management progress uses an explicit current-state label and readable non-colour cues', () => {

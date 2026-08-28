@@ -40,7 +40,11 @@ service cloud.firestore {
         && get(path).data.subtotal == request.resource.data.subtotal
         && get(path).data.taxByRate == request.resource.data.taxByRate
         && get(path).data.tax == request.resource.data.tax
-        && get(path).data.total == request.resource.data.total;
+        && get(path).data.total == request.resource.data.total
+        && get(path).data.invoiceAvailableOn == request.resource.data.invoiceAvailableOn
+        && get(path).data.paymentDueDate == request.resource.data.paymentDueDate
+        && request.resource.data.issueDate == request.resource.data.invoiceAvailableOn
+        && request.resource.data.dueDate == request.resource.data.paymentDueDate;
     }
 
     function validManualInvoice(uid) {
@@ -52,6 +56,12 @@ service cloud.firestore {
         && request.resource.data.jobIds.size() == 1
         && request.resource.data.lines is list
         && request.resource.data.lines.size() == 1
+        && request.resource.data.invoiceAvailableOn is string
+        && request.resource.data.invoiceAvailableOn.matches('^[0-9]{4}-[0-9]{2}-25$')
+        && request.resource.data.paymentDueDate is string
+        && request.resource.data.paymentDueDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.issueDate == request.resource.data.invoiceAvailableOn
+        && request.resource.data.dueDate == request.resource.data.paymentDueDate
         && request.resource.data.subtotal > 0
         && request.resource.data.tax >= 0
         && request.resource.data.total == request.resource.data.subtotal + request.resource.data.tax;
@@ -63,6 +73,13 @@ service cloud.firestore {
           && request.resource.data.evidenceUrl.matches('^https?://.+')
           && request.resource.data.blocker is string
           && request.resource.data.blocker.size() == 0);
+    }
+
+    // `deliveryDate` remains the promised deadline.  The actual completion
+    // date is a separate, optional field so historical cases stay readable.
+    function validCompletedDeliveryDate() {
+      return !('completedDeliveryDate' in request.resource.data)
+        || validOptionalIsoDate(request.resource.data.completedDeliveryDate);
     }
 
     function validOptionalIsoDate(value) {
@@ -77,6 +94,7 @@ service cloud.firestore {
         && validOptionalIsoDate(request.resource.data.get('clientDraftDate', ''))
         && validOptionalIsoDate(request.resource.data.get('thumbnailDate', ''))
         && validOptionalIsoDate(delivery)
+        && validCompletedDeliveryDate()
         && delivery != ''
         && request.resource.data.get('deadline', delivery) == delivery;
     }
@@ -401,6 +419,27 @@ service cloud.firestore {
         );
     }
 
+    // Only the assigned editor can record the real delivery after the client
+    // has approved it.  This is deliberately distinct from the deadline and
+    // requires both delivery evidence and an append-only workflow event.
+    function validEditorDeliveryCompletion() {
+      return hasReviewWorkflow(resource.data)
+        && hasReviewWorkflow(request.resource.data)
+        && reviewStage(resource.data) == 'client_review'
+        && reviewStage(request.resource.data) == 'delivered'
+        && reviewRound(request.resource.data) == reviewRound(resource.data)
+        && resource.data.status == '確認待ち'
+        && request.resource.data.status == '完了'
+        && request.resource.data.get('completedDeliveryDate', '') is string
+        && request.resource.data.get('completedDeliveryDate', '') != ''
+        && validCompletedJobEvidence()
+        && appendsOneReviewEvent()
+        && lastReviewEventMatches(
+          'editor_delivery_completed', 'client_review', 'delivered',
+          reviewRound(resource.data), '完了', '担当編集者'
+        );
+    }
+
     // Once a workflow exists, only the editor's own submission may change a
     // review status. A saved D/client/final status is manager-owned even when
     // the editor is merely saving dates or a progress memo.
@@ -418,6 +457,7 @@ service cloud.firestore {
           && reviewStage(request.resource.data) == 'director_review'
           && request.resource.data.status in ['初稿提出済み', '修正稿提出済み']
         )
+        || validEditorDeliveryCompletion()
         || (
           reviewStage(request.resource.data) == reviewStage(resource.data)
           && request.resource.data.status == resource.data.status
@@ -468,13 +508,6 @@ service cloud.firestore {
               && validManagerProgressEvent(
                 'client_revision_requested', 'client_review', 'editing',
                 reviewRound(request.resource.data), '修正中'
-              ))
-            || (reviewStage(resource.data) == 'client_review'
-              && reviewStage(request.resource.data) == 'delivered'
-              && reviewRound(request.resource.data) == reviewRound(resource.data)
-              && validManagerProgressEvent(
-                'client_approved_delivered', 'client_review', 'delivered',
-                reviewRound(request.resource.data), '完了'
               ))
           )
         );
@@ -728,7 +761,7 @@ service cloud.firestore {
             && (!externalEditor(uid) || !containsExternalSettlement(resource.data)));
         allow create: if editor(uid)
           && request.resource.data.keys().hasOnly([
-            'recordType','businessType','boardJobId','title','caseName',
+            'recordType','businessType','boardJobId','title','caseName','parentCaseId','parentCaseName',
             'clientId','clientDisplay','accountId','accountDisplay','deadline','requestUrl','sourceUrl',
             'sharedDate','editorDraftDate','clientDraftDate','thumbnailDate','deliveryDate',
             'instructions','urgent','status','progress','evidenceUrl','blocker',
@@ -749,6 +782,10 @@ service cloud.firestore {
           && request.resource.data.title is string
           && request.resource.data.title.size() > 0
           && request.resource.data.title.size() <= 120
+          && request.resource.data.get('parentCaseId', '') is string
+          && request.resource.data.get('parentCaseId', '').size() <= 160
+          && request.resource.data.get('parentCaseName', '') is string
+          && request.resource.data.get('parentCaseName', '').size() <= 120
           && request.resource.data.clientDisplay is string
           && request.resource.data.clientDisplay.size() > 0
           && request.resource.data.instructions is string
@@ -777,7 +814,7 @@ service cloud.firestore {
           && validCompletedJobEvidence()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status','deadline','sharedDate','editorDraftDate','clientDraftDate',
-            'thumbnailDate','deliveryDate','progress','evidenceUrl','blocker',
+            'thumbnailDate','deliveryDate','completedDeliveryDate','progress','evidenceUrl','blocker',
             'workDate','startTime','endTime','progressMilestones',
             'lastProgressChangedByUid','lastProgressChangedByEmail',
             'lastProgressChangedByRole','updatedAt','history','workflow','progressEvents'
@@ -786,7 +823,7 @@ service cloud.firestore {
           && request.resource.data.get('lastProgressChangedByRole', '担当編集者') == '担当編集者'
           && request.resource.data.get('progressMilestones', []) is list
           && request.resource.data.get('history', []) is list
-          && validEditorReviewTransition()
+          && (validEditorReviewTransition() || validEditorDeliveryCompletion())
           && validEditorWorkflowStatus()
           && preservesFinalJob()
           && validJobSchedule();
@@ -848,7 +885,18 @@ service cloud.firestore {
         match /events/{eventId} {
           allow read: if portalManager(uid) || editor(uid);
           allow create: if portalManager(uid)
-            || (editor(uid) && request.resource.data.byUid == uid);
+            || (editor(uid) && request.resource.data.byUid == uid
+              && (request.resource.data.get('type', '') != 'editor_delivery_completed'
+                || (request.resource.data.keys().hasOnly([
+                      'at','type','byUid','byEmail','byRole','status',
+                      'completedDeliveryDate','deliveryDate','evidenceUrl'
+                    ])
+                    && request.resource.data.byRole == '担当編集者'
+                    && request.resource.data.status == '完了'
+                    && request.resource.data.completedDeliveryDate is string
+                    && request.resource.data.completedDeliveryDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+                    && request.resource.data.evidenceUrl is string
+                    && request.resource.data.evidenceUrl.matches('^https?://.+'))));
           allow update, delete: if false;
         }
 
@@ -879,6 +927,10 @@ service cloud.firestore {
           && request.resource.data.recordType == 'invoice_authorization'
           && request.resource.data.editorUid == uid
           && request.resource.data.month is string
+          && request.resource.data.invoiceAvailableOn is string
+          && request.resource.data.invoiceAvailableOn.matches('^[0-9]{4}-[0-9]{2}-25$')
+          && request.resource.data.paymentDueDate is string
+          && request.resource.data.paymentDueDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
           && request.resource.data.jobIds is list
           && request.resource.data.lines is list
           && request.resource.data.jobIds.size() == request.resource.data.lines.size()
@@ -906,7 +958,8 @@ service cloud.firestore {
             'recordType','editorUid','editorEmail','editorName','month','jobIds',
             'lines','issuer','recipientName','documentType','subtotal','taxByRate',
             'tax','withholding','withholdingStatus','total','status','invoiceNumber',
-            'issueDate','dueDate','retentionUntil','version','idempotencyKey','file',
+            'issueDate','dueDate','invoiceAvailableOn','paymentDueDate',
+            'retentionUntil','version','idempotencyKey','file',
             'ownerShareStatus','createdAt','updatedAt','history',
             'submittedAt','reviewReason','supersedesInvoiceId',
             'authorizationId','authorizationRevision'
@@ -998,6 +1051,65 @@ service cloud.firestore {
           && request.resource.data.version is string;
         allow delete: if false;
       }
+
+      // One installed device owns one immutable document ID.  An editor can
+      // only see and replace their own subscription.  Managers may read
+      // status for setup follow-up, but never receive a write route here.
+      // The subscription endpoint is sensitive and must never be listed to
+      // other editors or exposed in any shared case/DM document.
+      match /push_devices/{deviceId} {
+        allow read: if portalManager(uid) || editor(uid);
+        allow create: if editor(uid)
+          && request.resource.data.keys().hasOnly([
+            'deviceId','endpoint','keys','permission','appInstalled',
+            'platform','userAgent','schemaVersion','createdAt','updatedAt'
+          ])
+          && request.resource.data.deviceId == deviceId
+          && request.resource.data.deviceId is string
+          && request.resource.data.deviceId.matches('^[A-Za-z0-9_-]{20,80}$')
+          && request.resource.data.endpoint is string
+          && request.resource.data.endpoint.matches('^https://.+')
+          && request.resource.data.endpoint.size() <= 2000
+          && request.resource.data.keys is map
+          && request.resource.data.keys.keys().hasOnly(['p256dh','auth'])
+          && request.resource.data.keys.p256dh is string
+          && request.resource.data.keys.p256dh.size() >= 20
+          && request.resource.data.keys.p256dh.size() <= 300
+          && request.resource.data.keys.auth is string
+          && request.resource.data.keys.auth.size() >= 10
+          && request.resource.data.keys.auth.size() <= 300
+          && request.resource.data.permission == 'granted'
+          && request.resource.data.appInstalled == true
+          && request.resource.data.platform is string
+          && request.resource.data.platform.size() <= 180
+          && request.resource.data.userAgent is string
+          && request.resource.data.userAgent.size() <= 400
+          && request.resource.data.schemaVersion == 1;
+        allow update: if editor(uid)
+          && request.resource.data.deviceId == resource.data.deviceId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'endpoint','keys','permission','appInstalled','platform','userAgent','schemaVersion','updatedAt'
+          ])
+          && request.resource.data.endpoint is string
+          && request.resource.data.endpoint.matches('^https://.+')
+          && request.resource.data.endpoint.size() <= 2000
+          && request.resource.data.keys is map
+          && request.resource.data.keys.keys().hasOnly(['p256dh','auth'])
+          && request.resource.data.keys.p256dh is string
+          && request.resource.data.keys.p256dh.size() >= 20
+          && request.resource.data.keys.p256dh.size() <= 300
+          && request.resource.data.keys.auth is string
+          && request.resource.data.keys.auth.size() >= 10
+          && request.resource.data.keys.auth.size() <= 300
+          && request.resource.data.permission == 'granted'
+          && request.resource.data.appInstalled == true
+          && request.resource.data.platform is string
+          && request.resource.data.platform.size() <= 180
+          && request.resource.data.userAgent is string
+          && request.resource.data.userAgent.size() <= 400
+          && request.resource.data.schemaVersion == 1;
+        allow delete: if editor(uid);
+      }
     }
 
     match /editor_job_board/{jobId} {
@@ -1005,7 +1117,7 @@ service cloud.firestore {
         || (signedIn() && resource.data.get('assignedUid', '') == request.auth.uid);
       allow create: if videoManager()
         && request.resource.data.keys().hasOnly([
-          'businessType','title','caseName','clientId','clientName','accountId','accountName',
+          'businessType','title','caseName','parentCaseId','parentCaseName','clientId','clientName','accountId','accountName',
           'summary','instructions','requestUrl','sourceUrl','attachments','editorDraftDate',
           'clientDraftDate','thumbnailDate','deliveryDate','urgent','status',
           'audience','eligibleUids','directorUid','createdByUid','createdByName',
@@ -1015,6 +1127,10 @@ service cloud.firestore {
         && request.resource.data.title is string
         && request.resource.data.title.size() > 0
         && request.resource.data.title.size() <= 120
+        && request.resource.data.get('parentCaseId', '') is string
+        && request.resource.data.get('parentCaseId', '').size() <= 160
+        && request.resource.data.get('parentCaseName', '') is string
+        && request.resource.data.get('parentCaseName', '').size() <= 120
         && request.resource.data.status == 'open'
         && validAttachments(request.resource.data)
         && request.resource.data.eligibleUids is list

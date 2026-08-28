@@ -22,8 +22,8 @@ test('video cards normalize and expose saved subcases', () => {
     { title: '2本目', done: true, workerId: '__self', clientDraftDate: '2026-08-29' },
   ] });
   assert.deepEqual(JSON.parse(JSON.stringify(result)), [
-    { id: '0', title: '1本目', deadline: '2026-08-30', status: '修正中', assignee: '編集者A', progressMilestones: [], updatedAt: 0, done: false },
-    { id: '1', title: '2本目', deadline: '2026-08-29', status: '完了', assignee: 'mono.create社内対応', progressMilestones: [], updatedAt: 0, done: true },
+    { id: '0', title: '1本目', deadline: '2026-08-30', editorDraftDate: '', clientDraftDate: '', completedDeliveryDate: '', status: '修正中', assignee: '編集者A', progressMilestones: [], updatedAt: 0, done: false },
+    { id: '1', title: '2本目', deadline: '2026-08-29', editorDraftDate: '', clientDraftDate: '2026-08-29', completedDeliveryDate: '', status: '完了', assignee: 'mono.create社内対応', progressMilestones: [], updatedAt: 0, done: true },
   ]);
 });
 

@@ -18,7 +18,7 @@ test('review-cycle schema is optional for legacy jobs and bounded for new jobs',
   }
 });
 
-test('review workflow keeps editor submissions and manager decisions separate', () => {
+test('review workflow keeps editor submissions, manager decisions, and editor actual delivery separate', () => {
   const editorBody = rules.match(/function validEditorReviewTransition\(\) \{([\s\S]*?)\n    \}/)?.[1] || '';
   const managerBody = rules.match(/function validManagerReviewTransition\(\) \{([\s\S]*?)\n    \}/)?.[1] || '';
   assert.match(editorBody, /'editing'/);
@@ -26,7 +26,8 @@ test('review workflow keeps editor submissions and manager decisions separate', 
   assert.match(managerBody, /'director_review'/);
   assert.match(managerBody, /'client_submission'/);
   assert.match(managerBody, /'client_review'/);
-  assert.match(managerBody, /'delivered'/);
+  assert.doesNotMatch(managerBody, /client_approved_delivered/);
+  assert.match(rules, /function validEditorDeliveryCompletion\(\)/);
   assert.match(managerBody, /reviewRound\(request\.resource\.data\) == reviewRound\(resource\.data\) \+ 1/);
 });
 
@@ -37,7 +38,7 @@ test('workflow changes append one matching, role-owned event without dropping pr
     'function lastReviewEventMatches(type, fromStage, toStage, round, status, role)',
     "event.get('byUid', '') == request.auth.uid", "'editor_submitted'",
     "'director_approved'", "'client_submitted'", "'client_revision_requested'",
-    "'client_approved_delivered'", "return owner() ? 'owner' : 'director'",
+    "'editor_delivery_completed'", "return owner() ? 'owner' : 'director'",
   ]) assert.ok(rules.includes(marker), `missing ${marker}`);
   assert.match(rules, /&& reviewEventsUnchanged\(\)/);
   assert.match(rules, /&& validEditorSubmittedEvent\(/);
