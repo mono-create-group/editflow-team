@@ -1,10 +1,10 @@
 (function(){
   'use strict';
 
-  const PORTAL_APP_VERSION='20260828-17';
+  const PORTAL_APP_VERSION='20260828-18';
   const feature={
     board:[],catalog:[],manuals:[],schedules:[],release:null,
-    messages:new Map(),messageUnsubs:new Map(),unsubs:[],startedFor:'',serverVersion:'',jobsListMode:'active',jobsTypeFilter:'all',lastSuggestionCode:''
+    messages:new Map(),messageUnsubs:new Map(),messageLoading:new Set(),openMessageJobIds:new Set(),groupDraftSaving:new Set(),unsubs:[],startedFor:'',serverVersion:'',jobsListMode:'active',jobsTypeFilter:'all',lastSuggestionCode:''
   };
   const original={
     navHtml,render,startPortal,jobForm,jobsHtml,jobCard,createJob,dashboardHtml,logout
@@ -79,7 +79,7 @@
       .update-banner>div{flex:1;min-width:0}.update-banner b{display:block;font-size:12px}.update-banner span{font-size:10.5px;color:var(--t2)}
       .role-chip{display:inline-flex;align-items:center;margin-top:4px;padding:2px 7px;border-radius:99px;background:var(--purple2);color:#5b21b6;font-size:9px;font-weight:800}
       .nav .btn.accept-entry{border:2px solid #7c3aed;background:#f5f3ff;color:#5b21b6;box-shadow:0 4px 14px rgba(124,58,237,.18);font-weight:850}.nav .btn.accept-entry.active{background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;border-color:#5b21b6}.accept-count{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:99px;background:#dc2626;color:#fff;font-size:10px;font-weight:900}
-      .notification-button{position:relative}.notification-count{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;border-radius:99px;background:#dc2626;color:#fff;font-size:9px;font-weight:900}.notification-list{display:flex;flex-direction:column;gap:7px}.notification-item{width:100%;display:flex;align-items:center;gap:10px;text-align:left;border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:10px;background:var(--card);padding:10px;cursor:pointer}.notification-item:hover{background:var(--card2)}.notification-copy{flex:1;min-width:0}.notification-copy b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.notification-copy span{display:block;font-size:10.5px;color:var(--t2);margin-top:2px}.quick-draft{display:flex;align-items:end;gap:8px;margin:9px 0;padding:10px;border:1px solid #c4b5fd;border-radius:10px;background:#f5f3ff}.quick-draft .field{flex:1;margin:0}.quick-draft .btn{min-height:40px}
+      .notification-button{position:relative}.notification-count{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;border-radius:99px;background:#dc2626;color:#fff;font-size:9px;font-weight:900}.notification-list{display:flex;flex-direction:column;gap:7px}.notification-item{width:100%;display:flex;align-items:center;gap:10px;text-align:left;border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:10px;background:var(--card);padding:10px;cursor:pointer}.notification-item:hover{background:var(--card2)}.notification-copy{flex:1;min-width:0}.notification-copy b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.notification-copy span{display:block;font-size:10.5px;color:var(--t2);margin-top:2px}.quick-draft,.group-draft-panel{display:flex;align-items:end;gap:8px;margin:9px 0;padding:10px;border:1px solid #c4b5fd;border-radius:10px;background:#f5f3ff}.quick-draft .field,.group-draft-panel .field{flex:1;margin:0}.quick-draft .btn,.group-draft-panel .btn{min-height:40px}.group-draft-panel b{display:block;font-size:14px;color:#4c1d95}.group-draft-panel .muted{margin-top:2px}
       .feature-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.feature-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
       .board-card{display:flex;flex-direction:column;gap:8px;border:2px solid #c4b5fd;box-shadow:0 6px 20px rgba(91,33,182,.10)}.board-card .actions{margin-top:auto}.claim-button{width:100%;min-height:52px;font-size:14px;background:linear-gradient(135deg,#7c3aed,#5b21b6)!important;box-shadow:0 7px 18px rgba(91,33,182,.25)}.claim-button:hover{transform:translateY(-1px)}.accept-howto{display:flex;align-items:flex-start;gap:10px;margin:10px 0 14px;padding:12px 14px;border:1px solid #c4b5fd;border-radius:11px;background:#f5f3ff;color:#4c1d95}.accept-howto b{display:block;font-size:12px}.accept-howto span{display:block;margin-top:2px;font-size:10.5px;color:#6d28d9;line-height:1.6}.scope-line{display:flex;gap:5px;flex-wrap:wrap}.scope-chip{display:inline-flex;padding:3px 7px;border-radius:7px;background:var(--card2);font-size:10px;color:var(--t2)}
       .message-thread{border-top:1px solid var(--border);margin-top:12px;padding-top:10px}.message{padding:8px 9px;margin:6px 0;border-radius:9px;background:var(--card2);font-size:11px}.message.mine{background:var(--purple2)}.message-head{display:flex;justify-content:space-between;gap:8px;color:var(--t3);font-size:9.5px;margin-bottom:3px}.message-body{white-space:pre-wrap;overflow-wrap:anywhere}
@@ -94,6 +94,7 @@
       @media(max-width:980px){.availability-calendar{grid-template-columns:repeat(2,minmax(0,1fr))}.availability-bulk-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
       @media(max-width:760px){.editor-nav-desktop{display:none}.editor-nav-mobile{position:fixed;left:0;right:0;bottom:0;z-index:80;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin:0;padding:7px 5px calc(7px + env(safe-area-inset-bottom));border-top:1px solid var(--border);background:rgba(255,255,255,.96);box-shadow:0 -5px 20px rgba(15,23,42,.12);backdrop-filter:blur(14px)}.editor-nav-mobile .btn{min-width:0;min-height:44px;padding:5px 3px;font-size:10px;line-height:1.2}.editor-nav-mobile .btn.active{background:#ede9fe;color:#5b21b6}.editor-nav-more{position:static;display:flex;align-items:stretch}.editor-nav-more summary{display:flex;align-items:center;justify-content:center;width:100%;min-height:44px;padding:5px 3px;border:1px solid var(--border);border-radius:9px;font-size:10px;text-align:center;cursor:pointer}.editor-nav-more-menu{position:fixed;top:auto;right:12px;bottom:calc(66px + env(safe-area-inset-bottom));left:12px;z-index:95;width:auto;max-height:min(62dvh,460px);grid-template-columns:repeat(2,minmax(0,1fr));overflow-y:auto;padding:12px}.editor-nav-more-menu .btn{min-height:52px;padding:11px 12px;font-size:14px}.feature-grid,.feature-grid.two,.availability-calendar,.availability-bulk-grid{grid-template-columns:1fr}.update-banner{top:65px;align-items:flex-start;flex-wrap:wrap}.update-banner .btn{width:auto}.availability-day{display:grid;grid-template-columns:70px minmax(0,1fr);gap:7px}.availability-day-head{display:block}.availability-day>.field,.availability-day>.availability-time{margin-top:0}.availability-day .field.full{grid-column:1/-1}.editor-timeline{grid-template-columns:1fr;gap:0}.editor-timeline-step{min-height:44px;padding:7px 5px 9px 32px;text-align:left}.editor-timeline-step:before{left:8px;top:11px;transform:none}.editor-timeline-step:not(:last-child):after{left:13px;right:auto;top:23px;width:2px;height:calc(100% - 7px)}.editor-timeline-step b,.editor-timeline-step span{display:inline;font-size:14px;line-height:1.5}.editor-timeline-step span{margin:0 0 0 7px}.job-list-tab{flex:1;min-width:0}.job-type-filter{flex:1;min-width:0}.job-submit-panel{grid-template-columns:1fr}.job-submit-panel .btn{width:100%}.dispatch-create summary{font-size:14px}.editor-primary-action .section-title{flex-wrap:wrap}.editor-deadline-chip{max-width:100%;white-space:normal}.editor-current-state{align-items:flex-start;flex-direction:column;gap:3px}.editor-case-group>summary:after{align-self:flex-start}.editor-case-group-count{white-space:normal}.editor-job-status-line{align-items:flex-start;flex-direction:column;gap:3px}}
       @media(max-width:420px){.editor-case-group>summary{align-items:flex-start;flex-direction:column}.editor-case-group-count{white-space:normal;max-width:100%}.notification-copy b,.notification-copy span{overflow-wrap:anywhere;white-space:normal}.editor-nav-mobile .btn{font-size:9px}}
+      @media(max-width:760px){.group-draft-panel{align-items:stretch;flex-direction:column}.group-draft-panel .btn{width:100%;min-height:44px}}
       @media(pointer:coarse){.editor-job-card .btn.small,.notification-item,.editor-nav-more summary{min-height:44px}}
     `;document.head.appendChild(style);
   }
@@ -152,7 +153,7 @@
   function editorJobParent(job){
     const explicit=editorGroupText(job?.parentCaseId||job?.linkedLegacyJobId||job?.parentJobId||job?.caseId).replace(/^legacy:/,'');
     const caseName=editorGroupText(job?.parentCaseName||job?.caseName),client=editorGroupText(job?.clientId||job?.clientDisplay),account=editorGroupText(job?.accountId||job?.accountDisplay),type=editorJobType(job);
-    if(explicit)return{key:`id:${explicit}`,title:caseName||editorGroupText(job?.parentCaseName)||editorGroupText(job?.title)||'親案件',client:editorGroupText(job?.clientDisplay),account:editorGroupText(job?.accountDisplay)};
+    if(explicit)return{key:`id:${type}|${client}|${account}|${explicit}`,title:caseName||editorGroupText(job?.parentCaseName)||editorGroupText(job?.title)||'親案件',client:editorGroupText(job?.clientDisplay),account:editorGroupText(job?.accountDisplay)};
     if(caseName)return{key:`case:${type}|${client}|${account}|${caseName}`,title:caseName,client:editorGroupText(job?.clientDisplay),account:editorGroupText(job?.accountDisplay)};
     return{key:`job:${String(job?.id||'')}`,title:editorGroupText(job?.title)||'案件名未設定',client:editorGroupText(job?.clientDisplay),account:editorGroupText(job?.accountDisplay)};
   }
@@ -170,9 +171,14 @@
     return `${editorNotificationTitle(job)} ・ ${editorWaitMessage(job)||editorDeadlineLabel(job)}`;
   }
   function editorNotificationTitle(job){const parent=editorJobParent(job),child=editorGroupText(job?.title)||'担当案件';return parent.title===child?child:`${parent.title} ／ ${child}`}
+  function groupDraftEligibleJobs(group){return(group?.jobs||[]).filter(job=>activeJob(job)&&!job.previewLegacy&&!job.editorDraftDate)}
+  function groupDraftPanel(group){
+    const targets=groupDraftEligibleJobs(group);if(!targets.length)return'';
+    return`<div class="group-draft-panel"><div class="field"><b>サブ案件の編集者初稿日をまとめて設定</b><div class="muted">初稿日が未設定のサブ案件 ${targets.length}件に、同じ日付を反映します。設定済みの日付は変更しません。</div><label>編集者 初稿日<input class="group-editor-draft-input" type="date"></label></div><button class="btn primary small group-editor-draft-save" type="button" onclick="saveGroupEditorDraftDate(this)">まとめて保存</button></div>`;
+  }
   function editorGroupHtml(group,kind='jobs'){
     const workflow=editorWorkflow(group.jobs[0]),meta=[group.client,group.account].filter(Boolean).join(' / '),summary=editorGroupSummary(group);
-    return`<details id="editor-case-${esc(group.key)}" data-case-key="${esc(group.key)}" class="card editor-case-group"><summary aria-label="親案件 ${esc(group.title)} を開く"><span><b>${esc(group.title)}</b><small>${esc(meta||'クライアント・アカウント未設定')}</small><span class="editor-next-child">次：${esc(editorGroupNext(group))}</span></span><span class="editor-case-group-count">${esc(summary)}</span></summary><div class="editor-case-group-body">${group.jobs.map(jobCard).join('')}</div><div class="editor-workflow-hint">現在の進捗：${esc(editorWorkflowLabel(workflow.stage,group.jobs[0]?.status))} / ${workflow.round}回目</div></details>`;
+    return`<details id="editor-case-${esc(group.key)}" data-case-key="${esc(group.key)}" class="card editor-case-group"><summary aria-label="親案件 ${esc(group.title)} を開く"><span><b>${esc(group.title)}</b><small>${esc(meta||'クライアント・アカウント未設定')}</small><span class="editor-next-child">次：${esc(editorGroupNext(group))}</span></span><span class="editor-case-group-count">${esc(summary)}</span></summary>${kind==='jobs'?groupDraftPanel(group):''}<div class="editor-case-group-body">${group.jobs.map(jobCard).join('')}</div><div class="editor-workflow-hint">現在の進捗：${esc(editorWorkflowLabel(workflow.stage,group.jobs[0]?.status))} / ${workflow.round}回目</div></details>`;
   }
   function setEditorJobsListMode(mode){feature.jobsListMode=mode==='completed'?'completed':'active';render()}
   function setEditorJobsTypeFilter(type){feature.jobsTypeFilter=['all','agency','dispatch'].includes(type)?type:'all';render()}
@@ -229,6 +235,7 @@
   function openEditorJob(jobId){
     const job=jobs.find(x=>x.id===jobId);if(!job)return;
     if(view!=='jobs'){view='jobs';render();return setTimeout(()=>openEditorJob(jobId),50)}
+    ensureJobMessages(jobId);
     const group=document.querySelector(`[data-case-key="${CSS.escape(editorJobParent(job).key)}"]`);if(group)group.open=true;
     const card=document.querySelector(`#editor-job-${CSS.escape(jobId)}`)||document.getElementById(`job-editor-draft-${jobId}`)?.closest('article');
     card?.scrollIntoView({behavior:'smooth',block:'start'});
@@ -237,7 +244,8 @@
 
   function messageBlock(job){
     const list=(feature.messages.get(job.id)||[]).slice().sort((a,b)=>stamp(a.createdAt)-stamp(b.createdAt));
-    return`<div class="message-thread"><div class="section-title"><h2>案件内チャット</h2><span>この案件の連絡を残します</span></div>${list.map(x=>`<div class="message ${x.byUid===portalUid()?'mine':''}"><div class="message-head"><span>${esc(x.byName||'メンバー')} ・ ${esc(x.kind||'メッセージ')}</span><span>${x.createdAt&&typeof x.createdAt.toDate==='function'?x.createdAt.toDate().toLocaleString('ja-JP'):''}</span></div><div class="message-body">${esc(x.body||'')}</div>${safeUrl(x.url||'')?`<a class="safe-link" href="${esc(safeUrl(x.url))}" target="_blank" rel="noopener">添付URLを開く</a>`:''}</div>`).join('')||'<div class="muted">まだ連絡はありません</div>'}<div class="form-grid" style="margin-top:8px"><div class="field"><label for="msg-kind-${job.id}">種類</label><select id="msg-kind-${job.id}"><option>質問</option><option>回答</option><option>初稿提出</option><option>修正指示</option><option>修正稿提出</option><option>納品</option><option>連絡</option></select></div><div class="field"><label for="msg-url-${job.id}">関連URL</label><input id="msg-url-${job.id}" type="url" placeholder="https://"></div><div class="field full"><label for="msg-body-${job.id}">メッセージ</label><textarea id="msg-body-${job.id}" maxlength="2000" placeholder="相手に伝えたいことを入力"></textarea></div></div><div class="actions"><button class="btn primary small" onclick="sendJobMessage('${job.id}')">メッセージを送信</button></div></div>`;
+    const loaded=feature.messageUnsubs.has(job.id)||DEMO,loading=feature.messageLoading.has(job.id),thread=loading?'<div class="muted">案件内チャットを読み込んでいます…</div>':loaded?(list.map(x=>`<div class="message ${x.byUid===portalUid()?'mine':''}"><div class="message-head"><span>${esc(x.byName||'メンバー')} ・ ${esc(x.kind||'メッセージ')}</span><span>${x.createdAt&&typeof x.createdAt.toDate==='function'?x.createdAt.toDate().toLocaleString('ja-JP'):''}</span></div><div class="message-body">${esc(x.body||'')}</div>${safeUrl(x.url||'')?`<a class="safe-link" href="${esc(safeUrl(x.url))}" target="_blank" rel="noopener">添付URLを開く</a>`:''}</div>`).join('')||'<div class="muted">まだ連絡はありません</div>'):'<div class="muted">この詳細を開くと、案件内チャットを読み込みます。</div>';
+    return`<div class="message-thread" data-message-job-id="${esc(job.id)}"><div class="section-title"><h2>案件内チャット</h2><span>この案件の連絡を残します</span></div>${thread}<div class="form-grid" style="margin-top:8px"><div class="field"><label for="msg-kind-${job.id}">種類</label><select id="msg-kind-${job.id}"><option>質問</option><option>回答</option><option>初稿提出</option><option>修正指示</option><option>修正稿提出</option><option>納品</option><option>連絡</option></select></div><div class="field"><label for="msg-url-${job.id}">関連URL</label><input id="msg-url-${job.id}" type="url" placeholder="https://"></div><div class="field full"><label for="msg-body-${job.id}">メッセージ</label><textarea id="msg-body-${job.id}" maxlength="2000" placeholder="相手に伝えたいことを入力"></textarea></div></div><div class="actions"><button class="btn primary small" onclick="sendJobMessage('${job.id}')">メッセージを送信</button></div></div>`;
   }
 
 
@@ -248,7 +256,7 @@
     const links=`<div class="link-row">${r?`<a class="safe-link" target="_blank" rel="noopener" href="${esc(r)}">依頼内容</a>`:''}${s?`<a class="safe-link" target="_blank" rel="noopener" href="${esc(s)}">素材</a>`:''}${e?`<a class="safe-link" target="_blank" rel="noopener" href="${esc(e)}">提出した内容</a>`:''}</div>`;
     const statusControl=waiting?`<div class="field"><label>ステータス</label><div class="editor-readonly-status" aria-label="ステータス ${esc(videoStatusLabel(j.status))}">${esc(videoStatusLabel(j.status))}（ディレクター・管理者が更新）</div><input id="job-status-${jid}" type="hidden" value="${esc(j.status||'')}"></div>`:`<div class="field"><label for="job-status-${jid}">ステータス</label><select id="job-status-${jid}">${statuses.map(x=>`<option value="${esc(x)}" ${x===j.status?'selected':''}>${esc(videoStatusLabel(x))}</option>`).join('')}</select></div>`;
     const fields=`<div class="form-grid" oninput="saveJobDraft('${jid}')" onchange="saveJobDraft('${jid}')">${statusControl}<div class="field"><label for="job-shared-${jid}">受注日</label><input id="job-shared-${jid}" type="date" value="${esc(j.sharedDate||'')}"></div><div class="field"><label for="job-editor-draft-${jid}">編集者 初稿</label><input id="job-editor-draft-${jid}" type="date" value="${esc(j.editorDraftDate||'')}"></div><div class="field"><label for="job-client-draft-${jid}">クライアント提出 初稿</label><input id="job-client-draft-${jid}" type="date" value="${esc(j.clientDraftDate||'')}"></div><div class="field"><label for="job-thumbnail-${jid}">サムネイル納品日</label><input id="job-thumbnail-${jid}" type="date" value="${esc(j.thumbnailDate||'')}"></div><div class="field"><label for="job-delivery-${jid}">納品日 *</label><input id="job-delivery-${jid}" type="date" value="${esc(deliveryDate)}"></div><div class="field"><label for="job-workdate-${jid}">作業日</label><input id="job-workdate-${jid}" type="date" value="${esc(j.workDate||'')}"></div><div class="field"><label for="job-start-${jid}">開始時刻</label><input id="job-start-${jid}" type="time" value="${esc(j.startTime||'')}"></div><div class="field"><label for="job-end-${jid}">終了時刻</label><input id="job-end-${jid}" type="time" value="${esc(j.endTime||'')}"></div><div class="field full"><label for="job-progress-${jid}">進み具合のメモ</label><textarea id="job-progress-${jid}" maxlength="2000">${esc(j.progress||'')}</textarea></div><div class="field"><label for="job-evidence-${jid}">提出した内容のURL</label><input id="job-evidence-${jid}" type="url" value="${esc(j.evidenceUrl||'')}" placeholder="https://"></div><div class="field"><label for="job-blocker-${jid}">作業を止めている理由</label><input id="job-blocker-${jid}" maxlength="300" value="${esc(j.blocker||'')}"></div></div>`;
-    return`<article id="editor-job-${jid}" data-job-id="${jid}" class="card job-card editor-job-card ${overdue?'notice danger':''}"><div class="job-top"><div><span class="pill">${editorJobTypeLabel(j)}</span><div class="job-title" style="margin-top:6px">${esc(j.title||'案件名未設定')}</div><div class="job-meta">${esc(j.clientDisplay||'クライアント未設定')} / ${esc(j.accountDisplay||'アカウント未設定')}</div></div>${statusPill(j.status)}</div><div class="editor-job-status-line" aria-label="現在の工程"><span>現在の進捗</span><b>${esc(editorWorkflowLabel(editorWorkflow(j).stage,j.status))}</b></div><div class="editor-next-owner">次の担当：<b>${esc(editorNextOwner(j))}</b></div>${j.correctionReason?`<div class="job-urgent-note danger"><b>差戻し内容</b><br>${esc(j.correctionReason)}</div>`:''}${j.blocker?`<div class="job-urgent-note danger"><b>停止・確認が必要です</b><br>${esc(j.blocker)}</div>`:''}<div class="deadline-summary ${overdue?'overdue':''}">${esc(deadline)}${overdue?'（作業中の案件）':''}</div><div class="editor-timeline" aria-label="編集進行の5段階">${timeline.map(x=>`<div class="editor-timeline-step ${x.state}"><b>${x.state==='done'?'完了':x.state==='current'?'いまここ':x.state==='optional'?'必要時':'未到達'}</b><span>${esc(x.label)}</span></div>`).join('')}</div>${waiting?`<div class="job-waiting"><b>現在の状況：</b>${esc(waiting)}</div>`:editorActionHtml(j,action,e)}<details class="job-detail"><summary>案件の詳細・連絡を開く</summary>${j.instructions?`<div class="job-body">${esc(j.instructions)}</div>`:''}${links}${fields}<div class="actions"><button class="btn primary job-primary" type="button" onclick="saveJobProgress('${jid}')">変更を保存</button></div>${messageBlock(j)}</details></article>`;
+    return`<article id="editor-job-${jid}" data-job-id="${jid}" class="card job-card editor-job-card ${overdue?'notice danger':''}"><div class="job-top"><div><span class="pill">${editorJobTypeLabel(j)}</span><div class="job-title" style="margin-top:6px">${esc(j.title||'案件名未設定')}</div><div class="job-meta">${esc(j.clientDisplay||'クライアント未設定')} / ${esc(j.accountDisplay||'アカウント未設定')}</div></div>${statusPill(j.status)}</div><div class="editor-job-status-line" aria-label="現在の工程"><span>現在の進捗</span><b>${esc(editorWorkflowLabel(editorWorkflow(j).stage,j.status))}</b></div><div class="editor-next-owner">次の担当：<b>${esc(editorNextOwner(j))}</b></div>${j.correctionReason?`<div class="job-urgent-note danger"><b>差戻し内容</b><br>${esc(j.correctionReason)}</div>`:''}${j.blocker?`<div class="job-urgent-note danger"><b>停止・確認が必要です</b><br>${esc(j.blocker)}</div>`:''}<div class="deadline-summary ${overdue?'overdue':''}">${esc(deadline)}${overdue?'（作業中の案件）':''}</div><div class="editor-timeline" aria-label="編集進行の5段階">${timeline.map(x=>`<div class="editor-timeline-step ${x.state}"><b>${x.state==='done'?'完了':x.state==='current'?'いまここ':x.state==='optional'?'必要時':'未到達'}</b><span>${esc(x.label)}</span></div>`).join('')}</div>${waiting?`<div class="job-waiting"><b>現在の状況：</b>${esc(waiting)}</div>`:editorActionHtml(j,action,e)}<details class="job-detail" ${feature.openMessageJobIds.has(j.id)?'open':''} ontoggle="ensureJobMessages('${jid}',this.open)"><summary>案件の詳細・連絡を開く</summary>${j.instructions?`<div class="job-body">${esc(j.instructions)}</div>`:''}${links}${fields}<div class="actions"><button class="btn primary job-primary" type="button" onclick="saveJobProgress('${jid}')">変更を保存</button></div>${messageBlock(j)}</details></article>`;
   }
 
   function editorActionHtml(job,action,evidence){
@@ -273,12 +281,23 @@
     return next||null;
   }
 
-  function editorDraftQuickPanel(job){if(!activeJob(job))return'';return`<div class="quick-draft"><div class="field"><label for="quick-editor-draft-${job.id}">編集者 初稿日</label><input id="quick-editor-draft-${job.id}" type="date" value="${esc(job.editorDraftDate||'')}"></div><button class="btn primary small" type="button" onclick="saveEditorDraftDate('${job.id}')">初稿日を保存</button></div>`}
-  async function saveEditorDraftDate(jid){
-    const job=jobs.find(x=>x.id===jid),value=$(`#quick-editor-draft-${jid}`)?.value||'';if(!job)return;if(!value)return toast('編集者初稿日を入力してください');
-    const schedule={sharedDate:job.sharedDate||'',editorDraftDate:value,clientDraftDate:job.clientDraftDate||'',thumbnailDate:job.thumbnailDate||'',deliveryDate:job.deliveryDate||job.deadline||''},dateError=scheduleError(schedule);if(dateError)return toast(dateError);
-    if(DEMO){job.editorDraftDate=value;render();return toast('編集者初稿日を保存しました')}
-    try{await db.collection('editor_portals').doc(user.uid).collection('editor_jobs').doc(jid).update({editorDraftDate:value,updatedAt:now()});job.editorDraftDate=value;render();toast('編集者初稿日を保存しました')}catch(e){console.warn(e);toast('編集者初稿日を保存できませんでした')}
+  async function saveGroupEditorDraftDate(trigger){
+    if(ADMIN_PREVIEW)return toast('実データ確認モードでは変更できません');
+    const container=trigger?.closest?.('.editor-case-group'),groupKey=container?.dataset?.caseKey||'';
+    if(!groupKey)return toast('親案件を確認できませんでした');
+    if(feature.groupDraftSaving.has(groupKey))return;
+    const input=container.querySelector('.group-editor-draft-input'),button=trigger,value=input?.value||'';
+    if(!value)return toast('編集者初稿日を入力してください');
+    const group=editorGroupJobs(jobs).find(x=>x.key===groupKey),targets=groupDraftEligibleJobs(group);
+    if(!targets.length)return toast('まとめて設定できる未完了のサブ案件はありません');
+    if(targets.length>450)return toast('一度に保存できるサブ案件は450件までです');
+    for(const job of targets){const schedule={sharedDate:job.sharedDate||'',editorDraftDate:value,clientDraftDate:job.clientDraftDate||'',thumbnailDate:job.thumbnailDate||'',deliveryDate:job.deliveryDate||job.deadline||''},dateError=scheduleError(schedule);if(dateError)return toast(`${job.title||'案件'}：${dateError}`)}
+    feature.groupDraftSaving.add(groupKey);if(button)button.disabled=true;
+    try{
+      if(DEMO){targets.forEach(job=>{job.editorDraftDate=value});render();toast(`${targets.length}件の編集者初稿日を保存しました`);return}
+      const batch=db.batch(),updatedAt=now();targets.forEach(job=>batch.update(db.collection('editor_portals').doc(user.uid).collection('editor_jobs').doc(job.id),{editorDraftDate:value,updatedAt}));await batch.commit();targets.forEach(job=>{job.editorDraftDate=value});render();toast(`${targets.length}件の編集者初稿日を保存しました`);
+    }catch(error){console.warn(error);toast('編集者初稿日をまとめて保存できませんでした')}
+    finally{feature.groupDraftSaving.delete(groupKey);if(button?.isConnected)button.disabled=false}
   }
 
   function mountUpdateBanner(){
@@ -298,32 +317,45 @@
 
   function stopFeatures(){
     feature.unsubs.forEach(x=>{try{x()}catch(_){}});feature.unsubs=[];
-    feature.messageUnsubs.forEach(x=>{try{x()}catch(_){}});feature.messageUnsubs.clear();feature.messages.clear();feature.startedFor='';
+    feature.messageUnsubs.forEach(x=>{try{x()}catch(_){}});feature.messageUnsubs.clear();feature.messages.clear();feature.messageLoading.clear();feature.openMessageJobIds.clear();feature.startedFor='';
   }
 
-  function mergeBoard(items){feature.board=uniqById([...feature.board,...items]);render()}
-  function mergeManuals(items){feature.manuals=uniqById([...feature.manuals,...items]);render()}
+  function mergeBoard(items){feature.board=uniqById([...feature.board,...items]);scheduleSnapshotRender()}
+  function mergeManuals(items){feature.manuals=uniqById([...feature.manuals,...items]);scheduleSnapshotRender()}
 
   function startFeatures(){
     if(DEMO||!user||!access?.approved||feature.startedFor===portalUid())return;
     stopFeatures();feature.startedFor=portalUid();
     const root=db.collection('editor_portals').doc(portalUid());
-    feature.unsubs.push(root.collection('client_catalog').onSnapshot(q=>{feature.catalog=q.docs.map(d=>({id:d.id,...d.data()}));render()},()=>toast('クライアント一覧を読み込めません')));
+    feature.unsubs.push(root.collection('client_catalog').onSnapshot(q=>{feature.catalog=q.docs.map(d=>({id:d.id,...d.data()}));scheduleSnapshotRender()},()=>toast('クライアント一覧を読み込めません')));
     const boardQueries=isExternal()&&assignedDirectorUid()
       ?[db.collection('editor_job_board').where('directorUid','==',assignedDirectorUid())]
       :[db.collection('editor_job_board').where('audience','==','direct'),db.collection('editor_job_board').where('eligibleUids','array-contains',portalUid())];
     boardQueries.forEach(q=>feature.unsubs.push(q.onSnapshot(s=>mergeBoard(s.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.status==='open')),e=>console.warn('board',e?.code||e))));
-    feature.unsubs.push(db.collection('editor_schedules').onSnapshot(q=>{feature.schedules=q.docs.map(d=>({id:d.id,...d.data()}));render()},e=>console.warn('schedules',e?.code||e)));
+    feature.unsubs.push(db.collection('editor_schedules').onSnapshot(q=>{feature.schedules=q.docs.map(d=>({id:d.id,...d.data()}));scheduleSnapshotRender()},e=>console.warn('schedules',e?.code||e)));
     feature.unsubs.push(db.collection('editor_manuals').where('audience','==','all').onSnapshot(q=>mergeManuals(q.docs.map(d=>({id:d.id,...d.data()}))),e=>console.warn('manuals',e?.code||e)));
     feature.unsubs.push(db.collection('editor_manuals').where('allowedUids','array-contains',portalUid()).onSnapshot(q=>mergeManuals(q.docs.map(d=>({id:d.id,...d.data()}))),e=>console.warn('manuals assigned',e?.code||e)));
-    feature.unsubs.push(db.collection('system').doc('releases_current').onSnapshot(d=>{feature.release=d.exists?d.data():null;render()},e=>console.warn('release',e?.code||e)));
+    feature.unsubs.push(db.collection('system').doc('releases_current').onSnapshot(d=>{feature.release=d.exists?d.data():null;scheduleSnapshotRender()},e=>console.warn('release',e?.code||e)));
   }
 
   function syncMessageSubscriptions(){
     if(DEMO||!db||!user)return;
     const ids=new Set(jobs.map(x=>x.id));
-    feature.messageUnsubs.forEach((unsub,jid)=>{if(!ids.has(jid)){try{unsub()}catch(_){}feature.messageUnsubs.delete(jid);feature.messages.delete(jid)}});
-    jobs.filter(j=>!j.previewLegacy).forEach(j=>{if(feature.messageUnsubs.has(j.id))return;const u=db.collection('editor_portals').doc(portalUid()).collection('editor_jobs').doc(j.id).collection('messages').orderBy('createdAt','asc').limit(200).onSnapshot(q=>{feature.messages.set(j.id,q.docs.map(d=>({id:d.id,...d.data()})));render()},e=>console.warn('messages',e?.code||e));feature.messageUnsubs.set(j.id,u)});
+    feature.messageUnsubs.forEach((unsub,jid)=>{if(!ids.has(jid)){try{unsub()}catch(_){}feature.messageUnsubs.delete(jid);feature.messages.delete(jid);feature.messageLoading.delete(jid);feature.openMessageJobIds.delete(jid)}});
+  }
+
+  function ensureJobMessages(jid,opened=true){
+    if(!opened){
+      feature.openMessageJobIds.delete(jid);
+      const unsub=feature.messageUnsubs.get(jid);if(unsub){try{unsub()}catch(_){}feature.messageUnsubs.delete(jid)}
+      feature.messages.delete(jid);feature.messageLoading.delete(jid);return;
+    }
+    feature.openMessageJobIds.add(jid);
+    if(DEMO||!db||!user||feature.messageUnsubs.has(jid)||feature.messageLoading.has(jid))return;
+    const job=jobs.find(x=>x.id===jid);if(!job||job.previewLegacy)return;
+    feature.messageLoading.add(jid);scheduleSnapshotRender();
+    const u=db.collection('editor_portals').doc(portalUid()).collection('editor_jobs').doc(jid).collection('messages').orderBy('createdAt','asc').limit(200).onSnapshot(q=>{feature.messages.set(jid,q.docs.map(d=>({id:d.id,...d.data()})));feature.messageLoading.delete(jid);scheduleSnapshotRender()},e=>{feature.messageLoading.delete(jid);console.warn('messages',e?.code||e);scheduleSnapshotRender()});
+    feature.messageUnsubs.set(jid,u);
   }
 
   async function createDispatchJob(){
@@ -432,8 +464,9 @@
   window.reloadPortalUpdate=reloadPortalUpdate;
   window.openEditorNotification=openEditorNotification;
   window.openEditorJob=openEditorJob;
+  window.ensureJobMessages=ensureJobMessages;
   window.markEditorNotificationsRead=markEditorNotificationsRead;
-  window.saveEditorDraftDate=saveEditorDraftDate;
+  window.saveGroupEditorDraftDate=saveGroupEditorDraftDate;
   window.setEditorJobsListMode=setEditorJobsListMode;
   window.setEditorJobsTypeFilter=setEditorJobsTypeFilter;
   window.submitEditorJobAction=submitEditorJobAction;

@@ -36,7 +36,7 @@ test('owner can inspect an editor portal using that member actual portal data', 
   assert.match(editor, /function buildLegacyPreviewJobs\(shared,member\)/);
   assert.match(editor, /collection\('shared'\)\.doc\('mcapp'\)\.onSnapshot/);
   assert.match(editor, /previewLegacy:true/);
-  assert.match(features, /jobs\.filter\(j=>!j\.previewLegacy\)/);
+  assert.match(features, /if\(!job\|\|job\.previewLegacy\)return/);
 });
 
 test('a video director sees every saved child case under a parent assigned to that director', () => {

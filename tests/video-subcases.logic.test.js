@@ -38,7 +38,7 @@ test('portal video cards fall back to linked legacy subcases without mutating da
   assert.equal(result[0].title, '既存サブ案件');
   assert.equal(result[0].assignee, '未割当');
   assert.equal(JSON.stringify({ portal, legacy }), before);
-  assert.match(html, /subtasks:_videoSubtasks\(j,linked\)/);
+  assert.match(html, /subtasks:_videoSubtasks\(j,linked,workerNames\)/);
 });
 
 test('video case cards render subcase name, assignee, deadline, and status', () => {

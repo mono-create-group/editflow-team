@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  const state={editors:[],catalog:new Map(),board:[],manuals:[],schedules:[],suggestions:[],invoices:[],authorizations:[],profiles:[],portalJobsByEditor:new Map(),loaded:{editors:false,portalJobs:new Set()},unsubs:[],nested:[],started:''};
+  const state={editors:[],catalog:new Map(),board:[],manuals:[],schedules:[],suggestions:[],invoices:[],authorizations:[],profiles:[],portalJobsByEditor:new Map(),loaded:{editors:false,portalJobs:new Set()},unsubs:[],nested:[],started:'',portalSignature:null,renderFrame:null,lifecycleTimer:null};
   const originalVideoOperations=rVideoOperations;
   const originalWorkers=rWorkers;
   // index.html の既存クライアント操作を安全に拡張する。案件・履歴はこの処理で触らない。
@@ -59,8 +59,14 @@
   function clientsForEditor(uid){const rows=catalogsFor(uid).map(c=>({...c,catalogId:c.id,id:c.sourceClientId||c.id,accounts:visibleAccounts(c.accounts||[])}));if(_isOwner())legacyClients().forEach(c=>{const found=rows.find(x=>(x.sourceClientId&&x.sourceClientId===c.id)||nameKey(x.name)===nameKey(c.name)),accounts=masterAccounts(c);if(found)found.accounts=accounts;else rows.push({id:c.id,sourceClientId:c.id,name:c.name,accounts})});return rows}
 
   function stopNested(){state.nested.forEach(x=>{try{x()}catch(_){}});state.nested=[];state.catalog.clear();state.invoices=[];state.authorizations=[];state.profiles=[];state.portalJobsByEditor.clear();state.loaded.portalJobs.clear()}
-  function stop(){state.unsubs.forEach(x=>{try{x()}catch(_){}});state.unsubs=[];stopNested();state.loaded.editors=false;state.started=''}
-  function renderSafe(){try{renderSyncSafe()}catch(_){try{render()}catch(__){}}}
+  function cancelManagerRender(){if(state.renderFrame===null)return;if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(state.renderFrame);else clearTimeout(state.renderFrame);state.renderFrame=null}
+  function stop(){state.unsubs.forEach(x=>{try{x()}catch(_){}});state.unsubs=[];stopNested();state.loaded.editors=false;state.started='';state.portalSignature=null;cancelManagerRender()}
+  function renderSafe(){
+    if(state.renderFrame!==null)return;
+    const run=()=>{state.renderFrame=null;try{renderSyncSafe()}catch(_){try{render()}catch(__){}}};
+    state.renderFrame=typeof requestAnimationFrame==='function'?requestAnimationFrame(run):setTimeout(run,0);
+  }
+  function portalSubscriptionSignature(editors){return(editors||[]).map(editor=>`${String(editor?.id||'')}:${editor?.editorKind==='external'?'external':'direct'}:${String(editor?.directorUid||'')}`).sort().join('|')}
   function subscribePortals(){
     stopNested();
     state.editors.forEach(e=>{
@@ -78,7 +84,7 @@
     if(!FB_USER||!ACCESS_RESOLVED||!canManage()||state.started===FB_USER.uid)return;
     stop();state.started=FB_USER.uid;
     const aq=_isOwner()?fbDb.collection('access'):fbDb.collection('access').where('directorUid','==',FB_USER.uid);
-    state.unsubs.push(aq.onSnapshot(q=>{state.editors=q.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.approved===true&&rolesGrantVideoEditor(x.roles||[]));state.loaded.editors=true;subscribePortals();renderSafe()},e=>{state.loaded.editors=false;console.warn('editor relations',e?.code||e);renderSafe()}));
+    state.unsubs.push(aq.onSnapshot(q=>{const nextEditors=q.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.approved===true&&rolesGrantVideoEditor(x.roles||[])),nextSignature=portalSubscriptionSignature(nextEditors);state.editors=nextEditors;state.loaded.editors=true;if(nextSignature!==state.portalSignature){state.portalSignature=nextSignature;subscribePortals()}renderSafe()},e=>{state.loaded.editors=false;console.warn('editor relations',e?.code||e);renderSafe()}));
     const bq=_isOwner()?fbDb.collection('editor_job_board'):fbDb.collection('editor_job_board').where('directorUid','==',FB_USER.uid);
     state.unsubs.push(bq.onSnapshot(q=>{state.board=q.docs.map(d=>({id:d.id,...d.data()}));renderSafe()},e=>console.warn('manager board',e?.code||e)));
     const mq=_isOwner()?fbDb.collection('editor_manuals'):fbDb.collection('editor_manuals').where('directorUid','==',FB_USER.uid);
@@ -375,9 +381,25 @@
     }catch(e){console.warn(e);toast('Chatwork名を保存できませんでした','err');}
   }
 
+  function syncManagerLifecycle(retries=3){
+    state.lifecycleTimer=null;
+    if(!FB_USER){stop();renderSafe();return}
+    if(!ACCESS_RESOLVED){
+      if(retries>0)state.lifecycleTimer=setTimeout(()=>syncManagerLifecycle(retries-1),500);
+      return;
+    }
+    if(canManage())start();else stop();
+    renderSafe();
+  }
+  function scheduleManagerLifecycle(delay=0){
+    if(state.lifecycleTimer!==null)clearTimeout(state.lifecycleTimer);
+    state.lifecycleTimer=setTimeout(()=>syncManagerLifecycle(),delay);
+  }
+
   window.saveClient=saveClientWithCatalog;window.confirmDelClient=confirmDelClientWithCatalog;
   window.managerRelationToggle=relationToggle;window.managerSaveRelation=saveRelation;window.managerSaveMasterAccount=saveMasterAccount;window.managerOpenMasterAccountEdit=openMasterAccountEdit;window.managerSaveMasterAccountEdit=saveMasterAccountEdit;window.managerOpenMasterAccountDelete=openMasterAccountDelete;window.managerConfirmMasterAccountDelete=confirmMasterAccountDelete;window.managerSaveCatalog=saveCatalog;window.managerSyncMasterCatalog=syncMasterCatalog;window.managerHydrateBoardCatalog=hydrateClients;window.managerHydrateBoardAccounts=hydrateAccounts;window.managerAddBoardAccount=addBoardAccount;window.managerRequestModeChanged=requestModeChanged;window.managerBoardAudienceChanged=boardAudienceChanged;window.managerOpenBoardForm=openBoardForm;window.managerPublishBoardJob=publishBoard;window.managerSaveManual=saveManual;window.managerMigrateExternalSettlement=migrateExternalSettlement;window.managerInvoiceAction=invoiceAction;window.managerSendMessage=sendMessage;window.managerReplySuggestion=replySuggestion;window.managerOpenChatworkNameCheck=openChatworkNameCheck;window.managerSaveChatworkNameCheck=saveChatworkNameCheck;window.__managerStatusLogic={normalizeChatworkName,legacyAssignmentCount};window.__managerAccountLogic={mergeAccounts,visibleAccounts,editAccountList,deleteAccountList,addOrReviveAccount,catalogAccountChange,mergeMasterCatalogAccounts,catalogAccountsFromMaster};window.__managerCatalogSyncLogic={catalogDocIdForClient,mergeMasterCatalogAccounts};window.__managerExternalPrivacyLogic={hasExternalSettlement};
-  fbAuth.onAuthStateChanged(()=>setTimeout(()=>{if(canManage())start();else stop();renderSafe()},800));
-  setInterval(()=>{if(FB_USER&&ACCESS_RESOLVED&&canManage())start()},2000);
+  fbAuth.onAuthStateChanged(()=>scheduleManagerLifecycle(800));
+  window.addEventListener('pageshow',()=>scheduleManagerLifecycle());
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)scheduleManagerLifecycle()});
   setTimeout(renderSafe,50);
 })();

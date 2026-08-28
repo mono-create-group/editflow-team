@@ -27,7 +27,7 @@ test('cards show the repeatable editor, director, client, and delivery timeline 
   for (const label of ['編集作業', 'D確認', 'クライアント提出', 'クライアント確認', '納品']) assert.match(features, new RegExp(label));
   assert.match(features, /編集進行の5段階/);
   assert.match(features, /`第\$\{workflow\.round\}回 修正作業`/);
-  assert.match(features, /<details class="job-detail"><summary>案件の詳細・連絡を開く<\/summary>/);
+  assert.match(features, /<details class="job-detail"[^>]*><summary>案件の詳細・連絡を開く<\/summary>/);
   assert.match(features, /\$\{messageBlock\(j\)\}<\/details>/);
   assert.match(features, /saveJobDraft\('\$\{jid\}'\)/);
   assert.match(features, /saveJobProgress\('\$\{jid\}'\)/);
@@ -111,7 +111,7 @@ test('editor cards state the current progress, next step, and deadline in words 
 });
 
 test('editor portal keeps supporting actions folded while preserving accessible 44px controls', () => {
-  assert.match(features, /<details class="job-detail"><summary>案件の詳細・連絡を開く<\/summary>/);
+  assert.match(features, /<details class="job-detail"[^>]*><summary>案件の詳細・連絡を開く<\/summary>/);
   assert.match(features, /<details class="card dispatch-create"><summary>＋ 編集者派遣の案件を追加<\/summary>/);
   assert.match(features, /\.editor-timeline-step\{min-height:44px/);
   assert.match(features, /\.editor-timeline-step b,\.editor-timeline-step span\{display:inline;font-size:14px/);
@@ -125,7 +125,7 @@ test('secondary navigation stays hidden until the Other menu is opened', () => {
 
 test('job cards keep supporting edits behind details and expose one primary action path', () => {
   const html = fs.readFileSync(path.resolve(__dirname, '..', 'editor.html'), 'utf8');
-  assert.match(features, /<details class="job-detail"><summary>案件の詳細・連絡を開く<\/summary>/);
+  assert.match(features, /<details class="job-detail"[^>]*><summary>案件の詳細・連絡を開く<\/summary>/);
   assert.match(features, /<details><summary>日程・案件内容を確認する<\/summary>/);
   assert.match(features, /class="btn primary claim-button"/);
   assert.match(features, /editor-primary-action/);

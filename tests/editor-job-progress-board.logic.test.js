@@ -29,7 +29,8 @@ test('management progress board tracks initial, revision, director check, and de
     assert.match(index, new RegExp(marker));
   }
   assert.match(index, /\['progress','編集進行ボード'\]/);
-  assert.match(index, /VIDEO_TAB==='progress'\?_videoProgressBoard\(_videoSortJobs\(all\)\)/);
+  assert.match(index, /if\(VIDEO_TAB==='progress'\)/);
+  assert.match(index, /workspaceBody=_videoProgressBoard\(visible\)/);
   assert.match(index, /video-progress-row/);
   assert.match(index, /progressMilestones:Array\.isArray\(j\.progressMilestones\)/);
   assert.match(index, /const VIDEO_STATUS_LABELS=\{'FB待ち':'mono\.create FB中','確認待ち':'先方確認中'\}/);

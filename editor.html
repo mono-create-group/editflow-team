@@ -25,9 +25,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" onerror="portalSdkLoadFailed()"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js" onerror="portalSdkLoadFailed()"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js" onerror="portalSdkLoadFailed()"></script>
-  <!-- Fixed versions: the PDF is made from the browser-rendered Japanese invoice, then saved as a PDF. -->
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
+  <!-- PDF libraries are loaded only when an editor creates a PDF. -->
   <script>
   const PAGE_PARAMS=new URLSearchParams(location.search);
   const DEMO=PAGE_PARAMS.get('demo')==='editor';
@@ -53,7 +51,7 @@
   const now=()=>Date.now();
   const localDate=()=>{const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
   const safeUrl=v=>{try{const u=new URL(v);return['https:','http:'].includes(u.protocol)?u.href:''}catch(_){return''}};
-  let auth=null,db=null,user=null,access=null,accessRequest=null,profile={},jobs=[],portalJobsSource=[],previewLegacyJobs=[],invoices=[],authorizations=[],view='dashboard',unsubs=[],portalUnsubs=[],driveToken=null,driveClient=null,driveContinuation=null,invoiceMonth=new Date().toISOString().slice(0,7),invoiceDue='',pdfBuilding=false,ADMIN_PREVIEW=false,PORTAL_UID='';
+  let auth=null,db=null,user=null,access=null,accessRequest=null,profile={},jobs=[],portalJobsSource=[],previewLegacyJobs=[],invoices=[],authorizations=[],view='dashboard',unsubs=[],portalUnsubs=[],driveToken=null,driveClient=null,driveContinuation=null,invoiceMonth=new Date().toISOString().slice(0,7),invoiceDue='',pdfBuilding=false,ADMIN_PREVIEW=false,PORTAL_UID='',snapshotRenderFrame=null,pdfLibrariesPromise=null;
   const AUTH_POPUP_TIMEOUT_MS=45000;
   let authInFlight=false,authAttempt=0,authStateSettled=false,authStateWatchdog=null;
   let authUiState={busy:false,message:'',kind:'',browserHelp:false,startupError:false};
@@ -63,6 +61,9 @@
   const draftKey=()=>`mc_editor_case_draft_${portalUid()||'anon'}`;
 
   function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),3200)}
+  function scheduleSnapshotRender(){if(snapshotRenderFrame!==null)return;const enqueue=window.requestAnimationFrame||((fn)=>setTimeout(fn,16));snapshotRenderFrame=enqueue(()=>{snapshotRenderFrame=null;render()})}
+  function loadPdfScript(src,integrity){return new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=src;script.async=true;script.crossOrigin='anonymous';script.integrity=integrity;script.onload=resolve;script.onerror=()=>reject(new Error('PDF library unavailable'));document.head.appendChild(script)})}
+  function ensurePdfLibraries(){if(typeof window.html2canvas==='function'&&window.jspdf?.jsPDF)return Promise.resolve();if(pdfLibrariesPromise)return pdfLibrariesPromise;pdfLibrariesPromise=Promise.all([loadPdfScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js','sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H'),loadPdfScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js','sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk')]).catch(error=>{pdfLibrariesPromise=null;throw error});return pdfLibrariesPromise}
   function accountHtml(){const el=$('#account');if(!el)return;el.innerHTML=user?`<b>${esc(access?.name||user.displayName||'編集者')}</b><span>${esc(portalEmail())}</span>`:'';$('#logout-btn').hidden=!user||ADMIN_PREVIEW}
   function navHtml(){return`<nav class="nav" aria-label="編集者メニュー">${[['guide','使い方ガイド'],['dashboard','概要'],['jobs','担当案件'],['invoices','請求書'],['settings','登録情報']].map(([k,l])=>`<button type="button" class="btn ${view===k?'active':''}" onclick="setView('${k}')">${l}</button>`).join('')}</nav>`}
   function setView(v){view=v;render()}
@@ -234,12 +235,12 @@
   function startPortal(){
     portalUnsubs.forEach(u=>{try{u()}catch(_){}});portalUnsubs=[];portalJobsSource=[];previewLegacyJobs=[];combinePortalJobs();
     const root=db.collection('editor_portals').doc(portalUid()),next=[];
-    if(directBillingEnabled())next.push(root.collection('editor_profile').doc('self').onSnapshot(s=>{profile=s.exists?s.data():{};render()},e=>toast('請求者設定を読み込めません')));else{profile={};invoices=[];authorizations=[];}
-    next.push(root.collection('editor_jobs').onSnapshot(q=>{portalJobsSource=q.docs.map(d=>({id:d.id,...d.data()}));combinePortalJobs();render()},e=>toast('案件を読み込めません')));
-    if(ADMIN_PREVIEW||(Array.isArray(access?.roles)&&access.roles.includes('動画編集ディレクター')))next.push(db.collection('shared').doc('mcapp').onSnapshot(s=>{previewLegacyJobs=s.exists?buildLegacyPreviewJobs(s.data()||{},access):[];combinePortalJobs();render()},e=>console.warn('legacy director jobs',e?.code||e)));
+    if(directBillingEnabled())next.push(root.collection('editor_profile').doc('self').onSnapshot(s=>{profile=s.exists?s.data():{};scheduleSnapshotRender()},e=>toast('請求者設定を読み込めません')));else{profile={};invoices=[];authorizations=[];}
+    next.push(root.collection('editor_jobs').onSnapshot(q=>{portalJobsSource=q.docs.map(d=>({id:d.id,...d.data()}));combinePortalJobs();scheduleSnapshotRender()},e=>toast('案件を読み込めません')));
+    if(ADMIN_PREVIEW||(Array.isArray(access?.roles)&&access.roles.includes('動画編集ディレクター')))next.push(db.collection('shared').doc('mcapp').onSnapshot(s=>{previewLegacyJobs=s.exists?buildLegacyPreviewJobs(s.data()||{},access):[];combinePortalJobs();scheduleSnapshotRender()},e=>console.warn('legacy director jobs',e?.code||e)));
     if(directBillingEnabled()){
-      next.push(root.collection('editor_invoices').onSnapshot(q=>{invoices=q.docs.map(d=>({id:d.id,...d.data()}));render()},e=>toast('請求書を読み込めません')));
-      next.push(root.collection('invoice_authorizations').onSnapshot(q=>{authorizations=q.docs.map(d=>({id:d.id,...d.data()}));render()},e=>toast('確定報酬を読み込めません')));
+      next.push(root.collection('editor_invoices').onSnapshot(q=>{invoices=q.docs.map(d=>({id:d.id,...d.data()}));scheduleSnapshotRender()},e=>toast('請求書を読み込めません')));
+      next.push(root.collection('invoice_authorizations').onSnapshot(q=>{authorizations=q.docs.map(d=>({id:d.id,...d.data()}));scheduleSnapshotRender()},e=>toast('確定報酬を読み込めません')));
     }
     portalUnsubs=next;unsubs.push(...next);
   }
@@ -288,6 +289,7 @@
   function previewInvoice(iid){const x=invoices.find(v=>v.id===iid);if(!x)return;const url=URL.createObjectURL(new Blob([invoiceDocument(x)],{type:'text/html;charset=utf-8'}));window.open(url,'_blank','noopener');setTimeout(()=>URL.revokeObjectURL(url),60000)}
   const waitForFrame=frame=>new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('invoice render timeout')),15000);frame.onload=()=>{clearTimeout(timer);resolve()};frame.onerror=()=>{clearTimeout(timer);reject(new Error('invoice render failed'))}});
   async function generateInvoicePdf(x){
+    await ensurePdfLibraries();
     if(typeof window.html2canvas!=='function'||!window.jspdf?.jsPDF)throw new Error('PDF library unavailable');
     const frame=document.createElement('iframe');
     frame.setAttribute('aria-hidden','true');
@@ -355,6 +357,6 @@
   }
   if(DEMO)initDemo();else initializePortalFirebase();
   </script>
-  <script src="./editor-features.js?v=20260828-17"></script>
+  <script src="./editor-features.js?v=20260828-18"></script>
 </body>
 </html>
