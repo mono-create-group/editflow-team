@@ -1,0 +1,255 @@
+/* mono.create owner workspace — yellow business skin
+   Loaded after app-ui.css. Presentation only: data, actions and DOM stay untouched. */
+:root{
+  --owner-yellow:#ffc800;
+  --owner-yellow-strong:#d99b00;
+  --owner-yellow-soft:#fff5c7;
+  --owner-yellow-pale:#fffdf4;
+  --owner-ink:#1d1d1f;
+  --owner-ink-soft:#60646c;
+  --owner-line:#e2e4e8;
+  --owner-canvas:#f7f7f5;
+  --app-primary:var(--owner-yellow-strong);
+  --app-primary-strong:#a66f00;
+  --app-primary-soft:var(--owner-yellow-soft);
+  --app-bg:var(--owner-canvas);
+  --app-surface:#fff;
+  --app-surface-subtle:#f8f9fa;
+  --app-border:var(--owner-line);
+  --app-text:var(--owner-ink);
+  --app-muted:var(--owner-ink-soft);
+  --app-faint:#77869a;
+  --app-radius-sm:6px;
+  --app-radius:8px;
+  --app-radius-lg:10px;
+  --app-shadow:0 1px 2px rgba(20,20,20,.04),0 3px 12px rgba(20,20,20,.035);
+  --app-focus:0 0 0 3px rgba(246,201,14,.42);
+  --bg:var(--owner-canvas);
+  --surface:#fff;
+  --card:#fff;
+  --card2:#f7f8fa;
+  --border:var(--owner-line);
+  --text:var(--owner-ink);
+  --t2:var(--owner-ink-soft);
+  --t3:#8290a4;
+  --purple:var(--owner-yellow-strong);
+  --pl:var(--owner-yellow-strong);
+  --pdim:rgba(246,201,14,.17);
+  --r:8px;
+  --rs:6px;
+  --shadow:var(--app-shadow);
+  --shadow-sm:0 1px 2px rgba(21,35,59,.08);
+  --shadow-lg:0 18px 48px rgba(21,35,59,.20);
+}
+
+html{background:var(--owner-canvas)}
+body{background:var(--owner-canvas);color:var(--owner-ink);letter-spacing:.005em}
+/* Accent belongs to the selected item and call-to-action, not to a decorative
+   stripe across every screen. */
+body::before{display:none}
+button,input,textarea,select{border-radius:6px!important}
+input,textarea,select{border-color:var(--owner-line);background:#fff;box-shadow:none!important}
+input:focus,textarea:focus,select:focus{border-color:var(--owner-yellow-strong)!important;box-shadow:var(--app-focus)!important}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline-color:var(--owner-yellow-strong)!important;box-shadow:var(--app-focus)!important}
+
+/* Persistent owner navigation: compact, dark ink rail with a clear yellow current location. */
+#sidebar{width:248px;padding:18px 0;background:#fff;border-right:1px solid var(--owner-line);box-shadow:none}
+.logo{padding:3px 20px 22px;background:none!important;color:var(--owner-ink)!important;-webkit-text-fill-color:var(--owner-ink)!important;font-size:20px;letter-spacing:-.055em}
+.logo::before{content:"OWNER WORKSPACE";display:block;margin-bottom:5px;color:#a16c00;font-size:9px;font-weight:900;letter-spacing:.14em;-webkit-text-fill-color:#a16c00}
+.logo small{color:var(--owner-ink-soft)!important;-webkit-text-fill-color:var(--owner-ink-soft)!important;font-size:10px}
+/* The real logo asset stays horizontal and never inherits the old text-gradient. */
+.logo:has(.app-brand-logo){display:flex;align-items:center;min-height:42px;padding:0 18px 18px!important;color:var(--owner-ink)!important;-webkit-text-fill-color:var(--owner-ink)!important}
+.logo:has(.app-brand-logo)::before{display:none}
+.app-brand-logo{display:block;width:min(148px,100%);height:auto;max-height:38px;object-fit:contain;object-position:left center}
+.nav-cat-hd{padding:13px 18px 5px;color:#77869a;font-size:10px;letter-spacing:.1em}
+.nav-item{position:relative;min-height:40px;margin:1px 10px;padding:8px 10px;border-radius:6px;color:var(--owner-ink-soft);font-weight:700}
+.nav-item:hover{background:#f4f6f8;color:var(--owner-ink)}
+.nav-item.active{background:var(--owner-yellow-soft);color:var(--owner-ink)}
+.nav-item.active::before{content:"";position:absolute;left:-10px;top:8px;bottom:8px;width:4px;background:var(--owner-yellow-strong)}
+.nav-item.active .nav-icon{color:var(--owner-yellow-strong)}
+.nav-sep{margin:10px 18px;background:var(--owner-line)}
+#pomo-mini{margin:24px 12px 0;border:1px solid #ecd47c;border-radius:6px;background:var(--owner-yellow-pale);box-shadow:none}
+#pomo-display{color:var(--owner-ink)}
+.pbtn.go{background:var(--owner-ink);box-shadow:none}.pbtn.go:hover{background:#263955;box-shadow:none;transform:none}
+
+/* Page hierarchy and shared controls. */
+#main{max-width:1440px;padding:30px 38px 42px}
+.ph,.app-header{margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--owner-line)}
+.ph-title,.app-header h1{color:var(--owner-ink);font-weight:850;letter-spacing:-.045em}
+.app-header h1{font-size:clamp(24px,2.4vw,34px)}
+.app-breadcrumb{color:var(--owner-ink-soft);font-weight:800}.app-breadcrumb span+span::before{color:var(--owner-yellow-strong)}
+.btn{border-radius:6px!important;font-weight:800;box-shadow:none!important}
+.btn-p,.btn.primary{background:var(--owner-yellow)!important;border:1px solid var(--owner-yellow)!important;color:var(--owner-ink)!important}
+.btn-p:hover,.btn.primary:hover{background:#ffd84b!important;border-color:#ffd84b!important;color:var(--owner-ink)!important}
+.btn-g{border:1px solid var(--owner-line)!important;background:#fff!important;color:var(--owner-ink)!important}
+.btn-g:hover{border-color:var(--owner-ink)!important;background:#f7f8f9!important}
+.card,.stat-card{border:1px solid var(--owner-line);border-radius:8px;box-shadow:var(--app-shadow)}
+.card:hover,.stat-card:hover{border-color:#bac4d1}
+
+/* Business dashboard, status panels, toolbar and Kanban. */
+.app-context-switch,.app-view-tabs,.editor-primary-nav{gap:0;padding:0;border:1px solid var(--owner-line);border-radius:8px;background:#fff;box-shadow:none}
+.app-context-switch .btn,.app-view-tabs .btn,.editor-primary-nav>.btn,.editor-primary-nav>details>summary{min-height:42px;border-radius:0!important;border-right:1px solid var(--owner-line)!important;color:var(--owner-ink-soft)!important;font-weight:800}
+.app-context-switch .btn:last-child,.app-view-tabs .btn:last-child,.editor-primary-nav>.btn:last-child{border-right:0!important}
+.app-context-switch .btn[aria-selected="true"],.app-view-tabs .btn[aria-selected="true"],.app-view-tabs .btn.active,.editor-primary-nav>.btn.active,.editor-primary-nav>details[data-active="true"]>summary{position:relative;background:var(--owner-yellow-soft)!important;color:var(--owner-ink)!important;box-shadow:none!important}
+.app-context-switch .btn[aria-selected="true"]::after,.app-view-tabs .btn[aria-selected="true"]::after,.app-view-tabs .btn.active::after{content:"";position:absolute;right:0;bottom:-1px;left:0;height:3px;background:var(--owner-yellow-strong)}
+.app-attention-grid{gap:8px}.app-attention-card{min-height:82px;border-radius:8px;box-shadow:none}.app-attention-card strong{color:var(--owner-ink);font-size:28px}.app-attention-card span{color:var(--owner-ink-soft)}
+.app-attention-card.danger{border-color:#f0b7b1;background:#fff8f7}.app-attention-card.danger strong{color:#ba271a}
+.app-attention-card.warning{border-color:#ecd47c;background:var(--owner-yellow-pale)}.app-attention-card.warning strong{color:#8d6200}
+.app-attention-card.info{border-color:#b7d4ec;background:#f5faff}.app-attention-card.info strong{color:#176996}
+.app-metric-row{gap:8px}.app-metric{border-radius:6px;border-top:3px solid var(--owner-yellow);box-shadow:none}.app-metric strong{color:var(--owner-ink);font-size:26px}
+.app-searchbar{padding:8px;border-radius:8px;background:#fff;box-shadow:var(--app-shadow)}
+.app-scroll-hint{padding:5px 0;color:var(--owner-ink-soft);font-size:12px}
+.app-kanban{gap:12px;padding:2px 2px 16px}.app-kanban-column{padding:0;min-width:244px}.app-kanban-column>summary{padding:10px 0;color:var(--owner-ink);border-bottom:3px solid var(--owner-yellow);font-size:14px}.app-kanban-list{gap:8px;margin-top:10px}
+.app-kanban .video-job-card,.app-kanban .card{border-radius:8px;box-shadow:0 1px 3px rgba(20,20,20,.06)}
+.app-kanban .video-job-card:hover{border-color:var(--owner-yellow-strong);transform:none}
+.app-queue-card{border-left-color:var(--owner-yellow-strong)}
+
+/* Existing legacy screens: tasks, jobs, money, calendar and forms. */
+.stat-card{border-top:3px solid var(--owner-yellow)}.stat-card.cp{border-color:#ecd47c;background:var(--owner-yellow-pale)}
+.task-item{border-radius:8px;box-shadow:none}.task-item:hover{border-color:var(--owner-yellow-strong);box-shadow:0 2px 6px rgba(20,20,20,.06);transform:none}
+.task-item.frog{border-left-color:var(--owner-yellow-strong);background:linear-gradient(90deg,var(--owner-yellow-pale),#fff 35%)}
+.task-item.drag-over{border-color:var(--owner-yellow-strong);background:var(--owner-yellow-soft)}
+.job-item{border-radius:4px;background:#f7f8fa}.job-item:hover{border-color:var(--owner-yellow-strong);background:var(--owner-yellow-pale)}
+.profit-group-card{border-radius:6px;border-color:var(--owner-line);box-shadow:none}.profit-group-head{background:var(--owner-yellow-pale);border-bottom:1px solid #efd985}.profit-group-item:hover{background:#fafbfc}
+.profit-total,.proj-profit{color:#08764c}.payment-row:hover,.profit-row:hover{background:var(--owner-yellow-pale)}
+.month-grid{gap:5px}.month-grid>*,.manager-week-day{border-radius:4px!important}.manager-week-day{border:1px solid var(--owner-line);background:#fff}.manager-week-entry{border-radius:3px;border-left:3px solid var(--owner-yellow-strong);box-shadow:none}
+.week-nav button,.month-nav button,.fs-tl-daynav-btn{border-radius:4px!important}.fs-tl-daynav-today{border-radius:4px;color:var(--owner-ink);background:var(--owner-yellow-soft);border-color:#e7c34d}
+.badge{border-radius:3px;font-weight:850}.bk{background:#edf0f3;color:var(--owner-ink-soft)}
+
+/* Forms, modals, invoices and financial work all share the same paper-like surface. */
+.fg>.fl,.fl{color:var(--owner-ink-soft);font-weight:800}
+.modal,.modal-overlay .modal{border-radius:10px!important;border:1px solid var(--owner-line);box-shadow:0 18px 52px rgba(20,20,20,.18)}
+.modal-hdr,.mhdr{background:#fff;color:var(--owner-ink);border-bottom:3px solid var(--owner-yellow)}
+.modal-close,.mclose{color:var(--owner-ink)}.modal-close:hover,.mclose:hover{background:#f3f4f6;color:var(--owner-ink)}
+.invoice-preview,.invoice-paper,.gdoc-page{border-color:var(--owner-line)!important;box-shadow:0 2px 10px rgba(21,35,59,.07)}
+.payment-row,.profit-row{border-color:var(--owner-line)}
+.video-subcase-list{background:#f8f9fa}.video-subcase-row{border-radius:4px;border-left-color:var(--owner-yellow-strong)}
+.video-job-main:hover,.video-job-main:focus-visible,button.video-subcase-row:hover,button.video-subcase-row:focus-visible{background:var(--owner-yellow-pale);outline-color:var(--owner-yellow-strong)}
+.video-material-count{border-radius:3px;border-color:#ecd47c;background:var(--owner-yellow-soft);color:#765000}
+.video-material-link{border-radius:4px}.video-material-link:hover,.video-material-link:focus-visible{border-color:var(--owner-yellow-strong);background:var(--owner-yellow-pale);outline-color:var(--owner-yellow-strong)}
+
+/* Mobile keeps the yellow information hierarchy without a viewport-width overflow. */
+@media(max-width:760px){
+  body::before{height:3px}
+  #main{padding:calc(env(safe-area-inset-top) + 58px) 14px calc(env(safe-area-inset-bottom) + 84px);max-width:100%;overflow-x:hidden}
+  #mob-hamburger{border-radius:4px;border-color:var(--owner-line);box-shadow:0 3px 12px rgba(21,35,59,.12)}
+  #mob-hamburger span{background:var(--owner-ink)}
+  #mob-drawer{width:min(292px,84vw);background:#fff;border-color:var(--owner-line)}
+  #mob-drawer .logo{padding-left:18px}
+  #mob-nav{gap:0;border-top:3px solid var(--owner-yellow);background:#fff;box-shadow:0 -6px 20px rgba(21,35,59,.08)}
+  .mnav-item{min-width:0;color:var(--owner-ink-soft);font-weight:750}.mnav-item.active{color:var(--owner-ink);background:var(--owner-yellow-soft)}
+  .app-header{gap:12px}.app-header-actions,.app-header-actions>.btn{width:100%}
+  .app-context-switch,.app-view-tabs{max-width:100%;overflow-x:auto}.app-context-switch .btn,.app-view-tabs .btn{flex:0 0 auto}
+  .app-attention-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.app-attention-card{min-width:0;padding:11px;gap:8px}.app-attention-card strong{font-size:23px}.app-attention-card span{font-size:12px;overflow-wrap:anywhere}
+  .app-kanban{display:grid;grid-template-columns:1fr;overflow:visible;padding:0}.app-kanban-column{min-width:0;padding:10px;border:1px solid var(--owner-line);border-radius:6px;background:#fff}.app-kanban-column>summary{padding-top:0}
+  .app-searchbar{min-width:0}.app-searchbar>*{min-width:0}
+  .profit-group-head,.profit-group-item,.payment-row,.profit-row{min-width:0}
+  .modal-overlay{padding:8px}.modal-overlay .modal{border-radius:7px!important}
+}
+
+@media(max-width:420px){
+  .app-view-tabs .btn{padding-inline:11px;font-size:12px}
+  .app-metric{padding:11px}.app-metric strong{font-size:22px}
+  .video-deadline-alert{max-width:100%;min-width:0;white-space:normal;overflow-wrap:anywhere}
+}
+
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+
+/* Runtime manager module is inserted after this stylesheet.  These deliberate
+   important overrides keep its late, legacy lavender rules inside the owner system. */
+.manager-state-guidance{
+  border-left:3px solid var(--owner-yellow-strong)!important;
+  border-radius:8px!important;
+  background:var(--owner-yellow-pale)!important;
+  color:var(--owner-ink-soft)!important;
+}
+.manager-state-guidance b{color:var(--owner-ink)!important}
+.manager-relation-row{
+  min-width:0!important;
+  border-color:var(--owner-line)!important;
+  border-radius:4px!important;
+  background:#fff!important;
+  box-shadow:0 1px 2px rgba(21,35,59,.05)!important;
+}
+.manager-relation-field{min-width:0!important;color:var(--owner-ink-soft)!important}
+.manager-relation-field select,.manager-relation-save{min-width:0!important;border-radius:6px!important}
+.manager-operation-disclosure{min-width:0;border:1px solid var(--owner-line);border-radius:8px;background:#fff;overflow:hidden}
+.manager-operation-disclosure+.manager-operation-disclosure{margin-top:8px}
+.manager-operation-disclosure>summary{width:100%;border:0!important;border-left:4px solid var(--owner-yellow)!important;border-radius:0!important;background:#fff!important;color:var(--owner-ink)!important}
+.manager-operation-disclosure[open]>summary{background:var(--owner-yellow-pale)!important;border-bottom:1px solid #ead376!important}
+.manager-operation-body{min-width:0;padding:14px;background:#fafbfc;border-top:1px solid var(--owner-line)}
+.manager-operation-body>*,#manager-board-publish form,#manager-board-publish [style*="display:grid"]{min-width:0;max-width:100%}
+#manager-board-publish input,#manager-board-publish select,#manager-board-publish textarea,#manager-board-publish button{min-width:0;max-width:100%}
+#mb-client-pricing-status{border-color:#ead376!important;border-radius:6px!important;background:var(--owner-yellow-pale)!important;color:var(--owner-ink-soft)!important}
+.manager-board-subcase-scroll{min-width:0!important;border-color:var(--owner-line)!important;border-radius:8px!important;background:#fff!important}
+.manager-board-subcase-list{min-width:0!important}
+.manager-board-subcase{min-width:0!important;border-color:var(--owner-line)!important;border-radius:8px!important;background:#f8f9fa!important}
+.manager-board-subcase [style*="grid-template-columns"]{min-width:0;max-width:100%}
+.manager-board-subcase-add{border-color:var(--owner-line)!important;background:#fff!important;box-shadow:0 -6px 14px rgba(21,35,59,.07)!important}
+.manager-account-row{border-radius:8px!important;background:#fff!important}.manager-account-row:hover{border-color:var(--owner-yellow-strong)!important}
+.manager-account-add,.manager-account-actions{min-width:0}
+
+/* Project board, clients and financial pages use their real production DOM. */
+.board-wrap{gap:10px;max-width:100%;padding:2px 2px 14px;scrollbar-gutter:stable}
+.board-col{min-width:236px;max-width:260px}
+.board-col-hdr{min-height:42px;margin-bottom:8px;border:1px solid #ead376;border-bottom:3px solid var(--owner-yellow-strong);border-radius:8px!important;background:var(--owner-yellow-pale)!important;color:var(--owner-ink)!important}
+.proj-card{border-radius:8px!important;border-color:var(--owner-line);box-shadow:0 1px 3px rgba(21,35,59,.07)}
+.proj-card:hover{border-color:var(--owner-yellow-strong);background:var(--owner-yellow-pale);transform:none}
+.client-card{min-width:0;border-radius:8px!important;border-top:3px solid var(--owner-yellow);box-shadow:0 1px 3px rgba(21,35,59,.06)}
+.client-hdr{min-width:0;gap:10px;padding-bottom:9px;border-bottom:1px solid var(--owner-line)}
+.client-hdr>*{min-width:0}.client-name{overflow-wrap:anywhere;color:var(--owner-ink)}
+.rev-card{border-radius:8px!important;border-top:3px solid var(--owner-yellow)}
+.rev-tabs{gap:0;width:max-content;max-width:100%;border:1px solid var(--owner-line);border-radius:8px;overflow-x:auto}
+.rev-tab{position:relative;min-height:40px;margin:0;border:0;border-right:1px solid var(--owner-line);border-radius:0!important;background:#fff;color:var(--owner-ink-soft);white-space:nowrap}
+.rev-tab:last-child{border-right:0}.rev-tab.act{background:var(--owner-yellow-soft)!important;color:var(--owner-ink)!important;border-color:var(--owner-line)!important}
+.rev-tab.act::after{content:"";position:absolute;right:0;bottom:0;left:0;height:3px;background:var(--owner-yellow-strong)}
+.profit-group-list,.profit-group-card,.profit-group-head,.profit-group-item,.profit-row,.payment-row{min-width:0;max-width:100%}
+.profit-group-card{border-radius:8px!important}.profit-group-head{background:var(--owner-yellow-pale)!important}
+.profit-group-item-title,.profit-group-item-money,.profit-group-metric,.profit-row>*,.payment-row>*{min-width:0;overflow-wrap:anywhere}
+.profit-row,.payment-row{background:#fff}.profit-row:nth-child(odd),.payment-row:nth-child(odd){background:#fafbfc}
+.video-progress-info,.video-progress-stage{border-radius:4px!important}
+.video-progress-info .video-progress-current{border-color:var(--owner-yellow-strong)!important;border-radius:3px!important;background:var(--owner-yellow-soft)!important;color:var(--owner-ink)!important}
+.video-progress-parent-state{color:var(--owner-ink)!important}
+.video-progress-stage.active{border-color:var(--owner-yellow-strong)!important;background:var(--owner-yellow-soft)!important;color:var(--owner-ink)!important;box-shadow:inset 4px 0 0 var(--owner-yellow)!important}
+.video-progress-stage.done{box-shadow:inset 4px 0 0 #20a36a}
+
+/* Inline legacy colour declarations cannot inherit variables.  Attribute
+   selectors neutralise only elements carrying one of the retired purple literals. */
+body [style*="#7c3aed"],body [style*="#6d28d9"],body [style*="#5b21b6"],body [style*="#faf5ff"],body [style*="#ede9fe"],
+body [style*="rgba(109,40,217"],body [style*="rgba(124,58,237"]{
+  border-color:var(--owner-yellow-strong)!important;
+  background:var(--owner-yellow-soft)!important;
+  color:var(--owner-ink)!important;
+  box-shadow:none!important;
+}
+.role-preview-banner{border-color:var(--owner-yellow-strong)!important;border-radius:4px!important;background:var(--owner-yellow-soft)!important;box-shadow:none!important}
+.role-preview-banner b,.role-preview-banner span{color:var(--owner-ink)!important}.role-preview-card{border-left-color:var(--owner-yellow-strong)!important;border-radius:4px!important}
+.video-material-link span:first-child{border-radius:3px!important;background:var(--owner-yellow-soft)!important;color:var(--owner-ink)!important}
+.sub-blk{border-left-color:var(--owner-yellow-strong)!important;background:var(--owner-yellow-strong)!important;color:var(--owner-ink)!important}
+.guide-hero{border-radius:6px!important;background:var(--owner-ink)!important;box-shadow:var(--app-shadow)!important}
+.ai-model-tab.active,.ai-msg-user .ai-msg-body{background:var(--owner-yellow)!important;color:var(--owner-ink)!important;box-shadow:none!important}
+.gdoc-page ul.gdoc-check li.done::before{border-color:var(--owner-yellow-strong)!important;background:var(--owner-yellow)!important}
+
+/* Keep late inline radii quiet on the owner management surfaces. */
+#video-workspace [style*="border-radius"],.modal [style*="border-radius"],.client-card [style*="border-radius"],.profit-group-card [style*="border-radius"],.manager-operation-body [style*="border-radius"]{border-radius:4px!important}
+
+@media(max-width:700px){
+  .manager-relation-row{grid-template-columns:minmax(0,1fr)!important;width:100%!important;padding:10px!important}
+  .manager-operation-body{padding:10px}
+  #manager-board-publish [style*="grid-template-columns:repeat(2"]{grid-template-columns:minmax(0,1fr)!important}
+  #manager-board-publish [style*="min-width:220px"]{width:100%!important;min-width:0!important}
+  .manager-board-subcase [style*="grid-template-columns:repeat(2"]{grid-template-columns:minmax(0,1fr)!important}
+  .board-wrap{display:grid;grid-template-columns:minmax(0,1fr);width:100%;min-width:0;max-width:100%;overflow-x:hidden;padding-inline:0}
+  .board-col{width:100%;min-width:0;max-width:none}
+  .client-card{width:100%;max-width:100%;padding:12px}.client-hdr{align-items:flex-start;flex-wrap:wrap}
+  .rev-tabs{width:100%}.rev-tab{flex:1;min-width:0;padding-inline:8px}
+  .profit-group-head,.profit-group-item{width:100%;max-width:100%}
+  .profit-row,.payment-row{width:100%;max-width:100%;flex-wrap:wrap;align-items:flex-start;gap:7px}
+  .profit-row>*,.payment-row>*{max-width:100%}
+}
+
+@media(max-width:390px){
+  #main,#video-workspace,.board-wrap,.board-col,.client-card,.profit-group-list,.profit-group-card,.manager-operation-body,.manager-board-subcase-scroll{width:100%;min-width:0;max-width:100%;overflow-x:hidden}
+  .manager-account-actions{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .manager-account-actions .btn{width:100%;min-width:0}
+}

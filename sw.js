@@ -1,6 +1,6 @@
 // mono.create 社内連絡アプリ SW
-const CACHE='mcshanai-20260828-30';
-const URLS=['./','./index.html','./editor.html','./billing-terms.js','./editor-features.js','./editor-push.js','./direct-messages.js','./manager-features.js','./app-ui.css','./manifest.json','./editor-manifest.json','./icon-192.png','./icon-512.png','./icon-512-maskable.png','./apple-touch-icon.png','./ai-bridge-client.js'];
+const CACHE='mcshanai-20260829-01';
+const URLS=['./','./index.html','./editor.html','./billing-terms.js','./editor-features.js','./editor-push.js','./direct-messages.js','./manager-features.js','./app-ui.css','./owner-yellow-ui.css','./editor-yellow-ui.css','./editflow-logo.svg','./manifest.json','./editor-manifest.json','./icon-192.png','./icon-512.png','./icon-512-maskable.png','./apple-touch-icon.png','./ai-bridge-client.js'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(URLS)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('mcshanai-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',e=>{

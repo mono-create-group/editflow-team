@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="188" height="48" viewBox="0 0 188 48" role="img" aria-labelledby="title desc">
+  <title id="title">EditFlow</title>
+  <desc id="desc">黄色のフローマークとEditFlowのロゴ</desc>
+  <path d="M8 7.5 35.5 24 8 40.5Z" fill="none" stroke="#f6c900" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M13 14.7 27.7 24 13 33.3" fill="none" stroke="#f6c900" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity=".72"/>
+  <text x="46" y="32.5" fill="#17191d" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Yu Gothic UI',sans-serif" font-size="27" font-weight="780" letter-spacing="-1.1">EditFlow</text>
+</svg>

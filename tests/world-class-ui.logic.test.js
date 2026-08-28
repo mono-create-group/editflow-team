@@ -19,7 +19,8 @@ test('each editorial journey leads with one visually distinct primary action', (
   assert.match(features, /editor-primary-action\{border:2px solid/);
   assert.match(editor, /class="btn primary job-primary"/);
   assert.match(features, /claim-button\{width:100%;min-height:52px/);
-  assert.match(features, /最後の紫ボタンで受けてください/);
+  assert.match(features, /黄色の「この案件を受ける」を押してください/);
+  assert.doesNotMatch(features, /最後の紫ボタン/);
   assert.match(index, /const headerPrimary=managementKey\?managementActions:\(VIDEO_TAB==='overview'&&attentionTotal/);
   assert.match(index, /<span>未割当<\/span>/);
   assert.match(index, /const utilityActions=`\$\{VIDEO_TAB==='overview'&&attentionTotal\?addJobAction:''\}/);

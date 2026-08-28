@@ -9,10 +9,10 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="社内連絡">
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260828-30"></script>
+<script src="./billing-terms.js?v=20260829-01"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -986,13 +986,14 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260829-01">
 </head>
-<body>
+<body class="owner-yellow-ui">
 
 <a class="app-skip-link" href="#main">メイン画面へ移動</a>
 
 <nav id="sidebar">
-  <div class="logo">mono.create <small>社内連絡アプリ</small></div>
+  <div class="logo"><img class="app-brand-logo" src="./editflow-logo.svg" alt="EditFlow"></div>
   <div id="nav-items"></div>
   <div class="nav-sep"></div>
   <div class="nav-item" data-view="customize"><span class="nav-icon">🛠</span>カスタマイズ</div>
@@ -1022,7 +1023,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 <div id="mob-overlay" onclick="closeDrawer()"></div>
 <div id="mob-drawer">
   <div style="display:flex;align-items:center;justify-content:space-between;padding:0 14px 16px">
-    <div class="logo" style="margin:0;padding:0">mono.create <small>社内連絡アプリ</small></div>
+    <div class="logo" style="margin:0;padding:0"><img class="app-brand-logo" src="./editflow-logo.svg" alt="EditFlow"></div>
     <button onclick="closeDrawer()" style="background:none;border:none;font-size:20px;color:var(--t2);cursor:pointer;line-height:1;padding:4px 6px">✕</button>
   </div>
   <div id="mob-drawer-nav"></div>
@@ -14114,7 +14115,7 @@ function _injectAuthGateCSS(){
   `;
   document.head.appendChild(st);
 }
-function _gateLogo(){return`<div class="brand">mono.create</div><div class="sub">社内連絡アプリ</div>`;}
+function _gateLogo(){return`<div class="brand"><img class="app-brand-logo" src="./editflow-logo.svg" alt="EditFlow"></div><div class="sub">案件管理ポータル</div>`;}
 function _gateLoadingHTML(){return`<div class="agw">${_gateLogo()}<div class="card"><div style="text-align:center;color:var(--t3);font-size:13px;padding:14px 0">読み込み中…</div></div></div>`;}
 function _gateLoginHTML(){
   const wv=_isEmbeddedWebview();
@@ -16801,7 +16802,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260828-30';
+const APP_VERSION='20260829-01';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -16875,6 +16876,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260828-30"></script>
+<script src="./manager-features.js?v=20260829-01"></script>
 </body>
 </html>

@@ -1,0 +1,198 @@
+/* Editor portal — yellow operations workspace. Loaded only with .editor-yellow-ui. */
+body.editor-yellow-ui{
+  --bg:#f7f7f2;--card:#fff;--card2:#f0efe7;--border:#d8d7ce;--text:#171a1f;
+  --t2:#555a62;--t3:#747980;--purple:#171a1f;--purple2:#fff3bd;
+  --green:#087a53;--green2:#dff5e8;--red:#c72f25;--red2:#fde9e6;
+  --amber:#a76500;--amber2:#fff1c6;--shadow:0 1px 0 rgba(23,26,31,.06);
+  background:var(--bg);font-family:"Hiragino Sans","Yu Gothic UI","Yu Gothic",-apple-system,BlinkMacSystemFont,sans-serif;
+}
+.editor-yellow-ui .topbar{border-bottom:2px solid #171a1f;background:#fffdf4;backdrop-filter:none}
+.editor-yellow-ui .topbar-in{min-height:64px}.editor-yellow-ui .brand{display:flex;align-items:center;gap:9px;font-size:18px;color:#171a1f;letter-spacing:-.04em}
+.editor-yellow-ui .brand small{color:#6a6d66;font-size:9px;letter-spacing:.12em}.editor-yellow-ui .who b{color:#171a1f}
+.editor-yellow-ui .brand-logo,.editor-yellow-ui .editor-sidebar-brand{display:flex;align-items:center;gap:9px;min-width:0;color:#171a1f}
+.editor-yellow-ui .brand-logo img,.editor-yellow-ui .editor-sidebar-brand img{display:block;width:auto;max-width:100%;height:30px;object-fit:contain}
+.editor-yellow-ui .editor-sidebar-brand{padding:2px 8px 15px;border-bottom:1px solid rgba(23,26,31,.35)}
+.editor-yellow-ui .editor-sidebar-brand img{height:34px}.editor-yellow-ui .editor-sidebar-brand span{font-size:11px;font-weight:800;color:#3c3b30}
+.editor-yellow-ui .btn{border-radius:4px;border-color:#c9c8bf;box-shadow:none;font-weight:800;transition:background .15s,border-color .15s,color .15s}
+.editor-yellow-ui .btn:hover{border-color:#171a1f;background:#fff8d7}.editor-yellow-ui .btn.primary{background:#171a1f;border-color:#171a1f;color:#fff}
+.editor-yellow-ui .btn.primary:hover{background:#343840}.editor-yellow-ui .btn:focus-visible,.editor-yellow-ui button:focus-visible,.editor-yellow-ui a:focus-visible,.editor-yellow-ui summary:focus-visible{outline:3px solid rgba(246,201,14,.9);outline-offset:2px}
+.editor-yellow-ui .card{border-radius:5px;border-color:#d8d7ce;box-shadow:0 1px 0 rgba(23,26,31,.08)}
+.editor-yellow-ui .page-head{margin-top:6px;padding:18px 0 15px;border-bottom:2px solid #171a1f}.editor-yellow-ui .page-head h1{font-size:28px;color:#171a1f;letter-spacing:-.045em}
+.editor-yellow-ui .page-head p{font-size:13px;color:#5d615d}.editor-yellow-ui .section-title h2{font-size:17px;color:#171a1f}.editor-yellow-ui .field label,.editor-yellow-ui .label{color:#4c514f;font-size:12px}
+.editor-yellow-ui .field input,.editor-yellow-ui .field select,.editor-yellow-ui .field textarea,.editor-yellow-ui .control{border-radius:3px;border-color:#c9c8bf;background:#fffef9}
+.editor-yellow-ui .field input:focus,.editor-yellow-ui .field select:focus,.editor-yellow-ui .field textarea:focus,.editor-yellow-ui .control:focus{border-color:#171a1f;box-shadow:0 0 0 3px rgba(246,201,14,.55)}
+.editor-yellow-ui .safe-link{color:#1d5e9d;text-decoration-thickness:1px}.editor-yellow-ui .muted{color:#6d726e}
+.editor-yellow-ui .login-wrap{max-width:500px}.editor-yellow-ui .login-card{border-top:8px solid #f6c90e;border-radius:5px;background:#fffef9}
+.editor-yellow-ui .login-card h1{color:#171a1f}.editor-yellow-ui .auth-status{border-radius:4px;border-color:#d6b400;border-left:5px solid #f6c90e;background:#fff8d7;color:#40370d}
+.editor-yellow-ui .auth-browser-help{border-radius:4px}.editor-yellow-ui .auth-login-button,.editor-yellow-ui .auth-retry{border-radius:3px}
+
+/* Desktop rail: deliberately functional, no purple Slack-like treatment. */
+@media(min-width:761px){
+  body.editor-yellow-ui.editor-slack-layout main#app{padding:26px 34px 72px 286px;max-width:none}
+  .editor-yellow-ui.editor-slack-layout .editor-nav-desktop{top:64px;width:258px;padding:18px 12px 22px;border-right:2px solid #171a1f;background:#f6c90e;box-shadow:none}
+  .editor-yellow-ui .editor-sidebar-head{padding:3px 9px 18px;border-bottom:1px solid rgba(23,26,31,.36)}
+  .editor-yellow-ui .editor-sidebar-head b{color:#171a1f;font-size:18px}.editor-yellow-ui .editor-sidebar-head span{color:#383a35;font-size:11px}
+  .editor-yellow-ui .editor-sidebar-label{padding:14px 9px 5px;color:#504714;font-size:10px;letter-spacing:.1em}
+  .editor-yellow-ui.editor-slack-layout .editor-nav-desktop .editor-nav-button{border-radius:3px;color:#24271f;font-weight:800}
+  .editor-yellow-ui.editor-slack-layout .editor-nav-desktop .editor-nav-button:hover,.editor-yellow-ui.editor-slack-layout .editor-nav-desktop .editor-nav-button.active{background:#171a1f;color:#fff}
+  .editor-yellow-ui .editor-sidebar-footer{border-top-color:rgba(23,26,31,.3)}
+  .editor-yellow-ui.editor-slack-layout .page-head,.editor-yellow-ui.editor-slack-layout .editor-home-rail,.editor-yellow-ui.editor-slack-layout .editor-primary-action,.editor-yellow-ui.editor-slack-layout .editor-home-stats,.editor-yellow-ui.editor-slack-layout .section{max-width:1180px}
+}
+
+/* Home, current work, and grouped assigned cases. */
+.editor-yellow-ui .editor-home-rail{padding:12px 0 2px;border-bottom:1px solid #d8d7ce}.editor-yellow-ui .editor-home-rail-head b{color:#171a1f}
+.editor-yellow-ui .editor-home-chip{border-radius:4px;border-color:#d8d7ce;box-shadow:none;background:#fffef9}.editor-yellow-ui .editor-home-chip:hover,.editor-yellow-ui .editor-home-chip:focus-visible{border-color:#171a1f;background:#fff8d7}
+.editor-yellow-ui .editor-home-chip-state{color:#7b5800}.editor-yellow-ui .editor-home-stats .metric{border-top:4px solid #f6c90e;background:#fff}
+.editor-yellow-ui .editor-primary-action{border:2px solid #171a1f;border-left:8px solid #f6c90e;border-radius:5px;background:#fffef9}
+.editor-yellow-ui .editor-action-kicker{border-radius:2px;background:#171a1f;color:#fff}.editor-yellow-ui .editor-action-title{color:#171a1f}
+.editor-yellow-ui .editor-deadline-chip{border-radius:2px;border-color:#d2aa00;background:#fff8d7;color:#604b00}
+.editor-yellow-ui .editor-current-state,.editor-yellow-ui .editor-next-instruction{border-radius:3px;border-color:#d8d7ce;background:#faf9f2}.editor-yellow-ui .editor-current-state b{color:#171a1f}
+.editor-yellow-ui .editor-case-group{border:1px solid #c7c6bc;border-radius:5px;background:#fff;box-shadow:none}
+.editor-yellow-ui .editor-case-group>summary{min-height:76px;padding:15px 17px;border-left:6px solid #f6c90e;background:#fffdf4}.editor-yellow-ui .editor-case-group>summary b{color:#171a1f}.editor-yellow-ui .editor-case-group>summary:after{color:#635500}
+.editor-yellow-ui .editor-case-group[open]>summary{border-bottom:1px solid #d8d7ce;background:#fff8d7}.editor-yellow-ui .editor-case-group-count{border-radius:2px;background:#f6c90e;color:#171a1f}
+.editor-yellow-ui .editor-workflow-hint{padding:10px 14px 14px;color:#5b5f59;background:#faf9f2}.editor-yellow-ui .editor-next-child{color:#725700}
+.editor-yellow-ui .editor-job-card,.editor-yellow-ui .board-card{border-color:#cfcec4;border-radius:4px;box-shadow:none}.editor-yellow-ui .board-card{border-left:5px solid #f6c90e;background:#fff}
+.editor-yellow-ui .editor-job-card:hover,.editor-yellow-ui .board-card:hover{border-color:#171a1f}.editor-yellow-ui .job-title{font-size:17px;color:#171a1f;letter-spacing:-.02em}.editor-yellow-ui .job-meta{color:#626762}
+.editor-yellow-ui .editor-job-status-line{border-radius:3px;border-color:#d8d7ce;background:#faf9f2}.editor-yellow-ui .editor-job-status-line b,.editor-yellow-ui .editor-next-owner b{color:#171a1f}
+.editor-yellow-ui .pill{border-radius:2px;background:#ecebe3;color:#4e534e}.editor-yellow-ui .pill.green{background:#dff5e8;color:#076c49}.editor-yellow-ui .pill.red{background:#fde9e6;color:#b42c22}.editor-yellow-ui .pill.amber{background:#fff1c6;color:#885300}
+.editor-yellow-ui .deadline-summary{border-radius:3px;border-color:#d8d7ce;background:#faf9f2}.editor-yellow-ui .job-next-action{border-left-color:#f6c90e;border-radius:0;background:#fff8d7;color:#3e3510}.editor-yellow-ui .job-waiting{border-radius:3px;background:#fff7db}.editor-yellow-ui .job-submit-panel{border-radius:4px;border-color:#d8d7ce;background:#faf9f2}
+
+/* Application board: the editor must understand this screen in three seconds. */
+.editor-yellow-ui .accept-howto{gap:14px;margin:14px 0;padding:15px 17px;border:2px solid #171a1f;border-radius:5px;background:#f6c90e;color:#171a1f;box-shadow:none}
+.editor-yellow-ui .accept-howto>span{display:grid;place-items:center;width:30px;height:30px;flex:0 0 30px;border:1px solid #171a1f;border-radius:50%;background:#fff;font-size:0!important}
+.editor-yellow-ui .accept-howto>span:after{content:"1";font-size:15px;font-weight:900}.editor-yellow-ui .accept-howto b{font-size:14px}.editor-yellow-ui .accept-howto span{color:#3b3517;font-size:12px}
+.editor-yellow-ui .privacy-note{border-radius:4px;border-color:#d8d7ce;background:#fffef9;color:#565b56}.editor-yellow-ui .privacy-note b{color:#171a1f}
+.editor-yellow-ui .editor-job-list{gap:12px}.editor-yellow-ui .editor-job-list>.editor-case-group>summary{border-left-width:6px}.editor-yellow-ui .board-card details{border-top-color:#e0dfd7}.editor-yellow-ui .board-card details summary{color:#4c4f46}.editor-yellow-ui .board-card details summary:after{content:"内容を確認";margin-left:auto;font-size:11px;color:#786000}.editor-yellow-ui .board-card details[open] summary:after{content:"閉じる"}
+.editor-yellow-ui .editor-resource-link{border-radius:3px;border-color:#d8d7ce;background:#fffef9;color:#171a1f}.editor-yellow-ui .editor-resource-link:hover,.editor-yellow-ui .editor-resource-link:focus-visible{border-color:#171a1f;background:#fff8d7}.editor-yellow-ui .editor-resource-link span:first-child{border-radius:2px;background:#f6c90e;color:#171a1f}
+.editor-yellow-ui .claim-button{min-height:54px;border:1px solid #f6c90e!important;border-radius:4px!important;background:#f6c90e!important;color:#171a1f!important;box-shadow:0 1px 2px rgba(23,26,31,.12)!important;font-size:15px;font-weight:900!important}
+.editor-yellow-ui .claim-button:hover{transform:none;box-shadow:0 2px 4px rgba(23,26,31,.15)!important;background:#ffd938!important}.editor-yellow-ui .claim-button:active{transform:none;box-shadow:inset 0 1px 1px rgba(23,26,31,.15)!important}
+.editor-yellow-ui .job-list-tab,.editor-yellow-ui .job-type-filter{border-radius:3px;border-color:#c9c8bf;background:#fff;color:#484d49}.editor-yellow-ui .job-list-tab.active,.editor-yellow-ui .job-type-filter.active{border-color:#171a1f;background:#f6c90e;color:#171a1f;box-shadow:none}.editor-yellow-ui .job-list-tab .accept-count{background:#171a1f}.editor-yellow-ui .accept-count,.editor-yellow-ui .notification-count{background:#c72f25}
+.editor-yellow-ui .job-detail{border-top-color:#d8d7ce}.editor-yellow-ui .job-detail summary{min-height:44px;display:flex;align-items:center;color:#4c4f46}.editor-yellow-ui .job-detail summary:after{margin-left:auto;color:#725700}
+.editor-yellow-ui .dispatch-create{border-top:4px solid #f6c90e}.editor-yellow-ui .dispatch-create summary{color:#171a1f}.editor-yellow-ui .dispatch-subcase-scroll{border-radius:4px;border-color:#c9c8bf;background:#faf9f2}.editor-yellow-ui .dispatch-subcase{border-left:4px solid #f6c90e}.editor-yellow-ui .dispatch-subcase-add{background:#fffdf4;box-shadow:0 -1px 0 rgba(23,26,31,.12)}
+
+/* Other operational views share the same system. */
+.editor-yellow-ui .update-banner{border-radius:4px;border-color:#d7b700;background:#fff8d7;box-shadow:none;color:#171a1f}.editor-yellow-ui .update-banner span{color:#5b501d}.editor-yellow-ui .role-chip{border-radius:2px;background:#f6c90e;color:#171a1f}
+.editor-yellow-ui .notification-item{border-radius:4px;border-left-color:#f6c90e}.editor-yellow-ui .notification-open:hover,.editor-yellow-ui .notification-open:focus-visible{background:#fff8d7}
+.editor-yellow-ui .message{border-radius:4px;background:#ecebe3}.editor-yellow-ui .message.mine{background:#fff1b0}.editor-yellow-ui .availability-day,.editor-yellow-ui .availability-bulk,.editor-yellow-ui .availability-bulk-days label{border-radius:4px;background:#fffef9}.editor-yellow-ui .availability-routine{border-radius:4px;background:#fff1b0}.editor-yellow-ui .team-day-chip{border-radius:2px}.editor-yellow-ui .guide-hero{border-radius:5px;background:#171a1f;box-shadow:none}.editor-yellow-ui .guide-hero:after{border-color:rgba(246,201,14,.55);box-shadow:0 0 0 28px rgba(246,201,14,.08)}.editor-yellow-ui .guide-map .card{border-top-color:#f6c90e}.editor-yellow-ui .guide-done,.editor-yellow-ui .guide-warning{border-radius:3px}
+.editor-yellow-ui .invoice-card{border-left:5px solid #f6c90e}.editor-yellow-ui .invoice-total{font-variant-numeric:tabular-nums;color:#171a1f}.editor-yellow-ui .split>.card{border-top:3px solid #f6c90e}
+.editor-yellow-ui .date-chip{border-radius:2px;background:#ecebe3}.editor-yellow-ui .notice{border-left-color:#f6c90e;background:#fff8d7}.editor-yellow-ui .notice.warn{border-left-color:#a76500;background:#fff1c6}.editor-yellow-ui .notice.danger{border-left-color:#c72f25;background:#fde9e6}
+.editor-yellow-ui .editor-timeline-step.current{border-radius:3px;background:#fff8d7;color:#5d4800}.editor-yellow-ui .editor-timeline-step.current:before{border-color:#171a1f;background:#f6c90e}.editor-yellow-ui .editor-timeline-step.done:before{border-color:#087a53;background:#087a53}
+.editor-yellow-ui .optional-box{border-radius:4px;background:#faf9f2}.editor-yellow-ui .quick-draft,.editor-yellow-ui .group-draft-panel{border-radius:4px;border-color:#d8d7ce;background:#fff8d7}.editor-yellow-ui .group-draft-panel b{color:#171a1f}
+.editor-yellow-ui .catalog-empty{border-radius:4px;background:#fffef9}.editor-yellow-ui .manual-body{color:#4f544f}.editor-yellow-ui .manual-meta{color:#6a6f6b}.editor-yellow-ui .feature-grid>article.card{border-top:4px solid #f6c90e}
+.editor-yellow-ui .editor-job-dates div{border-radius:3px!important;border-color:#d8d7ce!important;background:#faf9f2!important;color:#535853!important}.editor-yellow-ui .editor-job-dates b{color:#171a1f!important}.editor-yellow-ui .editor-job-dates .actual{border-color:#73bb99!important;background:#e6f5ec!important}
+
+/* DM and notification setup are operational tools, not a separate purple app. */
+.editor-yellow-ui .dm-shell{border-radius:5px;border:1px solid #c9c8bf;background:#fff;box-shadow:none}.editor-yellow-ui .dm-inbox,.editor-yellow-ui .dm-chat,.editor-yellow-ui .dm-compose{background:#fffef9}.editor-yellow-ui .dm-inbox{border-right-color:#d8d7ce}
+.editor-yellow-ui .dm-inbox-head,.editor-yellow-ui .dm-thread-head{border-bottom:2px solid #171a1f;background:#fffdf4}.editor-yellow-ui .dm-inbox-head h2,.editor-yellow-ui .dm-thread-head h2{color:#171a1f}
+.editor-yellow-ui .dm-list-label{color:#6c5a00}.editor-yellow-ui .dm-person{border-bottom-color:#e5e4dc;background:#fff}.editor-yellow-ui .dm-person:hover,.editor-yellow-ui .dm-person:focus-visible{background:#fff8d7}.editor-yellow-ui .dm-person.active{background:#f6c90e;color:#171a1f}
+.editor-yellow-ui .dm-avatar{border-radius:3px;background:#171a1f;color:#f6c90e}.editor-yellow-ui .dm-person.active .dm-avatar{background:#fff;color:#171a1f}.editor-yellow-ui .dm-unread-dot{background:#c72f25}
+.editor-yellow-ui .dm-message{border-radius:3px}.editor-yellow-ui .dm-message:hover{background:#faf9f2}.editor-yellow-ui .dm-compose{border-top-color:#d8d7ce}.editor-yellow-ui .dm-compose textarea{border-radius:3px;border-color:#c9c8bf;background:#fff}.editor-yellow-ui .dm-compose textarea:focus{border-color:#171a1f;box-shadow:0 0 0 3px rgba(246,201,14,.55);outline:0}.editor-yellow-ui .dm-guidance{border-radius:3px;background:#fff8d7;color:#4a4119}
+.editor-yellow-ui .device-notification-card{border-radius:4px;border-color:#d7b700;background:#fff8d7}.editor-yellow-ui .device-notification-card h2{color:#171a1f}.editor-yellow-ui .device-notification-card p{color:#514a2a}
+.editor-yellow-ui .push-setup-banner{border-radius:4px;border-color:#d7b700;background:#fff8d7;color:#171a1f}.editor-yellow-ui .push-setup-banner span{color:#554b18}.editor-yellow-ui .push-setup-card{border-top:5px solid #f6c90e}.editor-yellow-ui .push-setup-card li::marker{color:#806600}.editor-yellow-ui .push-status{border-radius:3px;background:#faf9f2;color:#515651}.editor-yellow-ui .push-status.ready{background:#e6f5ec;color:#08704d}
+
+/* App-level overlays and popovers. */
+.editor-yellow-ui .editor-nav-more-menu,.editor-yellow-ui .editor-more-popover,.editor-yellow-ui .modal,.editor-yellow-ui [role="dialog"]{border-radius:4px;border-color:#171a1f;background:#fffdf4;box-shadow:4px 4px 0 rgba(23,26,31,.9)}
+.editor-yellow-ui .editor-more-popover .btn.active{background:#f6c90e!important;color:#171a1f!important}.editor-yellow-ui .editor-primary-nav{border-radius:4px;background:#ecebe3}.editor-yellow-ui .editor-primary-nav>.btn.active,.editor-yellow-ui .editor-primary-nav>details[data-active="true"]>summary{background:#f6c90e!important;color:#171a1f!important;box-shadow:none!important}
+
+@media(max-width:760px){
+  body.editor-yellow-ui{padding-bottom:82px}.editor-yellow-ui .topbar-in{min-height:58px;padding:9px 12px}.editor-yellow-ui .brand{font-size:16px}
+  .editor-yellow-ui .page-head{padding:14px 0 12px}.editor-yellow-ui .page-head h1{font-size:24px}.editor-yellow-ui .card{padding:12px}
+  .editor-yellow-ui .editor-nav-mobile{gap:0;padding:5px 3px calc(5px + env(safe-area-inset-bottom));border-top:2px solid #171a1f;background:#fffdf4;box-shadow:0 -1px 0 rgba(23,26,31,.08);backdrop-filter:none}
+  .editor-yellow-ui .editor-nav-mobile .editor-nav-button,.editor-yellow-ui .editor-nav-mobile .editor-nav-more summary{min-height:48px;border-radius:2px;color:#454a43}.editor-yellow-ui .editor-nav-mobile .editor-nav-button.active,.editor-yellow-ui .editor-nav-mobile .editor-nav-more summary.active{background:#f6c90e;color:#171a1f}
+  .editor-yellow-ui .editor-nav-more-menu{border-radius:4px;border-color:#171a1f;background:#fffdf4;box-shadow:4px 4px 0 #171a1f}.editor-yellow-ui .editor-nav-more-menu .btn{border-radius:2px}
+  .editor-yellow-ui .accept-howto{align-items:flex-start;margin:10px 0 12px;padding:13px}.editor-yellow-ui .accept-howto b{font-size:13px}.editor-yellow-ui .accept-howto span{font-size:11px}
+  .editor-yellow-ui .editor-case-group>summary{padding:13px 12px}.editor-yellow-ui .editor-case-group-count{align-self:flex-start}.editor-yellow-ui .editor-case-group-body{padding:9px}.editor-yellow-ui .board-card{padding:13px}
+  .editor-yellow-ui .claim-button{min-height:52px;width:100%}.editor-yellow-ui .editor-resource-list{grid-template-columns:1fr}.editor-yellow-ui .job-list-tab,.editor-yellow-ui .job-type-filter{min-height:44px}
+  .editor-yellow-ui .editor-home-chip{min-width:84vw;flex-basis:84vw}.editor-yellow-ui .editor-home-stats .metric{padding:10px}.editor-yellow-ui .availability-calendar{gap:7px}
+  .editor-yellow-ui .dm-shell,.editor-yellow-ui .dm-chat{min-width:0;width:100%}.editor-yellow-ui .dm-person{grid-template-columns:42px minmax(0,1fr) auto}.editor-yellow-ui .dm-compose{grid-template-columns:minmax(0,1fr) auto}.editor-yellow-ui .dm-compose textarea{min-width:0}.editor-yellow-ui .push-setup-banner{max-width:100%}
+}
+@media(max-width:375px){
+  .editor-yellow-ui .page-head h1{font-size:22px}.editor-yellow-ui .job-title{font-size:16px}.editor-yellow-ui .editor-nav-mobile .editor-nav-button,.editor-yellow-ui .editor-nav-mobile .editor-nav-more summary{font-size:8.5px}.editor-yellow-ui .accept-howto{gap:10px}.editor-yellow-ui .accept-howto>span{width:27px;height:27px;flex-basis:27px}
+  .editor-yellow-ui .dm-person{grid-template-columns:38px minmax(0,1fr) auto;padding-inline:8px}.editor-yellow-ui .dm-avatar{width:38px;height:38px}.editor-yellow-ui .dm-compose{padding-inline:8px}.editor-yellow-ui .dm-compose .btn{min-width:62px;padding-inline:8px}
+}
+
+/*
+ * EditFlow reference language
+ * White workspace, hairline gray structure. Yellow is reserved for the
+ * current destination, key action and compact status markers.
+ */
+body.editor-yellow-ui{
+  --bg:#f7f7f7;--card:#fff;--card2:#f6f6f4;--border:#e4e4e1;--text:#202124;
+  --t2:#5f6368;--t3:#8a8d91;--purple:#ffca0a;--purple2:#fff3bf;
+  --shadow:0 1px 2px rgba(32,33,36,.04);
+  background:#f7f7f7;
+}
+.editor-yellow-ui .topbar{border-bottom:1px solid #e6e6e3;background:#fff;box-shadow:0 1px 3px rgba(32,33,36,.03)}
+.editor-yellow-ui .topbar-in{max-width:none;min-height:64px;padding:10px 26px}
+.editor-yellow-ui .brand{gap:10px;color:#202124;font-size:19px;letter-spacing:-.03em}
+.editor-yellow-ui .brand-logo{display:block!important;width:auto!important;height:31px!important;max-width:176px!important;flex:0 1 auto!important;border-radius:0!important;object-fit:contain;object-position:left center}
+.editor-yellow-ui .brand-copy{font-weight:800;white-space:nowrap}.editor-yellow-ui .brand-copy small{font-size:9px;letter-spacing:.1em;color:#8a8d91}
+.editor-yellow-ui .brand-logo+.brand-copy{display:none}
+.editor-yellow-ui .btn{min-height:40px;border:1px solid #dededb;border-radius:6px;background:#fff;color:#34363a;box-shadow:0 1px 2px rgba(32,33,36,.04);font-weight:700}
+.editor-yellow-ui .btn:hover{border-color:#c9c9c3;background:#fafaf8}.editor-yellow-ui .btn.primary{background:#ffca0a;border-color:#ffca0a;color:#302a00;box-shadow:0 1px 2px rgba(32,33,36,.11)}
+.editor-yellow-ui .btn.primary:hover{background:#ffd53d}.editor-yellow-ui .card{border:1px solid #e4e4e1;border-radius:7px;box-shadow:0 1px 2px rgba(32,33,36,.035)}
+.editor-yellow-ui .page-head{margin-top:8px;padding:16px 0 14px;border-bottom:0}.editor-yellow-ui .page-head h1{font-size:25px;color:#202124;letter-spacing:-.035em}
+.editor-yellow-ui .field input,.editor-yellow-ui .field select,.editor-yellow-ui .field textarea,.editor-yellow-ui .control{border-color:#dfdfdc;border-radius:6px;background:#fff}
+.editor-yellow-ui .field input:focus,.editor-yellow-ui .field select:focus,.editor-yellow-ui .field textarea:focus,.editor-yellow-ui .control:focus{border-color:#e6bd00;box-shadow:0 0 0 3px rgba(255,202,10,.18)}
+
+/* The desktop rail is navigation, not a yellow banner. */
+@media(min-width:761px){
+  .editor-yellow-ui .topbar-in{padding:0}.editor-yellow-ui .topbar .brand{width:264px;min-width:264px;height:64px;padding:0 25px;border-right:1px solid #e5e5e2}
+  .editor-yellow-ui .topbar .who{padding-left:20px}.editor-yellow-ui .topbar #logout-btn{margin-right:26px}
+  body.editor-yellow-ui.editor-slack-layout main#app{padding:28px 34px 72px 292px}
+  .editor-yellow-ui.editor-slack-layout .editor-nav-desktop{top:64px;width:264px;padding:17px 13px 20px;border-right:1px solid #e5e5e2;background:#fff;box-shadow:none}
+  .editor-yellow-ui .editor-sidebar-head{display:none}
+  .editor-yellow-ui .editor-sidebar-brand{display:none}
+  .editor-yellow-ui .editor-sidebar-brand img{width:auto;height:29px;max-width:188px;border-radius:0;object-fit:contain;object-position:left center}
+  .editor-yellow-ui .editor-sidebar-brand-copy{display:none!important}.editor-yellow-ui .editor-sidebar-head>span{margin-top:5px;color:#777a7c;font-size:11px;white-space:nowrap}
+  .editor-yellow-ui .editor-sidebar-label{padding:17px 9px 5px;color:#9a9c9d;font-size:10px;letter-spacing:.08em}
+  .editor-yellow-ui.editor-slack-layout .editor-nav-desktop .editor-nav-button{min-height:40px;padding:7px 9px;border:0;border-radius:6px;color:#4d5053;background:transparent;font-weight:700;box-shadow:none}
+  .editor-yellow-ui.editor-slack-layout .editor-nav-desktop .editor-nav-button:hover{background:#f6f6f4;color:#202124}
+  .editor-yellow-ui.editor-slack-layout .editor-nav-desktop .editor-nav-button.active{background:#ffca0a;color:#302a00}
+  .editor-yellow-ui .editor-sidebar-footer{border-top:1px solid #e8e8e5}
+}
+
+/* Cards on the application page use the same quiet, dense table-like surface. */
+.editor-yellow-ui .accept-howto{gap:12px;margin:8px 0 14px;padding:12px 14px;border:1px solid #f0cf47;border-radius:7px;background:#fff8da;color:#46402a}
+.editor-yellow-ui .accept-howto>span{width:26px;height:26px;flex-basis:26px;border:0;border-radius:50%;background:#ffca0a;color:#302a00!important}
+.editor-yellow-ui .accept-howto>span:after{font-size:13px}.editor-yellow-ui .accept-howto b{font-size:13px;color:#302a00}
+.editor-yellow-ui .privacy-note{border-color:#e4e4e1;border-radius:7px;background:#fff;color:#606368}
+.editor-yellow-ui .editor-case-group{border-color:#e2e2df;border-radius:7px;background:#fff}
+.editor-yellow-ui .editor-case-group>summary{min-height:68px;padding:13px 15px;border-left:0;background:#fff}
+.editor-yellow-ui .editor-case-group>summary:hover{background:#fafaf8}.editor-yellow-ui .editor-case-group[open]>summary{border-bottom-color:#e8e8e5;background:#fff}
+.editor-yellow-ui .editor-case-group-count{border-radius:999px;background:#fff1b4;color:#705b00;font-size:12px;font-weight:800}
+.editor-yellow-ui .editor-workflow-hint{padding:9px 14px 12px;background:#fff;color:#777a7d}.editor-yellow-ui .editor-next-child{color:#786000}
+.editor-yellow-ui .editor-job-card,.editor-yellow-ui .board-card{border-color:#e4e4e1;border-radius:7px;background:#fff}
+.editor-yellow-ui .board-card{border-left:1px solid #e4e4e1;padding:15px}.editor-yellow-ui .editor-job-card:hover,.editor-yellow-ui .board-card:hover{border-color:#d3d3ce;box-shadow:0 2px 5px rgba(32,33,36,.06)}
+.editor-yellow-ui .job-title{font-size:16px;color:#202124;letter-spacing:-.015em}.editor-yellow-ui .job-meta{color:#767a7f}
+.editor-yellow-ui .pill{border-radius:999px;background:#f1f2f2;color:#5f6368}.editor-yellow-ui .pill.amber{background:#fff1b4;color:#7c6500}.editor-yellow-ui .pill.red{background:#fff0ef;color:#b23d36}
+.editor-yellow-ui .board-card details{border-top-color:#ededeb}.editor-yellow-ui .board-card details summary{color:#5f6368}.editor-yellow-ui .board-card details summary:after{color:#7a6500}
+.editor-yellow-ui .editor-resource-link{border-color:#e2e2df;border-radius:5px;background:#fff;color:#3c4043}.editor-yellow-ui .editor-resource-link:hover{border-color:#d1d1cc;background:#fafaf8}.editor-yellow-ui .editor-resource-link span:first-child{background:#fff1b4;color:#745f00}
+.editor-yellow-ui .claim-button{min-height:46px;border:1px solid #ffca0a!important;border-radius:6px!important;background:#ffca0a!important;color:#302a00!important;box-shadow:0 1px 2px rgba(32,33,36,.12)!important;font-size:14px;font-weight:800!important}
+.editor-yellow-ui .claim-button:hover{transform:none;box-shadow:0 2px 4px rgba(32,33,36,.16)!important;background:#ffd43b!important}.editor-yellow-ui .claim-button:active{transform:none;box-shadow:inset 0 1px 1px rgba(64,48,0,.18)!important}
+.editor-yellow-ui .job-list-tab,.editor-yellow-ui .job-type-filter{min-height:40px;border-color:#dededb;border-radius:6px;background:#fff;color:#5f6368;box-shadow:none}
+.editor-yellow-ui .job-list-tab.active,.editor-yellow-ui .job-type-filter.active{border-color:#ffca0a;background:#fff7d1;color:#302a00}.editor-yellow-ui .job-list-tab .accept-count{background:#ffca0a;color:#302a00}
+.editor-yellow-ui .accept-count,.editor-yellow-ui .notification-count{background:#d9453d}.editor-yellow-ui .job-detail{border-top-color:#e8e8e5}.editor-yellow-ui .job-detail summary{color:#5f6368}.editor-yellow-ui .job-detail summary:after{color:#7a6500}
+
+/* Keep secondary pages in the same white product surface. */
+.editor-yellow-ui .editor-primary-action{border:1px solid #e4e4e1;border-left:4px solid #ffca0a;border-radius:7px;background:#fff}
+.editor-yellow-ui .editor-action-kicker{background:#fff1b4;color:#725e00}.editor-yellow-ui .editor-home-chip{border-color:#e4e4e1;border-radius:7px;background:#fff}.editor-yellow-ui .editor-home-stats .metric{border-top:3px solid #ffca0a}
+.editor-yellow-ui .editor-current-state,.editor-yellow-ui .editor-next-instruction,.editor-yellow-ui .editor-job-status-line,.editor-yellow-ui .deadline-summary,.editor-yellow-ui .job-submit-panel{border-color:#e7e7e4;background:#fafaf8}
+.editor-yellow-ui .job-next-action{border-left-color:#ffca0a;background:#fff8da;color:#51471b}.editor-yellow-ui .job-waiting{background:#fff8da}.editor-yellow-ui .editor-timeline-step.current{background:#fff8da;color:#665800}
+.editor-yellow-ui .dispatch-create{border-top:3px solid #ffca0a}.editor-yellow-ui .dispatch-subcase{border-left-color:#ffca0a}.editor-yellow-ui .update-banner,.editor-yellow-ui .push-setup-banner,.editor-yellow-ui .device-notification-card{border-color:#f0cf47;background:#fff8da;color:#3e391f}
+.editor-yellow-ui .guide-hero{border-radius:7px;background:#34363a}.editor-yellow-ui .guide-map .card,.editor-yellow-ui .feature-grid>article.card,.editor-yellow-ui .split>.card{border-top-color:#ffca0a}
+.editor-yellow-ui .invoice-card{border-left-color:#ffca0a}.editor-yellow-ui .notice{border-left-color:#ffca0a;background:#fff8da}.editor-yellow-ui .date-chip{border-radius:4px;background:#f1f2f2}
+.editor-yellow-ui .dm-shell{border-color:#e4e4e1;border-radius:7px}.editor-yellow-ui .dm-inbox,.editor-yellow-ui .dm-chat,.editor-yellow-ui .dm-compose{background:#fff}.editor-yellow-ui .dm-inbox-head,.editor-yellow-ui .dm-thread-head{border-bottom:1px solid #e7e7e4;background:#fff}
+.editor-yellow-ui .dm-person.active{background:#fff5c7;color:#302a00}.editor-yellow-ui .dm-avatar{background:#f1f2f2;color:#4f5357}.editor-yellow-ui .dm-person.active .dm-avatar{background:#ffca0a;color:#302a00}.editor-yellow-ui .dm-guidance{background:#fff8da;color:#51471b}
+.editor-yellow-ui .editor-nav-more-menu,.editor-yellow-ui .editor-more-popover,.editor-yellow-ui .modal,.editor-yellow-ui [role="dialog"]{border-color:#dededb;border-radius:7px;background:#fff;box-shadow:0 8px 22px rgba(32,33,36,.16)}
+.editor-yellow-ui .editor-primary-nav{background:#f4f4f2}.editor-yellow-ui .editor-primary-nav>.btn.active,.editor-yellow-ui .editor-primary-nav>details[data-active="true"]>summary,.editor-yellow-ui .editor-more-popover .btn.active{background:#fff3bf!important;color:#302a00!important}
+
+@media(max-width:760px){
+  body.editor-yellow-ui{padding-bottom:74px}.editor-yellow-ui .topbar-in{min-height:56px;padding:9px 13px}.editor-yellow-ui .brand-logo{height:27px!important;max-width:152px!important}
+  .editor-yellow-ui .editor-nav-mobile{padding:5px 4px calc(5px + env(safe-area-inset-bottom));border-top:1px solid #e2e2df;background:#fff;box-shadow:0 -1px 5px rgba(32,33,36,.06)}
+  .editor-yellow-ui .editor-nav-mobile .editor-nav-button,.editor-yellow-ui .editor-nav-mobile .editor-nav-more summary{min-height:46px;border-radius:5px;color:#676b70}
+  .editor-yellow-ui .editor-nav-mobile .editor-nav-button.active,.editor-yellow-ui .editor-nav-mobile .editor-nav-more summary.active{background:#fff1b4;color:#302a00}
+  .editor-yellow-ui .editor-nav-more-menu{border-color:#dededb;background:#fff;box-shadow:0 8px 22px rgba(32,33,36,.16)}
+  .editor-yellow-ui .accept-howto{padding:11px 12px}.editor-yellow-ui .privacy-note{display:block}.editor-yellow-ui .privacy-note b{display:block;margin:0 0 4px}.editor-yellow-ui .privacy-note span{display:block}
+  .editor-yellow-ui .editor-case-group>summary{padding:12px}.editor-yellow-ui .board-card{padding:13px}.editor-yellow-ui .board-card .job-meta{font-size:11px;letter-spacing:-.02em;white-space:nowrap}.editor-yellow-ui .claim-button{min-height:48px}
+}
