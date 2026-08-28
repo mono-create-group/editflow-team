@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260829-05"></script>
+<script src="./billing-terms.js?v=20260829-06"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -986,7 +986,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260829-05">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260829-06">
 </head>
 <body class="owner-yellow-ui">
 
@@ -6916,8 +6916,9 @@ function _videoReferenceTabs(tabs){
   let primary=coreKeys.map(key=>tabs.find(([tabKey])=>tabKey===key)).filter(Boolean);
   if(!primary.length)primary=tabs.slice(0,5);
   const primaryKeys=new Set(primary.map(([key])=>key)),extra=tabs.filter(([key])=>!primaryKeys.has(key));
-  const iconButton=([key,label])=>{const name=_videoReferenceTabLabel(label);return`<button type="button" aria-label="${esc(name)}" title="${esc(name)}" data-tooltip="${esc(name)}" ${VIDEO_TAB===key?'aria-current="page"':''} onclick="setVideoTab('${key}')">${_videoReferenceTabIcon(key)}<span class="app-sr-only">${esc(name)}</span></button>`};
-  return`<nav class="ref-global-tabs" aria-label="案件管理ページ"><div class="ref-primary-tabs">${primary.map(iconButton).join('')}</div>${extra.length?`<details class="ref-more-tabs" ${extra.some(([key])=>key===VIDEO_TAB)?'data-active="true"':''}><summary aria-label="その他のページ" title="その他のページ">${_videoReferenceTabIcon('manage-list')}<span class="app-sr-only">その他のページ</span></summary><div class="ref-more-tabs-menu">${extra.map(([key,label])=>{const name=_videoReferenceTabLabel(label);return`<button type="button" ${VIDEO_TAB===key?'aria-current="page"':''} onclick="setVideoTab('${key}')">${_videoReferenceTabIcon(key)}<span>${esc(name)}</span></button>`}).join('')}</div></details>`:''}</nav>`;
+  const shortLabels={'manage-board':'案件','manage-profit':'利益','manage-payment':'支払','manage-completed':'完了','manage-worker':'編集者'};
+  const iconButton=([key,label])=>{const name=_videoReferenceTabLabel(label),short=shortLabels[key]||name.slice(0,4);return`<button type="button" aria-label="${esc(name)}" title="${esc(name)}" data-tooltip="${esc(name)}" ${VIDEO_TAB===key?'aria-current="page"':''} onclick="setVideoTab('${key}')">${_videoReferenceTabIcon(key)}<span class="ref-tab-label" aria-hidden="true">${esc(short)}</span></button>`};
+  return`<nav class="ref-global-tabs" aria-label="案件管理ページ"><div class="ref-primary-tabs">${primary.map(iconButton).join('')}</div>${extra.length?`<details class="ref-more-tabs" ${extra.some(([key])=>key===VIDEO_TAB)?'data-active="true"':''}><summary aria-label="その他のページ" title="その他のページ">${_videoReferenceTabIcon('manage-list')}<span class="ref-tab-label" aria-hidden="true">その他</span></summary><div class="ref-more-tabs-menu">${extra.map(([key,label])=>{const name=_videoReferenceTabLabel(label);return`<button type="button" ${VIDEO_TAB===key?'aria-current="page"':''} onclick="setVideoTab('${key}')">${_videoReferenceTabIcon(key)}<span>${esc(name)}</span></button>`}).join('')}</div></details>`:''}</nav>`;
 }
 function _videoReferenceWorkspace({biz,all,active,title,addJobAction,tabs}){
   const filtered=_videoFiltered(biz,all),filteredActive=filtered.filter(j=>!['完了','キャンセル'].includes(j.status));
@@ -16902,7 +16903,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260829-05';
+const APP_VERSION='20260829-06';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -16976,6 +16977,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260829-05"></script>
+<script src="./manager-features.js?v=20260829-06"></script>
 </body>
 </html>

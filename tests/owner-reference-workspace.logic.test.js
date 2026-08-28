@@ -42,11 +42,12 @@ test('global case navigation is icon-led but remains unambiguous and accessible'
   for(const route of ['manage-board','manage-profit','manage-payment','manage-completed','manage-worker'])assert.ok(html.includes(`'${route}':`),route);
   assert.match(html,/data-tooltip="\$\{esc\(name\)\}" \$\{VIDEO_TAB===key\?'aria-current="page"':''\}/);
   assert.match(html,/aria-label="\$\{esc\(name\)\}" title="\$\{esc\(name\)\}"/);
-  assert.match(html,/<span class="app-sr-only">\$\{esc\(name\)\}<\/span>/);
+  assert.match(html,/<span class="ref-tab-label" aria-hidden="true">\$\{esc\(short\)\}<\/span>/);
   assert.match(html,/function _videoReferenceTabIcon\(key\)/);
   assert.match(html,/class="ref-more-tabs-menu"/);
   assert.match(css,/\.ref-primary-tabs>button,\.ref-more-tabs>summary[^}]*min-height:/);
   assert.match(css,/data-tooltip[^}]*focus-visible/);
+  assert.match(css,/\.ref-tab-label\{[^}]*font-size:9px/);
   assert.match(html,/class="ref-topbar-module" aria-label="案件一覧" title="案件一覧"/);
 });
 
