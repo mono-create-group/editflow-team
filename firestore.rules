@@ -43,6 +43,20 @@ service cloud.firestore {
         && get(path).data.total == request.resource.data.total;
     }
 
+    function validManualInvoice(uid) {
+      return request.resource.data.authorizationId == 'manual'
+        && request.resource.data.authorizationRevision == 0
+        && request.resource.data.version == 1
+        && request.resource.data.editorUid == uid
+        && request.resource.data.jobIds is list
+        && request.resource.data.jobIds.size() == 1
+        && request.resource.data.lines is list
+        && request.resource.data.lines.size() == 1
+        && request.resource.data.subtotal > 0
+        && request.resource.data.tax >= 0
+        && request.resource.data.total == request.resource.data.subtotal + request.resource.data.tax;
+    }
+
     function validCompletedJobEvidence() {
       return request.resource.data.status != '完了'
         || (request.resource.data.evidenceUrl is string
@@ -427,7 +441,7 @@ service cloud.firestore {
           && request.resource.data.status == '下書き'
           && request.resource.data.authorizationId is string
           && request.resource.data.authorizationRevision is int
-          && validInvoiceAuthorization(uid, invoiceId)
+          && (validInvoiceAuthorization(uid, invoiceId) || validManualInvoice(uid))
           && request.resource.data.jobIds is list
           && request.resource.data.jobIds.size() > 0
           && request.resource.data.jobIds.size() <= 100
@@ -441,7 +455,7 @@ service cloud.firestore {
           && request.resource.data.total == request.resource.data.subtotal + request.resource.data.tax;
         allow update: if editor(uid)
           && resource.data.status == '下書き'
-          && validInvoiceAuthorization(uid, invoiceId)
+          && (validInvoiceAuthorization(uid, invoiceId) || validManualInvoice(uid))
           && validInvoiceStatus(request.resource.data.status)
           && request.resource.data.status in ['下書き','提出済み']
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([

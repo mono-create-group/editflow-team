@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const PORTAL_APP_VERSION='20260828-03';
+  const PORTAL_APP_VERSION='20260828-04';
   const feature={
     board:[],catalog:[],manuals:[],schedules:[],release:null,
     messages:new Map(),messageUnsubs:new Map(),unsubs:[],startedFor:'',serverVersion:''
@@ -19,6 +19,11 @@
   function byUpdated(a,b){return(stamp(b.updatedAt)||stamp(b.createdAt))-(stamp(a.updatedAt)||stamp(a.createdAt))}
   function accountItems(clientId){return(feature.catalog.find(x=>x.id===clientId)?.accounts||[]).filter(x=>x&&x.id&&x.name)}
   function validText(v,max){return typeof v==='string'&&v.trim().length>0&&v.trim().length<=max}
+  function notificationReadKey(){return`editor_notification_read_${user?.uid||'guest'}`}
+  function notificationReadIds(){try{return new Set(JSON.parse(localStorage.getItem(notificationReadKey())||'[]'))}catch(_){return new Set()}}
+  function saveNotificationReadIds(ids){try{localStorage.setItem(notificationReadKey(),JSON.stringify([...ids].slice(-1000)))}catch(_){}}
+  function activeJob(job){return !['完了','キャンセル'].includes(job?.status)}
+  function daysFromToday(value){if(!value)return null;return Math.round((dateAtNoon(value)-dateAtNoon(localDate()))/86400000)}
   const WEEKDAY_LABELS=['月','火','水','木','金','土','日'];
   function dateAtNoon(value){const d=new Date(`${value}T12:00:00`);return Number.isNaN(d.getTime())?new Date():d}
   function localYmd(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
@@ -50,6 +55,7 @@
       .update-banner>div{flex:1;min-width:0}.update-banner b{display:block;font-size:12px}.update-banner span{font-size:10.5px;color:var(--t2)}
       .role-chip{display:inline-flex;align-items:center;margin-top:4px;padding:2px 7px;border-radius:99px;background:var(--purple2);color:#5b21b6;font-size:9px;font-weight:800}
       .nav .btn.accept-entry{border:2px solid #7c3aed;background:#f5f3ff;color:#5b21b6;box-shadow:0 4px 14px rgba(124,58,237,.18);font-weight:850}.nav .btn.accept-entry.active{background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;border-color:#5b21b6}.accept-count{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:99px;background:#dc2626;color:#fff;font-size:10px;font-weight:900}
+      .notification-button{position:relative}.notification-count{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;border-radius:99px;background:#dc2626;color:#fff;font-size:9px;font-weight:900}.notification-list{display:flex;flex-direction:column;gap:7px}.notification-item{width:100%;display:flex;align-items:center;gap:10px;text-align:left;border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:10px;background:var(--card);padding:10px;cursor:pointer}.notification-item:hover{background:var(--card2)}.notification-copy{flex:1;min-width:0}.notification-copy b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.notification-copy span{display:block;font-size:10.5px;color:var(--t2);margin-top:2px}.quick-draft{display:flex;align-items:end;gap:8px;margin:9px 0;padding:10px;border:1px solid #c4b5fd;border-radius:10px;background:#f5f3ff}.quick-draft .field{flex:1;margin:0}.quick-draft .btn{min-height:40px}
       .feature-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.feature-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
       .board-card{display:flex;flex-direction:column;gap:8px;border:2px solid #c4b5fd;box-shadow:0 6px 20px rgba(91,33,182,.10)}.board-card .actions{margin-top:auto}.claim-button{width:100%;min-height:52px;font-size:14px;background:linear-gradient(135deg,#7c3aed,#5b21b6)!important;box-shadow:0 7px 18px rgba(91,33,182,.25)}.claim-button:hover{transform:translateY(-1px)}.accept-howto{display:flex;align-items:flex-start;gap:10px;margin:10px 0 14px;padding:12px 14px;border:1px solid #c4b5fd;border-radius:11px;background:#f5f3ff;color:#4c1d95}.accept-howto b{display:block;font-size:12px}.accept-howto span{display:block;margin-top:2px;font-size:10.5px;color:#6d28d9;line-height:1.6}.scope-line{display:flex;gap:5px;flex-wrap:wrap}.scope-chip{display:inline-flex;padding:3px 7px;border-radius:7px;background:var(--card2);font-size:10px;color:var(--t2)}
       .message-thread{border-top:1px solid var(--border);margin-top:12px;padding-top:10px}.message{padding:8px 9px;margin:6px 0;border-radius:9px;background:var(--card2);font-size:11px}.message.mine{background:var(--purple2)}.message-head{display:flex;justify-content:space-between;gap:8px;color:var(--t3);font-size:9.5px;margin-bottom:3px}.message-body{white-space:pre-wrap;overflow-wrap:anywhere}
@@ -71,9 +77,10 @@
   }
 
   function navHtmlExtended(){
-    const items=[['guide','使い方ガイド'],['dashboard','概要'],['board','案件を探す'],['jobs','担当案件'],['schedule','スケジュール'],['manuals','マニュアル'],['suggestion','匿名目安箱'],['invoices','請求書'],['settings','登録情報']];
+    const items=[['guide','使い方ガイド'],['dashboard','概要'],['notifications','通知'],['board','案件を探す'],['jobs','担当案件'],['schedule','スケジュール'],['manuals','マニュアル'],['suggestion','匿名目安箱'],['invoices','請求書'],['settings','登録情報']];
     const open=feature.board.filter(x=>x.status==='open').length;
-    return`<nav class="nav" aria-label="編集者メニュー">${items.map(([k,l])=>`<button type="button" class="btn ${k==='board'?'accept-entry ':''}${view===k?'active':''}" onclick="setView('${k}')">${k==='board'?'🔍 ':''}${l}${k==='board'&&open?` <span class="accept-count">${open}</span>`:''}</button>`).join('')}</nav>`;
+    const noticeCount=notificationItems().length;
+    return`<nav class="nav" aria-label="編集者メニュー">${items.map(([k,l])=>`<button type="button" class="btn ${k==='board'?'accept-entry ':''}${k==='notifications'?'notification-button ':''}${view===k?'active':''}" onclick="setView('${k}')">${k==='board'?'🔍 ':k==='notifications'?'🔔 ':''}${l}${k==='board'&&open?` <span class="accept-count">${open}</span>`:''}${k==='notifications'&&noticeCount?` <span class="notification-count">${noticeCount}</span>`:''}</button>`).join('')}</nav>`;
   }
 
   function dashboardExtended(){
@@ -94,7 +101,7 @@
 
   function boardHtml(){
     const list=feature.board.filter(x=>x.status==='open').sort(byUpdated);
-    return`${pageHead('案件を探す','mono.createから募集中の編集代行案件')}<div class="accept-howto"><span style="font-size:20px">✅</span><div><b>内容と日程を確認し、紫のボタンを押してください</b><span>案件内容・初稿日・納品日を確認 → 「この案件を受ける」 → 「担当案件」に自動反映</span></div></div><div class="privacy-note"><b>表示範囲</b><span>${isExternal()?'担当ディレクターから届いた案件のみです。':'公開案件と、ご自身宛ての案件のみです。'} クライアント請求額と利益は保存も表示もしません。</span></div><section class="section"><div class="feature-grid">${list.map(x=>`<article class="card board-card"><div class="job-top"><div><div class="job-title">${esc(x.title||'')}</div><div class="job-meta">${esc(x.clientName||'')} / ${esc(x.accountName||'')}</div></div>${x.urgent?'<span class="pill red">緊急</span>':'<span class="pill">募集中</span>'}</div>${x.caseName?`<div class="muted">${esc(x.caseName)}</div>`:''}<div class="scope-line"><span class="scope-chip">初稿 ${esc(x.editorDraftDate||'未設定')}</span><span class="scope-chip">納品 ${esc(x.deliveryDate||'未設定')}</span></div><div class="job-body">${esc(x.summary||x.instructions||'')}</div><div class="actions"><button class="btn primary claim-button" onclick="claimBoardJob('${esc(x.id)}')">✓ この案件を受ける</button></div></article>`).join('')||'<div class="card empty"><b>現在公開中の案件は0件です</b><br><span class="muted">権限エラーではありません。管理者が編集代行案件を掲載すると、ここに表示されます。</span></div>'}</div></section>`;
+    return`${pageHead('案件を探す','mono.createから募集中の編集代行案件')}<div class="accept-howto"><span style="font-size:20px">✅</span><div><b>内容と日程を確認し、紫のボタンを押してください</b><span>案件内容・初稿日・納品日を確認 → 「この案件を受ける」 → 「担当案件」に自動反映</span></div></div><div class="privacy-note"><b>表示範囲</b><span>${isExternal()?'担当ディレクターから届いた案件のみです。':'公開案件と、ご自身宛ての案件のみです。'} クライアント請求額と利益は保存も表示もしません。</span></div><section class="section"><div class="feature-grid">${list.map(x=>{const requested=x.audience==='designated'||Array.isArray(x.eligibleUids)&&x.eligibleUids.length===1;return`<article class="card board-card"><div class="job-top"><div><div class="job-title">${esc(x.title||'')}</div><div class="job-meta">${esc(x.clientName||'')} / ${esc(x.accountName||'')}</div></div>${requested?'<span class="pill red">編集リクエスト</span>':x.urgent?'<span class="pill red">緊急</span>':'<span class="pill">募集中</span>'}</div>${x.caseName?`<div class="muted">${esc(x.caseName)}</div>`:''}<div class="scope-line"><span class="scope-chip">初稿 ${esc(x.editorDraftDate||'未設定')}</span><span class="scope-chip">納品 ${esc(x.deliveryDate||'未設定')}</span></div><div class="job-body">${esc(x.summary||x.instructions||'')}</div><div class="actions"><button class="btn primary claim-button" onclick="claimBoardJob('${esc(x.id)}')">✓ この案件を受ける</button></div></article>`}).join('')||'<div class="card empty"><b>現在公開中の案件は0件です</b><br><span class="muted">権限エラーではありません。管理者が編集代行案件を掲載すると、ここに表示されます。</span></div>'}</div></section>`;
   }
 
   function scheduleHtml(){
@@ -112,6 +119,27 @@
     return`${pageHead('匿名目安箱','投稿者のUID・氏名・メールをレコードに保存しません')}<div class="split"><div class="card"><div class="field"><label for="sg-category">種類</label><select id="sg-category"><option>業務改善</option><option>人間関係・ハラスメント</option><option>報酬・契約</option><option>アプリの不具合</option><option>その他</option></select></div><div class="field" style="margin-top:10px"><label for="sg-message">内容 *</label><textarea id="sg-message" maxlength="2000" placeholder="状況と改善してほしいことを入力"></textarea></div><label class="check" style="margin-top:10px"><input id="sg-reply" type="checkbox" checked> 匿名の返信コードを発行する</label><div class="actions"><button class="btn primary" onclick="submitSuggestion()">匿名で送信</button></div></div><div><div class="card privacy-note"><b>匿名性</b><span>投稿時の認証は外部からの悪用防止にのみ使います。投稿レコードには投稿者を特定する項目を保存しません。</span></div><div class="card" style="margin-top:10px"><b>匿名返信を確認</b><div class="field" style="margin-top:8px"><input id="sg-code" maxlength="32" placeholder="返信コード"></div><div class="actions"><button class="btn small" onclick="checkSuggestionReply()">返信を確認</button></div><div id="sg-reply-result" class="muted"></div></div></div></div>`;
   }
 
+  function notificationItems(){
+    const read=notificationReadIds(),items=[];
+    feature.board.filter(x=>x.status==='open').forEach(x=>{const id=`board:${x.id}`;if(!read.has(id)){const requested=x.audience==='designated'||Array.isArray(x.eligibleUids)&&x.eligibleUids.length===1;items.push({id,kind:'board',target:'board',jobId:x.id,icon:requested?'🎯':'📣',title:x.title||'新しい募集案件',detail:`${requested?'あなたへの編集リクエスト ・ ':''}${x.clientName||''} ${x.editorDraftDate?`・初稿 ${x.editorDraftDate}`:''}`,timing:requested?'リクエスト':'新着',persistent:false})}});
+    jobs.filter(activeJob).forEach(j=>{
+      if(!j.editorDraftDate)items.push({id:`draft-missing:${j.id}`,kind:'required',target:'jobs',jobId:j.id,icon:'✏️',title:j.title||'担当案件',detail:'編集者初稿日を設定してください',timing:'要設定',persistent:true});
+      [['editorDraftDate','編集者初稿','✏️'],['clientDraftDate','クライアント初稿','📋'],['deliveryDate','納期','📅']].forEach(([key,label,icon])=>{const value=j[key]||(key==='deliveryDate'?j.deadline:'');const days=daysFromToday(value);if(days===null||days>3)return;items.push({id:`due:${j.id}:${key}:${value}`,kind:'due',target:'jobs',jobId:j.id,icon,title:j.title||'担当案件',detail:`${label} ${value}`,timing:days<0?`${Math.abs(days)}日超過`:days===0?'今日':days===1?'明日':`あと${days}日`,persistent:true,order:days})});
+      (feature.messages.get(j.id)||[]).forEach(m=>{const id=`message:${j.id}:${m.id}`;if(m.byUid!==user?.uid&&!read.has(id))items.push({id,kind:'message',target:'jobs',jobId:j.id,icon:'💬',title:j.title||'担当案件',detail:`${m.byName||'担当者'}：${String(m.body||'').slice(0,90)}`,timing:'未読',persistent:false,order:-1})});
+    });
+    return items.sort((a,b)=>(a.order??0)-(b.order??0)||String(a.title).localeCompare(String(b.title)));
+  }
+  function notificationsHtml(){
+    const items=notificationItems();
+    return`${pageHead('通知','初稿・納期・案件内チャットをまとめて確認')}<div class="card"><div class="section-title"><h2>対応する通知</h2><span>${items.length}件</span></div><div class="notification-list">${items.map(x=>`<button type="button" class="notification-item" onclick="openEditorNotification('${esc(x.id)}','${esc(x.target)}','${esc(x.jobId||'')}')"><span style="font-size:20px">${x.icon}</span><span class="notification-copy"><b>${esc(x.title)}</b><span>${esc(x.detail)}</span></span><span class="pill ${x.timing.includes('超過')?'red':''}">${esc(x.timing)}</span></button>`).join('')||'<div class="empty">現在、対応が必要な通知はありません</div>'}</div>${items.some(x=>!x.persistent)?'<div class="actions"><button class="btn small" type="button" onclick="markEditorNotificationsRead()">新着・メッセージを既読にする</button></div>':''}<div class="muted" style="margin-top:9px">初稿日未設定と期限通知は、案件を更新すると自動で消えます。</div></div>`;
+  }
+  function openEditorNotification(id,target){
+    const item=notificationItems().find(x=>x.id===id);if(item&&!item.persistent){const read=notificationReadIds();read.add(id);saveNotificationReadIds(read)}
+    view=target==='board'?'board':'jobs';render();
+    if(item?.jobId&&view==='jobs')setTimeout(()=>document.getElementById(`job-editor-draft-${item.jobId}`)?.closest('article')?.scrollIntoView({behavior:'smooth',block:'start'}),50);
+  }
+  function markEditorNotificationsRead(){const read=notificationReadIds();notificationItems().filter(x=>!x.persistent).forEach(x=>read.add(x.id));saveNotificationReadIds(read);render()}
+
   function messageBlock(job){
     const list=(feature.messages.get(job.id)||[]).slice().sort((a,b)=>stamp(a.createdAt)-stamp(b.createdAt));
     return`<div class="message-thread"><div class="section-title"><h2>案件内チャット</h2><span>ここの履歴を正本として保存</span></div>${list.map(x=>`<div class="message ${x.byUid===portalUid()?'mine':''}"><div class="message-head"><span>${esc(x.byName||'メンバー')} ・ ${esc(x.kind||'メッセージ')}</span><span>${x.createdAt&&typeof x.createdAt.toDate==='function'?x.createdAt.toDate().toLocaleString('ja-JP'):''}</span></div><div class="message-body">${esc(x.body||'')}</div>${safeUrl(x.url||'')?`<a class="safe-link" href="${esc(safeUrl(x.url))}" target="_blank" rel="noopener">添付URLを開く</a>`:''}</div>`).join('')||'<div class="muted">まだメッセージはありません</div>'}<div class="form-grid" style="margin-top:8px"><div class="field"><label for="msg-kind-${job.id}">種類</label><select id="msg-kind-${job.id}"><option>質問</option><option>回答</option><option>初稿提出</option><option>修正指示</option><option>修正稿提出</option><option>納品</option><option>連絡</option></select></div><div class="field"><label for="msg-url-${job.id}">関連URL</label><input id="msg-url-${job.id}" type="url" placeholder="https://"></div><div class="field full"><label for="msg-body-${job.id}">メッセージ</label><textarea id="msg-body-${job.id}" maxlength="2000"></textarea></div></div><div class="actions"><button class="btn primary small" onclick="sendJobMessage('${job.id}')">メッセージを送信</button></div></div>`;
@@ -119,7 +147,15 @@
 
   function jobCardExtended(job){
     const base=original.jobCard(job);
-    return base.replace('<details class="job-detail">',`${editorMilestonePanel(job)}<details class="job-detail">`).replace('</article>',`${messageBlock(job)}</article>`);
+    return base.replace('<details class="job-detail">',`${editorDraftQuickPanel(job)}${editorMilestonePanel(job)}<details class="job-detail">`).replace('</article>',`${messageBlock(job)}</article>`);
+  }
+
+  function editorDraftQuickPanel(job){if(!activeJob(job))return'';return`<div class="quick-draft"><div class="field"><label for="quick-editor-draft-${job.id}">編集者 初稿日</label><input id="quick-editor-draft-${job.id}" type="date" value="${esc(job.editorDraftDate||'')}"></div><button class="btn primary small" type="button" onclick="saveEditorDraftDate('${job.id}')">初稿日を保存</button></div>`}
+  async function saveEditorDraftDate(jid){
+    const job=jobs.find(x=>x.id===jid),value=$(`#quick-editor-draft-${jid}`)?.value||'';if(!job)return;if(!value)return toast('編集者初稿日を入力してください');
+    const schedule={sharedDate:job.sharedDate||'',editorDraftDate:value,clientDraftDate:job.clientDraftDate||'',thumbnailDate:job.thumbnailDate||'',deliveryDate:job.deliveryDate||job.deadline||''},dateError=scheduleError(schedule);if(dateError)return toast(dateError);
+    if(DEMO){job.editorDraftDate=value;render();return toast('編集者初稿日を保存しました')}
+    try{await db.collection('editor_portals').doc(user.uid).collection('editor_jobs').doc(jid).update({editorDraftDate:value,updatedAt:now()});job.editorDraftDate=value;render();toast('編集者初稿日を保存しました')}catch(e){console.warn(e);toast('編集者初稿日を保存できませんでした')}
   }
 
   function mountUpdateBanner(){
@@ -258,12 +294,15 @@
   window.submitSuggestion=submitSuggestion;
   window.checkSuggestionReply=checkSuggestionReply;
   window.reloadPortalUpdate=reloadPortalUpdate;
+  window.openEditorNotification=openEditorNotification;
+  window.markEditorNotificationsRead=markEditorNotificationsRead;
+  window.saveEditorDraftDate=saveEditorDraftDate;
 
   const originalRenderBody=render;
   render=function(){
     if(user&&access?.approved){
       let body;
-      if(view==='board')body=boardHtml();else if(view==='schedule')body=scheduleHtml();else if(view==='manuals')body=manualsHtml();else if(view==='suggestion')body=suggestionHtml();
+      if(view==='notifications')body=notificationsHtml();else if(view==='board')body=boardHtml();else if(view==='schedule')body=scheduleHtml();else if(view==='manuals')body=manualsHtml();else if(view==='suggestion')body=suggestionHtml();
       if(body){accountHtml();$('#app').innerHTML=adminPreviewBanner()+navHtml()+body;injectStyles();mountUpdateBanner();applyAdminPreviewReadOnly();return}
     }
     originalRenderBody();
