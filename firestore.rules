@@ -220,6 +220,20 @@ service cloud.firestore {
         && !hasRole(request.auth.uid, '動画編集ディレクター');
     }
 
+    // Once Stage 2 marks shared/mcapp, stale owner/core tabs must not put the
+    // removed legacy amount fields back by saving an old `jobs` payload. A
+    // current client deliberately changes the nonce on every permitted jobs
+    // write. Updates that leave jobs untouched remain available to owner/core.
+    function migratedLegacyJobsWriteAllowed() {
+      let nonce = request.resource.data.get('legacyFinanceWriteNonce', '');
+      return !('ownerLegacyFinanceMigrationAt' in resource.data)
+        || request.resource.data.get('jobs', null) == resource.data.get('jobs', null)
+        || (nonce is string
+          && nonce.size() > 0
+          && nonce.size() <= 160
+          && nonce != resource.data.get('legacyFinanceWriteNonce', ''));
+    }
+
     function videoManager() {
       return owner() || (approved(request.auth.uid)
         && !pureEditor(request.auth.uid)
@@ -941,7 +955,12 @@ service cloud.firestore {
     // accidentally added; the app also prevents that combination at assignment time.
     // Directors use scoped portal data instead of this company-wide record.
     match /shared/{document=**} {
-      allow read, write: if owner() || legacyMonolithStaff();
+      allow read: if owner() || legacyMonolithStaff();
+      allow create, delete: if owner() || legacyMonolithStaff();
+      allow update: if (owner() || legacyMonolithStaff())
+        // Only shared/mcapp receives ownerLegacyFinanceMigrationAt. Shards
+        // have no marker, so this remains a no-op for mcapp_leads_* etc.
+        && migratedLegacyJobsWriteAllowed();
     }
 
     match /users/{uid} {

@@ -269,6 +269,11 @@ async function expectAllowed(label, promise) {
     await expectDenied('video director cannot list shared records', getDocs(collection(dir1, 'shared')));
     await expectDenied('video director cannot collection-group query shared records', getDocs(collectionGroup(dir1, 'shared')));
     await expectAllowed('non-director core staff keeps shared monolith access', getDoc(doc(hybrid1, 'shared', 'mcapp')));
+    await expectAllowed('pre-migration marker old core client can still update shared jobs', updateDoc(doc(hybrid1, 'shared', 'mcapp'), { jobs: 'legacy-v24-payload' }));
+    await expectAllowed('owner marks shared ledger after immutable finance migration', updateDoc(doc(owner, 'shared', 'mcapp'), { ownerLegacyFinanceMigrationAt: 2, legacyFinanceWriteNonce: 'stage2-migration' }));
+    await expectDenied('post-migration old core client cannot overwrite shared jobs without a changed nonce', updateDoc(doc(hybrid1, 'shared', 'mcapp'), { jobs: 'stale-v24-payload' }));
+    await expectAllowed('post-migration v28 client updates shared jobs with a changed bounded nonce', updateDoc(doc(owner, 'shared', 'mcapp'), { jobs: 'v28-payload', legacyFinanceWriteNonce: 'v28-save-1' }));
+    await expectAllowed('post-migration core client can update shared fields when jobs stay unchanged', updateDoc(doc(hybrid1, 'shared', 'mcapp'), { coreNonJobProbe: true }));
     await expectAllowed('non-director core staff keeps shared monolith write access', setDoc(doc(hybrid1, 'shared', 'core-staff-fixture'), { probe: true }));
     await expectAllowed('owner keeps shared monolith write access', updateDoc(doc(owner, 'shared', 'mcapp'), { ownerProbe: true }));
     await expectDenied('video director cannot read own legacy personal document', getDoc(doc(dir1, 'users', 'dir1')));

@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#000000">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260828-27"></script>
+<script src="./billing-terms.js?v=20260828-28"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -1510,7 +1510,10 @@ function mergeTeamArr(local,remote,key){
 function _teamSave(){
   if(!FB_USER||TEAM_SHARE_OK===false)return;
   if(!_teamCloudLoaded){console.warn('team share save skipped: cloud snapshot is not loaded');return;}
-  const payload={ts:firebase.firestore.FieldValue.serverTimestamp(),by:FB_USER.uid};
+  // 金額移行後は、旧タブが金額入りjobsを書き戻さないよう、
+  // 最新版だけが更新できる使い捨てnonceを毎回送る。
+  const financeWriteNonce=(()=>{try{return crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${crypto.getRandomValues(new Uint32Array(4)).join('-')}`;}catch(_){return`${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;}})();
+  const payload={ts:firebase.firestore.FieldValue.serverTimestamp(),by:FB_USER.uid,legacyFinanceWriteNonce:financeWriteNonce};
   // salesLeadsは分割格納(shared/mcapp_leads_0..3)へ移行済み。本体にはマーカーのみ置く
   // (旧クライアントはマーカーをJSON解釈できず無害スキップ。他キーは従来どおり)
   TEAM_KEYS.forEach(k=>{
@@ -16779,7 +16782,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260828-27';
+const APP_VERSION='20260828-28';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -16853,6 +16856,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260828-27"></script>
+<script src="./manager-features.js?v=20260828-28"></script>
 </body>
 </html>
