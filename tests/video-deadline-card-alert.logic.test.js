@@ -44,3 +44,12 @@ test('parent and child card markup render the deadline border class and visible 
   assert.match(html, /_videoDeadlineAlertHtml\(alert\)/);
   assert.match(html, /_videoDeadlineAlertHtml\(subAlert\)/);
 });
+
+test('deadline alert pills wrap inside a narrow mobile case card', () => {
+  const mobile = html.match(/\.video-deadline-alert\{([^}]*)\}/g);
+  assert.ok(mobile?.length >= 2, 'mobile deadline alert rule is present');
+  const mobileRule = mobile.at(-1);
+  for (const declaration of ['max-width:100%', 'min-width:0', 'white-space:normal', 'overflow-wrap:anywhere']) {
+    assert.ok(mobileRule.includes(declaration), declaration);
+  }
+});

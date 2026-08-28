@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#000000">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260828-29"></script>
+<script src="./billing-terms.js?v=20260828-30"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -123,6 +123,9 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 @media(min-width:701px) and (max-width:820px){.video-progress-head{display:none}.video-progress-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.video-progress-info{grid-column:1/-1;padding:5px}.video-progress-stage{justify-content:flex-start;text-align:left}.video-progress-stage::before{content:attr(data-label) " ";color:var(--t3);font-weight:700}}
 @media(max-width:700px){
   .video-job-main{padding:13px 12px}
+  /* Deadline labels must stay inside narrow case cards.  Keep the desktop
+     pill treatment, but let the text wrap rather than widening the card. */
+  .video-deadline-alert{align-self:flex-start;box-sizing:border-box;max-width:100%;min-width:0;white-space:normal;overflow-wrap:anywhere;line-height:1.35}
   .video-subcase-list{padding:9px}
   .video-subcase-row{grid-template-columns:minmax(0,1fr);gap:4px;padding:8px}
   .video-progress-board .video-subcase-head{align-items:flex-start;flex-direction:column}.video-progress-board .video-subcase-head>span:last-child{width:100%}
@@ -16798,7 +16801,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260828-29';
+const APP_VERSION='20260828-30';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -16872,6 +16875,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260828-29"></script>
+<script src="./manager-features.js?v=20260828-30"></script>
 </body>
 </html>
