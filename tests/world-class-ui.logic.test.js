@@ -21,6 +21,7 @@ test('each editorial journey leads with one visually distinct primary action', (
   assert.match(features, /claim-button\{width:100%;min-height:52px/);
   assert.match(features, /最後の紫ボタンで受けてください/);
   assert.match(index, /const headerPrimary=VIDEO_TAB==='overview'&&attentionTotal/);
+  assert.match(index, /<span>未割当<\/span>/);
   assert.match(index, /const utilityActions=`\$\{VIDEO_TAB==='overview'&&attentionTotal\?addJobAction:''\}/);
   assert.match(index, /managerOpenBoardForm\?managerOpenBoardForm\(\):openJobModal\(\)/);
   assert.match(manager, /id="manager-board-publish" class="manager-operation-disclosure"/);

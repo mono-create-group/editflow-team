@@ -6339,7 +6339,7 @@ function rVideoOperations(showBusinessSwitcher=false,biz=PBIZ){
   const board=`<div class="app-kanban">${VIDEO_PHASES.map(p=>`<details class="app-kanban-column" open><summary><span>${p.label}</span><span class="badge bk">${filtered.filter(j=>p.statuses.includes(j.status)).length}</span></summary><div class="app-kanban-list">${filtered.filter(j=>p.statuses.includes(j.status)).map(_videoCard).join('')||'<div style="font-size:12px;color:var(--t3);padding:8px 0">0件</div>'}</div></details>`).join('')}</div>`;
   const queue=[['期限超過',overdue,'var(--red)'],['停止中',blocked,'var(--amber)'],['確認・修正待ち',review,'var(--pl)'],['未割当',unassigned,'var(--red)']].map(([label,list,color])=>`<div class="card" style="border-left:3px solid ${color}"><div style="display:flex;justify-content:space-between"><b>${label}</b><span>${list.length}件</span></div>${list.slice(0,20).map(_videoCard).join('')||'<div style="font-size:11px;color:var(--t3);padding-top:8px">該当なし</div>'}</div>`).join('');
   const attentionTotal=new Set([...overdue,...blocked,...review,...unassigned].map(j=>`${j._source}:${j._portalUid||''}:${j.id}`)).size;
-  const overview=`<div class="app-attention-grid"><div class="app-attention-card danger"><strong>${overdue.length}</strong><span>期限超過</span></div><div class="app-attention-card warning"><strong>${blocked.length}</strong><span>停止中</span></div><div class="app-attention-card info"><strong>${review.length}</strong><span>確認・修正待ち</span></div></div><div class="app-metric-row"><div class="app-metric"><span>制作中</span><strong>${active.length}</strong></div><div class="app-metric"><span>サブ案件</span><strong>${subcaseCount}</strong></div><div class="app-metric"><span>${biz==='haken'?'編集者直接登録':'編集者受託'}</span><strong>${portalCount}</strong></div></div>`;
+  const overview=`<div class="app-attention-grid"><div class="app-attention-card danger"><strong>${overdue.length}</strong><span>期限超過</span></div><div class="app-attention-card warning"><strong>${blocked.length}</strong><span>停止中</span></div><div class="app-attention-card info"><strong>${review.length}</strong><span>確認・修正待ち</span></div><div class="app-attention-card"><strong>${unassigned.length}</strong><span>未割当</span></div></div><div class="app-metric-row"><div class="app-metric"><span>制作中</span><strong>${active.length}</strong></div><div class="app-metric"><span>サブ案件</span><strong>${subcaseCount}</strong></div><div class="app-metric"><span>${biz==='haken'?'編集者直接登録':'編集者受託'}</span><strong>${portalCount}</strong></div></div>`;
   const ownerAcceptancePreview=_isOwner()&&biz==='edit'?'<a class="btn btn-p btn-sm" href="./editor.html?demo=editor" target="_blank" rel="noopener">編集者の受託画面を確認（デモ）</a>':'';
   const acceptanceNote=biz==='edit'&&_isOwner()?'<div style="font-size:11px;color:var(--t2);margin:-2px 0 10px;padding:8px 10px;border-radius:8px;background:var(--card2)">この管理画面は案件を掲載する側です。編集者は「案件を探す」から「この案件を受ける」を押します。</div>':'';
   const roleNote=_isOwner()?'全案件の優先順位・請求・配置を管理します。':'担当する編集者と案件だけを確認・判断します。';
@@ -16021,7 +16021,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260828-11';
+const APP_VERSION='20260828-12';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -16095,6 +16095,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260828-11"></script>
+<script src="./manager-features.js?v=20260828-12"></script>
 </body>
 </html>
