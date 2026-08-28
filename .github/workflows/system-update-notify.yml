@@ -9,6 +9,7 @@ on:
       - editor-features.js
       - manager-features.js
       - sw.js
+  workflow_dispatch: # 失敗・停止した同一版の固定通知を、重複防止付きで再実行する
 
 permissions:
   contents: read
