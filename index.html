@@ -6322,8 +6322,8 @@ function openVideoNotification(source,portalUid,jobId){
 function rVideoNotificationCenter(biz=PBIZ){
   if(!['edit','haken'].includes(biz))return'';
   const items=_videoNotificationItems(biz),visible=items.slice(0,20);
-  return`<details class="card" style="margin-bottom:12px;border:1.5px solid ${items.length?'var(--amber)':'var(--border)'}" ${items.length?'open':''}>
-    <summary style="display:flex;align-items:center;gap:9px;cursor:pointer;list-style:none"><span style="font-size:20px">🔔</span><b style="flex:1">通知</b><span class="badge ${items.length?'ba':'bg'}">${items.length}件</span></summary>
+  return`<details class="card" style="margin-bottom:12px;border:1.5px solid ${items.length?'var(--amber)':'var(--border)'}">
+    <summary style="display:flex;align-items:center;gap:9px;cursor:pointer;list-style:none"><span style="font-size:20px">🔔</span><b style="flex:1">通知</b><span style="font-size:11px;color:var(--t3)">内容を開く</span><span class="badge ${items.length?'ba':'bg'}">${items.length}件</span></summary>
     <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">${visible.map(x=>`<button type="button" class="btn btn-g" data-notification-target="${esc(x.jobId)}" data-notification-section="${esc(x.source)}" data-notification-auto-open="true" style="width:100%;text-align:left;display:flex;align-items:center;gap:9px;border-left:3px solid ${x.color}" onclick="openVideoNotification('${x.source}','${esc(x.portalUid||'')}','${esc(x.jobId)}')"><span style="font-size:18px">${x.icon}</span><span style="flex:1;min-width:0"><b style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.title)}</b><span style="font-size:11px;color:var(--t2)">${esc(x.label)} ${esc(x.date)}</span></span><span class="badge ${x.remaining<0?'br':x.remaining<=1?'ba':'bk'}">${esc(x.timing)}</span></button>`).join('')||'<div style="font-size:12px;color:var(--t3);padding:8px 0">3日以内の納期・初稿・請求書提出はありません。</div>'}${items.length>visible.length?`<div style="font-size:11px;color:var(--t3)">ほか${items.length-visible.length}件。期限の古い案件から表示しています。</div>`:''}</div>
   </details>`;
 }
@@ -16021,7 +16021,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260828-10';
+const APP_VERSION='20260828-11';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -16095,6 +16095,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260828-10"></script>
+<script src="./manager-features.js?v=20260828-11"></script>
 </body>
 </html>

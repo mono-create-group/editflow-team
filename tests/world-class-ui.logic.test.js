@@ -42,6 +42,8 @@ test('notifications contain stable deep-link data and open the target context', 
   assert.match(index, /data-notification-auto-open=/);
   assert.match(index, /function openVideoNotification\(source,portalUid,jobId\)/);
   assert.match(index, /openPortalJobModal\(portalUid,jobId\)/);
+  assert.doesNotMatch(index, /<details class="card"[^>]*\$\{items\.length\?'open':''\}/);
+  assert.match(index, /内容を開く/);
 });
 
 test('parent cases and child cases are collapsible without hiding child detail', () => {
