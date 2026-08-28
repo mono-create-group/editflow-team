@@ -90,15 +90,31 @@ service cloud.firestore {
 
     function validJobSchedule() {
       let delivery = request.resource.data.get('deliveryDate', request.resource.data.get('deadline', ''));
-      let legacyWithoutDeadline = request.resource.data.get('source', '') == 'legacy_sync';
+      // A direct-client dispatch records the actual delivery date only after
+      // delivery.  It therefore has no promised delivery date at creation.
+      // Legacy synchronization has the same compatibility exception.
+      let sourceWithoutDeadline = request.resource.data.get('source', '') in ['legacy_sync', 'direct_client'];
       return validOptionalIsoDate(request.resource.data.get('sharedDate', ''))
         && validOptionalIsoDate(request.resource.data.get('editorDraftDate', ''))
         && validOptionalIsoDate(request.resource.data.get('clientDraftDate', ''))
         && validOptionalIsoDate(request.resource.data.get('thumbnailDate', ''))
-        && (delivery != '' || legacyWithoutDeadline)
+        && (delivery != '' || sourceWithoutDeadline)
         && validOptionalIsoDate(delivery)
         && validCompletedDeliveryDate()
         && request.resource.data.get('deadline', delivery) == delivery;
+    }
+
+    // The amount entered by an editor for a self-registered dispatch is the
+    // editor payment, not the client price.  Client price and profit stay in
+    // the owner-only pricing/ledger records.
+    function validEditorPayAmountForCreate() {
+      let source = request.resource.data.get('source', '');
+      return source != 'direct_client'
+        || (request.resource.data.get('businessType', '') == 'dispatch'
+          && ('editorPayAmount' in request.resource.data)
+          && request.resource.data.editorPayAmount is int
+          && request.resource.data.editorPayAmount > 0
+          && request.resource.data.editorPayAmount <= 100000000);
     }
 
     // New cases explicitly choose who sets the editor's first-draft date.
@@ -195,6 +211,15 @@ service cloud.firestore {
         );
     }
 
+    // Video directors operate through their scoped editor portal.  They must
+    // never receive the legacy company-wide monolith, even when they also hold
+    // another core-staff role.  Keep `coreStaff` unchanged because it remains
+    // the authorization source for non-financial operational surfaces.
+    function legacyMonolithStaff() {
+      return coreStaff()
+        && !hasRole(request.auth.uid, '動画編集ディレクター');
+    }
+
     function videoManager() {
       return owner() || (approved(request.auth.uid)
         && !pureEditor(request.auth.uid)
@@ -264,6 +289,165 @@ service cloud.firestore {
         && request.resource.data.get('manualIds', []).size() <= 100
         && request.resource.data.get('updatedBy', '') is string
         && request.resource.data.get('updatedBy', '').size() <= 320;
+    }
+
+    function validOwnerClientPricingDocument() {
+      let defaultPrice = request.resource.data.get('defaultClientUnitPrice', null);
+      return request.resource.data.keys().hasOnly([
+          'recordType','clientSource','sourceClientId','clientName',
+          'defaultClientUnitPrice','accountUnitPrices','revision','updatedAt','updatedBy'
+        ])
+        && request.resource.data.recordType == 'owner_client_pricing'
+        && request.resource.data.clientSource in ['projects','crm']
+        && request.resource.data.sourceClientId is string
+        && request.resource.data.sourceClientId.size() > 0
+        && request.resource.data.sourceClientId.size() <= 160
+        && request.resource.data.clientName is string
+        && request.resource.data.clientName.size() <= 100
+        && (defaultPrice == null
+          || (defaultPrice is int && defaultPrice >= 0 && defaultPrice <= 100000000))
+        && request.resource.data.accountUnitPrices is map
+        && request.resource.data.accountUnitPrices.size() <= 100
+        && request.resource.data.revision is int
+        && request.resource.data.revision >= 1
+        && request.resource.data.updatedBy is string
+        && request.resource.data.updatedBy.size() <= 320;
+    }
+
+    function validOwnerJobFinanceDocument() {
+      let masterPrice = request.resource.data.get('masterClientUnitPrice', null);
+      return request.resource.data.keys().hasOnly([
+          'recordType','portalUid','portalJobId','legacyJobId','parentCaseId',
+          'sourceClientId','accountId','clientUnitPrice','masterClientUnitPrice',
+          'pricingSource','pricingRevision','pricingUpdatedAt','overrideReason',
+          'editorPayReference','approvedPayAmount','payRoute','payeeUid',
+          'payeeWorkerId','assigneeUid','assigneeWorkerId','approvedBy',
+          'approvedAt','updatedAt'
+        ])
+        && request.resource.data.recordType == 'owner_job_finance'
+        && request.resource.data.portalUid is string
+        && request.resource.data.portalUid.size() > 0
+        && request.resource.data.portalUid.size() <= 160
+        && request.resource.data.portalJobId is string
+        && request.resource.data.portalJobId.size() > 0
+        && request.resource.data.portalJobId.size() <= 220
+        && request.resource.data.legacyJobId is string
+        && request.resource.data.legacyJobId.size() > 0
+        && request.resource.data.legacyJobId.size() <= 220
+        && request.resource.data.get('parentCaseId', '') is string
+        && request.resource.data.get('parentCaseId', '').size() <= 160
+        && request.resource.data.sourceClientId is string
+        && request.resource.data.sourceClientId.size() > 0
+        && request.resource.data.sourceClientId.size() <= 160
+        && request.resource.data.get('accountId', '') is string
+        && request.resource.data.get('accountId', '').size() <= 160
+        && request.resource.data.clientUnitPrice is int
+        && request.resource.data.clientUnitPrice > 0
+        && request.resource.data.clientUnitPrice <= 100000000
+        && (masterPrice == null
+          || (masterPrice is int && masterPrice >= 0 && masterPrice <= 100000000))
+        && request.resource.data.pricingSource in ['master','account_master','case_override']
+        && request.resource.data.pricingRevision is int
+        && request.resource.data.pricingRevision >= 0
+        && (request.resource.data.get('pricingUpdatedAt', null) == null
+          || request.resource.data.pricingUpdatedAt is timestamp)
+        && request.resource.data.overrideReason is string
+        && request.resource.data.overrideReason.size() <= 500
+        && (request.resource.data.pricingSource != 'case_override'
+          || request.resource.data.overrideReason.size() > 0)
+        && request.resource.data.editorPayReference is int
+        && request.resource.data.editorPayReference > 0
+        && request.resource.data.editorPayReference <= 100000000
+        && request.resource.data.approvedPayAmount is int
+        && request.resource.data.approvedPayAmount > 0
+        && request.resource.data.approvedPayAmount <= 100000000
+        && request.resource.data.payRoute in ['direct','director_team']
+        && request.resource.data.payeeUid is string
+        && request.resource.data.payeeUid.size() > 0
+        && request.resource.data.payeeUid.size() <= 160
+        && request.resource.data.get('payeeWorkerId', '') is string
+        && request.resource.data.get('payeeWorkerId', '').size() <= 160
+        && request.resource.data.assigneeUid is string
+        && request.resource.data.assigneeUid.size() > 0
+        && request.resource.data.assigneeUid.size() <= 160
+        && request.resource.data.assigneeUid == request.resource.data.portalUid
+        && request.resource.data.get('assigneeWorkerId', '') is string
+        && request.resource.data.get('assigneeWorkerId', '').size() <= 160
+        && exists(accessPath(request.resource.data.portalUid))
+        && approved(request.resource.data.portalUid)
+        && (hasRole(request.resource.data.portalUid, '動画編集者')
+          || hasRole(request.resource.data.portalUid, '動画編集ディレクター'))
+        && get(accessPath(request.resource.data.portalUid)).data.get('workerId', '') == request.resource.data.get('assigneeWorkerId', '')
+        && ((editorKind(request.resource.data.portalUid) == 'external'
+            && request.resource.data.payRoute == 'director_team'
+            && request.resource.data.payeeUid == get(accessPath(request.resource.data.portalUid)).data.get('directorUid', '')
+            && exists(accessPath(request.resource.data.payeeUid))
+            && approved(request.resource.data.payeeUid)
+            && hasRole(request.resource.data.payeeUid, '動画編集ディレクター')
+            && get(accessPath(request.resource.data.payeeUid)).data.get('workerId', '') == request.resource.data.get('payeeWorkerId', ''))
+          || (editorKind(request.resource.data.portalUid) != 'external'
+            && request.resource.data.payRoute == 'direct'
+            && request.resource.data.payeeUid == request.resource.data.portalUid
+            && request.resource.data.get('payeeWorkerId', '') == request.resource.data.get('assigneeWorkerId', '')))
+        && request.resource.data.approvedBy is string
+        && request.resource.data.approvedBy.size() > 0
+        && request.resource.data.approvedBy.size() <= 320
+        && request.resource.data.approvedAt is timestamp
+        && request.resource.data.updatedAt is timestamp;
+    }
+
+    // A one-time, owner-only copy of financial values that still exist in the
+    // legacy shared ledger.  Per-subtask row validation is intentionally done
+    // by the migration CLI: Firestore Rules cannot safely iterate a 500-row
+    // list, so Rules only enforce the envelope, identity, and parent amounts.
+    function validOwnerLegacyFinanceDocument(financeId) {
+      let amounts = request.resource.data.get('parentAmounts', {});
+      return request.resource.data.keys().hasOnly([
+          'recordType','legacyJobId','sourceHash','parentAmounts','subtaskAmounts',
+          'revision','migratedAt','migratedBy'
+        ])
+        && request.resource.data.recordType == 'owner_legacy_finance'
+        && request.resource.data.legacyJobId is string
+        && request.resource.data.legacyJobId.size() > 0
+        && request.resource.data.legacyJobId.size() <= 220
+        && request.resource.data.legacyJobId == financeId
+        && request.resource.data.sourceHash is string
+        && request.resource.data.sourceHash.matches('^[0-9a-fA-F]{64}$')
+        && amounts is map
+        && amounts.keys().hasOnly(['unitPrice','workerPay','profit','monthlyFee','salesPay'])
+        && amounts.keys().hasAll(['unitPrice','workerPay','profit','monthlyFee','salesPay'])
+        && amounts.unitPrice is int && amounts.unitPrice >= 0 && amounts.unitPrice <= 100000000
+        && amounts.workerPay is int && amounts.workerPay >= 0 && amounts.workerPay <= 100000000
+        && amounts.profit is int && amounts.profit >= 0 && amounts.profit <= 100000000
+        && amounts.monthlyFee is int && amounts.monthlyFee >= 0 && amounts.monthlyFee <= 100000000
+        && amounts.salesPay is int && amounts.salesPay >= 0 && amounts.salesPay <= 100000000
+        && request.resource.data.subtaskAmounts is list
+        && request.resource.data.subtaskAmounts.size() <= 500
+        && request.resource.data.revision is int
+        && request.resource.data.revision >= 1
+        && request.resource.data.migratedAt is timestamp
+        && request.resource.data.migratedBy is string
+        && request.resource.data.migratedBy.size() > 0
+        && request.resource.data.migratedBy.size() <= 320;
+    }
+
+    // A dispatch job's readable `ownPay` is only a legacy UI mirror. The
+    // immutable owner-only ledger is the source of truth and must exist
+    // before the job can be marked payable.
+    function validDispatchPayableMirror(uid, jobId) {
+      let legacyId = request.resource.data.get('linkedLegacyJobId', '');
+      let financePath = /databases/$(database)/documents/owner_job_finance/$(legacyId);
+      return request.resource.data.get('businessType', '') != 'dispatch'
+        || (!('ownPay' in request.resource.data)
+          && request.resource.data.get('payableApproved', false) != true)
+        || (legacyId is string
+          && legacyId.size() > 0
+          && existsAfter(financePath)
+          && getAfter(financePath).data.portalUid == uid
+          && getAfter(financePath).data.portalJobId == jobId
+          && getAfter(financePath).data.legacyJobId == legacyId
+          && request.resource.data.ownPay == getAfter(financePath).data.approvedPayAmount
+          && request.resource.data.ownPay > 0);
     }
 
     function approvedMember() {
@@ -755,14 +939,40 @@ service cloud.firestore {
 
     // Existing monolith data. A video editor is denied even when another role was
     // accidentally added; the app also prevents that combination at assignment time.
+    // Directors use scoped portal data instead of this company-wide record.
     match /shared/{document=**} {
-      allow read, write: if owner() || coreStaff();
+      allow read, write: if owner() || legacyMonolithStaff();
     }
 
     match /users/{uid} {
       // The dedicated editor portal does not use this legacy personal document.
-      // Denying editors also prevents historical local-state copies from leaking.
-      allow read, write: if owner() || (self(uid) && coreStaff());
+      // Denying editors and video directors also prevents historical local-state
+      // copies of the company-wide record from leaking.
+      allow read, write: if owner() || (self(uid) && legacyMonolithStaff());
+    }
+
+    // Client billing prices and per-account overrides are never copied into
+    // editor-readable catalog or portal documents.
+    match /owner_client_pricing/{pricingId} {
+      allow read: if owner();
+      allow create, update: if owner() && validOwnerClientPricingDocument();
+      allow delete: if owner();
+    }
+
+    // Confirmed per-case revenue and payment routing.  It is never copied to
+    // the company-wide legacy record or an editor-readable portal document.
+    match /owner_job_finance/{financeId} {
+      allow read: if owner();
+      allow create: if owner() && validOwnerJobFinanceDocument();
+      allow update, delete: if false;
+    }
+
+    // Migration-only immutable copies of legacy financial rows. These remain
+    // owner-only even after directors are allowed to manage scoped operations.
+    match /owner_legacy_finance/{financeId} {
+      allow read: if owner();
+      allow create: if owner() && validOwnerLegacyFinanceDocument(financeId);
+      allow update, delete: if false;
     }
 
     match /editor_portals/{uid} {
@@ -771,18 +981,19 @@ service cloud.firestore {
       allow delete: if false;
 
       match /editor_jobs/{jobId} {
-        allow read: if portalManager(uid)
+        allow read: if owner()
+          || (directorFor(uid) && !containsExternalSettlement(resource.data))
           || (editor(uid)
             && (!externalEditor(uid) || !containsExternalSettlement(resource.data)));
         allow create: if editor(uid)
           && request.resource.data.keys().hasOnly([
             'recordType','businessType','boardJobId','title','caseName','parentCaseId','parentCaseName',
-            'clientId','clientDisplay','accountId','accountDisplay','deadline','requestUrl','sourceUrl',
+            'clientId','sourceClientId','clientDisplay','accountId','accountDisplay','deadline','requestUrl','sourceUrl',
             'sharedDate','editorDraftDate','editorDraftDateSetter','clientDraftDate','thumbnailDate','deliveryDate',
             'instructions','urgent','status','progress','evidenceUrl','blocker',
             'workDate','startTime','endTime','submittedByUid','editorUid',
             'editorEmail','editorName','directorUid','source','createdAt','updatedAt','history',
-            'workflow','progressEvents','parentJobId','parentJobTitle','attachments'
+            'workflow','progressEvents','parentJobId','parentJobTitle','attachments','editorPayAmount'
           ])
           && request.resource.data.recordType == 'editor_portal_job'
           && request.resource.data.submittedByUid == uid
@@ -801,12 +1012,17 @@ service cloud.firestore {
           && request.resource.data.get('parentCaseId', '').size() <= 160
           && request.resource.data.get('parentCaseName', '') is string
           && request.resource.data.get('parentCaseName', '').size() <= 120
+          && request.resource.data.get('sourceClientId', '') is string
+          && request.resource.data.get('sourceClientId', '').size() <= 160
+          && (request.resource.data.get('source', '') != 'direct_client'
+            || request.resource.data.get('sourceClientId', '').size() > 0)
           && request.resource.data.clientDisplay is string
           && request.resource.data.clientDisplay.size() > 0
           && request.resource.data.instructions is string
           && request.resource.data.instructions.size() <= 3000
           && validJobStatus(request.resource.data.status)
           && validJobSchedule()
+          && validEditorPayAmountForCreate()
           && validEditorDraftDateAssignment(request.resource.data)
           && validCompletedJobEvidence()
           && validReviewWorkflow(request.resource.data)
@@ -814,10 +1030,12 @@ service cloud.firestore {
           && validAttachments(request.resource.data)
           && request.resource.data.history is list
           && request.resource.data.history.size() == 1;
-        // A manager can expose an already assigned legacy child case to the
-        // assigned editor.  The payload is deliberately free of every price,
-        // invoice, and settlement field; those remain in the private ledger.
-        allow create: if portalManager(uid)
+        // Only the owner can expose an already assigned legacy child case to
+        // the assigned editor. Directors receive the resulting scoped portal
+        // records, but cannot rerun legacy-ledger synchronization.
+        // The payload is deliberately free of every price, invoice, and
+        // settlement field; those remain in the private ledger.
+        allow create: if owner()
           && approved(uid)
           && (hasRole(uid, '動画編集者') || hasRole(uid, '動画編集ディレクター'))
           && request.resource.data.keys().hasOnly([
@@ -893,8 +1111,7 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'title','clientDisplay','deadline','sharedDate','editorDraftDate','editorDraftDateSetter',
             'clientDraftDate','thumbnailDate','deliveryDate','instructions','urgent','status',
-            'correctionReason','updatedAt','updatedBy','history','ownPay',
-            'payableApproved','payableApprovedAt','payableMonth',
+            'correctionReason','updatedAt','updatedBy','history',
             'workflow','progressEvents','attachments'
           ])
           && validJobStatus(request.resource.data.status)
@@ -908,14 +1125,8 @@ service cloud.firestore {
           && validManagerReviewTransition()
           && preservesFinalJob()
           // Director-managed external editors are settled privately. Never
-          // write the mono.create-to-director amount into their readable job.
-          && (!externalEditor(uid) || !containsExternalSettlement(request.resource.data))
-          && (!('ownPay' in request.resource.data) || request.resource.data.ownPay >= 0)
-          && (!('payableApproved' in request.resource.data) || request.resource.data.payableApproved != true
-            || (request.resource.data.status == '完了'
-              && request.resource.data.ownPay > 0
-              && request.resource.data.payableMonth is string
-              && validCompletedJobEvidence()));
+          // write a mono.create settlement field into their readable job.
+          && !containsExternalSettlement(request.resource.data);
         allow update: if owner()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'title','clientDisplay','deadline','sharedDate','editorDraftDate','editorDraftDateSetter',
@@ -943,7 +1154,8 @@ service cloud.firestore {
             || (request.resource.data.status == '完了'
               && request.resource.data.ownPay > 0
               && request.resource.data.payableMonth is string
-              && validCompletedJobEvidence()));
+              && validCompletedJobEvidence()))
+          && validDispatchPayableMirror(uid, jobId);
         allow delete: if false;
 
         match /events/{eventId} {
@@ -986,8 +1198,8 @@ service cloud.firestore {
       }
 
       match /invoice_authorizations/{authorizationId} {
-        allow read: if portalManager(uid) || (editor(uid) && !externalEditor(uid));
-        allow create, update: if portalManager(uid)
+        allow read: if owner() || (editor(uid) && !externalEditor(uid));
+        allow create, update: if owner()
           && request.resource.data.recordType == 'invoice_authorization'
           && request.resource.data.editorUid == uid
           && request.resource.data.month is string
@@ -1009,14 +1221,14 @@ service cloud.firestore {
         allow delete: if false;
 
         match /events/{eventId} {
-          allow read: if portalManager(uid) || (editor(uid) && !externalEditor(uid));
-          allow create: if portalManager(uid);
+          allow read: if owner() || (editor(uid) && !externalEditor(uid));
+          allow create: if owner();
           allow update, delete: if false;
         }
       }
 
       match /editor_invoices/{invoiceId} {
-        allow read: if portalManager(uid) || (editor(uid) && !externalEditor(uid));
+        allow read: if owner() || (editor(uid) && !externalEditor(uid));
         allow create: if editor(uid) && !externalEditor(uid)
           && request.resource.data.keys().hasOnly([
             'recordType','editorUid','editorEmail','editorName','month','jobIds',
@@ -1059,7 +1271,7 @@ service cloud.firestore {
               && request.resource.data.file.id is string
               && request.resource.data.file.sha256 is string
               && request.resource.data.ownerShareStatus == 'shared'));
-        allow update: if portalManager(uid)
+        allow update: if owner()
           && validInvoiceStatus(request.resource.data.status)
           && validOwnerInvoiceTransition(resource.data.status, request.resource.data.status)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
@@ -1069,8 +1281,8 @@ service cloud.firestore {
         allow delete: if false;
 
         match /events/{eventId} {
-          allow read: if portalManager(uid) || (editor(uid) && !externalEditor(uid));
-          allow create: if portalManager(uid)
+          allow read: if owner() || (editor(uid) && !externalEditor(uid));
+          allow create: if owner()
             || (editor(uid) && !externalEditor(uid) && request.resource.data.byUid == uid);
           allow update, delete: if false;
         }
@@ -1304,8 +1516,10 @@ service cloud.firestore {
 
     // Required for collection-group dashboards in the internal manager app.
     match /{path=**}/editor_jobs/{jobId} {
-      allow read: if owner() || (videoManager()
-        && resource.data.get('directorUid', '') == request.auth.uid);
+      // Directors enumerate their current team from access and subscribe to
+      // each allowed portal directly. A collection-group query cannot safely
+      // re-evaluate team transfers or redact old settlement fields.
+      allow read: if owner();
     }
 
     match /{path=**}/editor_invoices/{invoiceId} {

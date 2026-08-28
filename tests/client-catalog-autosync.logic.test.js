@@ -110,3 +110,23 @@ test('catalog schema permits the bounded former-name trail used by direct synchr
   assert.match(managerBlock, /directorUid/);
   assert.match(rules, /allow create, update: if catalogManager\(uid\)\s*&& validClientCatalogDocument\(\)/);
 });
+
+test('owner client pricing supports an account override without leaking prices into client_catalog', () => {
+  const priceStart = source.indexOf('function priceValue(');
+  const priceEnd = source.indexOf('function clientsForEditor(', priceStart);
+  assert.ok(priceStart >= 0 && priceEnd > priceStart);
+  const context = { ownerPricingDocId: (client) => `${client?._clientSource || 'projects'}_${client?.sourceRecordId || client?.id || ''}`, state: { clientPricing: new Map([['projects_client-a',{defaultClientUnitPrice:3000,accountUnitPrices:{a:4500}}]]) } };
+  vm.createContext(context);
+  vm.runInContext(`${source.slice(priceStart, priceEnd)};this.logic={priceValue,accountPriceMap,clientUnitPriceFor};`, context);
+  assert.equal(context.logic.priceValue('3800'), 3800);
+  assert.equal(context.logic.priceValue('-1'), null);
+  assert.equal(context.logic.clientUnitPriceFor({_clientSource:'projects',sourceRecordId:'client-a'}, 'a'), 4500);
+  assert.equal(context.logic.clientUnitPriceFor({_clientSource:'projects',sourceRecordId:'client-a'}, 'other'), 3000);
+  assert.match(source, /owner_client_pricing/);
+  assert.match(source, /owner_client_pricing collection, never in the/);
+  assert.match(source, /function catalogAccountsFromMaster\(client\)\{return mergeAccounts\(client\?\.accounts\|\|\[\]\)\}/);
+  assert.match(source, /window\.managerOwnerClientUnitPrice=ownerClientUnitPrice/);
+  assert.match(source, /window\.managerClientPricingReady=\(\)=>_isOwner\(\)&&state\.clientPricingReady/);
+  assert.match(source, /managerSaveClientUnitPrice/);
+  assert.doesNotMatch(source, /accountUnitPrices[^\n]{0,500}collection\('client_catalog'\)/);
+});

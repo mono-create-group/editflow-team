@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#000000">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260828-24"></script>
+<script src="./billing-terms.js?v=20260828-27"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -1148,7 +1148,45 @@ function jobBiz(j){
   if(j.jobType==='consul')return'consult';
   return'edit';
 }
-function BJOBS(){return (S.jobs||[]).filter(j=>jobBiz(j)===PBIZ);}
+function _ownerFinanceForLegacyJob(job){
+  if(!_isOwner()||!job)return null;
+  const legacyId=String(job.id||''),financeId=String(job.ownerFinanceId||'');
+  return(OWNER_JOB_FINANCE||[]).find(row=>(financeId&&String(row.id)===financeId)||String(row.legacyJobId||'')===legacyId)
+    ||(OWNER_LEGACY_FINANCE||[]).find(row=>(financeId&&String(row.id)===financeId)||String(row.legacyJobId||'')===legacyId)
+    ||null;
+}
+function _ownerFinanceForPortalJob(job){
+  if(!_isOwner()||!job)return null;
+  return(OWNER_JOB_FINANCE||[]).find(row=>String(row.portalUid||'')===String(job._portalUid||'')&&String(row.portalJobId||'')===String(job.id||''))||null;
+}
+// Dispatch jobs are paid from the owner-only immutable ledger.  `ownPay` is
+// retained only as a non-authoritative mirror for legacy direct-editor flows.
+function _portalApprovedPayAmount(job){
+  if(!job)return 0;
+  if(_portalVideoBiz(job)==='haken')return Math.max(0,Number(_ownerFinanceForPortalJob(job)?.approvedPayAmount)||0);
+  return Math.max(0,Number(job.ownPay)||0);
+}
+function _withOwnerJobFinance(job){
+  const finance=_ownerFinanceForLegacyJob(job);if(!finance)return job;
+  if(finance.recordType==='owner_legacy_finance'){
+    const parent=finance.parentAmounts||{},lines=Array.isArray(finance.subtaskAmounts)?finance.subtaskAmounts:[];
+    const subtasks=(job.subtasks||[]).map((sub,index)=>{
+      const id=String(sub?.id||''),line=lines.find(row=>(id&&String(row.id||'')===id)||(!row.id&&Number(row.index)===index));
+      if(!line)return sub;
+      const unitPrice=Math.max(0,Number(line.unitPrice)||0),workerPay=Math.max(0,Number(line.workerPay)||0);
+      return{...sub,unitPrice,workerPay,profit:Number.isFinite(Number(line.profit))?Number(line.profit):unitPrice-workerPay,salesPay:Math.max(0,Number(line.salesPay)||0)};
+    });
+    const unitPrice=Math.max(0,Number(parent.unitPrice)||0),workerPay=Math.max(0,Number(parent.workerPay)||0);
+    return{...job,unitPrice,workerPay,profit:Number.isFinite(Number(parent.profit))?Number(parent.profit):unitPrice-workerPay,monthlyFee:Math.max(0,Number(parent.monthlyFee)||0),salesPay:Math.max(0,Number(parent.salesPay)||0),subtasks,_ownerFinance:finance};
+  }
+  const unitPrice=Number(finance.clientUnitPrice)||0,workerPay=Number(finance.approvedPayAmount)||0;
+  return{...job,unitPrice,workerPay,profit:unitPrice-workerPay,_ownerFinance:finance};
+}
+const OWNER_LEGACY_AMOUNT_KEYS=['unitPrice','workerPay','profit','monthlyFee','salesPay'];
+function _legacyAmount(value){const n=Number(value);return Number.isInteger(n)&&n>=0&&n<=100000000?n:0;}
+function _legacyAmounts(value){const out={};OWNER_LEGACY_AMOUNT_KEYS.forEach(key=>{out[key]=_legacyAmount(value?.[key])});return out;}
+function _stripLegacyAmounts(value){const out={...value};OWNER_LEGACY_AMOUNT_KEYS.forEach(key=>delete out[key]);return out;}
+function BJOBS(){return (S.jobs||[]).filter(j=>jobBiz(j)===PBIZ).map(_withOwnerJobFinance);}
 const VIDEO_STATUS_LABELS={'FB待ち':'mono.create FB中','確認待ち':'先方確認中'};
 function videoStatusLabel(status){return VIDEO_STATUS_LABELS[String(status||'')]||String(status||'未着手');}
 function bizStatusLabel(k,status){return['edit','haken'].includes(k)?videoStatusLabel(status):String(status||'');}
@@ -1157,6 +1195,7 @@ function bizScopeOpts(k,cur){const list=bizCfgOf(k).scopes.slice();if(cur&&list.
 function setPBiz(k){PBIZ=k;const t=bizCfgOf(k).tabs;if(t.indexOf(PVMT)<0)PVMT=t[0];PRIO_IDX=0;render();}
 function allowedWorkspaces(){
   if(_isOwner())return['video','hp','ai'];
+  if(_isScopedVideoDirectorAccess())return['video'];
   const rs=myRoles(),out=[];
   if(rs.some(r=>['動画編集ディレクター','営業','SNSマーケター'].includes(r)))out.push('video');
   if(rs.some(r=>['Webデザイナー','営業'].includes(r)))out.push('hp');
@@ -1445,9 +1484,14 @@ function _teamSnapRebase(){
 function _jobDataLoss(cur,incoming){
   if(!cur||!incoming)return false;
   if(incoming.status==='案件掲載中'&&cur.status&&cur.status!=='案件掲載中')return true; // 掲載中へ逆戻り
-  if((cur.unitPrice||0)>0&&!((incoming.unitPrice||0)>0))return true; // 単価が消える
-  if((cur.workerPay||0)>0&&!((incoming.workerPay||0)>0))return true; // 編集者報酬が消える
-  if((cur.profit||0)>0&&!((incoming.profit||0)>0))return true;
+  // 金額をowner-only台帳へ移した案件は、共有側の0円化が正しい更新。
+  // ownerFinanceIdが付いた正規移行だけ金額消失を例外にする。ステータス逆戻り防止は必ず維持する。
+  const verifiedFinanceMigration=incoming.ownerFinanceId&&String(incoming.ownerFinanceId)===String(incoming.id||'');
+  if(!verifiedFinanceMigration){
+    if((cur.unitPrice||0)>0&&!((incoming.unitPrice||0)>0))return true; // 単価が消える
+    if((cur.workerPay||0)>0&&!((incoming.workerPay||0)>0))return true; // 編集者報酬が消える
+    if((cur.profit||0)>0&&!((incoming.profit||0)>0))return true;
+  }
   return false;
 }
 function mergeTeamArr(local,remote,key){
@@ -1624,23 +1668,41 @@ function renderAuthUI(){
 fbAuth.getRedirectResult().catch(e=>{console.warn('getRedirectResult:',e&&e.code||e);});
 
 function _stopRoleSubscriptions(){
-  [_fbUnsubscribe,_teamUnsub,_accessReqUnsub,_accessRecordsUnsub,_accessControlUnsub,_portalJobsUnsub,_portalInvoicesUnsub,_portalProfilesUnsub,_portalAuthorizationsUnsub].forEach(u=>{try{if(u)u();}catch(_){}});
-  _fbUnsubscribe=_teamUnsub=_accessReqUnsub=_accessRecordsUnsub=_accessControlUnsub=_portalJobsUnsub=_portalInvoicesUnsub=_portalProfilesUnsub=_portalAuthorizationsUnsub=null;
+  [_fbUnsubscribe,_teamUnsub,_accessReqUnsub,_accessRecordsUnsub,_accessControlUnsub,_portalJobsUnsub,_portalInvoicesUnsub,_portalProfilesUnsub,_portalAuthorizationsUnsub,_ownerJobFinanceUnsub,_ownerLegacyFinanceUnsub].forEach(u=>{try{if(u)u();}catch(_){}});
+  (_slShardUnsubs||[]).forEach(u=>{try{if(u)u();}catch(_){}});_slShardUnsubs=[];
+  _fbUnsubscribe=_teamUnsub=_accessReqUnsub=_accessRecordsUnsub=_accessControlUnsub=_portalJobsUnsub=_portalInvoicesUnsub=_portalProfilesUnsub=_portalAuthorizationsUnsub=_ownerJobFinanceUnsub=_ownerLegacyFinanceUnsub=null;
   _teamCloudLoaded=false;_teamKnownCounts={};
 }
-function _clearSensitiveLocalState(){
+function _clearSensitiveLocalState(resetPersonal=false){
   const fresh=defState();
+  if(resetPersonal){S=migrate(fresh);S._uid=FB_USER?.uid||'';S._savedAt=0;}
   TEAM_KEYS.forEach(k=>{S[k]=Array.isArray(fresh[k])?[]:fresh[k];});
   S.bizBoard=JSON.parse(JSON.stringify(fresh.bizBoard||{}));
-  window._teamSnap={};PORTAL_JOBS=[];PORTAL_INVOICES=[];PORTAL_PROFILES=[];PORTAL_AUTHORIZATIONS=[];
+  window._teamSnap={};PORTAL_JOBS=[];PORTAL_INVOICES=[];PORTAL_PROFILES=[];PORTAL_AUTHORIZATIONS=[];OWNER_JOB_FINANCE=[];OWNER_LEGACY_FINANCE=[];
   try{_lsSaveState(S);}catch(_){}
+}
+function _purgeLegacyDirectorLocalCopies(){
+  try{
+    Object.keys(localStorage).filter(key=>key.startsWith('ef_team_v5_backup_')||key.startsWith('mcapp_paid_cleanup_bak_')).forEach(key=>localStorage.removeItem(key));
+    ['mcapp_biz_bak','mc_team_ledger_restore_token'].forEach(key=>localStorage.removeItem(key));
+  }catch(error){console.warn('legacy director cache cleanup',error);}
+  TEAM_SHARE_OK=null;
+}
+function _isScopedVideoDirectorAccess(){
+  if(typeof _rolePreviewActive==='function'&&_rolePreviewActive())return ROLE_PREVIEW?.role==='動画編集ディレクター';
+  if(_isActualOwner())return false;
+  const rs=(APP_ACCESS&&Array.isArray(APP_ACCESS.roles))?APP_ACCESS.roles:[];
+  return APP_ACCESS?.approved===true&&rs.includes('動画編集ディレクター');
 }
 function _coreAccessAllowed(){
   if(_isActualOwner())return true;
   const rs=(APP_ACCESS&&Array.isArray(APP_ACCESS.roles))?APP_ACCESS.roles:[];
-  // 動画編集者だけのメンバーは専用ポータルへ分離し、兼任者は追加された社内役割の画面も利用する。
+  // 動画編集ディレクター兼任者も、全社旧台帳ではなく自チームのポータルだけを使う。
+  if(_isScopedVideoDirectorAccess())return false;
+  // 動画編集者だけのメンバーは専用ポータルへ分離する。
   return APP_ACCESS?.approved===true&&rs.some(r=>r!=='動画編集者'&&APP_ROLES.includes(r));
 }
+function _appAccessAllowed(){return _coreAccessAllowed()||_isScopedVideoDirectorAccess();}
 async function _requestAccess(){
   if(!FB_USER)return;
   try{
@@ -1680,7 +1742,10 @@ async function resolveAppAccess(){
     }
   }catch(e){console.warn('access resolution failed',e&&e.code||e);}
   ACCESS_RESOLVED=true;
-  if(!_coreAccessAllowed())_clearSensitiveLocalState();
+  if(_isScopedVideoDirectorAccess()){
+    _clearSensitiveLocalState(true);
+    _purgeLegacyDirectorLocalCopies();
+  }else if(!_coreAccessAllowed())_clearSensitiveLocalState();
   return APP_ACCESS;
 }
 function fbSetupAccessAdmin(){
@@ -1700,13 +1765,31 @@ function fbSetupAccessAdmin(){
 }
 function fbSetupPortalOpsSync(){
   if(!(_isOwner()||hasAppRole('動画編集ディレクター')))return;
-  const portalJobsQuery=_isOwner()
-    ?fbDb.collectionGroup('editor_jobs')
-    :fbDb.collectionGroup('editor_jobs').where('directorUid','==',FB_USER.uid);
-  _portalJobsUnsub=portalJobsQuery.onSnapshot(q=>{
-    PORTAL_JOBS=q.docs.filter(d=>d.ref.parent.parent&&d.ref.parent.parent.parent.id==='editor_portals').map(d=>({id:d.id,_portalUid:d.ref.parent.parent.id,_path:d.ref.path,...d.data()}));
-    renderSyncSafe();
-  },e=>console.warn('editor portal jobs sync',e&&e.code||e));
+  if(_isOwner()){
+    _portalJobsUnsub=fbDb.collectionGroup('editor_jobs').onSnapshot(q=>{
+      PORTAL_JOBS=q.docs.filter(d=>d.ref.parent.parent&&d.ref.parent.parent.parent.id==='editor_portals').map(d=>({id:d.id,_portalUid:d.ref.parent.parent.id,_path:d.ref.path,...d.data()}));
+      renderSyncSafe();
+    },e=>console.warn('editor portal jobs sync',e&&e.code||e));
+  }else{
+    // Firestore collection-group access is owner-only. Directors first read
+    // their current external-editor relationships and then subscribe only to
+    // those concrete portals plus their own editor portal.
+    const nested=new Map(),rows=new Map(),publish=()=>{PORTAL_JOBS=[...rows.values()].flat();renderSyncSafe();};
+    const subscribeUid=uid=>{
+      if(!uid||nested.has(uid))return;
+      const unsub=fbDb.collection('editor_portals').doc(uid).collection('editor_jobs').onSnapshot(q=>{
+        rows.set(uid,q.docs.map(d=>({id:d.id,_portalUid:uid,_path:d.ref.path,...d.data()})));publish();
+      },e=>{rows.delete(uid);publish();console.warn('scoped editor portal jobs',uid,e&&e.code||e);});
+      nested.set(uid,unsub);
+    };
+    subscribeUid(FB_USER.uid);
+    const relationUnsub=fbDb.collection('access').where('directorUid','==',FB_USER.uid).onSnapshot(q=>{
+      const allowed=new Set([FB_USER.uid,...q.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.approved===true&&x.editorKind==='external').map(x=>x.id)]);
+      allowed.forEach(subscribeUid);
+      [...nested.keys()].forEach(uid=>{if(allowed.has(uid))return;try{nested.get(uid)?.();}catch(_){}nested.delete(uid);rows.delete(uid);});publish();
+    },e=>console.warn('scoped editor relations',e&&e.code||e));
+    _portalJobsUnsub=()=>{try{relationUnsub();}catch(_){}nested.forEach(unsub=>{try{unsub();}catch(_){}});nested.clear();rows.clear();};
+  }
   if(_isOwner())_portalInvoicesUnsub=fbDb.collectionGroup('editor_invoices').onSnapshot(q=>{
     PORTAL_INVOICES=q.docs.filter(d=>d.ref.parent.parent&&d.ref.parent.parent.parent.id==='editor_portals').map(d=>({id:d.id,_portalUid:d.ref.parent.parent.id,_path:d.ref.path,...d.data()}));
     renderSyncSafe();
@@ -1719,18 +1802,25 @@ function fbSetupPortalOpsSync(){
     PORTAL_AUTHORIZATIONS=q.docs.filter(d=>d.ref.parent.parent&&d.ref.parent.parent.parent.id==='editor_portals').map(d=>({id:d.id,_portalUid:d.ref.parent.parent.id,_path:d.ref.path,...d.data()}));
     renderSyncSafe();
   },e=>console.warn('invoice authorizations sync',e&&e.code||e));
+  if(_isOwner())_ownerJobFinanceUnsub=fbDb.collection('owner_job_finance').onSnapshot(q=>{
+    OWNER_JOB_FINANCE=q.docs.map(d=>({id:d.id,...d.data()}));renderSyncSafe();
+  },e=>{OWNER_JOB_FINANCE=[];console.warn('owner job finance sync',e&&e.code||e);renderSyncSafe();});
+  if(_isOwner())_ownerLegacyFinanceUnsub=fbDb.collection('owner_legacy_finance').onSnapshot(q=>{
+    OWNER_LEGACY_FINANCE=q.docs.map(d=>({id:d.id,...d.data()}));renderSyncSafe();
+  },e=>{OWNER_LEGACY_FINANCE=[];console.warn('owner legacy finance sync',e&&e.code||e);renderSyncSafe();});
 }
 fbAuth.onAuthStateChanged(async user=>{
   _stopRoleSubscriptions();
   FB_USER=user;
   _authSettled=true;
-  APP_ACCESS=null;ACCESS_RESOLVED=!user;ACCESS_REQUESTS=[];ACCESS_RECORDS=[];PORTAL_JOBS=[];PORTAL_INVOICES=[];PORTAL_PROFILES=[];PORTAL_AUTHORIZATIONS=[];
+  APP_ACCESS=null;ACCESS_RESOLVED=!user;ACCESS_REQUESTS=[];ACCESS_RECORDS=[];PORTAL_JOBS=[];PORTAL_INVOICES=[];PORTAL_PROFILES=[];PORTAL_AUTHORIZATIONS=[];OWNER_JOB_FINANCE=[];OWNER_LEGACY_FINANCE=[];
   if(user){
     await resolveAppAccess();
-    if(_coreAccessAllowed()){
-      fbSetupRealtimeSync();fbSetupTeamSync();fbSetupPortalOpsSync();
+    if(_appAccessAllowed()){
+      if(_coreAccessAllowed()){fbSetupRealtimeSync();fbSetupTeamSync();}
+      fbSetupPortalOpsSync();
       if(_isOwner())fbSetupAccessAdmin();
-      setTimeout(_registerSignin,1500);
+      if(_coreAccessAllowed())setTimeout(_registerSignin,1500);
     }
   } else {
     TEAM_SHARE_OK=null;
@@ -3320,7 +3410,7 @@ function render(){
       return;
     }
     // 未承認ユーザーと編集者には、shared/mcappを読ませず専用導線だけを出す。
-    if(FB_USER&&ACCESS_RESOLVED&&!_coreAccessAllowed()){
+    if(FB_USER&&ACCESS_RESOLVED&&!_appAccessAllowed()){
       V='access';sessionStorage.setItem('ef_team_view',V);
       const isEditor=myRole()==='editor';
       document.getElementById('view').innerHTML=isEditor
@@ -3338,7 +3428,7 @@ function render(){
       return;
     }
     // ロックチェック（朝8時以降・朝ジャーナル未完了、または19時以降・夜の記録未完了）
-    if(!_rolePreviewActive()&&checkDailyLock()){
+    if(_coreAccessAllowed()&&!_rolePreviewActive()&&checkDailyLock()){
       const _lh=new Date().getHours();
       const _td=today();
       const _hasMorning=S.journals.some(j=>j.date===_td&&(j.type==='morning'||!j.type)&&(j.topPriority||j.focusBlock||j.notToDo||j.decisions||j.obstacle||j.commitment||j.mood||j.content||j.gratitude||j.win));
@@ -5965,7 +6055,7 @@ function _videoGroupPortalJobs(portal){
 }
 function _videoJobs(){
   if(_videoJobsMemoEpoch===_renderEpoch)return _videoJobsMemo;
-  const jobs=S.jobs||[],clientNames=new Map((S.clients||[]).map(c=>[c.id,c.name||''])),workerNames=new Map((S.workers||[]).map(w=>[w.id,w.name||''])),legacyById=new Map(),legacyByPortal=new Map();
+  const jobs=_isScopedVideoDirectorAccess()?[]:(S.jobs||[]),clientNames=new Map((_isScopedVideoDirectorAccess()?[]:(S.clients||[])).map(c=>[c.id,c.name||''])),workerNames=new Map((_isScopedVideoDirectorAccess()?[]:(S.workers||[])).map(w=>[w.id,w.name||''])),legacyById=new Map(),legacyByPortal=new Map();
   jobs.forEach(j=>{if(j?.deleted)return;legacyById.set(j.id,j);if(j.portalUid&&j.portalJobId)legacyByPortal.set(`${j.portalUid}:${j.portalJobId}`,j)});
   const legacy=jobs.filter(j=>!j.deleted&&['edit','haken'].includes(jobBiz(j))&&!j.portalJobId).map(j=>({_source:'legacy',_raw:j,biz:jobBiz(j),id:j.id,title:j.title||'',clientDisplay:clientNames.get(j.clientId)||'',deadline:j.deliveryDate||j.clientDraftDate||j.editorDraftDate||'',editorDraftDate:j.editorDraftDate||'',editorDraftDateSetter:_editorDraftDateSetter(j),clientDraftDate:j.clientDraftDate||'',completedDeliveryDate:j.completedDeliveryDate||'',status:j.status||'未着手',assignee:getJobWorkerNames(j)||'未割当',subtasks:_videoSubtasks(j,null,workerNames),attachments:_videoCaseMaterials(j.attachments,j),urgent:!!j.urgent,progress:j.progressNote||j.notes||'',progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:[],evidenceUrl:j.evidenceUrl||'',blocker:j.blocker||'',history:j.statusHistory||[],updatedAt:j.updatedAt||0}));
   const portal=(PORTAL_JOBS||[]).map(j=>{
@@ -6086,7 +6176,7 @@ async function advancePortalWorkflow(portalUid,id,action){
   else return toast('現在の工程ではこの操作はできません','warn');
   const eventData={at,byUid:FB_USER?.uid||'',byEmail:_myEmail(),byRole:_isOwner()?'owner':'director',type,action,fromStage:current.stage,toStage:workflow.stage,round:workflow.round,workflow,status,...(reason?{reason}:{})};
   const data={workflow,progressEvents:[...(j.progressEvents||[]).slice(-99),eventData],status,updatedAt:at,updatedBy:_myEmail(),history:[...(j.history||[]).slice(-49),eventData],...(action==='clientRevision'?{correctionReason:reason}:{})};
-  try{const ref=fbDb.collection('editor_portals').doc(portalUid).collection('editor_jobs').doc(id),event=ref.collection('events').doc(),batch=fbDb.batch();batch.set(ref,data,{merge:true});batch.set(event,{at:firebase.firestore.FieldValue.serverTimestamp(),...eventData});await batch.commit();if(_applyPortalToLegacy({...j,...data},true))save();closeModal();toast('進捗を更新しました');}catch(e){console.warn('workflow update',e);toast('進捗の更新に失敗しました','err');}
+  try{const ref=fbDb.collection('editor_portals').doc(portalUid).collection('editor_jobs').doc(id),event=ref.collection('events').doc(),batch=fbDb.batch();batch.set(ref,data,{merge:true});batch.set(event,{at:firebase.firestore.FieldValue.serverTimestamp(),...eventData});await batch.commit();if(_applyPortalToLegacy({...j,...data},false))save();closeModal();toast('進捗を更新しました');}catch(e){console.warn('workflow update',e);toast('進捗の更新に失敗しました','err');}
 }
 function _editorMilestoneSummary(j){const saved=Array.isArray(j?.progressMilestones)?j.progressMilestones:[],events=Array.isArray(j?.progressEvents)?j.progressEvents:[],defs=[['initial_submitted','初稿提出',events.some(x=>x?.type==='editor_submitted'&&x?.status==='初稿提出済み')],['revision_submitted','修正稿提出',events.some(x=>x?.type==='editor_submitted'&&x?.status==='修正稿提出済み')],['actual_delivery','納品',!!j?.completedDeliveryDate||events.some(x=>x?.type==='editor_delivery_completed')]];return`<div class="card" style="margin:8px 0;background:var(--card2)"><div style="font-size:11px;font-weight:800">編集者の提出・納品記録</div><div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px">${defs.map(([key,label,hasEvent])=>{const x=saved.find(v=>v?.key===key),done=!!x||hasEvent;return`<span class="badge ${done?'bg':'ba'}">${done?'✓':'未'} ${label}</span>`}).join('')}</div><div style="font-size:10px;color:var(--t3);margin-top:6px">初稿・修正稿と、先方OK後の納品日は担当編集者が記録します。納品日が未記録の案件には報酬が発生しません。ディレクターまたはオーナーはD確認・クライアント提出・修正指示を記録します。</div></div>`;}
 const VIDEO_PROGRESS_STEPS=[['editor_work','編集者の作業'],['director_review','D確認'],['client_submission','クライアントへ提出'],['client_review','クライアント確認'],['delivered','納品']];
@@ -6177,13 +6267,28 @@ function saveVideoLegacySafe(id){const j=(S.jobs||[]).find(x=>x.id===id);if(!j||
 function _portalAccessRecord(portalUid){return(ACCESS_RECORDS||[]).find(x=>x.id===portalUid)||null;}
 function _portalIsExternal(portalUid){return _portalAccessRecord(portalUid)?.editorKind==='external';}
 function _portalBillingTerms(completedDeliveryDate){return window.EditflowBilling?.forCompletedDelivery(String(completedDeliveryDate||''))||null;}
+function _ownerPortalClientPricingSnapshot(j){
+  if(!_isOwner()||typeof window.managerOwnerClientPricingSnapshot!=='function'||typeof window.managerClientPricingReady!=='function'||!window.managerClientPricingReady())return null;
+  const accountId=String(j?.accountId||'');
+  let snapshot=window.managerOwnerClientPricingSnapshot(String(j?.sourceClientId||j?.clientId||''),accountId);
+  if(!snapshot&&j?.clientDisplay)snapshot=window.managerOwnerClientPricingSnapshot(String(j.clientDisplay),accountId);
+  if(!snapshot){
+    const client=(S.clients||[]).find(c=>!c.deleted&&String(c.name||'').trim()===String(j?.clientDisplay||'').trim());
+    if(client)snapshot=window.managerOwnerClientPricingSnapshot(String(client.id||''),accountId);
+  }
+  if(!snapshot||snapshot.amount===null||snapshot.amount===undefined||snapshot.amount==='')return null;
+  const amount=Number(snapshot.amount);return Number.isInteger(amount)&&amount>=0?{...snapshot,amount}:null;
+}
+function _ownerPortalClientUnitPrice(j){return _ownerPortalClientPricingSnapshot(j)?.amount??null;}
 function openPortalJobModal(portalUid,id){
   const j=(PORTAL_JOBS||[]).find(x=>x._portalUid===portalUid&&x.id===id);if(!j)return;
   const canEdit=_videoCanEdit(),owner=_isOwner(),external=_portalIsExternal(portalUid),portalBiz=_portalVideoBiz(j);
   const deliveryDate=j.deliveryDate||j.deadline||'',completedDeliveryDate=j.completedDeliveryDate||'',billingTerms=_portalBillingTerms(completedDeliveryDate),draftSetter=_editorDraftDateSetter(j);
   const billingText=billingTerms?`請求可能日 <b>${esc(billingTerms.invoiceAvailableOn)}</b> ・ 支払予定日 <b>${esc(billingTerms.paymentDueDate)}</b>`:'納品日が記録されると、請求可能日と支払予定日が自動で決まります。';
-  const payBlock=owner&&!external?`<div class="card" style="background:var(--card2)"><div style="font-size:14px;font-weight:800;margin-bottom:6px">オーナーのみ・直接契約編集者の報酬</div><div class="frow"><div class="fg"><div class="fl">請求可能額</div><input id="vp-pay" type="number" min="0" value="${Number(j.ownPay||0)}"></div><div class="fg"><div class="fl">請求対象月（自動）</div><input id="vp-pay-month" type="month" value="${esc(billingTerms?.invoiceMonth||'')}" disabled></div></div><div class="notice" style="box-shadow:none;margin:7px 0;font-size:14px;line-height:1.6">${billingText}</div><div class="fg"><div class="fl">請求承認</div><select id="vp-payable"><option value="false" ${j.payableApproved?'':'selected'}>未承認</option><option value="true" ${j.payableApproved?'selected':''}>承認済み</option></select></div></div>`:owner&&external?`<div class="card notice" style="box-shadow:none"><b>外部編集者の案件に金額は保存しません</b><div style="font-size:14px;line-height:1.6;color:var(--t2);margin-top:4px">mono.createからディレクターへの単価と請求額は、ディレクター本人のまとめ請求で管理します。</div></div>`:'';
-  const legacyBlock=owner?`<div class="card" style="margin-top:8px;background:var(--card2)"><div style="font-size:11px;font-weight:800">社内案件台帳</div><div style="font-size:11px;color:var(--t3);margin:4px 0 8px">${j.linkedLegacyJobId?'自動連携済み。編集者の更新は案件台帳にも反映されます。':'自動連携を処理中です。画面を閉じても次回起動時に再実行します。'}</div>${j.linkedLegacyJobId?`<button class="btn btn-g btn-sm" onclick="openJobModal('${esc(j.linkedLegacyJobId)}')">連携先を開く</button>`:''}</div>`:'';
+  const linkedLegacyJob=j.linkedLegacyJobId?(S.jobs||[]).find(row=>String(row.id)===String(j.linkedLegacyJobId)):null,financeRecord=_ownerFinanceForPortalJob(j),pricingSnapshot=_ownerPortalClientPricingSnapshot(j),masterClientUnitPrice=pricingSnapshot?.amount??null,clientUnitPrice=financeRecord?Number(financeRecord.clientUnitPrice||0):masterClientUnitPrice,editorPayAmount=Math.max(0,Number(j.editorPayAmount)||0),confirmedDirectPay=Math.max(0,Number(financeRecord?.approvedPayAmount)||Number(j.ownPay)||editorPayAmount),confirmedDirectorPay=Math.max(0,Number(financeRecord?.approvedPayAmount)||0);
+  const clientPriceBlock=owner&&portalBiz==='haken'?`<div class="card" style="background:var(--card2)"><div style="font-size:14px;font-weight:800;margin-bottom:6px">オーナーのみ・クライアント単価</div><div class="fg"><div class="fl">クライアント単価（円） *</div><input id="vp-client-unit" type="number" min="1" step="1" inputmode="numeric" value="${clientUnitPrice===null?'':esc(clientUnitPrice)}" ${financeRecord?'disabled':''}></div><div class="fg"><div class="fl">今回だけ単価を変更する理由</div><textarea id="vp-client-price-reason" maxlength="500" placeholder="標準単価と異なる場合は必ず入力" ${financeRecord?'disabled':''}>${esc(financeRecord?.overrideReason||'')}</textarea></div><div style="font-size:12px;line-height:1.65;color:var(--t2)">${financeRecord?'オーナー専用の案件金額台帳に確定済みです。':'クライアント一覧の標準単価・アカウント別単価を自動入力しています。今回だけ金額が違う場合は理由とともに変更できます。'}<br>この金額は編集者の画面や共有クライアント一覧には表示されません。</div></div>`:'';
+  const payBlock=owner&&!external?`<div class="card" style="background:var(--card2)"><div style="font-size:14px;font-weight:800;margin-bottom:6px">オーナー確認・編集者支払額</div><div style="font-size:12px;color:var(--t2);margin-bottom:7px">編集者の入力額：<b>¥${editorPayAmount.toLocaleString()}</b>。${financeRecord?'オーナー確定後の金額はオーナー専用台帳に固定されています。':'この案件だけ変更する場合は下で修正できます。'}</div><div class="frow"><div class="fg"><div class="fl">確定支払額（円）</div><input id="vp-pay" type="number" min="1" step="1" value="${confirmedDirectPay||''}" ${financeRecord?'disabled':''}></div><div class="fg"><div class="fl">請求対象月（自動）</div><input id="vp-pay-month" type="month" value="${esc(billingTerms?.invoiceMonth||'')}" disabled></div></div><div class="notice" style="box-shadow:none;margin:7px 0;font-size:14px;line-height:1.6">${billingText}</div><div class="fg"><div class="fl">請求承認</div><select id="vp-payable"><option value="false" ${j.payableApproved?'':'selected'}>未承認</option><option value="true" ${j.payableApproved?'selected':''}>承認済み</option></select></div></div>`:owner&&external?`<div class="card" style="background:var(--card2)"><div style="font-size:14px;font-weight:800;margin-bottom:6px">オーナーのみ・担当ディレクターへの精算</div><div style="font-size:12px;color:var(--t2);margin-bottom:7px">外部編集者の入力額：<b>¥${editorPayAmount.toLocaleString()}</b>。作業担当は外部編集者、精算先はその担当ディレクターに固定します。</div><div class="fg"><div class="fl">ディレクター精算額（円） *</div><input id="vp-director-settlement" type="number" min="1" step="1" value="${confirmedDirectorPay||''}" ${financeRecord?'disabled':''}></div><div style="font-size:12px;line-height:1.65;color:var(--t2)">この確定額はオーナーの案件台帳と担当ディレクターのまとめ請求にだけ使います。外部編集者のポータルには、クライアント単価・利益・ディレクター精算額を保存しません。</div></div>`:'';
+  const legacyBlock=owner?`<div class="card" style="margin-top:8px;background:var(--card2)"><div style="font-size:11px;font-weight:800">社内案件台帳</div><div style="font-size:11px;color:var(--t3);margin:4px 0 8px">${j.linkedLegacyJobId?(financeRecord?'連携済み。進行情報は社内案件台帳、金額はオーナー専用台帳で管理します。':'案件は連携済みですが、金額が旧形式です。オーナー専用台帳へ移行してください。'):'クライアント単価と支払額をオーナーが確定すると、案件台帳とオーナー専用金額台帳へ登録されます。'}</div>${j.linkedLegacyJobId&&financeRecord?`<button class="btn btn-g btn-sm" onclick="openJobModal('${esc(j.linkedLegacyJobId)}')">連携先を開く</button>`:`<button class="btn btn-p btn-sm" onclick="promotePortalJob('${esc(portalUid)}','${esc(id)}')">${j.linkedLegacyJobId?'金額をオーナー専用台帳へ移行':'金額を確定して案件台帳へ登録'}</button>`}</div>`:'';
   openModal(`<div class="mhdr"><div class="mtitle">${portalBiz==='haken'?'編集者派遣案件':'編集代行案件'}</div><button class="mclose" onclick="closeModal()">✕</button></div>
 <div class="fg"><div class="fl">案件名</div><input id="vp-title" value="${esc(j.title||'')}" ${canEdit?'':'disabled'}></div>
 <div class="fg"><div class="fl">クライアント表示名</div><input id="vp-client" value="${esc(j.clientDisplay||'')}" ${canEdit?'':'disabled'}></div>
@@ -6198,39 +6303,46 @@ function openPortalJobModal(portalUid,id){
 	<div class="fg"><div class="fl">差戻し理由</div><textarea id="vp-correction" ${canEdit?'':'disabled'}>${esc(j.correctionReason||'')}</textarea></div>
 	${_videoWorkflowHtml(j,portalUid)}
 	${_editorMilestoneSummary(j)}
-	${payBlock}${legacyBlock}
+	${clientPriceBlock}${payBlock}${legacyBlock}
 	<div class="mfooter"><button class="btn btn-g" onclick="closeModal()">閉じる</button>${canEdit?`<button class="btn btn-p" onclick="savePortalJobAdmin('${portalUid}','${id}')">保存</button>`:''}</div>`);
 }
 async function savePortalJobAdmin(portalUid,id){
   if(!_videoCanEdit())return toast('権限がありません','err');
-  const j=(PORTAL_JOBS||[]).find(x=>x._portalUid===portalUid&&x.id===id);if(!j)return;const external=_portalIsExternal(portalUid);
+  const j=(PORTAL_JOBS||[]).find(x=>x._portalUid===portalUid&&x.id===id);if(!j)return;const external=_portalIsExternal(portalUid),financeRecord=_ownerFinanceForPortalJob(j);
   const requestedStatus=document.getElementById('vp-status').value;
   if(requestedStatus!==j.status&&EDITOR_OWNED_VIDEO_STATUSES.has(requestedStatus))return toast('この進捗は担当編集者本人が編集者ポータルから更新してください','warn');
   const at=Date.now(),deliveryDate=document.getElementById('vp-deadline').value,editorDraftDateSetter=document.getElementById('vp-editor-draft-setter')?.value||'editor',schedule={sharedDate:document.getElementById('vp-shared').value,editorDraftDate:document.getElementById('vp-editor-draft').value,clientDraftDate:document.getElementById('vp-client-draft').value,thumbnailDate:document.getElementById('vp-thumbnail').value,deliveryDate};
   if(editorDraftDateSetter==='creator'&&!schedule.editorDraftDate)return toast('案件追加者が設定する場合は、編集者初稿日を入力してください','warn');
   const scheduleError=_jobScheduleError(schedule);if(scheduleError)return toast(scheduleError,'warn');
-  if(!deliveryDate)return toast('納期（予定）を入力してください','warn');
+  if(!deliveryDate&&j.source!=='direct_client')return toast('納期（予定）を入力してください','warn');
   const attachmentRead=_readVideoAttachments(document.getElementById('vp-attachment-list'));if(attachmentRead.error)return toast(attachmentRead.error,'warn');
   const data={title:document.getElementById('vp-title').value.trim(),clientDisplay:document.getElementById('vp-client').value.trim(),deadline:deliveryDate,...schedule,editorDraftDateSetter,status:requestedStatus,instructions:document.getElementById('vp-instructions').value.trim(),attachments:attachmentRead.items,correctionReason:document.getElementById('vp-correction').value.trim(),updatedAt:at,updatedBy:_myEmail(),history:[...(j.history||[]).slice(-49),{at,by:_myEmail(),type:'manager_update',status:requestedStatus,editorDraftDateSetter}]};
   if(_isOwner()&&!external){
     const billingTerms=_portalBillingTerms(j.completedDeliveryDate);
-    data.ownPay=Math.max(0,Number(document.getElementById('vp-pay').value)||0);data.payableMonth=billingTerms?.invoiceMonth||'';data.payableApproved=document.getElementById('vp-payable').value==='true';data.payableApprovedAt=data.payableApproved?at:null;
+    const isDispatch=_portalVideoBiz(j)==='haken',requestedApproval=document.getElementById('vp-payable').value==='true';
+    if(isDispatch&&!financeRecord&&requestedApproval)return toast('編集者派遣案件は、先にオーナー専用の案件金額台帳で金額を確定してください','warn');
+    // For editor dispatch, never accept a modal value as the payable amount.
+    // It can only mirror the immutable owner_job_finance record.
+    if(isDispatch){
+      if(financeRecord)data.ownPay=_portalApprovedPayAmount(j);
+    }else data.ownPay=financeRecord?Number(financeRecord.approvedPayAmount||0):Math.max(0,Number(document.getElementById('vp-pay').value)||0);
+    data.payableMonth=billingTerms?.invoiceMonth||'';data.payableApproved=requestedApproval;data.payableApprovedAt=data.payableApproved?at:null;
     if(data.payableApproved&&(data.status!=='完了'||!billingTerms||!data.ownPay||!_videoSafeUrl(j.evidenceUrl||'')||j.blocker))return toast('納品日・納品証跡・停止理由・金額を確認してから請求承認してください','warn');
   }
   try{
     const ref=fbDb.collection('editor_portals').doc(portalUid).collection('editor_jobs').doc(id),event=ref.collection('events').doc(),batch=fbDb.batch();
     const eventData={at:firebase.firestore.FieldValue.serverTimestamp(),byUid:FB_USER.uid,byEmail:_myEmail(),type:'manager_update',status:data.status};if(!external)eventData.payableApproved=data.payableApproved===true;
     batch.set(ref,data,{merge:true});batch.set(event,eventData);await batch.commit();
-    if(_applyPortalToLegacy({...j,...data},true))save();
+    if(_applyPortalToLegacy({...j,...data},false))save();
     if(_isOwner()&&!external&&data.payableMonth)await _refreshInvoiceAuthorization(portalUid,data.payableMonth,{...j,...data});
     closeModal();toast('案件を更新しました');
   }catch(e){console.warn('portal job update',e);toast('案件の更新に失敗しました','err');}
 }
 function _portalLegacyId(portalUid,id){return('ep_'+String(portalUid).slice(0,10)+'_'+String(id)).replace(/[^A-Za-z0-9_-]/g,'_');}
 function _newPortalLegacyJob(j){
-  const client=(S.clients||[]).find(c=>!c.deleted&&String(c.name||'').trim()===String(j.clientDisplay||'').trim()),access=(ACCESS_RECORDS||[]).find(x=>x.id===j._portalUid),workerId=access?.workerId||null,at=Number(j.updatedAt)||Date.now();
-  const biz=_portalVideoBiz(j);
-	  return{id:j.linkedLegacyJobId,biz,jobType:'edit',title:j.title||(biz==='haken'?'編集者直接依頼':'編集代行案件'),clientId:client?.id||null,workerId,workerIds:workerId?[workerId]:[],scope:'その他',status:j.status||'受注済み',sharedDate:j.sharedDate||String(j.createdAt?new Date(j.createdAt).toISOString().slice(0,10):today()),deliveryDate:j.deliveryDate||j.deadline||null,completedDeliveryDate:j.completedDeliveryDate||null,editorDraftDate:j.editorDraftDate||null,editorDraftDateSetter:_editorDraftDateSetter(j),clientDraftDate:j.clientDraftDate||null,thumbnailDate:j.thumbnailDate||null,invoiceDate:null,dueDate:null,paymentDate:null,paidAt:null,payoutDate:null,unitPrice:0,workerPay:_portalIsExternal(j._portalUid)?0:Number(j.ownPay)||0,profit:0,notes:j.instructions||'',progressNote:j.progress||'',progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:[],progressEvents:Array.isArray(j.progressEvents)?j.progressEvents:[],workflow:j.workflow||null,lastProgressChangedByUid:j.lastProgressChangedByUid||null,lastProgressChangedByEmail:j.lastProgressChangedByEmail||null,lastProgressChangedByRole:j.lastProgressChangedByRole||null,evidenceUrl:j.evidenceUrl||'',blocker:j.blocker||'',attachments:_videoAttachments(j.attachments),portalUid:j._portalUid,portalJobId:j.id,source:'editor_portal',opsChecklist:[],createdAt:new Date().toISOString(),updatedAt:at,updatedBy:j.updatedBy||j.editorEmail||_myEmail()};
+  const client=(S.clients||[]).find(c=>!c.deleted&&(String(c.id||'')===String(j.sourceClientId||'')||String(c.name||'').trim()===String(j.clientDisplay||'').trim())),access=(ACCESS_RECORDS||[]).find(x=>x.id===j._portalUid),workerId=access?.workerId||null,at=Number(j.updatedAt)||Date.now();
+  const biz=_portalVideoBiz(j),billingSnapshot=_paymentRecipientSnapshot(workerId,{});
+	  return{id:j.linkedLegacyJobId,biz,jobType:'edit',title:j.title||(biz==='haken'?'編集者直接依頼':'編集代行案件'),clientId:client?.id||null,accountId:j.accountId||null,accountName:j.accountDisplay||null,workerId,workerIds:workerId?[workerId]:[],...billingSnapshot,scope:'その他',status:j.status||'受注済み',sharedDate:j.sharedDate||String(j.createdAt?new Date(j.createdAt).toISOString().slice(0,10):today()),deliveryDate:j.deliveryDate||j.deadline||null,completedDeliveryDate:j.completedDeliveryDate||null,editorDraftDate:j.editorDraftDate||null,editorDraftDateSetter:_editorDraftDateSetter(j),clientDraftDate:j.clientDraftDate||null,thumbnailDate:j.thumbnailDate||null,invoiceDate:null,dueDate:null,paymentDate:null,paidAt:null,payoutDate:null,unitPrice:0,workerPay:0,profit:0,ownerFinanceId:j._ownerFinanceId||j.linkedLegacyJobId||'',notes:j.instructions||'',progressNote:j.progress||'',progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:[],progressEvents:Array.isArray(j.progressEvents)?j.progressEvents:[],workflow:j.workflow||null,lastProgressChangedByUid:j.lastProgressChangedByUid||null,lastProgressChangedByEmail:j.lastProgressChangedByEmail||null,lastProgressChangedByRole:j.lastProgressChangedByRole||null,evidenceUrl:j.evidenceUrl||'',blocker:j.blocker||'',attachments:_videoAttachments(j.attachments),portalUid:j._portalUid,portalJobId:j.id,source:'editor_portal',opsChecklist:[],createdAt:new Date().toISOString(),updatedAt:at,updatedBy:j.updatedBy||j.editorEmail||_myEmail()};
 }
 function _portalField(j,key,fallback){return Object.prototype.hasOwnProperty.call(j,key)?(j[key]||null):fallback;}
 function _legacyPortalJobId(parentId,subId){
@@ -6264,7 +6376,8 @@ function _legacyPortalWorkerId(parent,record,hasChildren){
 async function syncLegacyAssignedSubtasksToPortal(jobOrId,{silent=false,targetUid='',onlyMissing=false}={}){
   const parent=typeof jobOrId==='string'?(S.jobs||[]).find(job=>String(job.id)===String(jobOrId)):jobOrId;
   if(!parent||!fbDb||!FB_USER||!['edit','haken'].includes(jobBiz(parent)))return{synced:0,skipped:0};
-  if(!_isOwner()&&!(typeof myRoles==='function'&&myRoles().includes('動画編集ディレクター')))return{synced:0,skipped:0};
+  // 旧台帳はオーナーだけが読める。ディレクターは移行後のポータルデータだけを使う。
+  if(!_isOwner())return{synced:0,skipped:0};
   const hasChildren=(parent.subtasks||[]).length>0,records=hasChildren?(parent.subtasks||[]):[parent],client=(S.clients||[]).find(item=>String(item.id||'')===String(parent.clientId||'')),candidates=[],problems=[];
   records.forEach((record,index)=>{
     if(record?.deleted)return;
@@ -6275,7 +6388,6 @@ async function syncLegacyAssignedSubtasksToPortal(jobOrId,{silent=false,targetUi
     // One-editor repair must never expose sibling subcases assigned to a
     // different editor in the same legacy parent case.
     if(targetUid&&String(access.id)!==String(targetUid))return;
-    if(!_isOwner()&&String(access.directorUid||'')!==String(FB_USER.uid||'')){problems.push(`${record.title||'サブ案件'}：自分のチーム外の編集者です`);return;}
     const setter=_editorDraftDateSetter(record),draft=setter==='creator'?String(record.editorDraftDate||''):'';
     if(setter==='creator'&&!draft){problems.push(`${record.title||'サブ案件'}：編集者初稿日が未入力`);return;}
     if(record.portalUid&&String(record.portalUid)!==String(access.id)){problems.push(`${record.title||'サブ案件'}：同期後に担当者が変更されています`);return;}
@@ -6331,11 +6443,29 @@ function _applyPortalToLegacy(j,createMissing=false){
 async function promotePortalJob(portalUid,id){
   if(!_isOwner())return toast('オーナーのみ操作できます','err');
   const j=(PORTAL_JOBS||[]).find(x=>x._portalUid===portalUid&&x.id===id);if(!j)return;
+  const portalBiz=_portalVideoBiz(j),external=_portalIsExternal(portalUid),editorPay=Math.max(0,Number(j.editorPayAmount)||0),pricingSnapshot=_ownerPortalClientPricingSnapshot(j),unitInput=document.getElementById('vp-client-unit'),clientUnitPrice=unitInput?Number(unitInput.value):pricingSnapshot?.amount,payInput=document.getElementById(external?'vp-director-settlement':'vp-pay'),ownerWorkerPay=payInput?Number(payInput.value):(!external?Number(j.ownPay||editorPay):0),overrideReason=String(document.getElementById('vp-client-price-reason')?.value||'').trim();
+  if(portalBiz==='haken'&&(!Number.isInteger(editorPay)||editorPay<=0))return toast('編集者支払額が未入力です。担当編集者へ確認してください','warn');
+  if(portalBiz==='haken'&&(!pricingSnapshot||!Number.isInteger(pricingSnapshot.amount)||pricingSnapshot.amount<=0))return toast('先にクライアント一覧で標準単価またはアカウント別単価を設定してください','warn');
+  if(portalBiz==='haken'&&(!Number.isInteger(clientUnitPrice)||clientUnitPrice<=0))return toast('クライアント一覧で単価を設定するか、今回のクライアント単価を入力してください','warn');
+  if(portalBiz==='haken'&&(!Number.isInteger(ownerWorkerPay)||ownerWorkerPay<=0))return toast(external?'担当ディレクターへの精算額を入力してください':'編集者への確定支払額を入力してください','warn');
+  const financeRequired=portalBiz==='haken',pricingSource=clientUnitPrice===pricingSnapshot?.amount?(pricingSnapshot?.pricingSource||'master'):'case_override';
+  if(financeRequired&&pricingSource==='case_override'&&!overrideReason)return toast('標準単価と異なるため、今回だけ変更する理由を入力してください','warn');
   const linkedId=j.linkedLegacyJobId||_portalLegacyId(portalUid,id);
+  const access=_portalAccessRecord(portalUid),workerId=String(access?.workerId||''),recipient=financeRequired?resolvePaymentRecipient(workerId):null;
+  if(financeRequired&&!recipient.ok)return toast(recipient.reason||'支払先を確定できません','warn');
+  if(financeRequired&&external&&recipient.route!=='director_team')return toast('外部編集者の担当ディレクターを先に設定してください','warn');
+  if(financeRequired&&!external&&recipient.route!=='direct')return toast('直接契約編集者の支払先設定を確認してください','warn');
+  const sourceClientId=String(pricingSnapshot?.sourceClientId||j.sourceClientId||j.clientId||'');
+  if(financeRequired&&!sourceClientId)return toast('クライアント単価マスターと案件のクライアントを照合できません','warn');
   try{
-    const ref=fbDb.collection('editor_portals').doc(portalUid).collection('editor_jobs').doc(id),event=ref.collection('events').doc(),batch=fbDb.batch(),at=Date.now();
-    batch.set(ref,{linkedLegacyJobId:linkedId,integratedAt:at,integratedBy:_myEmail(),updatedAt:at},{merge:true});batch.set(event,{at:firebase.firestore.FieldValue.serverTimestamp(),byUid:FB_USER.uid,byEmail:_myEmail(),type:'integrated_to_legacy',linkedLegacyJobId:linkedId,status:j.status});await batch.commit();
-    _applyPortalToLegacy({...j,_portalUid:portalUid,linkedLegacyJobId:linkedId,integratedAt:at,integratedBy:_myEmail(),updatedAt:at},true);
+    const ref=fbDb.collection('editor_portals').doc(portalUid).collection('editor_jobs').doc(id),event=ref.collection('events').doc(),financeRef=fbDb.collection('owner_job_finance').doc(linkedId),batch=fbDb.batch(),at=Date.now(),serverAt=firebase.firestore.FieldValue.serverTimestamp();
+    const linkData={linkedLegacyJobId:linkedId,integratedAt:at,integratedBy:_myEmail(),updatedAt:at};if(!external&&portalBiz==='haken')linkData.ownPay=ownerWorkerPay;
+    const financeData=financeRequired?{recordType:'owner_job_finance',portalUid,portalJobId:id,legacyJobId:linkedId,parentCaseId:String(j.parentCaseId||''),sourceClientId,accountId:String(j.accountId||''),clientUnitPrice,masterClientUnitPrice:pricingSnapshot?.amount??null,pricingSource,pricingRevision:Number(pricingSnapshot?.pricingRevision||0),pricingUpdatedAt:pricingSnapshot?.pricingUpdatedAt||null,overrideReason:pricingSource==='case_override'?overrideReason:'',editorPayReference:editorPay,approvedPayAmount:ownerWorkerPay,payRoute:recipient.route,payeeUid:String(recipient.payeeUid||portalUid),payeeWorkerId:String(recipient.payeeWorkerId||''),assigneeUid:portalUid,assigneeWorkerId:workerId,approvedBy:_myEmail(),approvedAt:serverAt,updatedAt:serverAt}:null;
+    batch.set(ref,linkData,{merge:true});batch.set(event,{at:serverAt,byUid:FB_USER.uid,byEmail:_myEmail(),type:'integrated_to_legacy',linkedLegacyJobId:linkedId,status:j.status});if(financeData)batch.set(financeRef,financeData);await batch.commit();
+    _applyPortalToLegacy({...j,...linkData,_portalUid:portalUid,_ownerFinanceId:financeRequired?linkedId:''},true);
+    const legacy=(S.jobs||[]).find(row=>String(row.id||'')===String(linkedId));
+    if(legacy&&legacy.source==='editor_portal'&&String(legacy.portalUid||'')===String(portalUid)&&String(legacy.portalJobId||'')===String(id)){legacy.unitPrice=0;legacy.workerPay=0;legacy.profit=0;legacy.ownerFinanceId=linkedId;}
+    if(financeData)OWNER_JOB_FINANCE=(OWNER_JOB_FINANCE||[]).filter(row=>String(row.id)!==String(linkedId)).concat([{id:linkedId,...financeData,approvedAt:at,updatedAt:at}]);
     save();closeModal();render();toast('既存の案件管理へ統合しました');
   }catch(e){console.warn('portal integration',e);toast('案件台帳へ統合できませんでした','err');}
 }
@@ -6372,10 +6502,28 @@ function _refreshDirectorSettlementTargets(keys){
   if(!_isOwner()||!FB_USER||!fbDb)return Promise.resolve();
   return Promise.all([...new Set(keys||[])].map(key=>{const split=String(key).split('|');return split.length===2?_refreshInvoiceAuthorization(split[0],split[1]):null;}));
 }
+async function rebuildAllDirectorInvoiceAuthorizations(){
+  if(!_isOwner())return toast('オーナーのみ実行できます','err');
+  const directorUids=new Set((ACCESS_RECORDS||[]).filter(row=>row?.approved===true&&Array.isArray(row.roles)&&row.roles.includes('動画編集ディレクター')).map(row=>String(row.id||'')).filter(Boolean));
+  const keys=(S.jobs||[]).map(_withOwnerJobFinance).flatMap(_directorSettlementTargetsForJob);
+  (PORTAL_AUTHORIZATIONS||[]).forEach(row=>{
+    const portalUid=String(row?._portalUid||''),month=String(row?.month||row?.id||'');
+    if(directorUids.has(portalUid)&&/^\d{4}-\d{2}$/.test(month))keys.push(`${portalUid}|${month}`);
+  });
+  const unique=[...new Set(keys)];
+  if(!unique.length)return toast('再計算するディレクター精算はありません','warn');
+  try{
+    await _refreshDirectorSettlementTargets(unique);
+    toast(`${unique.length}か月分のディレクター精算額を再計算しました`);
+  }catch(error){
+    console.warn('director invoice authorization rebuild failed',error);
+    toast('ディレクター精算額を再計算できませんでした','err');
+  }
+}
 async function _refreshInvoiceAuthorization(portalUid,month,overrideJob){
   if(!_isOwner()||!month||_portalIsExternal(portalUid))return;
-  const all=(PORTAL_JOBS||[]).map(j=>j._portalUid===portalUid&&overrideJob&&j.id===overrideJob.id?{...j,...overrideJob}:j),jobs=all.filter(j=>{const terms=_portalBillingTerms(j.completedDeliveryDate);return j._portalUid===portalUid&&j.status==='完了'&&terms?.invoiceMonth===month&&j.payableApproved===true&&Number(j.ownPay)>0}).sort((a,b)=>String(a.id).localeCompare(String(b.id)));
-  const profile=(PORTAL_PROFILES||[]).find(p=>p._portalUid===portalUid),rate=[0,8,10].includes(Number(profile?.taxRate))?Number(profile.taxRate):0,directLines=jobs.map(j=>({jobId:j.id,title:j.title||'',serviceDescription:j.title||'',transactionDate:j.completedDeliveryDate,amount:Number(j.ownPay),taxRate:rate})),teamLines=_directorTeamInvoiceLines(portalUid,month,rate),lines=[...directLines,...teamLines].sort((a,b)=>String(a.jobId).localeCompare(String(b.jobId))),billingTerms=_portalBillingTerms(lines[0]?.transactionDate)||_invoiceTermsForMonth(month);if(!billingTerms||billingTerms.invoiceMonth!==month)return;
+  const all=(PORTAL_JOBS||[]).map(j=>j._portalUid===portalUid&&overrideJob&&j.id===overrideJob.id?{...j,...overrideJob}:j),jobs=all.filter(j=>{const terms=_portalBillingTerms(j.completedDeliveryDate),approvedPay=_portalApprovedPayAmount(j);return j._portalUid===portalUid&&j.status==='完了'&&terms?.invoiceMonth===month&&j.payableApproved===true&&approvedPay>0}).sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+  const profile=(PORTAL_PROFILES||[]).find(p=>p._portalUid===portalUid),rate=[0,8,10].includes(Number(profile?.taxRate))?Number(profile.taxRate):0,directLines=jobs.map(j=>({jobId:j.id,title:j.title||'',serviceDescription:j.title||'',transactionDate:j.completedDeliveryDate,amount:_portalApprovedPayAmount(j),taxRate:rate})),teamLines=_directorTeamInvoiceLines(portalUid,month,rate),lines=[...directLines,...teamLines].sort((a,b)=>String(a.jobId).localeCompare(String(b.jobId))),billingTerms=_portalBillingTerms(lines[0]?.transactionDate)||_invoiceTermsForMonth(month);if(!billingTerms||billingTerms.invoiceMonth!==month)return;
   const jobIds=lines.map(x=>x.jobId),subtotal=lines.reduce((n,x)=>n+x.amount,0),taxByRate={[rate]:Math.round(subtotal*rate/100)},tax=Object.values(taxByRate).reduce((a,b)=>a+b,0),total=subtotal+tax,active=jobIds.length>0,authId=month,ref=fbDb.collection('editor_portals').doc(portalUid).collection('invoice_authorizations').doc(authId),event=ref.collection('events').doc();
   await fbDb.runTransaction(async tx=>{
     const snap=await tx.get(ref),existing=snap.exists?snap.data():null,unchanged=existing&&existing.active===active&&existing.month===month&&existing.invoiceAvailableOn===billingTerms.invoiceAvailableOn&&existing.paymentDueDate===billingTerms.paymentDueDate&&JSON.stringify(existing.jobIds||[])===JSON.stringify(jobIds)&&JSON.stringify(existing.lines||[])===JSON.stringify(lines)&&Number(existing.subtotal)===subtotal&&JSON.stringify(existing.taxByRate||{})===JSON.stringify(taxByRate)&&Number(existing.tax)===tax&&Number(existing.total)===total;
@@ -6436,10 +6584,11 @@ function _portalInvoiceCheck(x){
     }
     const j=(PORTAL_JOBS||[]).find(v=>v._portalUid===x._portalUid&&v.id===jobId);
     if(!j||!line)return{ok:false,reason:'元案件または明細が見つかりません'};
-    if(j.payableApproved!==true||Number(j.ownPay)<=0)return{ok:false,reason:'未承認の報酬が含まれています'};
+    const approvedPay=_portalApprovedPayAmount(j);
+    if(j.payableApproved!==true||approvedPay<=0)return{ok:false,reason:'未承認の報酬が含まれています'};
     const terms=_portalBillingTerms(j.completedDeliveryDate);if(!terms||terms.invoiceMonth!==String(x.month||'')||terms.invoiceAvailableOn!==String(x.invoiceAvailableOn||'')||terms.paymentDueDate!==String(x.paymentDueDate||''))return{ok:false,reason:'納品日から計算した請求日・支払日と一致しません'};
     if(String(line.transactionDate||'')!==String(j.completedDeliveryDate||''))return{ok:false,reason:'明細の納品日が案件と一致しません'};
-    if(Number(line.amount)!==Number(j.ownPay))return{ok:false,reason:'請求額が承認済み報酬と一致しません'};
+    if(Number(line.amount)!==approvedPay)return{ok:false,reason:'請求額が承認済み報酬と一致しません'};
     const rate=Number(line.taxRate||0);if(![0,8,10].includes(rate))return{ok:false,reason:'税率を確認してください'};
     subtotal+=Number(line.amount);taxByRate[rate]=(taxByRate[rate]||0)+Number(line.amount);
   }
@@ -6706,7 +6855,7 @@ function rVideoOperations(showBusinessSwitcher=false,biz=PBIZ){
   const operationTabs=[['overview','要対応'],['progress','編集進行ボード'],['board','工程ボード'],['queue','対応キュー']];
   // 旧画面の管理機能は別画面へ隔離せず、同じ新ワークスペースから直接開く。
   // 集計や保存処理は従来の renderer を再利用し、旧データと二重管理しない。
-  const managementTabs=BIZ_CFG[biz].tabs.filter(_canOpenProjectTab).map(k=>[`manage-${k}`,k==='worker'?BIZ_CFG[biz].lbl.member:PTAB_LBL[k]]);
+  const managementTabs=_isScopedVideoDirectorAccess()?[]:BIZ_CFG[biz].tabs.filter(_canOpenProjectTab).map(k=>[`manage-${k}`,k==='worker'?BIZ_CFG[biz].lbl.member:PTAB_LBL[k]]);
   const tabs=[...operationTabs,...managementTabs];
   if(!tabs.some(([k])=>k===VIDEO_TAB)){VIDEO_TAB='overview';sessionStorage.setItem('mc_video_tab',VIDEO_TAB);}
   const managementKey=VIDEO_TAB.startsWith('manage-')?VIDEO_TAB.slice(7):'';
@@ -6727,9 +6876,9 @@ function rVideoOperations(showBusinessSwitcher=false,biz=PBIZ){
   const ownerAcceptancePreview=_isOwner()&&biz==='edit'?'<a class="btn btn-p btn-sm" href="./editor.html?demo=editor" target="_blank" rel="noopener">編集者の受託画面を確認（デモ）</a>':'';
   const acceptanceNote=biz==='edit'&&_isOwner()?'<div style="font-size:11px;color:var(--t2);margin:-2px 0 10px;padding:8px 10px;border-radius:8px;background:var(--card2)">この管理画面は案件を掲載する側です。編集者は「案件を探す」から「この案件を受ける」を押します。</div>':'';
   const roleNote=_isOwner()?'全案件の優先順位・請求・配置を管理します。':'担当する編集者と案件だけを確認・判断します。';
-  const addJobAction=_videoCanEdit()?(biz==='edit'?'<button class="btn btn-p" onclick="window.managerOpenBoardForm?managerOpenBoardForm():openJobModal()">＋ 案件を掲載</button>':'<button class="btn btn-p" onclick="openJobModal()">＋ 派遣案件</button>'):'';
-  const managementActions=_videoCanEdit()?`<button class="btn btn-p" onclick="openClientModal()">＋ クライアント追加</button><button class="btn btn-g" onclick="openJobModal()">＋ 案件追加</button>`:'';
-  const legacyAddAction=_videoCanEdit()&&biz==='edit'?'<button class="btn btn-g btn-sm" onclick="openJobModal()">従来形式で案件を直接登録</button>':'';
+  const addJobAction=_videoCanEdit()?(biz==='edit'?(_isScopedVideoDirectorAccess()?'<button class="btn btn-p" onclick="managerOpenBoardForm()">＋ 案件を掲載</button>':'<button class="btn btn-p" onclick="window.managerOpenBoardForm?managerOpenBoardForm():openJobModal()">＋ 案件を掲載</button>'):_isScopedVideoDirectorAccess()?'':'<button class="btn btn-p" onclick="openJobModal()">＋ 派遣案件</button>'):'';
+  const managementActions=_videoCanEdit()&&!_isScopedVideoDirectorAccess()?`<button class="btn btn-p" onclick="openClientModal()">＋ クライアント追加</button><button class="btn btn-g" onclick="openJobModal()">＋ 案件追加</button>`:'';
+  const legacyAddAction=_videoCanEdit()&&biz==='edit'&&!_isScopedVideoDirectorAccess()?'<button class="btn btn-g btn-sm" onclick="openJobModal()">従来形式で案件を直接登録</button>':'';
   const headerPrimary=managementKey?managementActions:(VIDEO_TAB==='overview'&&attentionTotal?`<button class="btn btn-p" onclick="setVideoTab('queue')">要対応 ${attentionTotal}件を確認</button>`:addJobAction);
   const utilityActions=`${VIDEO_TAB==='overview'&&attentionTotal?addJobAction:''}${legacyAddAction}${ownerAcceptancePreview}${editorPortalReady?'<a class="btn btn-g btn-sm" href="./editor.html" target="_blank" rel="noopener">編集者画面</a>':''}`;
   let workspaceBody=overview;
@@ -7091,6 +7240,7 @@ ${others.length?`<div class="board-col">
 }
 
 function jobTotalIn(j){
+  j=_withOwnerJobFinance(j);
   const subs=j.subtasks||[];
   if(subs.some(s=>s.unitPrice>0))return subs.reduce((s,sub)=>s+(sub.unitPrice||0),0);
   return j.unitPrice||j.profit||0;
@@ -7103,6 +7253,7 @@ function getJobWorkerNames(j){
   return ids.map(id=>id===SELF_WID?'mono.create社内対応':(S.workers.find(w=>w.id===id)?.name||'')).filter(Boolean).join(', ');
 }
 function jobTotalOut(j){
+  j=_withOwnerJobFinance(j);
   const subs=j.subtasks||[];
   if(subs.some(s=>s.unitPrice>0||s.workerPay>0))
     return subs.filter(s=>s.workerId!==SELF_WID).reduce((sum,s)=>sum+(s.workerPay||0),0);
@@ -7223,14 +7374,20 @@ function rProjDeadline(){
 // ===請求書ページ===
 // 請求は親案件ではなく、単価が設定されたサブタスクを最小単位にする。
 // 親案件の unitPrice / profit は集計に使わず、親案件とサブタスクの二重計上を防ぐ。
-function _invoiceSubtasks(j){return(j.subtasks||[]).map((sub,index)=>({sub,index})).filter(x=>Number(x.sub.unitPrice)>0);}
+function _invoiceSubtasks(j){
+  const rows=(j.subtasks||[]).map((sub,index)=>({sub,index})).filter(x=>Number(x.sub.unitPrice)>0);
+  if(rows.length)return rows;
+  if(j._ownerFinance&&Number(j.unitPrice)>0)return[{sub:{...j,title:j.title||'案件',unitPrice:Number(j.unitPrice),invoicedAt:j.invoicedAt||null},index:-1}];
+  return[];
+}
 function _invAmt(j){return _invoiceSubtasks(j).reduce((sum,x)=>sum+Number(x.sub.unitPrice||0),0);}
-function _subInvoiceDate(j,sub){return sub.invoiceDate||j.invoiceDate||sub.deliveryDate||j.deliveryDate||'';}
+function _subInvoiceDate(j,sub){return sub.invoiceDate||j.invoiceDate||sub.completedDeliveryDate||j.completedDeliveryDate||sub.deliveryDate||j.deliveryDate||'';}
 function _subInvoicedAt(j,sub){return sub.invoicedAt||j.invoicedAt||null;}
 function _jobInvDate(j){
   if(j.invoiceDate)return j.invoiceDate;
+  if(j.completedDeliveryDate)return j.completedDeliveryDate;
   if(j.deliveryDate)return j.deliveryDate;
-  const sd=(j.subtasks||[]).map(s=>s.deliveryDate).filter(Boolean).sort();
+  const sd=(j.subtasks||[]).map(s=>s.invoiceDate||s.completedDeliveryDate||s.deliveryDate).filter(Boolean).sort();
   return sd.length?sd[sd.length-1]:'';
 }
 function _invMonthMatch(j,m){if(!m)return true;const d=_jobInvDate(j);return !!d&&d.startsWith(m);}
@@ -7318,7 +7475,7 @@ function openInvoiceEditorFromSelection(cid,m){
 function markDraftInvoiced(){
   const d=window._invDraft;if(!d)return;
   const at=today();
-  (d.subtaskRefs||[]).forEach(ref=>{const j=S.jobs.find(x=>x.id===ref.jobId),sub=j?.subtasks?.[Number(ref.subtaskIndex)];if(j&&sub){sub.invoicedAt=at;j.updatedAt=Date.now();if(_invoiceSubtasks(j).every(x=>_subInvoicedAt(j,x.sub)))j.invoicedAt=at;}});
+  (d.subtaskRefs||[]).forEach(ref=>{const j=S.jobs.find(x=>x.id===ref.jobId),index=Number(ref.subtaskIndex),sub=j?.subtasks?.[index];if(!j)return;if(index===-1&&_ownerFinanceForLegacyJob(j)){j.invoicedAt=at;j.updatedAt=Date.now();return;}if(sub){sub.invoicedAt=at;j.updatedAt=Date.now();if(_invoiceSubtasks(_withOwnerJobFinance(j)).every(x=>_subInvoicedAt(j,x.sub)))j.invoicedAt=at;}});
   save();closeInvoiceEditor();render();toast('🧾 請求済みにしました');
 }
 function _invItemRow(it){
@@ -7489,7 +7646,7 @@ function copyInvoiceText(cid,m){
 function markClientInvoiced(cid,m,on){
   if(!_canViewFinancials())return toast('財務操作の権限がありません','err');
   const at=on?today():null;
-  _invoiceJobs(cid,m).forEach(j=>{_invoiceSubtasks(j).forEach(({sub})=>{sub.invoicedAt=at;});j.invoicedAt=at;j.updatedAt=Date.now();});
+  _invoiceJobs(cid,m).forEach(j=>{const source=S.jobs.find(row=>row.id===j.id);if(!source)return;if(j._ownerFinance){source.invoicedAt=at;source.updatedAt=Date.now();return;}_invoiceSubtasks(source).forEach(({sub})=>{sub.invoicedAt=at;});source.invoicedAt=at;source.updatedAt=Date.now();});
   save();render();toast(on?'🧾 請求済みにしました':'請求済を取り消しました');
 }
 function openInvoiceInfo(){
@@ -12624,9 +12781,25 @@ function toggleJobWorkerSelection(id,checked){
   if(checked)ids.add(String(id));else ids.delete(String(id));
   _setJobModalWorkerIds([...ids]);
 }
+function _ownerMasterClientUnitPrice(clientId,accountId=''){
+  if(!_isOwner()||typeof window.managerOwnerClientUnitPrice!=='function'||typeof window.managerClientPricingReady!=='function'||!window.managerClientPricingReady())return null;
+  const raw=window.managerOwnerClientUnitPrice(String(clientId||''),String(accountId||''));if(raw===null||raw===undefined||raw==='')return null;
+  const amount=Number(raw);
+  return Number.isInteger(amount)&&amount>=0?amount:null;
+}
+function applyOwnerClientPriceFromMaster(){
+  if(!_isOwner())return;
+  const clientId=document.getElementById('j-cl')?.value||'',price=_ownerMasterClientUnitPrice(clientId),unit=document.getElementById('j-unit');
+  if(price===null)return;
+  const autoRows=[...document.querySelectorAll('#j-sub-cont .j-sub-price[data-price-auto="1"]')];
+  if(autoRows.length)autoRows.forEach(input=>{input.value=price});
+  if(unit&&unit.dataset.clientPriceAuto!=='0'&&!document.querySelector('#j-sub-cont .j-sub-row')){unit.value=price;unit.dataset.clientPriceAuto='1';}
+  updSubPrices();
+}
 function openJobModal(id,preStatus,preClientId){
   EID=id||null;
-  const j=id?S.jobs.find(j=>j.id===id):null;
+  const rawJob=id?S.jobs.find(j=>j.id===id):null,j=rawJob?_withOwnerJobFinance(rawJob):null;
+  const ownerFinanceLocked=!!(j?._ownerFinance||rawJob?.ownerFinanceId);
   const jbiz=j?jobBiz(j):(BIZ_CFG[PBIZ]?PBIZ:'edit');
   const clients=S.clients.filter(c=>!c.deleted);
   const selectedWorkerIds=j?getJobWorkerIds(j):[SELF_WID];
@@ -12634,7 +12807,7 @@ function openJobModal(id,preStatus,preClientId){
   const canManageMaterials=_videoCanEdit()&&['edit','haken'].includes(jbiz);
   const materialSection=canManageMaterials?_videoAttachmentEditorHtml(j?.attachments||[],"addVideoAttachmentRow(document.getElementById('j-attachment-list'))",'j-attachment-list'):`<div class="video-attachment-editor"><div class="video-attachment-heading"><div><b>素材・資料</b><span>閲覧のみ</span></div></div>${_videoAttachmentLinksHtml(_videoCaseMaterials(j?.attachments,j))||'<div class="video-attachment-hint">添付された素材・資料はありません。</div>'}</div>`;
   const parentDraftSetter=j?_editorDraftDateSetter(j):'creator';
-  const up=j?.unitPrice||j?.profit||0, wp=j?.workerPay||0;
+  const suggestedUnitPrice=!j?_ownerMasterClientUnitPrice(preClientId||''):null,up=j?(j.unitPrice||j.profit||0):(suggestedUnitPrice||0), wp=j?.workerPay||0;
   const pr=up-wp;
   openModalLg(`<div class="mhdr"><div class="mtitle">${j?'案件編集':'案件追加'}</div><button class="mclose" onclick="closeModal()">✕</button></div>
 <div class="fg"><div class="fl">事業</div>
@@ -12647,7 +12820,7 @@ function openJobModal(id,preStatus,preClientId){
 <div class="fg"><div class="fl">親案件名 *</div><input id="j-ttl" value="${esc(j?.title||'')}" placeholder="例：9月分 / 月次案件名"></div>
 <div class="frow">
   <div class="fg"><div class="fl">クライアント名</div>
-    <select id="j-cl">
+    <select id="j-cl" onchange="applyOwnerClientPriceFromMaster()">
       <option value="">未設定</option>
       ${clients.map(c=>`<option value="${c.id}" ${(j?.clientId||preClientId)===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}
     </select>
@@ -12703,14 +12876,14 @@ function openJobModal(id,preStatus,preClientId){
 	${materialSection}
 	${_isOwner()?`<div style="font-size:12px;font-weight:700;color:var(--t2);margin:10px 0 6px">💰 報酬</div>
 <div class="frow">
-  <div class="fg"><div class="fl" id="jl-unit">単価（円）<span id="j-unit-hint" style="font-size:10px;color:var(--t3);font-weight:400">${subs.some(s=>s.unitPrice>0)?' (サブタスクから自動計算)':''}</span></div><input type="number" id="j-unit" value="${j?jobTotalIn(j)||'':''}" placeholder="0" oninput="updJobProfit()" ${subs.some(s=>s.unitPrice>0)?'readonly style="opacity:.6"':''}></div>
-  <div class="fg" id="jf-wpay"><div class="fl" id="jl-wpay">ワーカー支払額（円）<span id="j-wpay-hint" style="font-size:10px;color:var(--t3);font-weight:400">${subs.some(s=>s.workerPay>0)?' (自動計算)':''}</span></div><input type="number" id="j-wpay" value="${j?jobTotalOut(j)||'':''}" placeholder="0" oninput="updJobProfit()" ${subs.some(s=>s.workerPay>0)?'readonly style="opacity:.6"':''}></div>
+  <div class="fg"><div class="fl" id="jl-unit">クライアント単価（円）<span id="j-unit-hint" style="font-size:10px;color:var(--t3);font-weight:400">${ownerFinanceLocked?' (オーナー専用台帳へ移行済み)':subs.some(s=>s.unitPrice>0)?' (サブ案件から自動計算)':!j&&suggestedUnitPrice!==null?' (クライアント一覧から自動入力)':''}</span></div><input type="number" id="j-unit" min="0" step="1" value="${j?jobTotalIn(j)||'':up||''}" placeholder="0" data-client-price-auto="${!j&&suggestedUnitPrice!==null?'1':'0'}" oninput="this.dataset.clientPriceAuto='0';updJobProfit()" ${ownerFinanceLocked||subs.some(s=>s.unitPrice>0)?'readonly style="opacity:.6"':''}><div style="font-size:10px;color:var(--t3);margin-top:3px">${ownerFinanceLocked?'確定済みの金額はオーナー専用台帳に固定されています。進行・日付などは引き続き変更できます。':'今回だけ金額が違う場合は、この案件の金額だけ変更できます。クライアント一覧の標準単価は変わりません。'}</div></div>
+  <div class="fg" id="jf-wpay"><div class="fl" id="jl-wpay">ワーカー支払額（円）<span id="j-wpay-hint" style="font-size:10px;color:var(--t3);font-weight:400">${ownerFinanceLocked?' (オーナー専用台帳へ移行済み)':subs.some(s=>s.workerPay>0)?' (自動計算)':''}</span></div><input type="number" id="j-wpay" value="${j?jobTotalOut(j)||'':''}" placeholder="0" oninput="updJobProfit()" ${ownerFinanceLocked||subs.some(s=>s.workerPay>0)?'readonly style="opacity:.6"':''}></div>
 </div>
 <div class="fg" id="jf-profit"><div class="fl" id="jl-profit">利益（自動計算）</div>
   <div id="j-profit-disp" style="padding:8px 12px;background:var(--card2);border-radius:var(--rs);font-weight:700;color:${pr>=0?'var(--green)':'var(--red)'}">¥${pr.toLocaleString()}</div>
 </div>
 <div class="frow" id="jf-monthly">
-  <div class="fg"><div class="fl" id="jl-monthly">月額（円）</div><input type="number" id="j-monthly" value="${j?.monthlyFee||''}" placeholder="0"></div>
+  <div class="fg"><div class="fl" id="jl-monthly">月額（円）</div><input type="number" id="j-monthly" value="${j?.monthlyFee||''}" placeholder="0" ${ownerFinanceLocked?'readonly style="opacity:.6"':''}></div>
   <div class="fg"></div>
 </div>
 <div style="font-size:12px;font-weight:700;color:var(--t2);margin:10px 0 6px">🤝 営業</div>
@@ -12722,7 +12895,7 @@ function openJobModal(id,preStatus,preClientId){
     </select>
     <div style="font-size:10px;color:var(--t3);margin-top:3px">営業リストの担当者と連動しています。</div>
   </div>
-  <div class="fg"><div class="fl">営業へのお支払い額（円）</div><input type="number" id="j-sales-pay" value="${j?.salesPay||''}" placeholder="0"></div>
+  <div class="fg"><div class="fl">営業へのお支払い額（円）</div><input type="number" id="j-sales-pay" value="${j?.salesPay||''}" placeholder="0" ${ownerFinanceLocked?'readonly style="opacity:.6"':''}></div>
 </div>
 <div class="frow">
   <div class="fg"><div class="fl">請求書提出日 <span style="color:var(--red)">*</span></div><input type="date" id="j-invoice" value="${j?.invoiceDate||''}"></div>
@@ -12745,10 +12918,10 @@ function openJobModal(id,preStatus,preClientId){
 </div>
 <div id="jf-subs">
 <div style="font-size:12px;font-weight:700;color:var(--t2);margin:10px 0 4px">✅ サブ案件 <span style="font-weight:400;color:var(--t3)">（親案件に「9月分」などを入力し、ここに各動画名を追加します。単価・支払はサブ案件ごとに入力すると案件全体の金額が自動計算されます）</span></div>
-<div id="j-sub-cont">${subs.map((s,i)=>mkSubRow(s,`サブ案件 ${i+1}`,jbiz,i)).join('')}</div>
+<div id="j-sub-cont" data-finance-locked="${ownerFinanceLocked?'1':'0'}">${subs.map((s,i)=>mkSubRow(s,`サブ案件 ${i+1}`,jbiz,i,ownerFinanceLocked)).join('')}</div>
 <div style="display:flex;gap:6px;align-items:center;margin-bottom:5px">
-  <button class="btn btn-g btn-xs" onclick="addJobSubField()">＋ サブ案件を追加</button>
-  <span style="font-size:11px;color:var(--t3)">単価・支払を入力すると案件全体が自動計算</span>
+  <button class="btn btn-g btn-xs" onclick="addJobSubField()" ${ownerFinanceLocked?'disabled':''}>＋ サブ案件を追加</button>
+  <span style="font-size:11px;color:var(--t3)">${ownerFinanceLocked?'金額台帳へ移行済みの過去案件は、親子構成と金額を固定しています。':'単価・支払を入力すると案件全体が自動計算'}</span>
 </div>
 </div>
 `:''}<div id="j-ops-checklist">${opsChecklistHtml(jbiz,j)}</div><div class="fg"><div class="fl">メモ</div><textarea id="j-notes" rows="2">${esc(j?.notes||'')}</textarea></div>
@@ -12760,6 +12933,7 @@ function openJobModal(id,preStatus,preClientId){
   document.getElementById('j-ttl')?.focus();
   _renderJobAssigneeSummary();
   setJobBiz(jbiz,true);
+  if(!j)applyOwnerClientPriceFromMaster();
   updPaidBtn();
 }
 // 入金状態(入金済み=paidAt)のトグル。入金予定日(j-payin)とは別物。保存はj-paid-valの値を保存ボタンで確定。
@@ -12862,21 +13036,23 @@ function updJobProfit(){
 }
 function addJobSubField(){
   const c=document.getElementById('j-sub-cont');
+  if(c?.dataset.financeLocked==='1')return toast('金額台帳へ移行済みの過去案件では、親子構成を変更できません','warn');
   const d=document.createElement('div');
-  d.innerHTML=mkSubRow({},'サブ案件',_curJobBiz());
+  d.innerHTML=mkSubRow({},'サブ案件',_curJobBiz(),-1,false);
   const row=d.firstElementChild;
   c.appendChild(row);row.querySelector('.j-sub-inp').focus();
 }
-function mkSubRow(s,ph,bk,originalIndex=-1){
+function mkSubRow(s,ph,bk,originalIndex=-1,financeLocked=false){
   const _bk=bk||_curJobBiz();
   const _bc=bizCfgOf(_bk);
   const st=s.status||_bc.statuses[0];
   const draftSetter=Object.keys(s||{}).length?_editorDraftDateSetter(s):'creator';
+  const isNew=!Object.keys(s||{}).length,masterPrice=isNew?_ownerMasterClientUnitPrice(document.getElementById('j-cl')?.value||''):null,subPrice=s.unitPrice||(masterPrice===null?'':masterPrice);
   return`<div class="j-sub-row" data-sub-id="${esc(s.id||'')}" data-original-index="${Number.isInteger(originalIndex)?originalIndex:-1}" style="background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);padding:10px;margin-bottom:8px">
   <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
     <div class="chk${s.done?' done':''}" onclick="this.classList.toggle('done');updSubPrices()" style="flex-shrink:0"></div>
     <input class="j-sub-inp" value="${esc(s.title||'')}" placeholder="${ph||'サブタスク'}" style="flex:1" oninput="updSubPrices()">
-    <button class="btn btn-g btn-xs" onclick="this.closest('.j-sub-row').remove();updSubPrices()">✕</button>
+    ${financeLocked?'':`<button class="btn btn-g btn-xs" onclick="this.closest('.j-sub-row').remove();updSubPrices()">✕</button>`}
   </div>
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:5px">
     <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">ステータス</div>
@@ -12894,10 +13070,10 @@ function mkSubRow(s,ph,bk,originalIndex=-1){
       </div>
     </div>
     <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">単価（円）</div>
-      <input class="j-sub-price" type="number" value="${s.unitPrice||''}" placeholder="0" style="font-size:12px;padding:4px 6px" oninput="updSubPrices()">
+      <input class="j-sub-price" type="number" min="0" step="1" value="${subPrice}" data-price-auto="${isNew?'1':'0'}" placeholder="0" style="font-size:12px;padding:4px 6px${financeLocked?';opacity:.6':''}" oninput="this.dataset.priceAuto='0';updSubPrices()" ${financeLocked?'readonly':''}>
     </div>
     <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">支払（円）</div>
-      <input class="j-sub-pay" type="number" value="${s.workerPay||''}" placeholder="0" style="font-size:12px;padding:4px 6px" oninput="updSubPrices()">
+      <input class="j-sub-pay" type="number" value="${s.workerPay||''}" placeholder="0" style="font-size:12px;padding:4px 6px${financeLocked?';opacity:.6':''}" oninput="updSubPrices()" ${financeLocked?'readonly':''}>
       <div class="j-sub-payment-recipient" style="font-size:10px;line-height:1.45;margin-top:3px;color:${_paymentRecipientForRecord(s,s.workerId).ok?'var(--t2)':'var(--red)'}">${esc(_paymentRecipientHint(s.workerId,s))}</div>
     </div>
   </div>
@@ -12975,7 +13151,9 @@ function saveJob(){
   if(!title){toast('タイトルを入力してください','err');return;}
   if(_isOwner()&&!document.getElementById('j-invoice')?.value){toast('請求書提出日を入力してください（請求書ページで使います）','warn');return;}
   const current=EID?S.jobs.find(j=>j.id===EID):null;
-  const previousDirectorSettlementTargets=_directorSettlementTargetsForJob(current);
+  const currentFinance=current?_ownerFinanceForLegacyJob(current):null,financeProtected=!!(currentFinance||current?.ownerFinanceId);
+  if(current?.ownerFinanceId&&!currentFinance){toast('金額台帳を確認できないため保存を中止しました。読み込み完了後にもう一度お試しください','warn');return;}
+  const previousDirectorSettlementTargets=_directorSettlementTargetsForJob(_withOwnerJobFinance(current));
   const requestedStatus=document.getElementById('j-stat').value;
   if(current?.portalJobId&&requestedStatus!==current.status&&EDITOR_OWNED_VIDEO_STATUSES.has(requestedStatus)){toast('この進捗は担当編集者本人が編集者ポータルから更新してください','warn');return;}
   const oldSubs=current?.subtasks||[];
@@ -13032,13 +13210,18 @@ function saveJob(){
   const isTrial=document.getElementById('j-trial-val')?.value==='1';
   const primaryWorkerId=selWorkerIds[0]||null,billingSnapshot=_paymentRecipientSnapshot(primaryWorkerId,current||{});
   const data={title,biz:document.getElementById('j-biz')?.value||'edit',monthlyFee:_isOwner()?(parseInt(document.getElementById('j-monthly')?.value)||0):(Number(current?.monthlyFee)||0),jobType:document.getElementById('j-type')?.value||'edit',clientId:document.getElementById('j-cl').value||null,workerIds:selWorkerIds,workerId:primaryWorkerId,...billingSnapshot,scope:document.getElementById('j-scope').value||null,status:requestedStatus,isTrial,unitPrice,profit:_isOwner()?unitPrice:(Number(current?.profit)||unitPrice),workerPay,sharedDate:document.getElementById('j-shared').value||null,editorDraftDateSetter:aggregateDraftSetter,editorDraftDate:aggregateDraftDate,clientDraftDate:document.getElementById('j-client-draft').value||null,thumbnailDate:document.getElementById('j-thumbnail')?.value||null,deliveryDate:document.getElementById('j-deliver').value||null,invoiceDate:_isOwner()?(document.getElementById('j-invoice')?.value||null):(current?.invoiceDate||null),dueDate:_isOwner()?(document.getElementById('j-due')?.value||null):(current?.dueDate||null),paymentDate:_isOwner()?(document.getElementById('j-payin')?.value||null):(current?.paymentDate||null),paidAt:_isOwner()?(document.getElementById('j-paid-val')?.value||null):(current?.paidAt||null),payoutDate:_isOwner()?(document.getElementById('j-payout')?.value||null):(current?.payoutDate||null),salesRep:_isOwner()?(document.getElementById('j-sales-rep')?.value||null):(current?.salesRep||null),salesPay:_isOwner()?(parseInt(document.getElementById('j-sales-pay')?.value)||0):(Number(current?.salesPay)||0),notes:document.getElementById('j-notes').value.trim(),opsChecklist:readOpsChecklist(),subtasks,attachments:canManageMaterials?parentAttachmentRead.items:_videoAttachments(current?.attachments),updatedAt:Date.now(),updatedBy:_myEmail()};
+  // Once finance is moved to an owner-only ledger, shared/mcapp must never
+  // receive those amounts again. Dates and operational fields remain editable.
+  const sharedData=financeProtected
+    ?{..._stripLegacyAmounts(data),ownerFinanceId:String(currentFinance?.id||current?.ownerFinanceId||current?.id||''),subtasks:(data.subtasks||[]).map(_stripLegacyAmounts)}
+    :data;
   const entersOperationalCompletion=opsRequiresChecklist(data.biz,data.status)&&!opsRequiresChecklist(jobBiz(current),current?.status);
   if(entersOperationalCompletion&&data.opsChecklist.length<opsChecklistDef(data.biz).length){toast('公開・運用・完了へ進む前に「運用完了チェック」をすべて確認してください','warn');return;}
   let savedJob=null;
   if(EID){
     const j=S.jobs.find(j=>j.id===EID);
     const prevStatus=j?.status;
-    if(j){Object.assign(j,data);savedJob=j;}
+    if(j){Object.assign(j,sharedData);savedJob=j;}
     // 完了に変更された瞬間に収益自動記帳
     if(prevStatus!=='完了'&&data.status==='完了'&&data.unitPrice>0){
       const profit=data.unitPrice-(data.workerPay||0);
@@ -13056,7 +13239,7 @@ function saveJob(){
   if(syncRecords.some(record=>record&&record.workerId&&record.workerId!==SELF_WID&&!['完了','キャンセル'].includes(String(record.status||savedJob?.status||'')))){
     syncLegacyAssignedSubtasksToPortal(savedJob).catch(error=>console.warn('assigned legacy case sync failed',error));
   }
-  _refreshDirectorSettlementTargets([...previousDirectorSettlementTargets,..._directorSettlementTargetsForJob(savedJob)]).catch(error=>{console.warn('director invoice authorization refresh failed',error);toast('案件は保存しましたが、担当ディレクターの請求対象を更新できませんでした','warn');});
+  _refreshDirectorSettlementTargets([...previousDirectorSettlementTargets,..._directorSettlementTargetsForJob(_withOwnerJobFinance(savedJob))]).catch(error=>{console.warn('director invoice authorization refresh failed',error);toast('案件は保存しましたが、担当ディレクターの請求対象を更新できませんでした','warn');});
   // ※ GcalへのアプリデータWriteは行わない（読み戻し重複防止）
 }
 
@@ -13576,6 +13759,8 @@ let PORTAL_JOBS=[];
 let PORTAL_INVOICES=[];
 let PORTAL_PROFILES=[];
 let PORTAL_AUTHORIZATIONS=[];
+let OWNER_JOB_FINANCE=[];
+let OWNER_LEGACY_FINANCE=[];
 let _accessReqUnsub=null;
 let _accessRecordsUnsub=null;
 let _accessControlUnsub=null;
@@ -13583,6 +13768,8 @@ let _portalJobsUnsub=null;
 let _portalInvoicesUnsub=null;
 let _portalProfilesUnsub=null;
 let _portalAuthorizationsUnsub=null;
+let _ownerJobFinanceUnsub=null;
+let _ownerLegacyFinanceUnsub=null;
 function memberRolesOf(m){
   if(!m)return[];
   if(Array.isArray(m.roles)&&m.roles.length)return m.roles.filter(x=>APP_ROLES.includes(x));
@@ -13656,6 +13843,8 @@ function _salesAllowedViews(){const vs=[];NAV_CATS.forEach(c=>{if(ROLE_SALES_CAT
 function isViewAllowed(v){
   if(myRole()==='editor')return v==='editorportal'; // UI fail-closed; shared Firestore doc is not row-level security.
   if(_isOwner())return true;
+  // 動画編集ディレクター兼任者も、旧台帳を使う他部署画面には戻さない。
+  if(_isScopedVideoDirectorAccess())return(ROLE_VIEW_ACCESS['動画編集ディレクター']||[]).includes(v);
   const rs=myRoles();
   if(v==='settings'||v==='accounts'||v==='igaccounts'||v==='revenue'||v==='bizboard')return false;
   if(v.startsWith('cp_'))return false;
@@ -16590,7 +16779,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260828-24';
+const APP_VERSION='20260828-27';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -16664,6 +16853,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260828-24"></script>
+<script src="./manager-features.js?v=20260828-27"></script>
 </body>
 </html>

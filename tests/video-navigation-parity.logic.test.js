@@ -7,8 +7,8 @@ const root=path.join(__dirname,'..');
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const css=fs.readFileSync(path.join(root,'app-ui.css'),'utf8');
 
-test('新しい動画画面から旧案件管理の全タブを同じrendererで直接開ける',()=>{
-  assert.match(html,/const managementTabs=BIZ_CFG\[biz\]\.tabs\.filter\(_canOpenProjectTab\)\.map\(k=>\[`manage-\$\{k\}`/);
+test('オーナーと旧台帳スタッフは全管理タブを再利用し、ディレクターは開かない',()=>{
+  assert.match(html,/const managementTabs=_isScopedVideoDirectorAccess\(\)\?\[\]:BIZ_CFG\[biz\]\.tabs\.filter\(_canOpenProjectTab\)\.map\(k=>\[`manage-\$\{k\}`/);
   assert.match(html,/\{board:rProjBoard,deadline:rProjDeadline,listing:rProjListing,list:\(\)=>rProjList\(clients\),clients:rProjClients,profit:rProjProfit,payment:rProjPayment,invoice:rProjInvoice,completed:rProjCompleted,worker:rProjWorker,priority:rProjPriority\}\[managementKey\]/);
   assert.match(html,/VIDEO_TAB==='legacy'\)\{VIDEO_TAB='manage-board'/);
 });

@@ -43,10 +43,12 @@ test('owner can inspect an editor portal using that member actual portal data', 
   assert.match(features, /if\(!job\|\|job\.previewLegacy\)return/);
 });
 
-test('a video director sees every saved child case under a parent assigned to that director', () => {
+test('only the owner read-only preview may merge legacy jobs into portal jobs', () => {
   assert.match(editor, /const isVideoDirector=Array\.isArray\(member\?\.roles\)&&member\.roles\.includes\('動画編集ディレクター'\)/);
   assert.match(editor, /if\(isVideoDirector&&assigned\(j\)&&children\.length\)return children\.map\(x=>make\(j,x\.sub,x\.index\)\)/);
-  assert.match(editor, /ADMIN_PREVIEW\|\|\(Array\.isArray\(access\?\.roles\)&&access\.roles\.includes\('動画編集ディレクター'\)\)/);
+  assert.match(editor, /const includeLegacy=ADMIN_PREVIEW,/);
+  assert.match(editor, /if\(ADMIN_PREVIEW\)next\.push\(db\.collection\('shared'\)\.doc\('mcapp'\)\.onSnapshot/);
+  assert.doesNotMatch(editor, /ADMIN_PREVIEW\|\|\(Array\.isArray\(access\?\.roles\)&&access\.roles\.includes\('動画編集ディレクター'\)\)/);
   assert.match(editor, /const relevant=children\.filter\(x=>assigned\(x\.sub\)\)/, 'pure editors remain limited to their own children');
   assert.match(editor, /x\.isLegacySubtask\|\|!linkedParents\.has/, 'an integrated parent is not duplicated, while its independent children remain visible');
 });

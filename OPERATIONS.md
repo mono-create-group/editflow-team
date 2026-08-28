@@ -40,6 +40,80 @@ Firestore emulator option is local-only and must never be replaced with a live t
    table is complete. Only then enable access enforcement. If anyone is blocked,
    use the emergency compatibility rollback; do not delete their records.
 
+## v27 strict privacy release and legacy-finance migration
+
+This release intentionally differs from the no-downtime path above. Deploy the
+strict Firestore rules **first**. Until the v27 static files are public, old v24
+owner/core-staff tabs can fail closed; do not weaken the rules to keep them open.
+
+1. Finish the release QA and keep a restricted, mode-0600 migration backup outside
+   of the repository. Never put its path, service account, ADC token, or backup
+   contents in GitHub Actions logs.
+2. Deploy the reviewed strict rules first. This creates the short, expected v24
+   fail-closed window for old owner/core-staff tabs.
+3. Push `main`, then verify the public `index.html`, `editor.html`, and `sw.js`
+   all report v27 before any data migration. Confirm the exact deployed commit and
+   cache version from a fresh public request.
+4. Tell every owner/core user to force-reload or close every old app tab. Do not
+   run the clear stage while even one v24 owner/core tab may still save
+   `shared/mcapp`.
+5. Run a live **dry-run only** with the migration CLI and a secure backup path.
+   It must report zero conflicts before continuing.
+
+   ```bash
+   node scripts/migrate-owner-job-finance.cjs \
+     --project editflow-mono-create --adc \
+     --backup /secure/restricted/editflow-v27-before-stage1.json
+   ```
+
+6. Stage 1 creates immutable `owner_legacy_finance` snapshots without clearing
+   legacy money fields. Require the project confirmation and preserve the generated
+   backup.
+
+   ```bash
+   node scripts/migrate-owner-job-finance.cjs \
+     --apply --project editflow-mono-create --confirm-project editflow-mono-create \
+     --adc --migrated-by owner-migration \
+     --backup /secure/restricted/editflow-v27-stage1.json
+   ```
+
+7. Run a fresh dry-run. The expected result is **228 already migrated, 0
+   candidates, 0 conflicts, 0 skips**. Any other count stops the rollout.
+8. Only after that fresh result, run Stage 2 with `--clear-shared-finance`. It
+   removes amount keys only; delivery, invoice, and payment dates remain.
+
+   ```bash
+   node scripts/migrate-owner-job-finance.cjs \
+     --apply --clear-shared-finance \
+     --project editflow-mono-create --confirm-project editflow-mono-create \
+     --adc --migrated-by owner-migration \
+     --backup /secure/restricted/editflow-v27-stage2.json
+   ```
+
+9. Run a new dry-run and the read-only production verification. Confirm no shared
+   legacy amount keys remain, every immutable snapshot matches, and editor/director
+   reads are denied while the owner can read the private ledgers.
+10. If Stage 2 must be reversed, stop all old tabs and use the secure Stage 1/2
+    backup with the explicit restore confirmation. This is the only documented
+    restore command; never reconstruct financial rows by hand.
+
+    ```bash
+    node scripts/migrate-owner-job-finance.cjs \
+      --restore-backup /secure/restricted/editflow-v27-stage2.json \
+      --project editflow-mono-create --adc --apply \
+      --confirm-project editflow-mono-create \
+      --confirm-restore-owner-legacy-finance \
+      --backup /secure/restricted/editflow-v27-pre-restore.json
+    ```
+
+    The restore route rejects token-only input, `--clear-shared-finance`, and
+    unconfirmed projects. With a service account, replace `--adc` with the
+    restricted `--service-account` path.
+11. Do not send the editor system-update notice before strict rules and public v27
+    verification both pass. The existing GitHub workflow sends it after that check;
+    if its automatic run was disabled or missed, start the existing
+    `workflow_dispatch` manually only after the same checks pass.
+
 ## Daily operating flow
 
 1. The owner publishes editing-agency work to the job board. Eligible direct editors

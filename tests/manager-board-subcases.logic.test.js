@@ -21,8 +21,9 @@ test('manager publish form supports an editable list of child cases',()=>{
   assert.match(manager,/class="mb-subcase-instructions"/);
   assert.match(manager,/mb-subcase-attachments-/);
   assert.match(manager,/納品日は担当編集者が記録します/);
-  for(const field of ['mb-subcase-unit','mb-subcase-pay','mb-subcase-invoice','mb-subcase-due','mb-subcase-payment','mb-subcase-payout'])assert.match(manager,new RegExp(field));
-  assert.match(manager,/オーナー管理（編集者には表示されません）/);
+  for(const field of ['mb-subcase-unit','mb-subcase-pay','mb-subcase-invoice','mb-subcase-due','mb-subcase-payment','mb-subcase-payout'])assert.doesNotMatch(manager,new RegExp(field));
+  assert.match(manager,/クライアント単価はクライアント一覧のオーナー専用マスターで管理します/);
+  assert.match(manager,/id="mb-client-pricing-status"/);
 });
 
 test('manager validates every child case and preserves child-specific materials',()=>{
@@ -34,8 +35,8 @@ test('manager validates every child case and preserves child-specific materials'
   assert.match(manager,/editorDraftDateSetter,editorDraftDate/);
   assert.match(manager,/row\.querySelector\('\.video-attachment-list'\)/);
   assert.match(manager,/attachments:attachmentRead\.items/);
-  assert.match(manager,/paymentDate:_isOwner\(\)/);
-  assert.match(manager,/payoutDate:_isOwner\(\)/);
+  assert.doesNotMatch(manager,/paymentDate:_isOwner\(\)/);
+  assert.doesNotMatch(manager,/payoutDate:_isOwner\(\)/);
   assert.match(manager,/subcases\.items\.length>1&&!caseName/);
 });
 
@@ -50,15 +51,18 @@ test('published board jobs share one stable parent identifier while keeping each
   assert.match(rules,/'parentCaseId','parentCaseName'/);
 });
 
-test('owner-only finance fields are copied to the private legacy parent and child records, never the public board document',()=>{
+test('board publish keeps finance out of legacy/shared parent and child records',()=>{
   assert.match(manager,/if\(_isOwner\(\)\)\{/);
   assert.match(manager,/S\.jobs\.unshift\(\{id:parentCaseId/);
   assert.match(manager,/subtasks=subcases\.items\.map\(item=>\(\{/);
-  assert.match(manager,/invoiceDate:item\.invoiceDate,dueDate:item\.dueDate,paymentDate:item\.paymentDate,payoutDate:item\.payoutDate/);
   assert.match(manager,/editorDraftDateSetter:item\.editorDraftDateSetter/);
   assert.match(manager,/editorDraftDateSetter:parentDraftSetter/);
-  assert.match(manager,/unitPrice:subtasks\.reduce/);
-  assert.match(manager,/workerPay:subtasks\.reduce/);
+  assert.match(manager,/unitPrice:0,workerPay:0,profit:0/);
+  assert.doesNotMatch(manager,/unitPrice:item\.unitPrice/);
+  assert.doesNotMatch(manager,/workerPay:item\.workerPay/);
+  assert.doesNotMatch(manager,/invoiceDate:item\.invoiceDate/);
+  assert.doesNotMatch(manager,/payoutDate:item\.payoutDate/);
+  assert.match(manager,/owner_job_finance is created only when the/);
 });
 
 test('single-job publishing remains supported through the default child row',()=>{

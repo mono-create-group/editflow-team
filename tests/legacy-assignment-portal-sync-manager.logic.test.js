@@ -15,13 +15,13 @@ function sourceOf(name) {
   return manager.slice(start, next < 0 ? manager.length : next);
 }
 
-test('manager shows portal and unlinked legacy counts, then targets only the selected editor', () => {
-  for (const marker of ['本人画面：${s.portalCount}件', '台帳上の担当：${s.legacyCount}件', '未連携：${s.legacyUnlinkedCount}件', '本人画面へ同期']) {
+test('owner manager shows portal and unlinked legacy counts, then targets only the selected editor', () => {
+  for (const marker of ['本人画面：${s.portalCount===null?', '台帳上の担当：${s.legacyCount}件', '未連携：${s.legacyUnlinkedCount}件', '本人画面へ同期']) {
     assert.match(manager, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
   assert.match(manager, /syncLegacyAssignedSubtasksToPortal\(parent,\{silent:true,targetUid:uid,onlyMissing:true\}\)/);
   assert.match(manager, /state\.assignmentSyncing\.has\(uid\)/);
-  assert.match(manager, /jobCount=portalCount===null\?null:portalCount\+legacyUnlinkedCount/);
+  assert.match(manager, /jobCount=portalCount===null\?null:portalCount\+\(_isOwner\(\)\?legacyUnlinkedCount:0\)/);
   assert.match(manager, /editor\?\.editorKind==='external'/);
   assert.match(manager, /catalogAccountsFromMaster\(client\)/);
   assert.doesNotMatch(sourceOf('shareLegacySyncClients'), /ownPay|workerPay|unitPrice|payableApproved/);
@@ -29,6 +29,7 @@ test('manager shows portal and unlinked legacy counts, then targets only the sel
 
 test('manager unlinked count follows assigned child first and inherits one parent editor only', () => {
   const context = {
+    _isOwner: () => true,
     S: { jobs: [
       { id: 'parent-one', biz: 'edit', workerId: 'miyuu', subtasks: [
         { id: 'a', title: '継承される子', status: '進行中' },
@@ -61,5 +62,5 @@ test('legacy synchronizer enforces target UID, missing-only writes, child prefer
   assert.match(index, /if\(hasChildren&&!String\(record\.id\|\|''\)\.trim\(\)\)/);
   assert.match(index, /if\(existing&&onlyMissing\)\{alreadyRows\.add\(item\.portalJobId\);continue;\}/);
   assert.doesNotMatch(index, /const subId=[\s\S]{0,400}if\(!deliveryDate\)/);
-  assert.match(fs.readFileSync(path.join(root, 'firestore.rules'), 'utf8'), /delivery != '' \|\| legacyWithoutDeadline/);
+  assert.match(fs.readFileSync(path.join(root, 'firestore.rules'), 'utf8'), /delivery != '' \|\| sourceWithoutDeadline/);
 });

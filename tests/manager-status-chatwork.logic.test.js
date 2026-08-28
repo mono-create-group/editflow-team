@@ -19,7 +19,7 @@ test('Chatwork comparison normalizes full-width characters and spacing', () => {
 test('legacy assignment status counts parent and subcase assignments', () => {
   const fn = source.match(/function legacyAssignmentCount\(editor\)\{[\s\S]*?\n  \}/)?.[0];
   assert.ok(fn, 'legacyAssignmentCount must exist');
-  const context = {S:{jobs:[
+  const context = {_isOwner:()=>true,S:{jobs:[
     {id:'parent',workerIds:['w1'],subtasks:[{workerId:'w2'},{workerId:'w1'}]},
     {id:'sub-only',workerId:'w2',subtasks:[{workerId:'w1'}]},
     {id:'deleted',workerId:'w1',deleted:true}
@@ -29,6 +29,21 @@ test('legacy assignment status counts parent and subcase assignments', () => {
   assert.equal(context.legacyAssignmentCount({workerId:'w1'}), 3);
   assert.equal(context.legacyAssignmentCount({workerId:'w2'}), 2);
   assert.equal(context.legacyAssignmentCount({workerId:''}), 0);
+});
+
+test('director view never reads or syncs legacy assignments', () => {
+  const count = source.match(/function legacyAssignmentCount\(editor\)\{[\s\S]*?\n  \}/)?.[0];
+  const entries = source.match(/function legacySyncEntriesForEditor\(editor\)\{[\s\S]*?\n  \}/)?.[0];
+  const sync = source.match(/function canSyncLegacyForEditor\(\)\{[^}]+\}/)?.[0];
+  assert.ok(count);
+  assert.ok(entries);
+  assert.ok(sync);
+  const context = {_isOwner:()=>false,S:{jobs:[{workerId:'legacy-worker'}]}};
+  vm.createContext(context);
+  vm.runInContext(`${count};${entries};${sync};this.count=legacyAssignmentCount;this.entries=legacySyncEntriesForEditor;this.canSync=canSyncLegacyForEditor;`, context);
+  assert.equal(context.count({workerId:'legacy-worker'}), 0);
+  assert.equal(context.entries({workerId:'legacy-worker'}).length, 0);
+  assert.equal(context.canSync({workerId:'legacy-worker'}), false);
 });
 
 test('management roster keeps loading, permission, job, and Chatwork states explicit', () => {
@@ -42,4 +57,9 @@ test('management roster keeps loading, permission, job, and Chatwork states expl
   assert.match(source, /onclick="managerOpenChatworkNameCheck\('\$\{esc\(e\.id\)\}'\)"/);
   assert.doesNotMatch(source, /rosterHtmlWithCopy/);
   assert.match(source, /state\.loaded\.portalJobs\.has\(editor\.id\)/);
+  assert.match(source, /担当案件 \$\{s\.portalCount\}件/);
+  assert.match(source, /directorView\?'':syncButton/);
+  assert.match(source, /if\(isDirector\(\)&&FB_USER\?\.uid\)/);
+  assert.match(source, /root\.collection\('invoice_authorizations'\)/);
+  assert.match(source, /if\(!_isOwner\(\)\)return toast\('請求書の承認・差戻しはオーナーのみ行えます'/);
 });

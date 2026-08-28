@@ -8,22 +8,29 @@ const root = path.resolve(__dirname, '..');
 const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const rules = fs.readFileSync(path.join(root, 'firestore.rules'), 'utf8');
 
-test('editor role can be combined with a core staff role', () => {
-  const fn = index.match(/function _coreAccessAllowed\(\)\{[^}]+\}/)?.[0];
-  assert.ok(fn, '_coreAccessAllowed must exist');
+test('editor role can be combined with non-director core staff while directors stay portal-scoped', () => {
+  const start = index.indexOf('function _isScopedVideoDirectorAccess()');
+  const end = index.indexOf('async function _requestAccess()', start);
+  const fn = index.slice(start, end);
+  assert.ok(start >= 0 && end > start, 'scoped access helpers must exist');
   const context = {
     APP_ROLES: ['動画編集者','動画編集ディレクター','AIコンサルタント','AIエンジニア','Webデザイナー','営業','SNSマーケター'],
     APP_ACCESS: null,
     _isActualOwner: () => false,
+    _rolePreviewActive: () => false,
+    ROLE_PREVIEW: null,
   };
   vm.createContext(context);
-  vm.runInContext(`${fn}\nthis.allowed=_coreAccessAllowed;`, context);
+  vm.runInContext(`${fn}\nthis.allowed=_coreAccessAllowed;this.scoped=_isScopedVideoDirectorAccess;`, context);
   context.APP_ACCESS = { approved: true, roles: ['動画編集者'] };
   assert.equal(context.allowed(), false);
   context.APP_ACCESS = { approved: true, roles: ['動画編集者', 'Webデザイナー'] };
   assert.equal(context.allowed(), true);
   context.APP_ACCESS = { approved: true, roles: ['動画編集者', '動画編集ディレクター'] };
-  assert.equal(context.allowed(), true);
+  assert.equal(context.scoped(), true);
+  assert.equal(context.allowed(), false);
+  context.APP_ACCESS = { approved: true, roles: ['動画編集ディレクター', '営業'] };
+  assert.equal(context.allowed(), false);
   assert.doesNotMatch(index, /動画編集者.{0,20}他の役割と併用できません/);
   assert.match(index, /hasAppRole\('動画編集者'\).*編集者ポータルを開く/);
 });

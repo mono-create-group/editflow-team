@@ -11,11 +11,13 @@ const {
   setDoc,
   updateDoc,
   collection,
+  collectionGroup,
   addDoc,
   getDocs,
   query,
   where,
   runTransaction,
+  writeBatch,
   serverTimestamp,
   deleteField,
 } = require('firebase/firestore');
@@ -27,12 +29,13 @@ const claims = (email) => ({ email, email_verified: true });
 function portalJob(uid, overrides = {}) {
   return {
     recordType: 'editor_portal_job', businessType: 'dispatch', title: '案件1', caseName: '9月分',
-    clientId: 'c1', clientDisplay: 'クライアントA', accountId: 'a1', accountDisplay: 'アカウントA',
+    clientId: 'c1', sourceClientId: 'legacy-client-1', clientDisplay: 'クライアントA', accountId: 'a1', accountDisplay: 'アカウントA',
     deadline: '2026-09-10', sharedDate: '2026-09-01', editorDraftDate: '2026-09-05',
     editorDraftDateSetter: 'editor',
     clientDraftDate: '2026-09-06', thumbnailDate: '', deliveryDate: '2026-09-10',
     requestUrl: 'https://example.com/request', sourceUrl: 'https://example.com/source',
     instructions: '編集指示', urgent: false, status: '受注済み', progress: '', evidenceUrl: '', blocker: '',
+    editorPayAmount: 3000,
     workDate: '', startTime: '', endTime: '', submittedByUid: uid, editorUid: uid,
     editorEmail: `${uid}@example.com`, editorName: uid, directorUid: '', source: 'direct_client',
     createdAt: 1, updatedAt: 1, history: [{ at: 1, type: 'created', by: uid, status: '受注済み' }],
@@ -74,6 +77,31 @@ function clientCatalog(overrides = {}) {
     sourceClientId: 'legacy-client-1', name: 'クライアントA', formerNames: [],
     accounts: [{ id: 'a1', name: 'アカウントA' }], active: true, manualIds: [],
     updatedAt: 1, updatedBy: 'owner',
+    ...overrides,
+  };
+}
+
+function ownerJobFinance(overrides = {}) {
+  return {
+    recordType: 'owner_job_finance', portalUid: 'external1', portalJobId: 'done1',
+    legacyJobId: 'legacy-external1-done1', parentCaseId: 'parent-1', sourceClientId: 'c1', accountId: 'a1',
+    clientUnitPrice: 6000, masterClientUnitPrice: 6000, pricingSource: 'account_master',
+    pricingRevision: 1, pricingUpdatedAt: serverTimestamp(), overrideReason: '',
+    editorPayReference: 3000, approvedPayAmount: 3500, payRoute: 'director_team',
+    payeeUid: 'dir1', payeeWorkerId: 'worker-dir1', assigneeUid: 'external1',
+    assigneeWorkerId: 'worker-external1', approvedBy: 'owner', approvedAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    ...overrides,
+  };
+}
+
+function ownerLegacyFinance(overrides = {}) {
+  return {
+    recordType: 'owner_legacy_finance', legacyJobId: 'legacy-finance-1',
+    sourceHash: 'a'.repeat(64),
+    parentAmounts: { unitPrice: 6000, workerPay: 3000, profit: 3000, monthlyFee: 0, salesPay: 0 },
+    subtaskAmounts: [{ id: 'sub-1', unitPrice: 6000, workerPay: 3000, profit: 3000, monthlyFee: 0, salesPay: 0 }],
+    revision: 1, migratedAt: serverTimestamp(), migratedBy: 'owner',
     ...overrides,
   };
 }
@@ -121,14 +149,14 @@ async function expectAllowed(label, promise) {
     await env.withSecurityRulesDisabled(async (ctx) => {
       const db = ctx.firestore();
       const access = [
-        ['direct1', { uid: 'direct1', email: 'direct1@example.com', approved: true, roles: ['動画編集者'], editorKind: 'direct' }],
-        ['direct2', { uid: 'direct2', email: 'direct2@example.com', approved: true, roles: ['動画編集者'], editorKind: 'direct' }],
-        ['external1', { uid: 'external1', email: 'external1@example.com', approved: true, roles: ['動画編集者'], editorKind: 'external', directorUid: 'dir1', invoiceRecipientName: 'Dir 1' }],
-        ['external2', { uid: 'external2', email: 'external2@example.com', approved: true, roles: ['動画編集者'], editorKind: 'external', directorUid: 'dir2', invoiceRecipientName: 'Dir 2' }],
+        ['direct1', { uid: 'direct1', email: 'direct1@example.com', approved: true, roles: ['動画編集者'], editorKind: 'direct', workerId: 'worker-direct1' }],
+        ['direct2', { uid: 'direct2', email: 'direct2@example.com', approved: true, roles: ['動画編集者'], editorKind: 'direct', workerId: 'worker-direct2' }],
+        ['external1', { uid: 'external1', email: 'external1@example.com', approved: true, roles: ['動画編集者'], editorKind: 'external', directorUid: 'dir1', invoiceRecipientName: 'Dir 1', workerId: 'worker-external1' }],
+        ['external2', { uid: 'external2', email: 'external2@example.com', approved: true, roles: ['動画編集者'], editorKind: 'external', directorUid: 'dir2', invoiceRecipientName: 'Dir 2', workerId: 'worker-external2' }],
         ['externalHybrid', { uid: 'externalHybrid', email: 'externalHybrid@example.com', approved: true, roles: ['動画編集者', 'Webデザイナー'], editorKind: 'external', directorUid: 'dir1', invoiceRecipientName: 'Dir 1' }],
         ['hybrid1', { uid: 'hybrid1', email: 'hybrid1@example.com', approved: true, roles: ['動画編集者', 'Webデザイナー'], editorKind: 'direct' }],
-        ['dir1', { uid: 'dir1', email: 'dir1@example.com', approved: true, roles: ['動画編集ディレクター'] }],
-        ['dir2', { uid: 'dir2', email: 'dir2@example.com', approved: true, roles: ['動画編集ディレクター'] }],
+        ['dir1', { uid: 'dir1', email: 'dir1@example.com', approved: true, roles: ['動画編集ディレクター'], workerId: 'worker-dir1' }],
+        ['dir2', { uid: 'dir2', email: 'dir2@example.com', approved: true, roles: ['動画編集ディレクター'], workerId: 'worker-dir2' }],
       ];
       for (const [uid, data] of access) await setDoc(doc(db, 'access', uid), data);
       await setDoc(doc(db, 'system', 'access_control'), { enforced: true, compatibilityEmails: [] });
@@ -143,6 +171,8 @@ async function expectAllowed(label, promise) {
       await setDoc(doc(db, 'editor_portals', 'external2', 'editor_jobs', 'done2'), portalJob('external2', { directorUid: 'dir2', status: '完了', evidenceUrl: 'https://example.com/delivery' }));
       await setDoc(doc(db, 'editor_portals', 'hybrid1', 'editor_jobs', 'own1'), portalJob('hybrid1'));
       await setDoc(doc(db, 'editor_portals', 'direct1', 'editor_jobs', 'priced-direct1'), portalJob('direct1', { ownPay: 5000, payableApproved: true, payableApprovedAt: 1, payableMonth: '2026-09' }));
+      await setDoc(doc(db, 'editor_portals', 'direct1', 'editor_jobs', 'done1'), portalJob('direct1', { status: '完了', evidenceUrl: 'https://example.com/delivery', linkedLegacyJobId: 'legacy-direct1-done1' }));
+      await setDoc(doc(db, 'editor_portals', 'direct1', 'editor_jobs', 'done-batch'), portalJob('direct1', { status: '完了', evidenceUrl: 'https://example.com/delivery', linkedLegacyJobId: 'legacy-direct1-batch' }));
       await setDoc(doc(db, 'editor_portals', 'direct1', 'editor_jobs', 'draft-creator'), portalJob('direct1', { editorDraftDateSetter: 'creator' }));
       await setDoc(doc(db, 'editor_portals', 'direct1', 'editor_jobs', 'draft-editor'), portalJob('direct1', { editorDraftDateSetter: 'editor' }));
       const legacyDraftSetterJob = portalJob('direct1');
@@ -160,6 +190,8 @@ async function expectAllowed(label, promise) {
       await setDoc(doc(db, 'editor_portals', 'external1', 'editor_invoices', 'inv1', 'events', 'e1'), { type: 'created', byUid: 'external1' });
       await setDoc(doc(db, 'editor_portals', 'external1', 'invoice_authorizations', 'auth1', 'events', 'e1'), { type: 'approved', byUid: 'dir1' });
       await setDoc(doc(db, 'shared', 'mcapp'), { clientPrice: 999999, profit: 999999 });
+      await setDoc(doc(db, 'users', 'dir1'), { json_mcapp: 'legacy-director-private-copy', ts_mcapp: 1 });
+      await setDoc(doc(db, 'users', 'hybrid1'), { json_mcapp: 'non-director-core-private-copy', ts_mcapp: 1 });
     });
 
     const direct1 = env.authenticatedContext('direct1', claims('direct1@example.com')).firestore();
@@ -170,6 +202,40 @@ async function expectAllowed(label, promise) {
     const dir1 = env.authenticatedContext('dir1', claims('dir1@example.com')).firestore();
     const dir2 = env.authenticatedContext('dir2', claims('dir2@example.com')).firestore();
     const owner = env.authenticatedContext('owner', claims('mono.create.group@gmail.com')).firestore();
+
+    const ownerPricing = {
+      recordType: 'owner_client_pricing', clientSource: 'projects', sourceClientId: 'c1',
+      clientName: 'クライアントA', defaultClientUnitPrice: 5000,
+      accountUnitPrices: { a1: 6000 }, revision: 1, updatedAt: 1, updatedBy: 'owner',
+    };
+    await expectAllowed('owner stores client pricing in the owner-only master', setDoc(doc(owner, 'owner_client_pricing', 'projects_c1'), ownerPricing));
+    await expectAllowed('owner reads client pricing master', getDoc(doc(owner, 'owner_client_pricing', 'projects_c1')));
+    await expectDenied('direct editor cannot read client pricing master', getDoc(doc(direct1, 'owner_client_pricing', 'projects_c1')));
+    await expectDenied('external editor cannot read client pricing master', getDoc(doc(external1, 'owner_client_pricing', 'projects_c1')));
+    await expectDenied('video director cannot read client pricing master', getDoc(doc(dir1, 'owner_client_pricing', 'projects_c1')));
+    await expectDenied('editor cannot write client pricing master', setDoc(doc(direct1, 'owner_client_pricing', 'projects-c2'), { ...ownerPricing, sourceClientId: 'c2' }));
+
+    await expectAllowed('owner creates an immutable case finance record with external-editor to director routing', setDoc(doc(owner, 'owner_job_finance', 'legacy-external1-done1'), ownerJobFinance()));
+    await expectAllowed('owner reads the private case finance record', getDoc(doc(owner, 'owner_job_finance', 'legacy-external1-done1')));
+    await expectDenied('external editor cannot read private case finance', getDoc(doc(external1, 'owner_job_finance', 'legacy-external1-done1')));
+    await expectDenied('assigned director cannot read private case finance', getDoc(doc(dir1, 'owner_job_finance', 'legacy-external1-done1')));
+    await expectDenied('direct editor cannot read private case finance', getDoc(doc(direct1, 'owner_job_finance', 'legacy-external1-done1')));
+    await expectDenied('owner cannot route an external editors settlement to the external editor', setDoc(doc(owner, 'owner_job_finance', 'bad-external-route'), ownerJobFinance({ legacyJobId: 'bad-external-route', payRoute: 'direct', payeeUid: 'external1', payeeWorkerId: 'worker-external1' })));
+    await expectAllowed('owner routes a direct editors confirmed payment to that editor', setDoc(doc(owner, 'owner_job_finance', 'legacy-direct1-done1'), ownerJobFinance({ portalUid: 'direct1', portalJobId: 'done1', legacyJobId: 'legacy-direct1-done1', payRoute: 'direct', payeeUid: 'direct1', payeeWorkerId: 'worker-direct1', assigneeUid: 'direct1', assigneeWorkerId: 'worker-direct1', approvedPayAmount: 3000 })));
+    await expectDenied('case price override requires an audit reason', setDoc(doc(owner, 'owner_job_finance', 'missing-override-reason'), ownerJobFinance({ legacyJobId: 'missing-override-reason', pricingSource: 'case_override', clientUnitPrice: 6500, overrideReason: '' })));
+    await expectDenied('confirmed case finance cannot be silently rewritten', updateDoc(doc(owner, 'owner_job_finance', 'legacy-external1-done1'), { approvedPayAmount: 9999, updatedAt: serverTimestamp() }));
+    await expectAllowed('owner creates an immutable legacy finance migration record', setDoc(doc(owner, 'owner_legacy_finance', 'legacy-finance-1'), ownerLegacyFinance()));
+    await expectAllowed('owner reads an immutable legacy finance migration record', getDoc(doc(owner, 'owner_legacy_finance', 'legacy-finance-1')));
+    await expectDenied('direct editor cannot read legacy finance migration records', getDoc(doc(direct1, 'owner_legacy_finance', 'legacy-finance-1')));
+    await expectDenied('director cannot read legacy finance migration records', getDoc(doc(dir1, 'owner_legacy_finance', 'legacy-finance-1')));
+    await expectDenied('legacy finance migration rejects malformed parent amounts', setDoc(doc(owner, 'owner_legacy_finance', 'legacy-finance-malformed'), ownerLegacyFinance({ legacyJobId: 'legacy-finance-malformed', parentAmounts: { unitPrice: 6000, workerPay: 3000, profit: 3000, monthlyFee: 0 } })));
+    await expectDenied('legacy finance migration records are immutable', updateDoc(doc(owner, 'owner_legacy_finance', 'legacy-finance-1'), { revision: 2 }));
+    await expectDenied('owner cannot approve a dispatch portal job with an amount different from its immutable case ledger', updateDoc(doc(owner, 'editor_portals', 'direct1', 'editor_jobs', 'done1'), { ownPay: 9999, payableApproved: true, payableApprovedAt: 2, payableMonth: '2026-09', updatedAt: 2, updatedBy: 'owner' }));
+    await expectAllowed('owner can approve a dispatch portal job only when ownPay mirrors immutable case ledger', updateDoc(doc(owner, 'editor_portals', 'direct1', 'editor_jobs', 'done1'), { ownPay: 3000, payableApproved: true, payableApprovedAt: 2, payableMonth: '2026-09', updatedAt: 2, updatedBy: 'owner' }));
+    const integrationBatch = writeBatch(owner);
+    integrationBatch.set(doc(owner, 'owner_job_finance', 'legacy-direct1-batch'), ownerJobFinance({ portalUid: 'direct1', portalJobId: 'done-batch', legacyJobId: 'legacy-direct1-batch', payRoute: 'direct', payeeUid: 'direct1', payeeWorkerId: 'worker-direct1', assigneeUid: 'direct1', assigneeWorkerId: 'worker-direct1', approvedPayAmount: 3100 }));
+    integrationBatch.update(doc(owner, 'editor_portals', 'direct1', 'editor_jobs', 'done-batch'), { ownPay: 3100, payableApproved: true, payableApprovedAt: 2, payableMonth: '2026-09', updatedAt: 2, updatedBy: 'owner' });
+    await expectAllowed('owner can atomically create immutable finance and its matching dispatch portal mirror', integrationBatch.commit());
 
     await expectAllowed('owner archives legacy external settlement before removing it from the portal job', setDoc(doc(owner, 'external_compensation_archive', 'external1-priced1'), { editorUid: 'external1', directorUid: 'dir1', sourceJobId: 'priced1', ownPay: 5000, payableApproved: true, payableMonth: '2026-09', archivedAt: 1 }));
     await expectDenied('external editor cannot read owner-only settlement archive', getDoc(doc(external1, 'external_compensation_archive', 'external1-priced1')));
@@ -188,14 +254,28 @@ async function expectAllowed(label, promise) {
     await expectDenied('external editor cannot see another director board', getDoc(doc(external1, 'editor_job_board', 'external-two')));
     await expectAllowed('editor reads own portal', getDoc(doc(external1, 'editor_portals', 'external1', 'editor_jobs', 'done1')));
     await expectDenied('external editor is fail-closed from a legacy priced portal job', getDoc(doc(external1, 'editor_portals', 'external1', 'editor_jobs', 'priced1')));
-    await expectAllowed('director can audit a legacy priced external portal job for migration', getDoc(doc(dir1, 'editor_portals', 'external1', 'editor_jobs', 'priced1')));
+    await expectDenied('director cannot read a legacy priced external portal job', getDoc(doc(dir1, 'editor_portals', 'external1', 'editor_jobs', 'priced1')));
     await expectDenied('editor cannot read another portal', getDoc(doc(external1, 'editor_portals', 'external2', 'editor_jobs', 'done2')));
     await expectAllowed('director reads assigned external editor', getDoc(doc(dir1, 'editor_portals', 'external1', 'editor_jobs', 'done1')));
     await expectDenied('director cannot read another director editor', getDoc(doc(dir1, 'editor_portals', 'external2', 'editor_jobs', 'done2')));
+    await expectDenied('director cannot use editor-jobs collection-group access after team transfers', getDocs(query(collectionGroup(dir1, 'editor_jobs'), where('directorUid', '==', 'dir1'))));
     await expectAllowed('owner reads every portal', getDoc(doc(owner, 'editor_portals', 'external2', 'editor_jobs', 'done2')));
     await expectDenied('editor cannot read shared financial monolith', getDoc(doc(direct1, 'shared', 'mcapp')));
     await expectAllowed('hybrid editor uses core staff data through the additional role', getDoc(doc(hybrid1, 'shared', 'mcapp')));
     await expectDenied('external editor with a legacy second role cannot read shared financial monolith', getDoc(doc(externalHybrid, 'shared', 'mcapp')));
+    await expectDenied('video director cannot read the company-wide shared monolith', getDoc(doc(dir1, 'shared', 'mcapp')));
+    await expectDenied('video director cannot write the company-wide shared monolith', updateDoc(doc(dir1, 'shared', 'mcapp'), { directorProbe: true }));
+    await expectDenied('video director cannot read a shared sales shard', getDoc(doc(dir1, 'shared', 'mcapp_leads_0')));
+    await expectDenied('video director cannot list shared records', getDocs(collection(dir1, 'shared')));
+    await expectDenied('video director cannot collection-group query shared records', getDocs(collectionGroup(dir1, 'shared')));
+    await expectAllowed('non-director core staff keeps shared monolith access', getDoc(doc(hybrid1, 'shared', 'mcapp')));
+    await expectAllowed('non-director core staff keeps shared monolith write access', setDoc(doc(hybrid1, 'shared', 'core-staff-fixture'), { probe: true }));
+    await expectAllowed('owner keeps shared monolith write access', updateDoc(doc(owner, 'shared', 'mcapp'), { ownerProbe: true }));
+    await expectDenied('video director cannot read own legacy personal document', getDoc(doc(dir1, 'users', 'dir1')));
+    await expectDenied('video director cannot write own legacy personal document', updateDoc(doc(dir1, 'users', 'dir1'), { directorProbe: true }));
+    await expectAllowed('non-director core staff keeps own legacy personal document access', getDoc(doc(hybrid1, 'users', 'hybrid1')));
+    await expectAllowed('non-director core staff keeps own legacy personal document write access', updateDoc(doc(hybrid1, 'users', 'hybrid1'), { coreStaffProbe: true }));
+    await expectAllowed('owner keeps legacy personal document access', updateDoc(doc(owner, 'users', 'dir1'), { ownerProbe: true }));
     await expectAllowed('hybrid editor also uses own editor portal', getDoc(doc(hybrid1, 'editor_portals', 'hybrid1', 'editor_jobs', 'own1')));
     await expectDenied('hybrid editor still cannot read another editor portal', getDoc(doc(hybrid1, 'editor_portals', 'external1', 'editor_jobs', 'done1')));
     await expectAllowed('editor changes only own Chatwork display name', updateDoc(doc(direct1, 'access', 'direct1'), { name: 'Direct Chatwork', updatedAt: 2 }));
@@ -234,14 +314,19 @@ async function expectAllowed(label, promise) {
 
     await expectAllowed('video director receives editor board access', getDoc(doc(dir1, 'editor_job_board', 'direct-open')));
     await expectAllowed('video director creates a job in own editor portal', setDoc(doc(dir1, 'editor_portals', 'dir1', 'editor_jobs', 'director-own'), portalJob('dir1')));
-    // Historical child cases can legitimately lack a planned delivery date.
-    // Only the manager-created legacy_sync path may preserve that blank value;
-    // new editor-created work must still include a promised delivery date.
+    // Historical synchronized work and editor-created direct-client dispatch
+    // both record actual delivery only when delivery is completed.
     const legacyUnscheduledExternalJob = portalJob('external1', {
       source: 'legacy_sync', directorUid: 'dir1', deadline: '', deliveryDate: '',
       parentCaseId: 'legacy-parent-miyuu', parentCaseName: '和光市デンタルオフィス様_9月分',
       legacyParentId: 'legacy-parent-miyuu', legacySubtaskId: 'legacy-subtask-miyuu-1',
     });
+    delete legacyUnscheduledExternalJob.sourceClientId;
+    delete legacyUnscheduledExternalJob.editorPayAmount;
+    await expectDenied('video director cannot rerun legacy ledger synchronization', setDoc(
+      doc(dir1, 'editor_portals', 'external1', 'editor_jobs', 'director-legacy-resync'),
+      legacyUnscheduledExternalJob
+    ));
     await expectAllowed('owner synchronizes an external legacy job with no planned delivery date', setDoc(
       doc(owner, 'editor_portals', 'external1', 'editor_jobs', 'legacy-no-delivery-date'),
       legacyUnscheduledExternalJob
@@ -254,9 +339,18 @@ async function expectAllowed(label, promise) {
         lastProgressChangedByRole: '担当編集者', updatedAt: 2,
       }
     ));
-    await expectDenied('editor cannot create a normal portal job without a planned delivery date', setDoc(
+    await expectAllowed('editor creates a direct-client dispatch without a planned delivery date', setDoc(
       doc(external1, 'editor_portals', 'external1', 'editor_jobs', 'normal-no-delivery-date'),
       portalJob('external1', { directorUid: 'dir1', deadline: '', deliveryDate: '' })
+    ));
+    const missingEditorPay = portalJob('external1', { directorUid: 'dir1', deadline: '', deliveryDate: '' });
+    delete missingEditorPay.editorPayAmount;
+    await expectDenied('direct-client dispatch requires editor payment amount', setDoc(
+      doc(external1, 'editor_portals', 'external1', 'editor_jobs', 'missing-editor-pay'), missingEditorPay
+    ));
+    await expectDenied('direct-client dispatch rejects a zero editor payment amount', setDoc(
+      doc(external1, 'editor_portals', 'external1', 'editor_jobs', 'zero-editor-pay'),
+      portalJob('external1', { directorUid: 'dir1', deadline: '', deliveryDate: '', editorPayAmount: 0 })
     ));
     const editorDraftDateUpdate = (date) => ({
       editorDraftDate: date,
@@ -309,7 +403,7 @@ async function expectAllowed(label, promise) {
     await expectAllowed('direct editor keeps own invoice authorization access', getDoc(doc(direct1, 'editor_portals', 'direct1', 'invoice_authorizations', 'auth1')));
     await expectAllowed('video director keeps own direct-editor invoice access', getDoc(doc(dir1, 'editor_portals', 'dir1', 'editor_invoices', 'inv1')));
     await expectAllowed('video director keeps own direct-editor invoice authorization access', getDoc(doc(dir1, 'editor_portals', 'dir1', 'invoice_authorizations', 'auth1')));
-    await expectAllowed('director sees assigned external invoice for migration and audit', getDoc(doc(dir1, 'editor_portals', 'external1', 'editor_invoices', 'inv1')));
+    await expectDenied('director cannot read an external editor invoice', getDoc(doc(dir1, 'editor_portals', 'external1', 'editor_invoices', 'inv1')));
     await expectDenied('other director cannot see invoice', getDoc(doc(dir2, 'editor_portals', 'external1', 'editor_invoices', 'inv1')));
 
     await expectAllowed('first editor atomically claims board', runTransaction(direct1, async (tx) => {

@@ -35,7 +35,7 @@ test('external editors cannot access mono.create invoice records or invoice even
   const authorization = blockAfter('match /invoice_authorizations/{authorizationId}', 'match /editor_invoices/{invoiceId}');
   const invoices = blockAfter('match /editor_invoices/{invoiceId}', 'match /submissions/{submissionId}');
   assert.match(authorization, /editor\(uid\) && !externalEditor\(uid\)/);
-  assert.match(invoices, /allow read: if portalManager\(uid\) \|\| \(editor\(uid\) && !externalEditor\(uid\)\)/);
+  assert.match(invoices, /allow read: if owner\(\) \|\| \(editor\(uid\) && !externalEditor\(uid\)\)/);
   assert.match(invoices, /allow create: if editor\(uid\) && !externalEditor\(uid\)/);
   assert.match(invoices, /allow update: if editor\(uid\) && !externalEditor\(uid\)/);
   assert.match(invoices, /request\.resource\.data\.byUid == uid/);
@@ -56,6 +56,12 @@ test('external editor portal never subscribes to or renders invoice amounts', ()
   assert.match(editorFeatures, /isExternal\(\)\?'支払い案内':'請求書'/);
 });
 
+test('dispatch entry keeps the editor pay but never transports client price or profit through the editor portal', () => {
+  assert.match(editorFeatures, /編集者支払額（円） \*/);
+  assert.match(editorFeatures, /editorPayAmount:subcase\.editorPayAmount/);
+  assert.doesNotMatch(editorFeatures, /clientUnitPrice|new-client-unit-price/);
+});
+
 test('manager and owner UI route external settlement away from the external portal', () => {
   assert.doesNotMatch(manager, /approveExternalPay|managerApproveExternalPay|externalPayHtml/);
   assert.match(manager, /external_compensation_archive/);
@@ -63,7 +69,12 @@ test('manager and owner UI route external settlement away from the external port
   assert.match(manager, /mono\.createからディレクターへの依頼単価も表示しません/);
   assert.match(index, /if\(_portalIsExternal\(x\._portalUid\)\)return\{ok:false/);
   assert.match(index, /filter\(x=>!_portalIsExternal\(x\._portalUid\)\)/);
-  assert.match(index, /workerPay:_portalIsExternal\(j\._portalUid\)\?0/);
+  assert.match(index, /vp-director-settlement/);
+  assert.match(index, /editorPayReference:editorPay/);
+  assert.match(index, /approvedPayAmount:ownerWorkerPay/);
+  assert.match(index, /payRoute:recipient\.route/);
+  assert.match(index, /legacy\.unitPrice=0;legacy\.workerPay=0;legacy\.profit=0/);
+  assert.doesNotMatch(index, /workerPay=biz==='haken'&&editorPay/);
 });
 
 test('role assignment copy explicitly protects the mono.create to director rate', () => {
