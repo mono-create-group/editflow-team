@@ -29,6 +29,10 @@ test('owner can inspect an editor portal using that member actual portal data', 
   assert.match(editor, /collection\('editor_portals'\)\.doc\(portalUid\(\)\)/);
   assert.match(features, /feature\.startedFor===portalUid\(\)/);
   assert.match(features, /applyAdminPreviewReadOnly\(\)/);
+  assert.match(editor, /btn\.closest\('\.nav,\.editor-nav-mobile'\)/, 'desktop and mobile navigation remain usable in read-only preview');
+  assert.match(features, /data-preview-safe onclick="openEditorJob/, 'the owner can open an actual assigned case without enabling writes');
+  assert.match(features, /data-preview-safe class="btn job-type-filter/, 'read-only preview can filter actual assigned cases');
+  assert.match(features, /data-preview-safe class="notification-item/, 'read-only preview can follow a notification to its case');
   assert.match(editor, /function buildLegacyPreviewJobs\(shared,member\)/);
   assert.match(editor, /collection\('shared'\)\.doc\('mcapp'\)\.onSnapshot/);
   assert.match(editor, /previewLegacy:true/);
