@@ -28,7 +28,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" onerror="portalSdkLoadFailed()"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js" onerror="portalSdkLoadFailed()"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js" onerror="portalSdkLoadFailed()"></script>
-  <script src="./billing-terms.js?v=20260828-23"></script>
+  <script src="./billing-terms.js?v=20260828-24"></script>
   <!-- PDF libraries are loaded only when an editor creates a PDF. -->
   <script>
   const PAGE_PARAMS=new URLSearchParams(location.search);
@@ -159,7 +159,8 @@
 
   function previewNameKey(v){return String(v||'').normalize('NFKC').replace(/\s+/g,'').toLowerCase()}
   function previewSharedArray(raw){if(typeof raw!=='string')return[];try{const v=JSON.parse(raw);return Array.isArray(v)?v:[]}catch(_){return[]}}
-  function combinePortalJobs(){const includeLegacy=ADMIN_PREVIEW||(Array.isArray(access?.roles)&&access.roles.includes('動画編集ディレクター')),linkedParents=new Set(portalJobsSource.map(x=>String(x.linkedLegacyJobId||'')).filter(Boolean)),legacyOnly=previewLegacyJobs.filter(x=>x.isLegacySubtask||!linkedParents.has(String(x.legacyParentId||'')));jobs=includeLegacy?[...portalJobsSource,...legacyOnly]:[...portalJobsSource]}
+  function legacyPreviewPairKey(row={}){const parent=String(row.legacyParentId||row.linkedLegacyJobId||''),child=String(row.legacySubtaskId||'');return parent&&child?`${parent}\u0000${child}`:''}
+  function combinePortalJobs(){const includeLegacy=ADMIN_PREVIEW||(Array.isArray(access?.roles)&&access.roles.includes('動画編集ディレクター')),linkedParents=new Set(portalJobsSource.map(x=>String(x.linkedLegacyJobId||'')).filter(Boolean)),linkedPairs=new Set(portalJobsSource.map(legacyPreviewPairKey).filter(Boolean)),legacyOnly=previewLegacyJobs.filter(x=>{const pair=legacyPreviewPairKey(x);return!(pair&&linkedPairs.has(pair))&&(x.isLegacySubtask||!linkedParents.has(String(x.legacyParentId||'')))});jobs=includeLegacy?[...portalJobsSource,...legacyOnly]:[...portalJobsSource]}
   function buildLegacyPreviewJobs(shared,member){
     const legacyJobs=previewSharedArray(shared?.jobs),workers=previewSharedArray(shared?.workers),clients=previewSharedArray(shared?.clients);
     const memberWorkerId=String(member?.workerId||''),memberKey=previewNameKey(member?.name||''),linkedWorker=workers.find(w=>String(w.id||'')===memberWorkerId)||workers.find(w=>previewNameKey(w.name)===memberKey),workerId=memberWorkerId||String(linkedWorker?.id||'');
@@ -171,7 +172,7 @@
       id:`legacy-preview-${j.id}-${sub?index:'parent'}`,recordType:'legacy_preview_job',previewLegacy:true,
       businessType:(j.biz==='haken'||j.jobType==='haken'||j.hakenId)?'dispatch':'edit_agency',source:'legacy_preview',
       title:sub?(sub.title||`サブ案件 ${index+1}`):(j.title||'案件名未設定'),caseName:sub?(j.title||''):'',
-      parentCaseId:`legacy:${j.id}`,parentCaseName:j.title||'',legacyParentId:String(j.id||''),subtaskIndex:sub?index:null,isLegacySubtask:!!sub,
+      parentCaseId:`legacy:${j.id}`,parentCaseName:j.title||'',legacyParentId:String(j.id||''),legacySubtaskId:String(sub?.id||(sub?'':j.id)||''),subtaskIndex:sub?index:null,isLegacySubtask:!!sub,
       clientId:j.clientId||'',clientDisplay:clientName(j),accountId:j.accountId||'',accountDisplay:j.accountDisplay||j.accountName||'',
       sharedDate:sub?.sharedDate||j.sharedDate||'',editorDraftDate:sub?.editorDraftDate||j.editorDraftDate||'',editorDraftDateSetter:sub?.editorDraftDateSetter||j.editorDraftDateSetter||'editor',clientDraftDate:sub?.clientDraftDate||j.clientDraftDate||'',thumbnailDate:sub?.thumbnailDate||j.thumbnailDate||'',
       deliveryDate:sub?.deliveryDate||sub?.dueDate||j.deliveryDate||j.clientDraftDate||j.editorDraftDate||'',deadline:sub?.deliveryDate||sub?.dueDate||j.deliveryDate||j.clientDraftDate||j.editorDraftDate||'',
@@ -394,8 +395,8 @@
   if(!DEMO&&'serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(error=>console.warn('service worker',error));
   </script>
   <script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
-  <script src="./editor-push.js?v=20260828-23"></script>
-  <script src="./direct-messages.js?v=20260828-23"></script>
-  <script src="./editor-features.js?v=20260828-23"></script>
+  <script src="./editor-push.js?v=20260828-24"></script>
+  <script src="./direct-messages.js?v=20260828-24"></script>
+  <script src="./editor-features.js?v=20260828-24"></script>
 </body>
 </html>

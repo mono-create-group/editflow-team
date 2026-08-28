@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 
 const root = path.resolve(__dirname, '..');
 const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
@@ -34,6 +35,9 @@ test('owner can inspect an editor portal using that member actual portal data', 
   assert.match(features, /data-preview-safe class="btn job-type-filter/, 'read-only preview can filter actual assigned cases');
   assert.match(features, /data-preview-safe class="notification-item/, 'read-only preview can follow a notification to its case');
   assert.match(editor, /function buildLegacyPreviewJobs\(shared,member\)/);
+  assert.match(editor, /function legacyPreviewPairKey\(row=\{\}\)/);
+  assert.match(editor, /linkedPairs=new Set\(portalJobsSource\.map\(legacyPreviewPairKey\)/);
+  assert.match(editor, /legacySubtaskId:String\(sub\?\.id\|\|\(sub\?'':j\.id\)\|\|''\)/);
   assert.match(editor, /collection\('shared'\)\.doc\('mcapp'\)\.onSnapshot/);
   assert.match(editor, /previewLegacy:true/);
   assert.match(features, /if\(!job\|\|job\.previewLegacy\)return/);
@@ -45,6 +49,26 @@ test('a video director sees every saved child case under a parent assigned to th
   assert.match(editor, /ADMIN_PREVIEW\|\|\(Array\.isArray\(access\?\.roles\)&&access\.roles\.includes\('動画編集ディレクター'\)\)/);
   assert.match(editor, /const relevant=children\.filter\(x=>assigned\(x\.sub\)\)/, 'pure editors remain limited to their own children');
   assert.match(editor, /x\.isLegacySubtask\|\|!linkedParents\.has/, 'an integrated parent is not duplicated, while its independent children remain visible');
+});
+
+test('actual-data preview does not count a synchronized legacy child twice', () => {
+  const start = editor.indexOf('function legacyPreviewPairKey');
+  const end = editor.indexOf('function buildLegacyPreviewJobs', start);
+  assert.ok(start >= 0 && end > start);
+  const context = {
+    ADMIN_PREVIEW: true,
+    access: null,
+    portalJobsSource: [{id:'portal-wd-s086',legacyParentId:'wako-sep',legacySubtaskId:'WD-S086'}],
+    previewLegacyJobs: [
+      {id:'legacy-wd-s086',legacyParentId:'wako-sep',legacySubtaskId:'WD-S086',isLegacySubtask:true},
+      {id:'legacy-wd-s087',legacyParentId:'wako-sep',legacySubtaskId:'WD-S087',isLegacySubtask:true},
+    ],
+    jobs: [],
+  };
+  vm.createContext(context);
+  vm.runInContext(editor.slice(start, end), context);
+  vm.runInContext('combinePortalJobs()', context);
+  assert.deepEqual(Array.from(context.jobs,row=>row.id), ['portal-wd-s086','legacy-wd-s087']);
 });
 
 test('editor display name is explicitly aligned with Chatwork and self-editable', () => {
