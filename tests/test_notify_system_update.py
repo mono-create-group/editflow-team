@@ -23,6 +23,13 @@ class NotificationHistoryTest(unittest.TestCase):
         self.assertFalse(MODULE.history_has_marker("", "システム更新 1"))
         self.assertFalse(MODULE.history_has_marker("not-json", "システム更新 1"))
 
+    def test_fixed_release_message_has_marker_url_and_ai_disclosure(self):
+        message = MODULE.build_message("20260828-06", "https://example.com/app/")
+        self.assertIn("[title]システム更新 20260828-06[/title]", message)
+        self.assertIn("https://example.com/app/", message)
+        self.assertEqual(message.count(MODULE.AI_DISCLOSURE), 1)
+        self.assertTrue(message.endswith(f"{MODULE.AI_DISCLOSURE}\n[/info]"))
+
 
 if __name__ == "__main__":
     unittest.main()

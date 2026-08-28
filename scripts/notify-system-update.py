@@ -19,6 +19,7 @@ import urllib.request
 API = "https://api.chatwork.com/v2"
 DEFAULT_APP_URL = "https://mono-create-group.github.io/editflow-team/"
 DEFAULT_ROOM_IDS = "436866454"  # Existing editor job-listing room.
+AI_DISCLOSURE = "これはAIでの送信です。"
 
 
 def request(token: str, method: str, path: str, data: dict[str, str] | None = None) -> str:
@@ -57,6 +58,23 @@ def history_has_marker(history_text: str, marker: str) -> bool:
     return any(marker in str(item.get("body", "")) for item in history if isinstance(item, dict))
 
 
+def build_message(version: str, app_url: str) -> str:
+    marker = f"システム更新 {version}"
+    return (
+        f"[info][title]{marker}[/title]\n"
+        "社内アプリを更新しました。\n\n"
+        "【主な変更】\n"
+        "・編集代行案件の受託と担当変更\n"
+        "・編集者派遣案件の直接登録\n"
+        "・案件内チャット、スケジュール、マニュアル、匿名目安箱\n"
+        "・編集者・ディレクターの請求書提出\n\n"
+        f"【アプリ】\n{app_url}\n\n"
+        "入力中の内容がある場合は、画面上の「保存して再読み込み」を押してください。\n\n"
+        f"{AI_DISCLOSURE}\n"
+        "[/info]"
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--version", required=True)
@@ -71,18 +89,7 @@ def main() -> int:
 
     wait_until_live(args.app_url, args.version, args.timeout)
     marker = f"システム更新 {args.version}"
-    message = (
-        f"[info][title]{marker}[/title]\n"
-        "社内アプリを更新しました。\n\n"
-        "【主な変更】\n"
-        "・編集代行案件の受託と担当変更\n"
-        "・編集者派遣案件の直接登録\n"
-        "・案件内チャット、スケジュール、マニュアル、匿名目安箱\n"
-        "・編集者・ディレクターの請求書提出\n\n"
-        f"【アプリ】\n{args.app_url}\n\n"
-        "入力中の内容がある場合は、画面上の「保存して再読み込み」を押してください。\n"
-        "[/info]"
-    )
+    message = build_message(args.version, args.app_url)
     for raw_room_id in args.room_ids.split(","):
         room_id = raw_room_id.strip()
         if not room_id.isdigit():

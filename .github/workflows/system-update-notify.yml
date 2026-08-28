@@ -31,6 +31,7 @@ jobs:
           test -n "$version"
           echo "value=$version" >> "$GITHUB_OUTPUT"
       - name: Notify existing Chatwork room after Pages is live
+        # 会長承認済みの限定例外: 公開完了後の固定システム更新通知は都度確認なしで自動送信する。
         env:
           CHATWORK_API_TOKEN: ${{ secrets.CHATWORK_API_TOKEN }}
           CHATWORK_SYSTEM_UPDATE_ROOM_IDS: ${{ secrets.CHATWORK_SYSTEM_UPDATE_ROOM_IDS }}
