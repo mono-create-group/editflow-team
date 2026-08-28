@@ -42,9 +42,31 @@ test('portal video cards fall back to linked legacy subcases without mutating da
 });
 
 test('video case cards render subcase name, assignee, deadline, and status', () => {
+  assert.match(html, /<details class="video-subcase-list"/);
+  assert.match(html, /<summary class="video-subcase-head">/);
   assert.match(html, /class="video-subcase-list"/);
   assert.match(html, /class="video-subcase-title"/);
   assert.match(html, /担当 \$\{esc\(s\.assignee\)\}/);
   assert.match(html, /期限 \$\{esc\(s\.deadline\|\|'未設定'\)\}/);
   assert.match(html, /class="badge \$\{badge\} video-subcase-status"/);
+});
+
+test('workflow keeps repeatable director and client review rounds without rewriting legacy status', () => {
+  const context = {};
+  vm.createContext(context);
+  vm.runInContext(`${functionSource('_videoWorkflow')}\nthis.workflow=_videoWorkflow;`, context);
+  assert.deepEqual({...context.workflow({status:'D確認OK'})}, {round:1,stage:'client_submission'});
+  assert.deepEqual({...context.workflow({status:'修正中'})}, {round:2,stage:'editing'});
+  assert.deepEqual({...context.workflow({workflow:{round:3,stage:'director_review'},status:'修正稿提出済み'})}, {round:3,stage:'director_review'});
+  assert.match(html, /function advancePortalWorkflow\(portalUid,id,action\)/);
+  assert.match(html, /progressEvents:/);
+});
+
+test('legacy video operations keep child cases inside parent details in every operational list', () => {
+  for (const marker of ['function rJobItem(j)', 'function rProjWorker()', 'function rProjPriority()', 'function rProjPayment()', 'function _profitGroupedHtml(jobs,mode)']) {
+    const start = html.indexOf(marker);
+    assert.ok(start >= 0, `${marker} must exist`);
+    const scope = html.slice(start, start + 7000);
+    assert.match(scope, /<details[^>]*(video-subcase-list|subtask-list)/, `${marker} nests child cases`);
+  }
 });

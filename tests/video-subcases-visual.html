@@ -23,7 +23,8 @@
     window.SELF_WID='__self';
     window.BOARD_COL={'未着手':'#6b7280','進行中':'#3b82f6','確認待ち':'#f59e0b','修正中':'#ef4444','完了':'#16a34a'};
     window.SCOLBG={'未着手':'bk','進行中':'bb','確認待ち':'ba','修正中':'br','完了':'bg'};
-    window.VIDEO_OVERDUE_EXCLUDED_STATUSES=new Set(['完了','キャンセル','初稿提出済み','修正稿提出済み','D確認OK','確認待ち','修正中']);
+    window.VIDEO_OVERDUE_EXCLUDED_STATUSES=new Set(['完了','キャンセル','初稿提出済み','初稿完成','修正中','修正稿提出済み','D確認OK','確認待ち','FB待ち','納品','納品済み']);
+    window._videoDeadlineExemptStatus=status=>window.VIDEO_OVERDUE_EXCLUDED_STATUSES.has(String(status||''));
     window.today=()=> '2026-08-27';
     window._isOwner=()=>true;
     window.esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

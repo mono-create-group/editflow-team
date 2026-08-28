@@ -172,7 +172,7 @@ def static_contract_checks() -> None:
     else:
         ok("editor actual-data preview and Chatwork-aligned name controls")
 
-    overdue_exclusions = ["完了", "キャンセル", "初稿提出済み", "修正稿提出済み", "D確認OK", "確認待ち", "修正中"]
+    overdue_exclusions = ["完了", "キャンセル", "初稿提出済み", "初稿完成", "修正中", "修正稿提出済み", "D確認OK", "確認待ち", "FB待ち", "納品", "納品済み"]
     require_values("manager overdue exclusions",
                    quoted_set_values(index, "VIDEO_OVERDUE_EXCLUDED_STATUSES"),
                    overdue_exclusions)
@@ -293,6 +293,31 @@ def static_contract_checks() -> None:
         ok("video director inherits editor portal and self-service permissions")
 
     require_values("editor portal job statuses", quoted_values(editor, "HAKEN_STATUSES"), CONTRACT["editor_job_statuses"])
+    review_schema_markers = ["workflow", "progressEvents", "parentJobId", "parentJobTitle"]
+    absent = [marker for marker in review_schema_markers if marker not in rules]
+    if absent:
+        fail(f"review-cycle storage schema missing: {', '.join(absent)}")
+    else:
+        ok("review-cycle storage schema is present and legacy-compatible")
+    for stage in CONTRACT["editor_review_workflow_stages"]:
+        if f"'{stage}'" not in rules:
+            fail(f"review-cycle workflow stage missing from rules: {stage}")
+    if all(f"'{stage}'" in rules for stage in CONTRACT["editor_review_workflow_stages"]):
+        ok("review-cycle workflow stages are constrained in rules")
+    for event_type in CONTRACT["editor_review_event_types"]:
+        if event_type not in editor and event_type not in index:
+            fail(f"review-cycle event type missing from portal/manager UI: {event_type}")
+    if all(event_type in editor or event_type in index for event_type in CONTRACT["editor_review_event_types"]):
+        ok("review-cycle event types are surfaced by the portal or manager UI")
+    review_rule_markers = [
+        "function validEditorReviewTransition()", "function validManagerReviewTransition()",
+        "function preservesFinalJob()", "reviewRound(request.resource.data) == reviewRound(resource.data) + 1",
+    ]
+    absent = [marker for marker in review_rule_markers if marker not in rules]
+    if absent:
+        fail(f"review-cycle role transition safeguards missing: {', '.join(absent)}")
+    else:
+        ok("review-cycle role transitions and final-case lock are guarded")
     for field in CONTRACT["editor_job_schedule_fields"]:
         if field not in editor or field not in index or field not in rules:
             fail(f"editor dispatch schedule field missing from a layer: {field}")

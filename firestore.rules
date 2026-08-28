@@ -201,6 +201,219 @@ service cloud.firestore {
       ];
     }
 
+    // The portal used a single status before review rounds were introduced.
+    // `workflow` and `progressEvents` are deliberately optional so those saved
+    // jobs can still be read and receive ordinary non-workflow updates.
+    function validReviewWorkflow(data) {
+      return !('workflow' in data)
+        || (data.workflow is map
+          && data.workflow.keys().hasOnly(['round', 'stage'])
+          && data.workflow.round is int
+          && data.workflow.round >= 0
+          && data.workflow.stage in [
+            'editing', 'director_review', 'client_submission',
+            'client_review', 'delivered'
+          ]);
+    }
+
+    function validProgressEvents(data) {
+      return !('progressEvents' in data)
+        || (data.progressEvents is list && data.progressEvents.size() <= 200);
+    }
+
+    function reviewEvents(data) {
+      return data.get('progressEvents', []);
+    }
+
+    function reviewEventsUnchanged() {
+      return reviewEvents(request.resource.data) == reviewEvents(resource.data);
+    }
+
+    function appendsOneReviewEvent() {
+      let before = reviewEvents(resource.data);
+      let after = reviewEvents(request.resource.data);
+      // Firestore Rules cannot compare a list prefix. `hasAll` plus a one-item
+      // size increase prevents deletion/replacement of saved events, although
+      // it cannot prove their original order. The client always appends.
+      return before is list
+        && after is list
+        && after.size() == before.size() + 1
+        && after.hasAll(before);
+    }
+
+    function lastReviewEventMatches(type, fromStage, toStage, round, status, role) {
+      let events = reviewEvents(request.resource.data);
+      let event = events[events.size() - 1];
+      return event is map
+        && event.get('type', '') == type
+        && event.get('round', -1) == round
+        && event.get('fromStage', '') == fromStage
+        && event.get('toStage', '') == toStage
+        && event.get('status', '') == status
+        && event.get('byUid', '') == request.auth.uid
+        && event.get('byRole', '') == role;
+    }
+
+    function validEditorSubmittedEvent(fromStage, round, status) {
+      return appendsOneReviewEvent()
+        && lastReviewEventMatches(
+          'editor_submitted', fromStage, 'director_review', round, status, '担当編集者'
+        );
+    }
+
+    function managerEventRole() {
+      // The portal stores role identifiers in English for manager events.
+      // The actor check itself is still enforced by the calling directorFor /
+      // owner rule, so a plain editor cannot claim either value.
+      return owner() ? 'owner' : 'director';
+    }
+
+    function validManagerProgressEvent(type, fromStage, toStage, round, status) {
+      let events = reviewEvents(request.resource.data);
+      let event = events[events.size() - 1];
+      return appendsOneReviewEvent()
+        && lastReviewEventMatches(
+          type, fromStage, toStage, round, status, managerEventRole()
+        )
+        && (type != 'client_revision_requested'
+          || (event.get('reason', '') is string
+            && event.get('reason', '').size() > 0
+            && event.get('reason', '').size() <= 2000));
+    }
+
+    function hasReviewWorkflow(data) {
+      return 'workflow' in data && data.workflow is map;
+    }
+
+    function reviewStage(data) {
+      return data.get('workflow', {}).get('stage', '');
+    }
+
+    function reviewRound(data) {
+      return data.get('workflow', {}).get('round', -1);
+    }
+
+    // A finalised or payment-authorised case is never silently reopened.
+    // A correction after approval must be handled through the invoice revision
+    // route, not by changing the operational case back to editing.
+    function preservesFinalJob() {
+      return !(
+        resource.data.status == '完了'
+        || resource.data.get('payableApproved', false) == true
+      ) || request.resource.data.status == '完了';
+    }
+
+    // Editor-owned action: submit the current draft for director review.
+    // Old documents without workflow stay on the legacy path below.
+    function validEditorReviewTransition() {
+      return (!hasReviewWorkflow(request.resource.data) && reviewEventsUnchanged())
+        || (hasReviewWorkflow(request.resource.data)
+          &&
+          validReviewWorkflow(request.resource.data)
+          && validProgressEvents(request.resource.data)
+          && (
+            (!hasReviewWorkflow(resource.data)
+              && reviewStage(request.resource.data) == 'editing'
+              && reviewEventsUnchanged())
+            || (!hasReviewWorkflow(resource.data)
+              && reviewStage(request.resource.data) == 'director_review'
+              && validEditorSubmittedEvent(
+                'editing', reviewRound(request.resource.data), request.resource.data.status
+              ))
+            || (hasReviewWorkflow(resource.data)
+              && reviewStage(request.resource.data) == reviewStage(resource.data)
+              && reviewRound(request.resource.data) == reviewRound(resource.data)
+              && reviewEventsUnchanged())
+            || (hasReviewWorkflow(resource.data)
+              && reviewStage(resource.data) == 'editing'
+              && reviewStage(request.resource.data) == 'director_review'
+              && reviewRound(request.resource.data) == reviewRound(resource.data)
+              && validEditorSubmittedEvent(
+                'editing', reviewRound(request.resource.data), request.resource.data.status
+              ))
+          )
+        );
+    }
+
+    // Once a workflow exists, only the editor's own submission may change a
+    // review status. A saved D/client/final status is manager-owned even when
+    // the editor is merely saving dates or a progress memo.
+    function validEditorWorkflowStatus() {
+      return !hasReviewWorkflow(request.resource.data)
+        || !hasReviewWorkflow(resource.data)
+        || (
+          reviewStage(resource.data) == 'editing'
+          && reviewStage(request.resource.data) == 'editing'
+          && request.resource.data.status in ['受注済み', '進行中', '初稿完成', '修正中']
+          && resource.data.status in ['受注済み', '進行中', '初稿完成', '修正中']
+        )
+        || (
+          reviewStage(resource.data) == 'editing'
+          && reviewStage(request.resource.data) == 'director_review'
+          && request.resource.data.status in ['初稿提出済み', '修正稿提出済み']
+        )
+        || (
+          reviewStage(request.resource.data) == reviewStage(resource.data)
+          && request.resource.data.status == resource.data.status
+        );
+    }
+
+    // Director/owner actions: approve a submitted draft, record actual client
+    // submission, receive a client correction, or finish after client approval.
+    function validManagerReviewTransition() {
+      return (!hasReviewWorkflow(request.resource.data) && reviewEventsUnchanged())
+        || (hasReviewWorkflow(request.resource.data)
+          &&
+          validReviewWorkflow(request.resource.data)
+          && validProgressEvents(request.resource.data)
+          && (
+            // First workflow action on a saved legacy job. Its old status is
+            // the only reliable source for the current review stage.
+            (!hasReviewWorkflow(resource.data)
+              && resource.data.status in ['初稿提出済み', '修正稿提出済み']
+              && reviewStage(request.resource.data) == 'client_submission'
+              && validManagerProgressEvent(
+                'director_approved', 'director_review', 'client_submission',
+                reviewRound(request.resource.data), 'D確認OK'
+              ))
+            || (hasReviewWorkflow(resource.data)
+              && reviewStage(request.resource.data) == reviewStage(resource.data)
+              && reviewRound(request.resource.data) == reviewRound(resource.data)
+              && request.resource.data.status == resource.data.status
+              && reviewEventsUnchanged())
+            || (hasReviewWorkflow(resource.data)
+              && reviewStage(resource.data) == 'director_review'
+              && reviewStage(request.resource.data) == 'client_submission'
+              && reviewRound(request.resource.data) == reviewRound(resource.data)
+              && validManagerProgressEvent(
+                'director_approved', 'director_review', 'client_submission',
+                reviewRound(request.resource.data), 'D確認OK'
+              ))
+            || (reviewStage(resource.data) == 'client_submission'
+              && reviewStage(request.resource.data) == 'client_review'
+              && reviewRound(request.resource.data) == reviewRound(resource.data)
+              && validManagerProgressEvent(
+                'client_submitted', 'client_submission', 'client_review',
+                reviewRound(request.resource.data), '確認待ち'
+              ))
+            || (reviewStage(resource.data) == 'client_review'
+              && reviewStage(request.resource.data) == 'editing'
+              && reviewRound(request.resource.data) == reviewRound(resource.data) + 1
+              && validManagerProgressEvent(
+                'client_revision_requested', 'client_review', 'editing',
+                reviewRound(request.resource.data), '修正中'
+              ))
+            || (reviewStage(resource.data) == 'client_review'
+              && reviewStage(request.resource.data) == 'delivered'
+              && reviewRound(request.resource.data) == reviewRound(resource.data)
+              && validManagerProgressEvent(
+                'client_approved_delivered', 'client_review', 'delivered',
+                reviewRound(request.resource.data), '完了'
+              ))
+          )
+        );
+    }
+
     function validInvoiceStatus(status) {
       return status in [
         '下書き','提出済み','再提出','差戻し','承認済み',
@@ -291,7 +504,8 @@ service cloud.firestore {
             'sharedDate','editorDraftDate','clientDraftDate','thumbnailDate','deliveryDate',
             'instructions','urgent','status','progress','evidenceUrl','blocker',
             'workDate','startTime','endTime','submittedByUid','editorUid',
-            'editorEmail','editorName','directorUid','source','createdAt','updatedAt','history'
+            'editorEmail','editorName','directorUid','source','createdAt','updatedAt','history',
+            'workflow','progressEvents','parentJobId','parentJobTitle'
           ])
           && request.resource.data.recordType == 'editor_portal_job'
           && request.resource.data.submittedByUid == uid
@@ -313,6 +527,8 @@ service cloud.firestore {
           && validJobStatus(request.resource.data.status)
           && validJobSchedule()
           && validCompletedJobEvidence()
+          && validReviewWorkflow(request.resource.data)
+          && validProgressEvents(request.resource.data)
           && request.resource.data.history is list
           && request.resource.data.history.size() == 1;
         allow update: if editor(uid)
@@ -323,25 +539,32 @@ service cloud.firestore {
             'thumbnailDate','deliveryDate','progress','evidenceUrl','blocker',
             'workDate','startTime','endTime','progressMilestones',
             'lastProgressChangedByUid','lastProgressChangedByEmail',
-            'lastProgressChangedByRole','updatedAt','history'
+            'lastProgressChangedByRole','updatedAt','history','workflow','progressEvents'
           ])
           && request.resource.data.get('lastProgressChangedByUid', uid) == uid
           && request.resource.data.get('lastProgressChangedByRole', '担当編集者') == '担当編集者'
           && request.resource.data.get('progressMilestones', []) is list
           && request.resource.data.get('history', []) is list
+          && validEditorReviewTransition()
+          && validEditorWorkflowStatus()
+          && preservesFinalJob()
           && validJobSchedule();
         allow update: if directorFor(uid)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'title','clientDisplay','deadline','sharedDate','editorDraftDate',
             'clientDraftDate','thumbnailDate','deliveryDate','instructions','urgent','status',
             'correctionReason','updatedAt','updatedBy','history','ownPay',
-            'payableApproved','payableApprovedAt','payableMonth'
+            'payableApproved','payableApprovedAt','payableMonth',
+            'workflow','progressEvents'
           ])
           && validJobStatus(request.resource.data.status)
           && (request.resource.data.status == resource.data.status
-            || !(request.resource.data.status in ['初稿提出済み','修正稿提出済み','D確認OK','完了']))
+            || !(request.resource.data.status in ['初稿提出済み','修正稿提出済み','D確認OK','完了'])
+            || validManagerReviewTransition())
           && validJobSchedule()
           && validCompletedJobEvidence()
+          && validManagerReviewTransition()
+          && preservesFinalJob()
           && (!('ownPay' in request.resource.data) || request.resource.data.ownPay >= 0)
           && (!('payableApproved' in request.resource.data) || request.resource.data.payableApproved != true
             || (request.resource.data.status == '完了'
@@ -354,13 +577,17 @@ service cloud.firestore {
             'clientDraftDate','thumbnailDate','deliveryDate','instructions','urgent','status',
             'correctionReason','updatedAt','updatedBy','history','ownPay',
             'payableApproved','payableApprovedAt','payableMonth',
-            'linkedLegacyJobId','integratedAt','integratedBy'
+            'linkedLegacyJobId','integratedAt','integratedBy',
+            'workflow','progressEvents'
           ])
           && validJobStatus(request.resource.data.status)
           && (request.resource.data.status == resource.data.status
-            || !(request.resource.data.status in ['初稿提出済み','修正稿提出済み','D確認OK','完了']))
+            || !(request.resource.data.status in ['初稿提出済み','修正稿提出済み','D確認OK','完了'])
+            || validManagerReviewTransition())
           && validJobSchedule()
           && validCompletedJobEvidence()
+          && validManagerReviewTransition()
+          && preservesFinalJob()
           && (!('ownPay' in request.resource.data) || request.resource.data.ownPay >= 0)
           && (!('payableApproved' in request.resource.data) || request.resource.data.payableApproved != true
             || (request.resource.data.status == '完了'
