@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260829-11"></script>
+<script src="./billing-terms.js?v=20260829-12"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -995,7 +995,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260829-11">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260829-12">
 </head>
 <body class="owner-yellow-ui">
 
@@ -3458,7 +3458,21 @@ function companyTaskPerformance(){const tasks=(S.tasks||[]).filter(t=>!t.deleted
 function companyGatePassed(){const r=companyGateRecord();return!!(r&&r.goalConfirmed&&r.taskPerformanceRecorded);}
 function submitCompanyGate(){const confirmed=!!document.getElementById('company-goal-confirm')?.checked;if(!confirmed)return toast('社内目標を確認してチェックしてください','warn');const td=today(),p=companyTaskPerformance(),old=companyGateRecord()||{},record={...old,date:td,goalConfirmed:true,taskPerformanceRecorded:true,taskPerformanceRate:p.rate,taskPerformanceRecordedAt:new Date().toISOString(),confirmedAt:Date.now()};if(!S.dailyOpenReviews)S.dailyOpenReviews={};S.dailyOpenReviews[td]=record;try{localStorage.setItem('mono_daily_open_gate_'+td,JSON.stringify(record));}catch(_){}save();render();toast('本日のタスク達成率を記録しました');}
 function rCompanyGate(){const r=companyGateRecord(),p=companyTaskPerformance(),target=Number(S.settings?.target||0),rev=thisMonthRev();return`<section class="company-gate" role="dialog" aria-labelledby="company-gate-title"><div class="company-gate-kicker">MONO.CREATE DAILY GOAL</div><h1 id="company-gate-title">社内目標とタスク達成率を確認</h1><div style="font-size:12px;color:var(--t2);line-height:1.6">社内目標の確認と、既存タスクから自動計算した達成率の記録が完了するまで社内アプリは開きません。</div><div class="company-gate-goal"><b>本日の社内目標</b><br>利益につながる最重要業務を優先し、今月の目標達成へ前進する。${target?`<br>今月の収益目標 ¥${target.toLocaleString()} / 現在 ¥${rev.toLocaleString()}`:''}</div><div class="company-gate-goal"><b>今日のタスク達成率 ${p.rate}%</b><br>完了 ${p.done}件 / 対象 ${p.total}件</div><div class="company-gate-form"><label class="company-gate-check"><input id="company-goal-confirm" type="checkbox" ${r?.goalConfirmed?'checked':''}>社内目標を確認しました</label><button class="btn btn-p" onclick="submitCompanyGate()">タスク達成率を記録して社内アプリを開く</button>${_isActualOwner()?'<button class="btn btn-g" onclick="openRolePreviewChooser()">役職別の実データ画面を確認</button>':''}</div></section>`;}
+function _captureViewBoardScroll(){
+  const board=document.querySelector('#view .board-wrap');
+  return board?Number(board.scrollLeft)||0:0;
+}
+function _restoreViewBoardScroll(scrollLeft){
+  if(!(scrollLeft>0))return;
+  const board=document.querySelector('#view .board-wrap');
+  if(!board)return;
+  board.scrollLeft=scrollLeft;
+  if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>{
+    if(board.isConnected&&board.scrollLeft===0)board.scrollLeft=scrollLeft;
+  });
+}
 function render(){
+  const previousBoardScrollLeft=_captureViewBoardScroll();
   _renderEpoch+=1;
   try{
     if(FB_USER&&!ACCESS_RESOLVED){
@@ -3542,6 +3556,7 @@ function render(){
       html=(((BUILTIN_VIEWS.some(v=>v.id===V)||CHROME_VIEWS.includes(V))&&views[V])?views[V]:rProjects)();
     }
     document.getElementById('view').innerHTML=rolePreviewBanner()+rHpFeeReminder()+rDraftReminder()+html;
+    _restoreViewBoardScroll(previousBoardScrollLeft);
     renderNav();
     document.querySelectorAll('.nav-item,.mnav-item').forEach(el=>el.classList.toggle('active',el.dataset.view===V));
     renderGcalUI();
@@ -6429,6 +6444,20 @@ function _legacyPortalAccessForWorker(workerId){
   const matches=(ACCESS_RECORDS||[]).filter(row=>row&&row.approved===true&&String(row.workerId||'')===wid&&Array.isArray(row.roles)&&row.roles.some(role=>['動画編集者','動画編集ディレクター'].includes(role)));
   return matches.length===1?matches[0]:null;
 }
+function _legacyAssignmentBinding(previous,nextWorkerId,parentId,subId){
+  const before=String(previous?.workerId||''),after=String(nextWorkerId||'');
+  const current={portalUid:previous?.portalUid||null,portalJobId:previous?.portalJobId||null,parentCaseId:previous?.parentCaseId||null};
+  // New or not-yet-synchronised children have no old portal that can race the
+  // save. Let the ordinary synchroniser attach them after the parent save.
+  if(before===after||(!current.portalUid&&!current.portalJobId))return current;
+  const access=_legacyPortalAccessForWorker(after);
+  if(!access)return{portalUid:null,portalJobId:null,parentCaseId:null};
+  return{
+    portalUid:String(access.id),
+    portalJobId:String(current.portalJobId||_legacyPortalJobId(parentId,subId)),
+    parentCaseId:`legacy:${parentId}`,
+  };
+}
 function _caseManualIds(value){
   return[...new Set((Array.isArray(value)?value:[]).map(id=>String(id||'').trim()).filter(Boolean))].slice(0,20);
 }
@@ -6465,7 +6494,7 @@ function _legacyPortalWorkerId(parent,record,hasChildren){
   const unique=[...new Set(parentIds)];
   return unique.length===1?unique[0]:'';
 }
-async function syncLegacyAssignedSubtasksToPortal(jobOrId,{silent=false,targetUid='',onlyMissing=false}={}){
+async function syncLegacyAssignedSubtasksToPortal(jobOrId,{silent=false,targetUid='',onlyMissing=false,reassignments=[]}={}){
   const parent=typeof jobOrId==='string'?(S.jobs||[]).find(job=>String(job.id)===String(jobOrId)):jobOrId;
   if(!parent||!fbDb||!FB_USER||!['edit','haken'].includes(jobBiz(parent)))return{synced:0,skipped:0};
   // 旧台帳はオーナーだけが読める。ディレクターは移行後のポータルデータだけを使う。
@@ -6484,14 +6513,24 @@ async function syncLegacyAssignedSubtasksToPortal(jobOrId,{silent=false,targetUi
     if(setter==='creator'&&!draft){problems.push(`${record.title||'サブ案件'}：編集者初稿日が未入力`);return;}
     if(record.portalUid&&String(record.portalUid)!==String(access.id)){problems.push(`${record.title||'サブ案件'}：同期後に担当者が変更されています`);return;}
     const subId=String(record.id||parent.id),portalJobId=record.portalJobId||_legacyPortalJobId(parent.id,subId),deliveryDate=String(record.deliveryDate||parent.deliveryDate||''),at=Date.now();
-    candidates.push({record,access,workerId,subId,portalJobId,subtaskIndex:index,setter,draft,status,deliveryDate,at});
+    const reassignment=(Array.isArray(reassignments)?reassignments:[]).find(item=>String(item?.subId||'')===subId&&String(item?.oldPortalUid||'')!==String(access.id))||null;
+    candidates.push({record,access,workerId,subId,portalJobId,subtaskIndex:index,setter,draft,status,deliveryDate,at,reassignment});
   });
   if(!candidates.length){if(!silent&&problems.length)toast(problems[0],'warn');return{synced:0,skipped:problems.length,problems};}
   try{
-    const rows=await Promise.all(candidates.map(async item=>{const ref=fbDb.collection('editor_portals').doc(item.access.id).collection('editor_jobs').doc(item.portalJobId),snap=await ref.get();return{...item,ref,snap};})),batch=fbDb.batch(),failedRows=new Set(),alreadyRows=new Set();let writeCount=0;
+    const rows=await Promise.all(candidates.map(async item=>{
+      const ref=fbDb.collection('editor_portals').doc(item.access.id).collection('editor_jobs').doc(item.portalJobId),oldPortalUid=String(item.reassignment?.oldPortalUid||''),oldPortalJobId=String(item.reassignment?.oldPortalJobId||''),oldRef=oldPortalUid&&oldPortalJobId?fbDb.collection('editor_portals').doc(oldPortalUid).collection('editor_jobs').doc(oldPortalJobId):null;
+      const [snap,oldSnap]=await Promise.all([ref.get(),oldRef?oldRef.get():Promise.resolve(null)]);
+      return{...item,ref,snap,oldRef,oldSnap};
+    })),batch=fbDb.batch(),failedRows=new Set(),alreadyRows=new Set();let writeCount=0,retiredCount=0;
     for(const item of rows){
       const existing=item.snap.exists?item.snap.data():null;
       if(existing&&(existing.source!=='legacy_sync'||String(existing.legacyParentId||'')!==String(parent.id)||String(existing.legacySubtaskId||'')!==item.subId)){problems.push(`${item.record.title||'サブ案件'}：同期先IDが別案件で使用中`);failedRows.add(item.portalJobId);continue;}
+      if(item.oldSnap?.exists){
+        const old=item.oldSnap.data();
+        if(old.source==='legacy_sync'&&String(old.legacyParentId||'')===String(parent.id)&&String(old.legacySubtaskId||'')===item.subId){batch.delete(item.oldRef);retiredCount++;}
+        else problems.push(`${item.record.title||'サブ案件'}：旧担当者側の連携データを自動解除できませんでした`);
+      }
       if(existing&&onlyMissing){
         if(Number.isInteger(existing.subtaskIndex)){alreadyRows.add(item.portalJobId);continue;}
         batch.set(item.ref,{subtaskIndex:item.subtaskIndex,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:_myEmail()},{merge:true});writeCount++;continue;
@@ -6505,11 +6544,11 @@ async function syncLegacyAssignedSubtasksToPortal(jobOrId,{silent=false,targetUi
       }
     }
     if(failedRows.size===rows.length){if(!silent)toast(problems[0],'warn');return{synced:0,skipped:problems.length,problems};}
-    if(writeCount)await batch.commit();
+    if(writeCount||retiredCount)await batch.commit();
     let linked=false;rows.forEach(item=>{if(failedRows.has(item.portalJobId))return;item.record.portalUid=item.access.id;item.record.portalJobId=item.portalJobId;item.record.parentCaseId=`legacy:${parent.id}`;linked=true;});
     if(linked){parent.updatedAt=Date.now();parent.updatedBy=_myEmail();save();}
-    const synced=writeCount,alreadyLinked=alreadyRows.size;if(!silent)toast(`${synced}件を担当編集者の画面へ同期しました${alreadyLinked?`（同期済み ${alreadyLinked}件）`:''}${problems.length?` （${problems.length}件は要確認）`:''}`,problems.length?'warn':undefined);
-    return{synced,alreadyLinked,skipped:problems.length,problems};
+    const synced=writeCount,alreadyLinked=alreadyRows.size;if(!silent)toast(`${synced}件を担当編集者の画面へ同期しました${retiredCount?`（旧担当者側 ${retiredCount}件を解除）`:''}${alreadyLinked?`（同期済み ${alreadyLinked}件）`:''}${problems.length?` （${problems.length}件は要確認）`:''}`,problems.length?'warn':undefined);
+    return{synced,retired:retiredCount,alreadyLinked,skipped:problems.length,problems};
   }catch(error){console.warn('legacy portal sync failed',error);if(!silent)toast('案件は保存しましたが、担当編集者の画面へ同期できませんでした','warn');return{synced:0,skipped:candidates.length,error};}
 }
 function _applyPortalToLegacy(j,createMissing=false){
@@ -6521,8 +6560,12 @@ function _applyPortalToLegacy(j,createMissing=false){
   if(!target)return false;
   const subIndex=(target.subtasks||[]).findIndex(sub=>String(sub?.id||'')===String(j.legacySubtaskId||j.id||'')||String(sub?.portalJobId||'')===String(j.id||''));
   if(subIndex>=0){
-    const sub=target.subtasks[subIndex],access=(ACCESS_RECORDS||[]).find(x=>x.id===j._portalUid),workerId=access?.workerId||sub.workerId||null,billingSnapshot=_paymentRecipientSnapshot(workerId,sub),updatedAt=_videoUpdatedMillis(j.updatedAt)||Date.now(),updatedBy=j.updatedBy||j.editorEmail||_myEmail();
+    const sub=target.subtasks[subIndex],access=(ACCESS_RECORDS||[]).find(x=>x.id===j._portalUid),portalWorkerId=String(access?.workerId||'');
     if(sub.portalUid&&sub.portalUid!==j._portalUid||sub.portalJobId&&sub.portalJobId!==j.id)return false;
+    // A snapshot from the former assignee's portal must never overwrite a
+    // freshly saved reassignment in the legacy owner ledger.
+    if(sub.workerId&&portalWorkerId&&String(sub.workerId)!==portalWorkerId)return false;
+    const workerId=portalWorkerId||sub.workerId||null,billingSnapshot=_paymentRecipientSnapshot(workerId,sub),updatedAt=_videoUpdatedMillis(j.updatedAt)||Date.now(),updatedBy=j.updatedBy||j.editorEmail||_myEmail();
     const next={...sub,workerId,...billingSnapshot,status:j.status||sub.status,sharedDate:_portalField(j,'sharedDate',sub.sharedDate),editorDraftDate:_portalField(j,'editorDraftDate',sub.editorDraftDate),editorDraftDateSetter:_editorDraftDateSetter(j,_editorDraftDateSetter(sub)),clientDraftDate:_portalField(j,'clientDraftDate',sub.clientDraftDate),thumbnailDate:_portalField(j,'thumbnailDate',sub.thumbnailDate),deliveryDate:_portalField(j,'deliveryDate',j.deadline||sub.deliveryDate),completedDeliveryDate:_portalField(j,'completedDeliveryDate',sub.completedDeliveryDate),instructions:j.instructions||sub.instructions,manualIds:Object.prototype.hasOwnProperty.call(j,'manualIds')?_caseManualIds(j.manualIds):_caseManualIds(sub.manualIds),caution:Object.prototype.hasOwnProperty.call(j,'caution')?String(j.caution||'').slice(0,2000):String(sub.caution||''),requestUrl:_portalField(j,'requestUrl',sub.requestUrl),sourceUrl:_portalField(j,'sourceUrl',sub.sourceUrl),progress:j.progress||sub.progress,progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:(sub.progressMilestones||[]),progressEvents:Array.isArray(j.progressEvents)?j.progressEvents:(sub.progressEvents||[]),workflow:j.workflow||sub.workflow||null,evidenceUrl:j.evidenceUrl||sub.evidenceUrl,blocker:j.blocker||'',attachments:Array.isArray(j.attachments)?_videoAttachments(j.attachments):(sub.attachments||[]),portalUid:j._portalUid,portalJobId:j.id,updatedAt,updatedBy};
     if(Object.keys(next).some(key=>JSON.stringify(sub[key])!==JSON.stringify(next[key]))){
       target.subtasks=target.subtasks.map((item,index)=>index===subIndex?next:item);target.updatedAt=updatedAt;target.updatedBy=updatedBy;target.statusHistory=[...(target.statusHistory||[]).slice(-99),{at:updatedAt,by:updatedBy,type:'portal_subcase_update',subId:String(sub.id||''),status:next.status,editorDraftDate:next.editorDraftDate,editorDraftDateSetter:next.editorDraftDateSetter,source:'editor_portal'}];changed=true;
@@ -13377,10 +13420,11 @@ function updSubPrices(){
 }
 function _paymentRecipientHint(workerId,record={}){
   const recipient=_paymentRecipientForRecord(record,workerId);
-  if(!workerId)return'支払先：作業担当者を選択してください';
-  if(!recipient.ok)return`支払保留：${recipient.reason}`;
-  if(recipient.route==='director_team')return`支払先：${_paymentWorkerName(recipient.payeeWorkerId)}（担当ディレクター）`;
-  return`支払先：${_paymentWorkerName(recipient.payeeWorkerId)}`;
+  if(!workerId)return'作業担当：未設定 ／ 精算先：未設定';
+  const assignee=_paymentWorkerName(workerId);
+  if(!recipient.ok)return`作業担当：${assignee} ／ 精算保留：${recipient.reason}`;
+  if(recipient.route==='director_team')return`作業担当：${assignee} ／ 精算先：${_paymentWorkerName(recipient.payeeWorkerId)}（担当ディレクター）`;
+  return`作業担当：${assignee} ／ 精算先：${_paymentWorkerName(recipient.payeeWorkerId)}`;
 }
 function updSubPaymentRecipients(){
   document.querySelectorAll('#j-sub-cont .j-sub-row').forEach(row=>{
@@ -13550,7 +13594,7 @@ function saveJob(){
   const parentEditorDraftDateSetter=document.getElementById('j-editor-draft-setter')?.value||_editorDraftDateSetter(current),parentEditorDraftDate=document.getElementById('j-editor-draft')?.value||null;
   const hasSubtasks=_isOwner()?subShells.length:oldSubs.length;
   if(!hasSubtasks&&!parentInternalOnly&&bizCfgOf(document.getElementById('j-biz')?.value||jobBiz(current)).show.d1&&parentEditorDraftDateSetter==='creator'&&!parentEditorDraftDate){toast('案件追加者が設定する場合は、編集者初稿日を入力してください','warn');return;}
-  let subLinkError='';
+  let subLinkError='';const assignmentReassignments=[];
   const parsedSubtasks=subShells.map(shell=>{
     const el=shell.querySelector('.j-sub-row'),stateIndex=Number(shell.dataset.stateIndex),stateRecord=JOB_MODAL_SUB_RECORDS[stateIndex]||{};
     if(!el)return _jobModalSubRecordClone(stateRecord);
@@ -13559,16 +13603,17 @@ function saveJob(){
     const pay=parseInt(el.querySelector('.j-sub-pay')?.value)||0;
     const savedId=String(el.dataset.subId||''),savedIndex=Number(el.dataset.originalIndex);
     const previous=(savedId?oldSubs.find(sub=>String(sub?.id||'')===savedId):Number.isInteger(savedIndex)&&savedIndex>=0?oldSubs[savedIndex]:stateRecord)||stateRecord;
-    const workerId=el.querySelector('.j-sub-worker')?.value||null,billingSnapshot=_paymentRecipientSnapshot(workerId,previous);
+    const workerId=el.querySelector('.j-sub-worker')?.value||null,subId=previous.id||uid(),assignmentBinding=_legacyAssignmentBinding(previous,workerId,current?.id||'',subId),billingSnapshot=_paymentRecipientSnapshot(workerId,previous);
+    if(previous.portalUid&&previous.portalJobId&&String(previous.portalUid)!==String(assignmentBinding.portalUid||''))assignmentReassignments.push({subId:String(subId),oldPortalUid:String(previous.portalUid),oldPortalJobId:String(previous.portalJobId)});
     const requestRaw=String(el.querySelector('.j-sub-request')?.value||'').trim(),sourceRaw=String(el.querySelector('.j-sub-source')?.value||'').trim(),requestUrl=requestRaw?_videoSafeUrl(requestRaw):'',sourceUrl=sourceRaw?_videoSafeUrl(sourceRaw):'';
     if(requestRaw&&!requestUrl)subLinkError=`「${inp?.value.trim()||'サブ案件'}」の台本・依頼URLを確認してください`;
     if(sourceRaw&&!sourceUrl)subLinkError=`「${inp?.value.trim()||'サブ案件'}」の素材URLを確認してください`;
     return{
-      ...previous,id:previous.id||uid(),
+      ...previous,id:subId,
       title:inp?.value.trim()||'',done:chk?.classList.contains('done')||false,
       unitPrice:price,workerPay:pay,
       status:el.querySelector('.j-sub-status')?.value||'未着手',
-      workerId,...billingSnapshot,
+      workerId,...assignmentBinding,...billingSnapshot,
       sharedDate:el.querySelector('.j-sub-shared')?.value||null,
       editorDraftDateSetter:el.querySelector('.j-sub-editor-setter')?.value||_editorDraftDateSetter(previous),
       editorDraftDate:el.querySelector('.j-sub-editor')?.value||null,
@@ -13628,7 +13673,7 @@ function saveJob(){
   save();closeModal();render();toast('案件を保存しました');
   const syncRecords=(savedJob?.subtasks||[]).length?savedJob.subtasks:[savedJob];
   if(syncRecords.some(record=>record&&record.workerId&&record.workerId!==SELF_WID&&!['完了','キャンセル'].includes(String(record.status||savedJob?.status||'')))){
-    syncLegacyAssignedSubtasksToPortal(savedJob).catch(error=>console.warn('assigned legacy case sync failed',error));
+    syncLegacyAssignedSubtasksToPortal(savedJob,{reassignments:assignmentReassignments}).catch(error=>console.warn('assigned legacy case sync failed',error));
   }
   _refreshDirectorSettlementTargets([...previousDirectorSettlementTargets,..._directorSettlementTargetsForJob(_withOwnerJobFinance(savedJob))]).catch(error=>{console.warn('director invoice authorization refresh failed',error);toast('案件は保存しましたが、担当ディレクターの請求対象を更新できませんでした','warn');});
   // ※ GcalへのアプリデータWriteは行わない（読み戻し重複防止）
@@ -17199,7 +17244,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260829-11';
+const APP_VERSION='20260829-12';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -17273,6 +17318,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260829-11"></script>
+<script src="./manager-features.js?v=20260829-12"></script>
 </body>
 </html>

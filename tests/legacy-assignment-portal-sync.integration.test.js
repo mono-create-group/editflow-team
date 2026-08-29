@@ -16,7 +16,7 @@ function fakeDb(){
   return{
     docs,
     collection(name){return{doc:id=>({collection:sub=>({doc:subId=>makeRef([name,id,sub,subId])})})}},
-    batch(){const writes=[];return{set(ref,data,options){writes.push({ref,data,options})},async commit(){for(const {ref,data,options} of writes){const prev=docs.get(ref.path)||{};docs.set(ref.path,options?.merge?{...prev,...data}:data)}}}},
+    batch(){const writes=[];return{set(ref,data,options){writes.push({type:'set',ref,data,options})},delete(ref){writes.push({type:'delete',ref})},async commit(){for(const write of writes){if(write.type==='delete'){docs.delete(write.ref.path);continue;}const prev=docs.get(write.ref.path)||{};docs.set(write.ref.path,write.options?.merge?{...prev,...write.data}:write.data)}}}},
   };
 }
 
@@ -72,4 +72,21 @@ test('和光8件と清水7件を、みゆう本人のポータルだけへ重複
   assert.equal(second.reduce((n,row)=>n+row.synced,0),0);assert.equal(db.docs.size,15);
   assert.ok(parents.flatMap(parent=>parent.subtasks).every(child=>child.portalUid==='uid-miyuu'&&child.portalJobId));
   assert.ok(saved.count>=2,'legacy records receive stable portal links after successful writes');
+});
+
+test('担当変更はみゆう側を作成してから旧三浦側の派生データを同じ一括処理で解除する',async()=>{
+  const db=fakeDb(),parent={id:'wako-aug',biz:'edit',title:'8月分_和光市デンタルオフィス',clientId:'itsuba',subtasks:[{id:'WD-S083',title:'WD-S083',status:'先方確認中',workerId:'worker-miyuu',portalUid:'uid-miyuu',portalJobId:'legacy_wako-aug_WD-S083',editorDraftDateSetter:'editor'}]};
+  db.docs.set('editor_portals/uid-miura/editor_jobs/legacy_wako-aug_WD-S083',{source:'legacy_sync',legacyParentId:'wako-aug',legacySubtaskId:'WD-S083',editorUid:'uid-miura'});
+  const context={
+    S:{jobs:[parent],clients:[{id:'itsuba',name:'itsuba.net 河戸様'}]},fbDb:db,FB_USER:{uid:'owner'},SELF_WID:'self',_isOwner:()=>true,jobBiz:j=>j.biz,
+    _legacyPortalStatus:s=>s,_legacyPortalWorkerId:(_parent,record)=>record.workerId,_legacyPortalJobId:(parentId,subId)=>`legacy_${parentId}_${subId}`,
+    _legacyPortalAccessForWorker:wid=>wid==='worker-miyuu'?{id:'uid-miyuu',email:'miyuu@example.test',name:'みゆう',directorUid:'uid-miura'}:null,
+    _editorDraftDateSetter:()=> 'editor',_videoAttachments:rows=>rows||[],_paymentWorkerName:()=>'',_caseManualIds:rows=>Array.isArray(rows)?rows:[],_myEmail:()=> 'owner@example.test',toast:()=>{},save:()=>{},
+    firebase:{firestore:{FieldValue:{serverTimestamp:()=>({serverTimestamp:true})}}},console,Date,String,Number,Array,Set,Map,Promise,
+  };
+  vm.createContext(context);vm.runInContext(`${syncSource}\nthis.sync=syncLegacyAssignedSubtasksToPortal;`,context);
+  const result=await context.sync(parent,{silent:true,reassignments:[{subId:'WD-S083',oldPortalUid:'uid-miura',oldPortalJobId:'legacy_wako-aug_WD-S083'}]});
+  assert.equal(result.synced,1);assert.equal(result.retired,1);
+  assert.equal(db.docs.has('editor_portals/uid-miura/editor_jobs/legacy_wako-aug_WD-S083'),false);
+  assert.equal(db.docs.has('editor_portals/uid-miyuu/editor_jobs/legacy_wako-aug_WD-S083'),true);
 });

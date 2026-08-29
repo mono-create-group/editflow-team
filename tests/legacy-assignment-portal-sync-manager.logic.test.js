@@ -56,7 +56,7 @@ test('legacy synchronizer enforces target UID, missing-only writes, child prefer
   assert.match(index, /function _legacyPortalWorkerId\(parent,record,hasChildren\)/);
   assert.match(index, /if\(explicit&&explicit!==SELF_WID\)return explicit/);
   assert.match(index, /return unique\.length===1\?unique\[0\]:''/);
-  assert.match(index, /syncLegacyAssignedSubtasksToPortal\(jobOrId,\{silent=false,targetUid='',onlyMissing=false\}=\{\}\)/);
+  assert.match(index, /syncLegacyAssignedSubtasksToPortal\(jobOrId,\{silent=false,targetUid='',onlyMissing=false,reassignments=\[\]\}=\{\}\)/);
   assert.match(index, /if\(targetUid&&String\(access\.id\)!==String\(targetUid\)\)return/);
   assert.match(index, /if\(record\?\.deleted\)return/);
   assert.match(index, /if\(hasChildren&&!String\(record\.id\|\|''\)\.trim\(\)\)/);

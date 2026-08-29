@@ -150,7 +150,8 @@ test('deleting a case recalculates every affected director invoice authorization
 
 test('payment UI explicitly separates work assignee from payment recipient', () => {
   assert.match(index, /作業担当：/);
-  assert.match(index, /支払先：/);
+  assert.match(index, /精算先：/);
+  assert.match(index, /作業担当：\$\{assignee\} ／ 精算先：/);
   assert.match(index, /payeeWorkerId/);
   assert.match(index, /billingRecipientWorkerId/);
 });

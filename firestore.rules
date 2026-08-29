@@ -1219,11 +1219,20 @@ service cloud.firestore {
               && request.resource.data.payableMonth is string
               && validCompletedJobEvidence()))
           && validDispatchPayableMirror(uid, jobId);
-        allow delete: if false;
+        // Legacy-synchronised portal rows are recoverable projections of the
+        // owner ledger. On reassignment, the owner atomically creates the new
+        // assignee projection and removes only the former one.
+        allow delete: if owner()
+          && resource.data.get('source', '') == 'legacy_sync';
 
         match /events/{eventId} {
-          allow read: if portalManager(uid) || editor(uid);
-          allow create: if portalManager(uid)
+          // A Firestore parent delete does not cascade into subcollections.
+          // Requiring the current parent prevents a former assignee from
+          // reading or appending to orphaned history after reassignment.
+          allow read: if exists(/databases/$(database)/documents/editor_portals/$(uid)/editor_jobs/$(jobId))
+            && (portalManager(uid) || editor(uid));
+          allow create: if existsAfter(/databases/$(database)/documents/editor_portals/$(uid)/editor_jobs/$(jobId))
+            && (portalManager(uid)
             || (editor(uid) && request.resource.data.byUid == uid
               && (request.resource.data.get('type', '') != 'editor_delivery_completed'
                 || (request.resource.data.keys().hasOnly([
@@ -1235,13 +1244,15 @@ service cloud.firestore {
                     && request.resource.data.completedDeliveryDate is string
                     && request.resource.data.completedDeliveryDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
                     && request.resource.data.evidenceUrl is string
-                    && request.resource.data.evidenceUrl.matches('^https?://.+'))));
+                    && request.resource.data.evidenceUrl.matches('^https?://.+')))));
           allow update, delete: if false;
         }
 
         match /messages/{messageId} {
-          allow read: if portalManager(uid) || editor(uid);
-          allow create: if (portalManager(uid)
+          allow read: if exists(/databases/$(database)/documents/editor_portals/$(uid)/editor_jobs/$(jobId))
+            && (portalManager(uid) || editor(uid));
+          allow create: if existsAfter(/databases/$(database)/documents/editor_portals/$(uid)/editor_jobs/$(jobId))
+            && (portalManager(uid)
               || (editor(uid) && request.resource.data.byUid == uid))
             && request.resource.data.keys().hasOnly([
               'body','kind','url','byUid','byName','byRole','createdAt'

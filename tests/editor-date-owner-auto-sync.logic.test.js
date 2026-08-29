@@ -73,3 +73,48 @@ test('an editor draft date updates only the linked legacy child and is idempoten
   assert.equal(context.applyPortal({ ...portal, id: 'unlinked', legacyParentId: 'missing-parent' }, false), false);
   assert.equal(context.S.jobs.length, before, 'automatic sync never creates an unlinked legacy case');
 });
+
+test('a snapshot from the former assignee cannot revert a freshly reassigned child', () => {
+  const linked = {
+    id: 'legacy-parent',
+    subtasks: [{
+      id: 'WD-S083',
+      workerId: 'worker-miyuu',
+      portalUid: 'uid-miyuu',
+      portalJobId: 'legacy_legacy-parent_WD-S083',
+      status: '先方確認中',
+    }],
+    statusHistory: [],
+  };
+  const context = {
+    S: { jobs: [linked] },
+    ACCESS_RECORDS: [
+      { id: 'uid-miura', workerId: 'worker-miura' },
+      { id: 'uid-miyuu', workerId: 'worker-miyuu' },
+    ],
+    _paymentRecipientSnapshot: () => ({}),
+    _portalField: (job, key, fallback) => Object.prototype.hasOwnProperty.call(job, key) ? (job[key] || null) : fallback,
+    _editorDraftDateSetter: (_job, fallback = 'creator') => fallback,
+    _videoAttachments: rows => Array.isArray(rows) ? rows : [],
+    _caseManualIds: rows => Array.isArray(rows) ? rows.map(String) : [],
+    _videoUpdatedMillis: value => Number(value || 0),
+    _myEmail: () => 'owner@example.test',
+    _isOwner: () => true,
+    Date, JSON, Object, String, Number, Array,
+  };
+  vm.createContext(context);
+  vm.runInContext(`${applySource}\nthis.applyPortal=_applyPortalToLegacy;`, context);
+
+  const staleMiuraPortal = {
+    id: 'legacy_legacy-parent_WD-S083',
+    _portalUid: 'uid-miura',
+    legacyParentId: 'legacy-parent',
+    legacySubtaskId: 'WD-S083',
+    status: '先方確認中',
+    updatedAt: 1788192000000,
+  };
+  assert.equal(context.applyPortal(staleMiuraPortal, false), false);
+  assert.equal(linked.subtasks[0].workerId, 'worker-miyuu');
+  assert.equal(linked.subtasks[0].portalUid, 'uid-miyuu');
+  assert.equal(linked.statusHistory.length, 0);
+});

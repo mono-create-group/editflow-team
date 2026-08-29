@@ -10,6 +10,7 @@ const {
   getDoc,
   setDoc,
   updateDoc,
+  deleteDoc,
   collection,
   collectionGroup,
   addDoc,
@@ -338,6 +339,26 @@ async function expectAllowed(label, promise) {
       doc(owner, 'editor_portals', 'external1', 'editor_jobs', 'legacy-no-delivery-date'),
       legacyUnscheduledExternalJob
     ));
+    await expectAllowed('owner creates a recoverable legacy projection for reassignment', setDoc(
+      doc(owner, 'editor_portals', 'external1', 'editor_jobs', 'legacy-reassignment-delete'),
+      { ...legacyUnscheduledExternalJob, legacySubtaskId: 'legacy-subtask-reassignment-delete' }
+    ));
+    await expectAllowed('owner records reassignment history before moving the projection', setDoc(
+      doc(owner, 'editor_portals', 'external1', 'editor_jobs', 'legacy-reassignment-delete', 'events', 'history-before-move'),
+      { at: 1, type: 'created', byUid: 'owner' }
+    ));
+    await expectAllowed('owner records a case message before moving the projection', setDoc(
+      doc(owner, 'editor_portals', 'external1', 'editor_jobs', 'legacy-reassignment-delete', 'messages', 'message-before-move'),
+      { body: '担当変更前の連絡', kind: '連絡', url: '', byUid: 'owner', byName: 'オーナー', byRole: 'オーナー', createdAt: 1 }
+    ));
+    await expectDenied('assigned editor cannot delete a synchronized legacy projection', deleteDoc(doc(external1, 'editor_portals', 'external1', 'editor_jobs', 'legacy-reassignment-delete')));
+    await expectDenied('assigned director cannot delete a synchronized legacy projection', deleteDoc(doc(dir1, 'editor_portals', 'external1', 'editor_jobs', 'legacy-reassignment-delete')));
+    await expectAllowed('owner can remove a recoverable legacy projection during reassignment', deleteDoc(doc(owner, 'editor_portals', 'external1', 'editor_jobs', 'legacy-reassignment-delete')));
+    await expectDenied('former editor cannot read orphaned reassignment history', getDoc(doc(external1, 'editor_portals', 'external1', 'editor_jobs', 'legacy-reassignment-delete', 'events', 'history-before-move')));
+    await expectDenied('former editor cannot append orphaned reassignment history', setDoc(doc(external1, 'editor_portals', 'external1', 'editor_jobs', 'legacy-reassignment-delete', 'events', 'history-after-move'), { at: 2, type: 'progress', byUid: 'external1' }));
+    await expectDenied('former editor cannot read orphaned case messages', getDoc(doc(external1, 'editor_portals', 'external1', 'editor_jobs', 'legacy-reassignment-delete', 'messages', 'message-before-move')));
+    await expectDenied('former editor cannot append orphaned case messages', setDoc(doc(external1, 'editor_portals', 'external1', 'editor_jobs', 'legacy-reassignment-delete', 'messages', 'message-after-move'), { body: '旧担当側からの追加', kind: '連絡', url: '', byUid: 'external1', byName: '旧担当', byRole: '担当編集者', createdAt: 2 }));
+    await expectDenied('owner cannot delete an editor-created portal case', deleteDoc(doc(owner, 'editor_portals', 'direct1', 'editor_jobs', 'draft-editor')));
     await expectAllowed('owner synchronizes a legacy child with its zero-based added order', setDoc(
       doc(owner, 'editor_portals', 'external1', 'editor_jobs', 'legacy-added-order-zero'),
       { ...legacyUnscheduledExternalJob, subtaskIndex: 0 }
