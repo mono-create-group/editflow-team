@@ -19,7 +19,7 @@
     @media(max-width:420px){.metric{grid-column:span 12}.who{max-width:46%}.btn{width:100%}.nav .btn,.actions .btn,.topbar .btn{width:auto}.actions .job-primary{width:100%}}
   </style>
   <link rel="stylesheet" href="app-ui.css">
-  <link rel="stylesheet" href="editor-yellow-ui.css?v=20260829-12">
+  <link rel="stylesheet" href="editor-yellow-ui.css?v=20260829-13">
 </head>
 <body class="editor-yellow-ui">
   <a class="app-skip-link" href="#app">メイン画面へ移動</a>
@@ -30,7 +30,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" onerror="portalSdkLoadFailed()"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js" onerror="portalSdkLoadFailed()"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js" onerror="portalSdkLoadFailed()"></script>
-  <script src="./billing-terms.js?v=20260829-12"></script>
+  <script src="./billing-terms.js?v=20260829-13"></script>
   <!-- PDF libraries are loaded only when an editor creates a PDF. -->
   <script>
   const PAGE_PARAMS=new URLSearchParams(location.search);
@@ -57,6 +57,13 @@
   const now=()=>Date.now();
   const localDate=()=>{const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
   const safeUrl=v=>{try{const u=new URL(v);return['https:','http:'].includes(u.protocol)?u.href:''}catch(_){return''}};
+  function portalSaveErrorMessage(error){
+    const code=String(error?.code||'').toLowerCase(),message=String(error?.message||error||'').toLowerCase();
+    if(code.includes('resource-exhausted')||message.includes('quota exceeded')){
+      return 'クラウド保存上限に達したため、今回は送信されていません。入力内容を残したまま、復旧後にもう一度提出してください';
+    }
+    return '進捗を保存できませんでした。入力内容は送信されていません';
+  }
   let auth=null,db=null,user=null,access=null,accessRequest=null,profile={},jobs=[],portalJobsSource=[],previewLegacyJobs=[],invoices=[],authorizations=[],view='dashboard',unsubs=[],portalUnsubs=[],driveToken=null,driveConnectPromise=null,invoiceMonth=new Date().toISOString().slice(0,7),invoiceDue='',pdfBuilding=false,ADMIN_PREVIEW=false,PORTAL_UID='',snapshotRenderFrame=null,pdfLibrariesPromise=null;
   const AUTH_POPUP_TIMEOUT_MS=45000;
   const PORTAL_AUTH_URL='https://editflow-mono-create.firebaseapp.com/editor.html';
@@ -311,7 +318,7 @@
       const ref=db.collection('editor_portals').doc(user.uid).collection('editor_jobs').doc(jid),ev=ref.collection('events').doc(),batch=db.batch();
       batch.update(ref,data);batch.set(ev,{at:firebase.firestore.FieldValue.serverTimestamp(),type:milestone?'editor_milestone':'progress',byUid:user.uid,byEmail:user.email||'',byRole:'担当編集者',status,milestone:milestone?.key||null,deliveryDate,hasEvidence:!!evidence,hasBlocker:!!blocker});
       await batch.commit();clearJobDraft(jid);toast(savedMessage);
-    }catch(e){console.warn(e);toast('進捗を保存できませんでした')}
+    }catch(e){console.warn(e);toast(portalSaveErrorMessage(e))}
   }
   saveJobProgress=saveJobProgressRequired;
   function quickJobStatus(jid,status){const select=$('#job-status-'+jid);if(!select)return;select.value=status;saveJobDraft(jid);void saveJobProgress(jid)}
@@ -412,8 +419,8 @@
   if(!DEMO&&'serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(error=>console.warn('service worker',error));
   </script>
   <script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
-  <script src="./editor-push.js?v=20260829-12"></script>
-  <script src="./direct-messages.js?v=20260829-12"></script>
-  <script src="./editor-features.js?v=20260829-12"></script>
+  <script src="./editor-push.js?v=20260829-13"></script>
+  <script src="./direct-messages.js?v=20260829-13"></script>
+  <script src="./editor-features.js?v=20260829-13"></script>
 </body>
 </html>

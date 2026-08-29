@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260829-12"></script>
+<script src="./billing-terms.js?v=20260829-13"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -995,7 +995,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260829-12">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260829-13">
 </head>
 <body class="owner-yellow-ui">
 
@@ -1242,6 +1242,30 @@ let FB_USER=null;
 let _fbSaveTimer=null;
 let _fbUnsubscribe=null;
 let _personalTaskBaseline=new Map();
+// Firestore の無料枠超過時に、通常の save() や snapshot が同じ書き込みを
+// 連鎖させないための回路遮断。ローカル保存は従来どおり継続する。
+let _fbQuotaBlocked=false;
+let _fbQuotaNoticeShown=false;
+let _fbPersonalSaveInFlight=false;
+let _fbPersonalSaveQueued=false;
+let _fbPersonalLastPayload='';
+function _fbIsQuotaError(e){
+  const code=String(e&&e.code||'').toLowerCase(),message=String(e&&e.message||e||'').toLowerCase();
+  return code==='resource-exhausted'||message.includes('quota exceeded')||message.includes('resource-exhausted');
+}
+function _fbFailClosed(e,scope){
+  if(!_fbIsQuotaError(e))return false;
+  _fbQuotaBlocked=true;
+  if(!_fbQuotaNoticeShown){
+    _fbQuotaNoticeShown=true;
+    const localSaved=_lsSaveState(S);
+    toast(localSaved
+      ?'クラウド保存の上限に達しました。個人データは端末に保存しましたが、案件・顧客など共有データは未保存の可能性があります。入力内容を控え、無料枠の回復後に再読み込みして、もう一度操作してください。'
+      :'クラウド保存の上限に達しました。端末保存も確認できないため、画面を閉じずに管理者へ連絡してください。','warn');
+  }
+  console.warn(`${scope} save paused after Firestore quota exhaustion`,e);
+  return true;
+}
 
 function fbSave(){
   if(!FB_USER)return;
@@ -1249,25 +1273,38 @@ function fbSave(){
   _stampTeamChanges();
   clearTimeout(_fbSaveTimer);
   _fbSaveTimer=setTimeout(()=>{
+    // 共有台帳は個人データと別に差分判定して保存する。
+    _teamSave();
+    if(_fbQuotaBlocked)return;
+    if(_fbPersonalSaveInFlight){_fbPersonalSaveQueued=true;return;}
     const mergeBaseline=_personalTaskBaseline;
     if(window.AIBridge)AIBridge.stampChangedTasks(S.tasks||[],_personalTaskBaseline);
     const ref=fbDb.collection('users').doc(FB_USER.uid);
     const local=_decodePersonalState(_packState());
+    const initialPayload=_packPersonalState(local);
+    if(initialPayload===_fbPersonalLastPayload)return;
     const saveBaseline=window.AIBridge?AIBridge.taskBaseline(local.tasks||[]):new Map();
     let committedTasks=local.tasks||[];
+    _fbPersonalSaveInFlight=true;
     fbDb.runTransaction(async tx=>{
       const snap=await tx.get(ref),remote=_decodePersonalState(snap.exists?(snap.data()||{}).json_mcapp:null);
       if(window.AIBridge&&remote&&Array.isArray(remote.tasks))local.tasks=AIBridge.mergeTaskChanges(local.tasks||[],remote.tasks,mergeBaseline);
       committedTasks=local.tasks||[];
       tx.set(ref,{json_mcapp:_packPersonalState(local),ts_mcapp:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
     }).then(()=>{
+      _fbPersonalLastPayload=_packPersonalState(local);
       if(!window.AIBridge)return;
       AIBridge.stampChangedTasks(S.tasks||[],saveBaseline);
       S.tasks=AIBridge.mergeTaskChanges(S.tasks||[],committedTasks,saveBaseline);
       _personalTaskBaseline=AIBridge.taskBaseline(committedTasks);
       _lsSaveState(S);
-    }).catch(e=>console.error('Firestore save error:',e));
-    _teamSave();
+    }).catch(e=>{if(!_fbFailClosed(e,'personal'))console.error('Firestore save error:',e);})
+      .finally(()=>{
+        _fbPersonalSaveInFlight=false;
+        const queued=_fbPersonalSaveQueued;_fbPersonalSaveQueued=false;
+        // 実際の利用者操作中に発生した1件だけを、成功後にまとめて保存する。
+        if(queued&&!_fbQuotaBlocked)fbSave();
+      });
   },2000);
 }
 
@@ -1275,9 +1312,14 @@ function fbSave(){
 // チームデータ(TEAM_KEYS + bizBoard)は shared/mcapp が唯一の真実(EditFlowのshared/teamとは完全分離)。個人docには保存しない
 // (二重管理で、アカウント切替時に個人docの古い/空のチームデータが共有取り込み分を上書きする事故を防ぐ)
 function _packState(){
-  const EXCL={bizBoard:1};TEAM_KEYS.forEach(k=>EXCL[k]=1);
-  const personal={};for(const k in S){if(!EXCL[k])personal[k]=S[k];}
-  return _packPersonalState(personal);
+  // _savedAt は端末内の同期判定用の時刻であり、毎回変わるためクラウドpayloadには含めない。
+  // これを除外しないと内容が同じでも users/{uid} へ毎回書き込んでしまう。
+  return _packPersonalState(_personalCloudState(S));
+}
+function _personalCloudState(source){
+  const EXCL={bizBoard:1,_savedAt:1};TEAM_KEYS.forEach(k=>EXCL[k]=1);
+  const personal={};for(const k in (source||{})){if(!EXCL[k])personal[k]=source[k];}
+  return personal;
 }
 function _packPersonalState(personal){
   const json=JSON.stringify(personal||{});
@@ -1315,6 +1357,9 @@ function _applyCloudData(json){
 function fbSetupRealtimeSync(){
   if(!FB_USER)return;
   if(_fbUnsubscribe){_fbUnsubscribe();_fbUnsubscribe=null;}
+  // Payload baselines are account-scoped. A fresh account without a cloud
+  // document must never inherit another account's no-op signature.
+  _fbPersonalLastPayload='';
   // 同じ端末で別アカウントがサインインした場合、前アカウントの個人データが
   // 新アカウントへ漏れる/上書きするのを防ぐため、ローカルを初期化してクラウド優先にする。
   if(S._uid&&S._uid!==FB_USER.uid){
@@ -1349,6 +1394,10 @@ function fbSetupRealtimeSync(){
         toast('☁️ ローカルデータをクラウドに同期中…');
         return;
       }
+      // Adopted cloud data is the no-op baseline. Any local task merge or
+      // migration performed below still changes the normalized payload and
+      // is therefore written once; an unchanged page load writes nothing.
+      _fbPersonalLastPayload=_packPersonalState(_personalCloudState(_decodePersonalState(doc.data().json_mcapp)));
       _applyCloudData(doc.data().json_mcapp);
       fbSave();
       render();
@@ -1356,6 +1405,7 @@ function fbSetupRealtimeSync(){
     } else {
       // リアルタイム更新 — クラウドが明らかに新しい場合のみ適用
       if(cloudTs>localTs+2000){
+        _fbPersonalLastPayload=_packPersonalState(_personalCloudState(_decodePersonalState(doc.data().json_mcapp)));
         _applyCloudData(doc.data().json_mcapp);
         renderSyncSafe(); // ドキュメント編集中はDOMを置き換えない(入力消失防止)
         toast('📱 他のデバイスから同期しました');
@@ -1377,6 +1427,9 @@ let _teamUnsub=null;
 let _teamCloudLoaded=false;  // shared/mcapp の初回読込前は共有データを絶対に保存しない
 let _teamLedgerRestoreAck=''; // 最後にサーバーから受信した移行/復元token
 let _teamKnownCounts={};     // 起動中に確認したクラウド件数。主要台帳の空上書きを防ぐ
+let _teamSaveInFlight=false;
+let _teamSaveQueued=false;
+let _teamLastPayload='';
 window._teamSnap=window._teamSnap||{};
 function _entSig(e){const o={};for(const k in e){if(k!=='updatedAt')o[k]=e[k];}return JSON.stringify(o);}
 // チーム共有フィールドのエンコード/デコード。salesLeadsは肥大するためLZ圧縮する。
@@ -1406,11 +1459,21 @@ const SL_SHARD_N=4;
 let _slShardJson='';
 let _slShardUnsubs=[];
 let _slShardEnc=[];   // shardごとの{raw,part}キャッシュ。無変更shardの再圧縮・再書き込みを避ける(2026-07-17)
+let _slShardLoaded=Array(SL_SHARD_N).fill(false);
+let _slInitialRemoteShards=Array(SL_SHARD_N).fill(null);
 // 【安全策 2026-07-24】salesLeadsはローカル(localStorage)に保存せずクラウドshardのみを正とするため、
 // 起動直後〜shard受信までは必ず S.salesLeads=[] の空窓が生じる。その状態で書き戻すと全件消失するため、
 // 「クラウド未受信の空」と「実際の激減」を両方ブロックするガードを本体側に入れる(旧: leads_ioのみ対応)。
 let _slCloudLoaded=false;   // 1度でもクラウドshardを受信したか
 let _slCloudCount=0;        // 受信済みの既知件数(この件数からの激減は書かない)
+function _slLeadSignature(leads){
+  // Snapshot callbacks may arrive in any shard order. Compare by stable lead
+  // id so an unchanged startup never writes merely because callback order
+  // changed the in-memory array order.
+  const rows=(leads||[]).map((value,index)=>({key:String(value&&value.id||`__${index}`),value}));
+  rows.sort((a,b)=>a.key.localeCompare(b.key,'ja',{numeric:true}));
+  return JSON.stringify(rows.map(row=>row.value));
+}
 function _slEncodeShard(arr){const j=JSON.stringify(arr);return (window.LZString&&j.length>4000)?'LZ:'+LZString.compressToBase64(j):j;}
 // 【性能 2026-07-17】以前はshard境界を探すのに200件ごとに「累積配列全体」をLZ圧縮しており、
 // 7,489件の保存で延べ92,090件分を38回圧縮=約9.9秒メインスレッドを占有していた(会長「重すぎる」の主因)。
@@ -1448,11 +1511,12 @@ function _slSplitShards(leads){
   return shards;
 }
 function _slShardsSave(){
-  if(!FB_USER||TEAM_SHARE_OK===false||!window.LZString)return;
+  if(!FB_USER||TEAM_SHARE_OK===false||!window.LZString||_fbQuotaBlocked)return;
   // ── 消失防止ガード(2026-07-24) ──
   const _cur=(S.salesLeads||[]).length;
-  // ① クラウド未受信のまま0件で書き戻さない(起動直後の空窓で全件消去するのを防ぐ)
-  if(!_slCloudLoaded&&_cur===0)return;
+  // ① 全shardの初回受信前は、件数にかかわらず書き戻さない。
+  // 起動直後の空窓・種データ・途中受信の部分配列を正本へ送らない。
+  if(!_slCloudLoaded)return;
   // ② 既知件数からの激減(100件超 かつ 2割超の減少)は書かない。誤操作/同期不整合での消失を止める。
   //    リード削除は論理削除(deletedフラグ)で配列長は減らないため、長さの激減は不整合の疑いが濃い。
   //    閾値0.5では過去の実事故(7636→3818=ちょうど半分)をすり抜けたため0.8にする。
@@ -1461,7 +1525,7 @@ function _slShardsSave(){
     return;
   }
   if(_cur>_slCloudCount)_slCloudCount=_cur;
-  const json=JSON.stringify(S.salesLeads||[]);
+  const json=_slLeadSignature(S.salesLeads||[]);
   if(json===_slShardJson)return;      // リード変更なし→書き込み節約
   _slShardJson=json;
   const shards=_slSplitShards(S.salesLeads||[]);
@@ -1475,7 +1539,7 @@ function _slShardsSave(){
     _slShardEnc[i]={raw,part};
     fbDb.collection('shared').doc('mcapp_leads_'+i)
       .set({ts:firebase.firestore.FieldValue.serverTimestamp(),by:FB_USER.uid,part},{merge:true})
-      .catch(e=>console.warn('leads shard save',i,(e&&e.code)||e));
+      .catch(e=>{if(!_fbFailClosed(e,'leads shard'))console.warn('leads shard save',i,(e&&e.code)||e);});
   });
 }
 function _stampTeamChanges(){
@@ -1522,8 +1586,28 @@ function mergeTeamArr(local,remote,key){
   return Object.values(by);
 }
 function _teamSave(){
-  if(!FB_USER||TEAM_SHARE_OK===false)return;
+  if(!FB_USER||TEAM_SHARE_OK===false||_fbQuotaBlocked)return;
   if(!_teamCloudLoaded){console.warn('team share save skipped: cloud snapshot is not loaded');return;}
+  // salesLeads は別 shard。親ドキュメントが不変でも shard のみ変更されるため先に判定する。
+  _slShardsSave();
+  const data={legacyFinanceRestoreAck:_teamLedgerRestoreAck};
+  // salesLeadsは分割格納(shared/mcapp_leads_0..3)へ移行済み。本体にはマーカーのみ置く
+  // (旧クライアントはマーカーをJSON解釈できず無害スキップ。他キーは従来どおり)
+  TEAM_KEYS.forEach(k=>{
+    if(k==='salesLeads'){data[k]='SHARDED';return;}
+    const cur=Array.isArray(S[k])?S[k].length:0,known=Number(_teamKnownCounts[k]||0);
+    if(['jobs','clients','workers'].includes(k)&&known>0&&cur===0){
+      console.warn('team share save skipped for protected ledger: '+k+' '+known+'→0');
+      return;
+    }
+    data[k]=_teamEncode(k,S[k]||[]);
+    if(cur>known)_teamKnownCounts[k]=cur;
+  });
+  // _seed(種データ)はクラウドへ書かない。merge:true なので既存の実データを消さずに保持する。
+  if(S.bizBoard && !S.bizBoard._seed)data.bizBoard=_teamEncode('bizBoard',S.bizBoard);
+  const payloadSignature=JSON.stringify(data);
+  if(payloadSignature===_teamLastPayload)return;
+  if(_teamSaveInFlight){_teamSaveQueued=true;return;}
   // 金額移行後は、旧タブが金額入りjobsを書き戻さないよう、
   // 最新版だけが更新できる使い捨てnonceを毎回送る。
   const financeWriteId=(()=>{try{return crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${crypto.getRandomValues(new Uint32Array(4)).join('-')}`;}catch(_){return`${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;}})();
@@ -1531,30 +1615,44 @@ function _teamSave(){
   // received. Older clients overwrite the nonce with a bare UUID, so they can
   // never inherit a persisted acknowledgement and pass the post-migration rule.
   const financeWriteNonce=`${_teamLedgerRestoreAck}:${financeWriteId}`;
-  const payload={ts:firebase.firestore.FieldValue.serverTimestamp(),by:FB_USER.uid,legacyFinanceWriteNonce:financeWriteNonce,legacyFinanceRestoreAck:_teamLedgerRestoreAck};
-  // salesLeadsは分割格納(shared/mcapp_leads_0..3)へ移行済み。本体にはマーカーのみ置く
-  // (旧クライアントはマーカーをJSON解釈できず無害スキップ。他キーは従来どおり)
-  TEAM_KEYS.forEach(k=>{
-    if(k==='salesLeads'){payload[k]='SHARDED';return;}
-    const cur=Array.isArray(S[k])?S[k].length:0,known=Number(_teamKnownCounts[k]||0);
-    if(['jobs','clients','workers'].includes(k)&&known>0&&cur===0){
-      console.warn('team share save skipped for protected ledger: '+k+' '+known+'→0');
-      return;
-    }
-    payload[k]=_teamEncode(k,S[k]||[]);
-    if(cur>known)_teamKnownCounts[k]=cur;
-  });
-  // _seed(種データ)はクラウドへ書かない。merge:true なので既存の実データを消さずに保持する。
-  if(S.bizBoard && !S.bizBoard._seed) payload.bizBoard=_teamEncode('bizBoard',S.bizBoard);
+  const payload={...data,ts:firebase.firestore.FieldValue.serverTimestamp(),by:FB_USER.uid,legacyFinanceWriteNonce:financeWriteNonce};
+  _teamSaveInFlight=true;
   fbDb.collection('shared').doc('mcapp').set(payload,{merge:true})
-    .then(()=>{if(TEAM_SHARE_OK!==true){TEAM_SHARE_OK=true;renderAuthUI();}})
-    .catch(e=>{const c=e&&e.code;if(c==='permission-denied'&&TEAM_SHARE_OK!==false){TEAM_SHARE_OK=false;renderAuthUI();}console.warn('team share save:',c||e);});
-  _slShardsSave();
+    .then(()=>{
+      _teamLastPayload=payloadSignature;
+      if(TEAM_SHARE_OK!==true){TEAM_SHARE_OK=true;renderAuthUI();}
+    })
+    .catch(e=>{
+      const c=e&&e.code;
+      if(c==='permission-denied'&&TEAM_SHARE_OK!==false){TEAM_SHARE_OK=false;renderAuthUI();}
+      if(!_fbFailClosed(e,'team share'))console.warn('team share save:',c||e);
+    })
+    .finally(()=>{
+      _teamSaveInFlight=false;
+      const queued=_teamSaveQueued;_teamSaveQueued=false;
+      // 保存中に発生した実データ変更を1回だけ後続保存する。失敗時は自動再試行しない。
+      if(queued&&!_fbQuotaBlocked)_teamSave();
+    });
+}
+function _teamCloudBaseline(d){
+  const data={legacyFinanceRestoreAck:_teamLedgerRestoreAck};
+  TEAM_KEYS.forEach(k=>{
+    if(k==='salesLeads'){data[k]='SHARDED';return;}
+    // Missing empty arrays are equivalent to the current default. A missing
+    // non-empty ledger remains a deliberate mismatch and is saved later.
+    data[k]=typeof d[k]==='string'
+      ?d[k]
+      :((S[k]||[]).length?_teamEncode(k,[]):_teamEncode(k,S[k]||[]));
+  });
+  if(S.bizBoard&&!S.bizBoard._seed){
+    data.bizBoard=typeof d.bizBoard==='string'?d.bizBoard:'__MISSING_BIZ_BOARD__';
+  }
+  return JSON.stringify(data);
 }
 function fbSetupTeamSync(){
   if(!FB_USER)return;
   if(_teamUnsub){_teamUnsub();_teamUnsub=null;}
-  _teamCloudLoaded=false;_teamLedgerRestoreAck='';_teamKnownCounts={};
+  _teamCloudLoaded=false;_teamLedgerRestoreAck='';_teamKnownCounts={};_teamLastPayload='';
   _teamUnsub=fbDb.collection('shared').doc('mcapp').onSnapshot(doc=>{
     if(TEAM_SHARE_OK!==true){TEAM_SHARE_OK=true;renderAuthUI();}
     if(!doc.exists){_teamCloudLoaded=true;_schedulePortalLegacySync();_teamSave();return;}
@@ -1596,23 +1694,43 @@ function fbSetupTeamSync(){
     // acknowledgement empty so Firestore rejects a stale jobs payload.
     _teamLedgerRestoreAck=ledgerRestoreReady&&ledgerLocalStateSafe?restoreToken:'';
     _teamCloudLoaded=true;
+    // Seed the exact cloud baseline. Current local additions/newer records
+    // still differ and will be written; an unchanged first load is a no-op.
+    _teamLastPayload=_teamCloudBaseline(d);
     _schedulePortalLegacySync();
     if(changed)renderSyncSafe();
   },e=>{const c=e&&e.code;if(c==='permission-denied'&&TEAM_SHARE_OK!==false){TEAM_SHARE_OK=false;renderAuthUI();}console.warn('team share sync:',c||e);});
   // salesLeads分割doc(mcapp_leads_0..3)の購読。各shardは部分集合なのでid+updatedAtでマージ(削除しない)
   _slShardUnsubs.forEach(u=>{try{u();}catch(_){}});
   _slShardUnsubs=[];
+  _slShardLoaded=Array(SL_SHARD_N).fill(false);_slInitialRemoteShards=Array(SL_SHARD_N).fill(null);_slShardEnc=[];_slShardJson='';_slCloudLoaded=false;_slCloudCount=0;
   for(let i=0;i<SL_SHARD_N;i++){
     _slShardUnsubs.push(fbDb.collection('shared').doc('mcapp_leads_'+i).onSnapshot(doc=>{
-      if(!doc.exists)return;
-      const remote=_teamDecode((doc.data()||{}).part);
-      if(!Array.isArray(remote)||!remote.length)return;
-      const merged=mergeTeamArr(S.salesLeads||[],remote,'salesLeads');
-      // クラウドから実データを受信した=以降は書き戻して良い(空窓ガード解除)。既知件数も更新する
-      _slCloudLoaded=true;
+      const storedPart=doc.exists?(doc.data()||{}).part:null;
+      const decoded=storedPart==null?[]:_teamDecode(storedPart);
+      const remote=Array.isArray(decoded)?decoded:[];
+      _slShardLoaded[i]=true;
+      _slInitialRemoteShards[i]=remote;
+      _slShardEnc[i]={raw:JSON.stringify(remote),part:storedPart==null?_slEncodeShard(remote):storedPart};
+      const merged=remote.length?mergeTeamArr(S.salesLeads||[],remote,'salesLeads'):(S.salesLeads||[]);
       if(merged.length>_slCloudCount)_slCloudCount=merged.length;
       if(JSON.stringify(merged)!==JSON.stringify(S.salesLeads||[])){
         S.salesLeads=merged;_teamSnapRebase();_lsSaveState(S);renderSyncSafe();
+      }
+      // No shard write is allowed before every initial shard snapshot has
+      // arrived. The baseline must be made only from the remote snapshots:
+      // S may already contain a lead added while the initial reads were in
+      // flight, and treating that merged value as cloud-saved would lose it.
+      if(!_slCloudLoaded&&_slShardLoaded.every(Boolean)){
+        const remoteBaseline=_slInitialRemoteShards.reduce(
+          (all,part)=>mergeTeamArr(all,part||[],'salesLeads'),[]
+        );
+        _slCloudLoaded=true;
+        _slShardJson=_slLeadSignature(remoteBaseline);
+        _slShardEnc=_slInitialRemoteShards.map(arr=>({raw:JSON.stringify(arr||[]),part:_slEncodeShard(arr||[])}));
+        // Persist exactly one legitimate local delta that happened before all
+        // initial snapshots completed. Unchanged startup remains a no-op.
+        if(_slLeadSignature(S.salesLeads||[])!==_slShardJson)_slShardsSave();
       }
     },e=>console.warn('leads shard sync',i,(e&&e.code)||e)));
   }
@@ -1625,10 +1743,18 @@ function _registerSignin(){
     if(!Array.isArray(S.signins))S.signins=[];
     const now=Date.now();
     let r=S.signins.find(x=>x&&x.id===FB_USER.uid);
+    const isNew=!r;
     if(!r){r={id:FB_USER.uid,firstSeen:now};S.signins.push(r);}
-    r.email=FB_USER.email||r.email||'';
-    r.name=FB_USER.displayName||r.name||'';
-    r.photo=FB_USER.photoURL||r.photo||'';
+    const nextEmail=FB_USER.email||r.email||'';
+    const nextName=FB_USER.displayName||r.name||'';
+    const nextPhoto=FB_USER.photoURL||r.photo||'';
+    const identityChanged=r.email!==nextEmail||r.name!==nextName||r.photo!==nextPhoto;
+    // Presence is not operational data. Touch at most once per day so every
+    // page load cannot consume a shared write while retaining a useful audit.
+    if(!isNew&&!identityChanged&&now-Number(r.lastSeen||0)<86400000)return;
+    r.email=nextEmail;
+    r.name=nextName;
+    r.photo=nextPhoto;
     r.lastSeen=now;
     r.updatedAt=now;
     save();
@@ -17244,7 +17370,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260829-12';
+const APP_VERSION='20260829-13';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -17318,6 +17444,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260829-12"></script>
+<script src="./manager-features.js?v=20260829-13"></script>
 </body>
 </html>
