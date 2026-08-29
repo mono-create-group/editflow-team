@@ -80,7 +80,7 @@ test('owner can bulk sync existing master clients and sees exact scope', () => {
   assert.match(source, /managerSyncMasterCatalog/);
 });
 
-test('missing catalog rows are repaired automatically for direct editors only', () => {
+test('catalog listeners are read-only; master synchronization is an explicit owner action', () => {
   const start = source.indexOf('async function syncMissingDirectCatalogsForEditor');
   const end = source.indexOf('async function syncDirectCatalogForClient', start);
   const body = source.slice(start, end);
@@ -91,7 +91,14 @@ test('missing catalog rows are repaired automatically for direct editors only', 
   assert.match(body, /sourceClientId/);
   assert.match(body, /catalogDocIdForClient\(client\)/);
   assert.match(body, /missing\.slice\(offset,offset\+300\)/);
-  assert.match(source, /e\.editorKind!=='external'\)void syncMissingDirectCatalogsForEditor\(e,catalogs\)/);
+  const subscribeStart = source.indexOf('function subscribePortals()');
+  const subscribeEnd = source.indexOf('function start()', subscribeStart);
+  const subscribeBody = source.slice(subscribeStart, subscribeEnd);
+  assert.ok(subscribeStart >= 0 && subscribeEnd > subscribeStart);
+  assert.doesNotMatch(subscribeBody, /syncMissingDirectCatalogsForEditor/);
+  assert.match(subscribeBody, /カタログの一括同期はオーナーが明示的に/);
+  assert.match(source, /async function syncMasterCatalog\(\)/);
+  assert.match(source, /window\.managerSyncMasterCatalog=syncMasterCatalog/);
 });
 
 test('catalog schema permits the bounded former-name trail used by direct synchronization', () => {

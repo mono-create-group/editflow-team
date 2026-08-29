@@ -1,11 +1,11 @@
 (function(){
   'use strict';
 
-  const PORTAL_APP_VERSION='20260829-14';
+  const PORTAL_APP_VERSION='20260830-01';
   const feature={
     board:[],boardSelectedId:'',boardSearch:'',catalog:[],manuals:[],schedules:[],release:null,
     messages:new Map(),messageUnsubs:new Map(),messageLoading:new Set(),openMessageJobIds:new Set(),groupDraftSaving:new Set(),unsubs:[],startedFor:'',serverVersion:'',jobsListMode:'active',jobsTypeFilter:'all',lastSuggestionCode:'',
-    dmPeers:[],dmThreads:[],dmMessages:[],dmActivePeerUid:'',dmActiveThreadId:'',dmThreadUnsub:null,dmMessageUnsub:null,dmLoading:false,dmError:'',dmStartedFor:'',dmInitialSnapshot:false,dmSeenMessages:new Map(),
+    dmPeers:[],dmThreads:[],dmMessages:[],dmActivePeerUid:'',dmActiveThreadId:'',dmThreadUnsub:null,dmMessageUnsub:null,dmLoading:false,dmError:'',dmStartedFor:'',dmInitialSnapshot:false,dmSeenMessages:new Map(),dmReadPending:new Map(),
     pushStatus:null,pushStatusFor:'',pushStatusLoading:false
   };
   const original={
@@ -433,7 +433,30 @@
     if(error)return portalReadError(error,'DM一覧',err=>{feature.dmError=String(err?.message||err);feature.dmLoading=false;scheduleSnapshotRender()});
     const incoming=Array.isArray(next)?next:[];
     incoming.forEach(thread=>{const key=`${stamp(thread.lastMessageAt)}:${thread.lastSenderUid||''}:${thread.lastMessagePreview||''}`,previous=feature.dmSeenMessages.get(thread.id);if(feature.dmInitialSnapshot&&thread.unread&&previous&&previous!==key)showForegroundDmNotification(thread);feature.dmSeenMessages.set(thread.id,key)});
-    feature.dmInitialSnapshot=true;feature.dmThreads=incoming;feature.dmLoading=false;feature.dmError='';scheduleSnapshotRender();
+    feature.dmInitialSnapshot=true;feature.dmThreads=incoming;feature.dmLoading=false;feature.dmError='';
+    // The message listener can arrive before the thread-list listener.  Retry
+    // the active-thread acknowledgement after the authoritative unread state
+    // is installed so listener delivery order cannot leave a visible DM unread.
+    if(feature.dmActiveThreadId)markOpenDirectThreadRead(feature.dmActiveThreadId);
+    scheduleSnapshotRender();
+  }
+
+  function dmReadToken(thread){return`${stamp(thread?.lastMessageAt)}:${thread?.lastSenderUid||''}:${thread?.lastMessagePreview||''}`}
+  function markOpenDirectThreadRead(threadId){
+    const api=dmApi(),thread=feature.dmThreads.find(item=>item.id===threadId);
+    if(!api||!thread?.unread||thread.lastSenderUid===user?.uid)return;
+    const token=dmReadToken(thread);
+    if(!token||feature.dmReadPending.get(threadId)===token)return;
+    feature.dmReadPending.set(threadId,token);
+    // Let the thread and message snapshots settle in the same turn.  The API
+    // acknowledges only a successful write, so an error remains retryable.
+    Promise.resolve().then(()=>api.markRead(threadId,thread)).then(()=>{
+      if(feature.dmReadPending.get(threadId)!==token)return;
+      feature.dmThreads=feature.dmThreads.map(item=>item.id===threadId?{...item,unread:false}:item);
+      scheduleSnapshotRender();
+    }).catch(error=>console.warn('dm read receipt',error)).finally(()=>{
+      if(feature.dmReadPending.get(threadId)===token)feature.dmReadPending.delete(threadId);
+    });
   }
 
   async function startDmFeatures(force=false){
@@ -451,7 +474,7 @@
     feature.dmActivePeerUid=peerUid;feature.dmActiveThreadId=threadId||api.threadId(user.uid,peerUid);feature.dmMessages=[];view='dm';
     const existing=threadId||dmThreadForPeer(peerUid)?.id||'';
     if(DEMO){feature.dmMessages=[{id:'demo-dm-1',senderUid:'demo-owner',senderName:'中村',body:'案件以外の連絡はこのDMで確認できます。',createdAt:now()-3600000}];render();return setTimeout(scrollDirectMessages,0)}
-    if(existing){feature.dmMessageUnsub=api.watchMessages(existing,(messages,error)=>{if(error)return portalReadError(error,'DM本文',err=>{feature.dmError=String(err?.message||err);scheduleSnapshotRender()});feature.dmMessages=messages;api.markRead(existing).catch(()=>{});feature.dmThreads=feature.dmThreads.map(thread=>thread.id===existing?{...thread,unread:false}:thread);scheduleSnapshotRender();setTimeout(scrollDirectMessages,0)})}
+    if(existing){feature.dmMessageUnsub=api.watchMessages(existing,(messages,error)=>{if(error)return portalReadError(error,'DM本文',err=>{feature.dmError=String(err?.message||err);scheduleSnapshotRender()});feature.dmMessages=messages;markOpenDirectThreadRead(existing);scheduleSnapshotRender();setTimeout(scrollDirectMessages,0)})}
     render();setTimeout(scrollDirectMessages,0);
   }
 
@@ -462,7 +485,7 @@
     const button=event?.submitter;if(button)button.disabled=true;
     try{if(DEMO){feature.dmMessages.push({id:id(),senderUid:user.uid,senderName:editorDisplayName(),body,createdAt:now()});$('#dm-compose-body').value='';render();setTimeout(scrollDirectMessages,0);return toast('DMを送信しました')};const result=await api.send(peerUid,body);const input=$('#dm-compose-body');if(input)input.value='';await openDirectMessage(peerUid,result.threadId);toast('DMを送信しました');const push=pushClient();if(push&&result?.threadId&&user?.getIdToken){user.getIdToken().then(idToken=>push.dispatchDirectThread({threadId:result.threadId,idToken})).catch(error=>console.warn('dm push dispatch',error))}}catch(error){console.warn(error);toast('DMを送信できませんでした')}finally{if(button?.isConnected)button.disabled=false}
   }
-  async function markAllDirectMessagesRead(){const api=dmApi(),ids=feature.dmThreads.filter(x=>x.unread).map(x=>x.id);if(!api||!ids.length)return;try{await api.markAllRead(ids);feature.dmThreads=feature.dmThreads.map(x=>({...x,unread:false}));render();toast('すべてのDMを既読にしました')}catch(error){console.warn(error);toast('DMを既読にできませんでした')}}
+  async function markAllDirectMessagesRead(){const api=dmApi(),threads=feature.dmThreads.filter(x=>x.unread&&x.lastSenderUid!==user?.uid);if(!api||!threads.length)return;try{await api.markAllRead(threads);feature.dmThreads=feature.dmThreads.map(x=>({...x,unread:false}));render();toast('すべてのDMを既読にしました')}catch(error){console.warn(error);toast('DMを既読にできませんでした')}}
   function retryDirectMessages(){feature.dmStartedFor='';startDmFeatures(true);render()}
 
   function messageBlock(job){

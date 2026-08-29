@@ -97,7 +97,11 @@
   }
   function clientsForEditor(uid){const rows=catalogsFor(uid).map(c=>({...c,catalogId:c.id,id:c.sourceClientId||c.id,accounts:visibleAccounts(c.accounts||[])}));if(_isOwner())legacyClients().forEach(c=>{const found=rows.find(x=>(x.sourceClientId&&x.sourceClientId===c.id)||nameKey(x.name)===nameKey(c.name)),accounts=masterAccounts(c);if(found)found.accounts=accounts;else rows.push({id:c.id,sourceClientId:c.id,name:c.name,accounts})});return rows}
 
-  function stopNested(){state.nested.forEach(x=>{try{x()}catch(_){}});state.nested=[];state.catalog.clear();state.catalogRepairing.clear();state.assignmentSyncing.clear();state.invoices=[];state.authorizations=[];state.profiles=[];state.clientPricing.clear();state.clientPricingReady=false;state.portalJobsByEditor.clear();state.loaded.portalJobs.clear()}
+  function stopNested({preserveOwnerPortalData=false,resetPricing=true}={}){
+    state.nested.forEach(x=>{try{x()}catch(_){}});state.nested=[];state.catalog.clear();state.catalogRepairing.clear();state.assignmentSyncing.clear();
+    if(!preserveOwnerPortalData){state.invoices=[];state.authorizations=[];state.profiles=[];state.portalJobsByEditor.clear();state.loaded.portalJobs.clear()}
+    if(resetPricing){state.clientPricing.clear();state.clientPricingReady=false}
+  }
   function cancelManagerRender(){if(state.renderFrame===null)return;if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(state.renderFrame);else clearTimeout(state.renderFrame);state.renderFrame=null}
   function stop(){state.unsubs.forEach(x=>{try{x()}catch(_){}});state.unsubs=[];stopNested();state.loaded.editors=false;state.started='';state.portalSignature=null;cancelManagerRender()}
   window.EditflowFirestoreQuota?.registerStop?.(stop);
@@ -107,12 +111,37 @@
     state.renderFrame=typeof requestAnimationFrame==='function'?requestAnimationFrame(run):setTimeout(run,0);
   }
   function portalSubscriptionSignature(editors){return(editors||[]).map(editor=>`${String(editor?.id||'')}:${editor?.editorKind==='external'?'external':'direct'}:${String(editor?.directorUid||'')}`).sort().join('|')}
+  function ownerBridgeSnapshot(){
+    const bridge=window.EditflowOwnerDataBridge;
+    return _isOwner()&&bridge&&typeof bridge.snapshot==='function'?bridge.snapshot():null;
+  }
+  function hydrateOwnerBridge(snapshot){
+    if(!_isOwner()||!snapshot||snapshot.owner!==true)return false;
+    const ready=snapshot.ready||{},nextEditors=(ready.access?Array.isArray(snapshot.accessRecords)?snapshot.accessRecords:[]:[]).filter(x=>x&&x.approved===true&&rolesGrantVideoEditor(x.roles||[])),nextSignature=portalSubscriptionSignature(nextEditors);
+    state.editors=nextEditors;state.loaded.editors=ready.access===true;
+    state.invoices=ready.invoices&&Array.isArray(snapshot.portalInvoices)?snapshot.portalInvoices.slice():[];
+    state.authorizations=ready.authorizations&&Array.isArray(snapshot.portalAuthorizations)?snapshot.portalAuthorizations.slice():[];
+    state.profiles=ready.profiles&&Array.isArray(snapshot.portalProfiles)?snapshot.portalProfiles.slice():[];
+    state.portalJobsByEditor.clear();state.loaded.portalJobs.clear();
+    if(ready.jobs&&Array.isArray(snapshot.portalJobs)){
+      snapshot.portalJobs.forEach(job=>{const uid=String(job?._portalUid||'');if(!uid)return;const rows=state.portalJobsByEditor.get(uid)||[];rows.push(job);state.portalJobsByEditor.set(uid,rows)});
+      nextEditors.forEach(editor=>state.loaded.portalJobs.add(editor.id));
+    }
+    if(nextSignature!==state.portalSignature){state.portalSignature=nextSignature;subscribePortals()}
+    renderSafe();return true;
+  }
   function subscribePortals(){
-    stopNested();
+    const owner=_isOwner();
+    // オーナーは index.html の collection-group 購読結果を使う。ここで残すのは
+    // 各編集者へ公開する client_catalog だけで、jobs/invoices/profile/auth は再購読しない。
+    stopNested({preserveOwnerPortalData:owner,resetPricing:false});
     state.editors.forEach(e=>{
       const root=fbDb.collection('editor_portals').doc(e.id);
+      // 閲覧や再接続で台帳を修復しない。カタログの一括同期はオーナーが明示的に
+      // 「直接契約編集者へ一括同期」を押した場合だけ書き込む。
+      state.nested.push(root.collection('client_catalog').onSnapshot(q=>{const catalogs=q.docs.map(d=>({id:d.id,...d.data()}));state.catalog.set(e.id,catalogs);renderSafe()},x=>quotaSnapshotError(x,'catalog')));
+      if(owner)return;
       state.nested.push(root.collection('editor_jobs').onSnapshot(q=>{state.portalJobsByEditor.set(e.id,q.docs.map(d=>({id:d.id,_portalUid:e.id,...d.data()})));state.loaded.portalJobs.add(e.id);renderSafe()},x=>quotaSnapshotError(x,'portal jobs',err=>{state.loaded.portalJobs.delete(e.id);console.warn('portal jobs',err?.code||err);renderSafe()})));
-      state.nested.push(root.collection('client_catalog').onSnapshot(q=>{const catalogs=q.docs.map(d=>({id:d.id,...d.data()}));state.catalog.set(e.id,catalogs);if(_isOwner()&&e.editorKind!=='external')void syncMissingDirectCatalogsForEditor(e,catalogs);renderSafe()},x=>quotaSnapshotError(x,'catalog')));
       if(e.editorKind!=='external'){
         state.nested.push(root.collection('editor_invoices').onSnapshot(q=>{state.invoices=state.invoices.filter(x=>x._portalUid!==e.id).concat(q.docs.map(d=>({id:d.id,_portalUid:e.id,...d.data()})));renderSafe()},x=>quotaSnapshotError(x,'invoice')));
         state.nested.push(root.collection('invoice_authorizations').onSnapshot(q=>{state.authorizations=state.authorizations.filter(x=>x._portalUid!==e.id).concat(q.docs.map(d=>({id:d.id,_portalUid:e.id,...d.data()})));renderSafe()},x=>quotaSnapshotError(x,'authorization')));
@@ -131,8 +160,14 @@
   function start(){
     if(window.EditflowFirestoreQuota?.isOpen?.()||!FB_USER||!ACCESS_RESOLVED||!canManage()||state.started===FB_USER.uid)return;
     stop();state.started=FB_USER.uid;
-    const aq=_isOwner()?fbDb.collection('access'):fbDb.collection('access').where('directorUid','==',FB_USER.uid);
-    state.unsubs.push(aq.onSnapshot(q=>{const nextEditors=q.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.approved===true&&rolesGrantVideoEditor(x.roles||[])),nextSignature=portalSubscriptionSignature(nextEditors);state.editors=nextEditors;state.loaded.editors=true;if(nextSignature!==state.portalSignature){state.portalSignature=nextSignature;subscribePortals()}renderSafe()},e=>quotaSnapshotError(e,'editor relations',err=>{state.loaded.editors=false;console.warn('editor relations',err?.code||err);renderSafe()})));
+    if(_isOwner()){
+      const bridge=window.EditflowOwnerDataBridge;
+      if(!bridge||typeof bridge.subscribe!=='function'){console.warn('owner portal bridge unavailable');state.loaded.editors=false;renderSafe();return}
+      state.unsubs.push(bridge.subscribe(snapshot=>hydrateOwnerBridge(snapshot)));
+    }else{
+      const aq=fbDb.collection('access').where('directorUid','==',FB_USER.uid);
+      state.unsubs.push(aq.onSnapshot(q=>{const nextEditors=q.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.approved===true&&rolesGrantVideoEditor(x.roles||[])),nextSignature=portalSubscriptionSignature(nextEditors);state.editors=nextEditors;state.loaded.editors=true;if(nextSignature!==state.portalSignature){state.portalSignature=nextSignature;subscribePortals()}renderSafe()},e=>quotaSnapshotError(e,'editor relations',err=>{state.loaded.editors=false;console.warn('editor relations',err?.code||err);renderSafe()})));
+    }
     const bq=_isOwner()?fbDb.collection('editor_job_board'):fbDb.collection('editor_job_board').where('directorUid','==',FB_USER.uid);
     state.unsubs.push(bq.onSnapshot(q=>{state.board=q.docs.map(d=>({id:d.id,...d.data()}));renderSafe()},e=>quotaSnapshotError(e,'manager board')));
     const mq=_isOwner()?fbDb.collection('editor_manuals'):fbDb.collection('editor_manuals').where('directorUid','==',FB_USER.uid);

@@ -13,6 +13,12 @@
   const MAX_MESSAGES = 100;
   const CLOUD_WRITE_PAUSED_MESSAGE = 'クラウド接続停止中。再読み込み後に操作してください';
   let peerCache = [];
+  // A read receipt is an acknowledgement of one concrete thread update.  Keep
+  // it locally only after the write succeeds so a failed request remains
+  // retryable, while repeated Firestore snapshots cannot create duplicate
+  // writes for the same incoming message.
+  const readAcknowledgements = new Map();
+  const readAcknowledgementWrites = new Map();
   const activeWatchStops = new Set();
   const isObject = value => !!value && typeof value === 'object' && !Array.isArray(value);
   const trim = value => String(value == null ? '' : value).trim();
@@ -166,6 +172,10 @@
   function preview(body) { return trim(body).replace(/\s+/g, ' ').slice(0, MAX_PREVIEW_LENGTH); }
   function readData(data) { return isObject(data) ? data : {}; }
   function otherParticipant(thread, uid) { return thread.participantA === uid ? thread.participantB : thread.participantA; }
+  function readToken(thread) {
+    if (!thread || !trim(thread.lastSenderUid) || !millis(thread.lastMessageAt)) return '';
+    return `${trim(thread.lastSenderUid)}:${millis(thread.lastMessageAt)}:${trim(thread.lastMessagePreview)}`;
+  }
 
   async function ensureThread(peerUid) {
     assertCloudWriteAvailable();
@@ -218,7 +228,7 @@
     return snap.docs.map(doc => ({ id: doc.id, ...readData(doc.data()) })).reverse();
   }
 
-  async function markRead(threadIdValue) {
+  async function markRead(threadIdValue, threadHint = null) {
     assertCloudWriteAvailable();
     const me = current();
     if (!me) throw new Error('not-signed-in');
@@ -226,28 +236,54 @@
     if (!id) throw new Error('invalid-direct-message-thread');
     if (!canWrite()) return { id, demo: true };
     const threadRef = me.state.db.collection('direct_threads').doc(id);
-    const thread = await threadRef.get();
-    if (!thread.exists) throw new Error('direct-message-thread-not-found');
-    validateThreadForCurrent(readData(thread.data()));
-    await threadRef.collection('reads').doc(me.uid).set({ readerUid: me.uid, lastReadAt: serverTime(), updatedAt: serverTime() }, { merge: true });
-    return { id };
+    let thread = isObject(threadHint) && trim(threadHint.id) === id ? threadHint : null;
+    if (!thread) {
+      const snapshot = await threadRef.get();
+      if (!snapshot.exists) throw new Error('direct-message-thread-not-found');
+      thread = { id: snapshot.id, ...readData(snapshot.data()) };
+    }
+    validateThreadForCurrent(thread);
+    const token = readToken(thread);
+    if (!token || thread.lastSenderUid === me.uid) return { id, skipped: true };
+    if (readAcknowledgements.get(id) === token) return { id, skipped: true };
+    const pending = readAcknowledgementWrites.get(id);
+    if (pending?.token === token) return pending.promise;
+    const promise = threadRef.collection('reads').doc(me.uid).set({ readerUid: me.uid, lastReadAt: serverTime(), updatedAt: serverTime() }, { merge: true })
+      .then(() => { readAcknowledgements.set(id, token); return { id }; })
+      .finally(() => { if (readAcknowledgementWrites.get(id)?.promise === promise) readAcknowledgementWrites.delete(id); });
+    readAcknowledgementWrites.set(id, { token, promise });
+    return promise;
   }
 
   async function markAllRead(threadIds) {
     assertCloudWriteAvailable();
     const me = current();
     if (!me) throw new Error('not-signed-in');
-    const ids = [...new Set((Array.isArray(threadIds) ? threadIds : []).map(trim).filter(Boolean))].slice(0, 450);
-    if (!ids.length) return { count: 0 };
-    if (!canWrite()) return { count: ids.length, demo: true };
+    const inputs = Array.isArray(threadIds) ? threadIds : [];
+    const unique = new Map();
+    inputs.forEach(value => {
+      const id = trim(isObject(value) ? value.id : value);
+      if (id && !unique.has(id)) unique.set(id, isObject(value) ? value : null);
+    });
+    const entries = [...unique.entries()].slice(0, 450);
+    if (!entries.length) return { count: 0 };
+    if (!canWrite()) return { count: entries.length, demo: true };
     const permitted = [];
-    for (const id of ids) {
-      const snapshot = await me.state.db.collection('direct_threads').doc(id).get();
-      if (snapshot.exists) { validateThreadForCurrent(readData(snapshot.data())); permitted.push(id); }
+    for (const [id, hint] of entries) {
+      let thread = hint;
+      if (!thread) {
+        const snapshot = await me.state.db.collection('direct_threads').doc(id).get();
+        if (!snapshot.exists) continue;
+        thread = { id: snapshot.id, ...readData(snapshot.data()) };
+      }
+      validateThreadForCurrent(thread);
+      const token = readToken(thread);
+      if (token && thread.lastSenderUid !== me.uid && readAcknowledgements.get(id) !== token) permitted.push({ id, token });
     }
     const batch = me.state.db.batch();
-    permitted.forEach(id => batch.set(me.state.db.collection('direct_threads').doc(id).collection('reads').doc(me.uid), { readerUid: me.uid, lastReadAt: serverTime(), updatedAt: serverTime() }, { merge: true }));
+    permitted.forEach(({ id }) => batch.set(me.state.db.collection('direct_threads').doc(id).collection('reads').doc(me.uid), { readerUid: me.uid, lastReadAt: serverTime(), updatedAt: serverTime() }, { merge: true }));
     if (permitted.length) await batch.commit();
+    permitted.forEach(({ id, token }) => readAcknowledgements.set(id, token));
     return { count: permitted.length };
   }
 
@@ -283,12 +319,11 @@
     return snapshots.filter(Boolean);
   }
 
-  async function list() {
-    const me = current();
-    if (!me?.state.db) return [];
-    const sources = await Promise.all([ownerConversationThreads(me), currentPeerThreads(me)]);
+  async function enrichThreads(me, sourceThreads) {
     const byId = new Map();
-    sources.flat().forEach(thread => byId.set(thread.id, thread));
+    (Array.isArray(sourceThreads) ? sourceThreads : []).forEach(thread => {
+      try { validateThreadForCurrent(thread); byId.set(thread.id, thread); } catch (_) {}
+    });
     const threads = [...byId.values()];
     const enriched = await Promise.all(threads.map(async thread => {
       let receipt = {};
@@ -309,30 +344,51 @@
     return enriched.sort((a, b) => millis(b.lastMessageAt || b.updatedAt) - millis(a.lastMessageAt || a.updatedAt));
   }
 
+  async function list() {
+    const me = current();
+    if (!me?.state.db) return [];
+    const sources = await Promise.all([ownerConversationThreads(me), currentPeerThreads(me)]);
+    return enrichThreads(me, sources.flat());
+  }
+
   function watch(callback) {
     const me = current();
     if (global.EditflowFirestoreQuota?.isOpen?.() || !me?.state.db || typeof callback !== 'function') return () => {};
-    let cancelled = false, queued = false;
+    let cancelled = false, queued = false, emitVersion = 0;
+    const ownerThreads = new Map(), peerThreads = new Map();
     const emit = () => {
       if (queued || cancelled) return;
       queued = true;
       Promise.resolve().then(async () => {
         queued = false;
         if (cancelled) return;
-        try { callback(await list()); } catch (error) { if (!cancelled) callback([], error); }
+        const version = ++emitVersion;
+        const snapshots = [...ownerThreads.values(), ...peerThreads.values()];
+        try {
+          const rows = await enrichThreads(me, snapshots);
+          if (!cancelled && version === emitVersion) callback(rows);
+        } catch (error) { if (!cancelled && version === emitVersion) callback([], error); }
       });
     };
-    const unsubs = [ownerThreadQuery(me).onSnapshot(emit, error => { if (!cancelled && !quotaWatchError(error, 'threads')) callback([], error); })];
+    const unsubs = [ownerThreadQuery(me).onSnapshot(snapshot => {
+      ownerThreads.clear();
+      snapshot.docs.forEach(doc => ownerThreads.set(doc.id, { id: doc.id, ...readData(doc.data()) }));
+      emit();
+    }, error => { if (!cancelled && !quotaWatchError(error, 'threads')) callback([], error); })];
     // Current director/external conversations are watched by deterministic
     // document ID, never by a broad thread-list query.
     if (!isCurrentOwner(me)) peers().filter(peer => !isOwnerRecord(member(peer.uid) || peer, peer.email)).forEach(peer => {
-      unsubs.push(me.state.db.collection('direct_threads').doc(threadId(me.uid, peer.uid)).onSnapshot(emit, error => {
+      const id = threadId(me.uid, peer.uid);
+      unsubs.push(me.state.db.collection('direct_threads').doc(id).onSnapshot(snapshot => {
+        if (snapshot.exists) peerThreads.set(id, { id: snapshot.id, ...readData(snapshot.data()) });
+        else peerThreads.delete(id);
+        emit();
+      }, error => {
         // A peer can move teams while a screen is open.  The denied old watch
         // is simply removed from the merged list; it is not a user-facing app error.
         if (!cancelled && error?.code !== 'permission-denied' && !quotaWatchError(error, 'peer thread')) callback([], error);
       }));
     });
-    emit();
     return trackedStop(() => { cancelled = true; unsubs.forEach(unsub => { try { unsub(); } catch (_) {} }); });
   }
   function watchMessages(threadIdValue, callback, limit = 50) {

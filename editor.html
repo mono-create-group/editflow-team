@@ -19,7 +19,7 @@
     @media(max-width:420px){.metric{grid-column:span 12}.who{max-width:46%}.btn{width:100%}.nav .btn,.actions .btn,.topbar .btn{width:auto}.actions .job-primary{width:100%}}
   </style>
   <link rel="stylesheet" href="app-ui.css">
-  <link rel="stylesheet" href="editor-yellow-ui.css?v=20260829-14">
+  <link rel="stylesheet" href="editor-yellow-ui.css?v=20260830-01">
 </head>
 <body class="editor-yellow-ui">
   <a class="app-skip-link" href="#app">メイン画面へ移動</a>
@@ -30,7 +30,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" onerror="portalSdkLoadFailed()"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js" onerror="portalSdkLoadFailed()"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js" onerror="portalSdkLoadFailed()"></script>
-  <script src="./billing-terms.js?v=20260829-14"></script>
+  <script src="./billing-terms.js?v=20260830-01"></script>
   <!-- PDF libraries are loaded only when an editor creates a PDF. -->
   <script>
   const PAGE_PARAMS=new URLSearchParams(location.search);
@@ -330,6 +330,7 @@
 
   async function createJob(){const title=$('#new-title')?.value.trim(),clientDisplay=$('#new-client')?.value.trim(),deliveryDate=$('#new-deadline')?.value,instructions=$('#new-instructions')?.value.trim(),requestUrl=$('#new-request')?.value.trim(),sourceUrl=$('#new-source')?.value.trim(),schedule={sharedDate:$('#new-shared')?.value||'',editorDraftDate:$('#new-editor-draft')?.value||'',clientDraftDate:$('#new-client-draft')?.value||'',thumbnailDate:$('#new-thumbnail')?.value||'',deliveryDate};if(!title||!clientDisplay||!instructions)return toast('案件名・クライアント名・依頼内容は必須です');const dateError=scheduleError(schedule);if(dateError)return toast(dateError);if((requestUrl&&!safeUrl(requestUrl))||(sourceUrl&&!safeUrl(sourceUrl)))return toast('URLは https:// または http:// で入力してください');const jid=id(),at=now(),data={recordType:'editor_portal_job',title,clientDisplay,deadline:deliveryDate,...schedule,requestUrl,sourceUrl,instructions,urgent:!!$('#new-urgent')?.checked,status:'受注済み',progress:'',evidenceUrl:'',blocker:'',workDate:'',startTime:'',endTime:'',submittedByUid:user.uid,editorUid:user.uid,editorEmail:user.email||'',editorName:access?.name||user.displayName||'',source:'direct_client',createdAt:at,updatedAt:at,history:[{at,type:'created',by:user.uid,status:'受注済み'}]};if(DEMO){jobs.unshift({id:jid,...data});sessionStorage.removeItem(draftKey());render();return toast('案件を登録しました')};try{const ref=db.collection('editor_portals').doc(user.uid).collection('editor_jobs').doc(jid),ev=ref.collection('events').doc();const batch=db.batch();batch.set(ref,data);batch.set(ev,{at:firebase.firestore.FieldValue.serverTimestamp(),type:'created',byUid:user.uid,status:data.status,deliveryDate});await batch.commit();sessionStorage.removeItem(draftKey());toast('案件を登録しました')}catch(e){console.warn(e);toast('案件を登録できませんでした')}}
   async function saveJobProgress(jid){const j=jobs.find(x=>x.id===jid);if(!j)return;const evidence=$('#job-evidence-'+jid)?.value.trim()||'';if(evidence&&!safeUrl(evidence))return toast('提出した内容のURLを確認してください');const at=now(),status=$('#job-status-'+jid).value,deliveryDate=$('#job-delivery-'+jid).value,schedule={sharedDate:$('#job-shared-'+jid).value,editorDraftDate:$('#job-editor-draft-'+jid).value,clientDraftDate:$('#job-client-draft-'+jid).value,thumbnailDate:$('#job-thumbnail-'+jid).value,deliveryDate},data={status,deadline:deliveryDate,...schedule,progress:$('#job-progress-'+jid).value.trim(),evidenceUrl:evidence,blocker:$('#job-blocker-'+jid).value.trim(),workDate:$('#job-workdate-'+jid).value,startTime:$('#job-start-'+jid).value,endTime:$('#job-end-'+jid).value,updatedAt:at};const dateError=scheduleError(schedule);if(dateError)return toast(dateError);if(data.startTime&&data.endTime&&data.endTime<=data.startTime)return toast('終了時刻は開始時刻より後にしてください');if(status==='完了'&&!evidence)return toast('完了にする前に納品または確認した内容のURLを登録してください');if(status==='完了'&&data.blocker)return toast('完了にする前に停止理由を解消してください');if(DEMO){Object.assign(j,data);clearJobDraft(jid);render();return toast('進捗を保存しました')};try{const ref=db.collection('editor_portals').doc(user.uid).collection('editor_jobs').doc(jid),ev=ref.collection('events').doc();const batch=db.batch();batch.update(ref,data);batch.set(ev,{at:firebase.firestore.FieldValue.serverTimestamp(),type:'progress',byUid:user.uid,status,deliveryDate,hasEvidence:!!evidence,hasBlocker:!!data.blocker});await batch.commit();clearJobDraft(jid);toast('進捗を保存しました')}catch(e){console.warn(e);toast('進捗を保存できませんでした')}}
+  function jobProgressInputsUnchanged(job,data){const value=x=>x==null?'':String(x).trim();return value(job?.status)===value(data?.status)&&value(job?.deadline||job?.deliveryDate)===value(data?.deadline||data?.deliveryDate)&&value(job?.sharedDate)===value(data?.sharedDate)&&value(job?.editorDraftDate)===value(data?.editorDraftDate)&&value(job?.clientDraftDate)===value(data?.clientDraftDate)&&value(job?.thumbnailDate)===value(data?.thumbnailDate)&&value(job?.deliveryDate||job?.deadline)===value(data?.deliveryDate||data?.deadline)&&value(job?.progress)===value(data?.progress)&&value(job?.evidenceUrl)===value(data?.evidenceUrl)&&value(job?.blocker)===value(data?.blocker)&&value(job?.workDate)===value(data?.workDate)&&value(job?.startTime)===value(data?.startTime)&&value(job?.endTime)===value(data?.endTime)}
   async function saveJobProgressRequired(jid){
     const j=jobs.find(x=>x.id===jid);if(!j)return;
     const evidence=$('#job-evidence-'+jid)?.value.trim()||'';
@@ -344,11 +345,13 @@
     const progress=$('#job-progress-'+jid).value.trim(),blocker=$('#job-blocker-'+jid).value.trim(),startTime=$('#job-start-'+jid).value,endTime=$('#job-end-'+jid).value;
     if(startTime&&endTime&&endTime<=startTime)return toast('終了時刻は開始時刻より後にしてください');
     if(status==='完了'&&blocker)return toast('完了にする前に停止理由を解消してください');
+    const submitted={status,deadline:deliveryDate,...schedule,progress,evidenceUrl:evidence,blocker,workDate:$('#job-workdate-'+jid).value,startTime,endTime};
+    if(jobProgressInputsUnchanged(j,submitted)){clearJobDraft(jid);return toast('変更はありません')}
     const milestone=previousStatus!==status&&['初稿提出済み','修正稿提出済み'].includes(status)?EDITOR_MILESTONE_BY_STATUS[status]:null;
     const historyEntry={at,type:milestone?'editor_milestone':'editor_progress',by:user.uid,byEmail:user.email||'',byName:access?.name||user.displayName||'',byRole:'担当編集者',status,milestone:milestone?.key||null,evidenceUrl:evidence||null};
     const existingWorkflow=j.workflow&&typeof j.workflow==='object'?j.workflow:{round:1,stage:'editing'},editorSubmitted=previousStatus!==status&&['初稿提出済み','修正稿提出済み'].includes(status),workflow={round:Math.max(1,Number(existingWorkflow.round)||1),stage:editorSubmitted?'director_review':(['editing','director_review','client_submission','client_review','delivered'].includes(existingWorkflow.stage)?existingWorkflow.stage:'editing')},progressEvent=editorSubmitted?{at,type:'editor_submitted',byUid:user.uid,byEmail:user.email||'',byRole:'担当編集者',fromStage:'editing',toStage:'director_review',status,evidenceUrl:evidence||null}:null,progressEvents=progressEvent?[...(Array.isArray(j.progressEvents)?j.progressEvents:[]).slice(-98),progressEvent]:Array.isArray(j.progressEvents)?j.progressEvents:[];
     const progressMilestones=milestone?[...(Array.isArray(j.progressMilestones)?j.progressMilestones:[]).filter(x=>x?.key!==milestone.key),{key:milestone.key,label:milestone.label,status,at,byUid:user.uid,byEmail:user.email||'',byName:access?.name||user.displayName||'',byRole:'担当編集者',evidenceUrl:evidence||null}]:Array.isArray(j.progressMilestones)?j.progressMilestones:[];
-    const data={status,deadline:deliveryDate,...schedule,progress,evidenceUrl:evidence,blocker,workDate:$('#job-workdate-'+jid).value,startTime,endTime,workflow,progressEvents,progressMilestones,lastProgressChangedByUid:user.uid,lastProgressChangedByEmail:user.email||'',lastProgressChangedByRole:'担当編集者',updatedAt:at,history:[...(Array.isArray(j.history)?j.history:[]).slice(-98),historyEntry]};
+    const data={...submitted,workflow,progressEvents,progressMilestones,lastProgressChangedByUid:user.uid,lastProgressChangedByEmail:user.email||'',lastProgressChangedByRole:'担当編集者',updatedAt:at,history:[...(Array.isArray(j.history)?j.history:[]).slice(-98),historyEntry]};
     const savedMessage=milestone?.key==='initial_submitted'?'初稿の提出を記録しました':milestone?.key==='revision_submitted'?'修正稿の提出を記録しました':'変更を保存しました';
     if(DEMO){Object.assign(j,data);clearJobDraft(jid);render();return toast(savedMessage)}
     try{
@@ -472,8 +475,8 @@
   if(!DEMO&&'serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(error=>console.warn('service worker',error));
   </script>
   <script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
-  <script src="./editor-push.js?v=20260829-14"></script>
-  <script src="./direct-messages.js?v=20260829-14"></script>
-  <script src="./editor-features.js?v=20260829-14"></script>
+  <script src="./editor-push.js?v=20260830-01"></script>
+  <script src="./direct-messages.js?v=20260830-01"></script>
+  <script src="./editor-features.js?v=20260830-01"></script>
 </body>
 </html>

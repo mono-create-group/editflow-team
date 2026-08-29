@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260829-14"></script>
+<script src="./billing-terms.js?v=20260830-01"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -995,7 +995,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260829-14">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260830-01">
 </head>
 <body class="owner-yellow-ui">
 
@@ -1888,13 +1888,14 @@ function _stopRoleSubscriptions(){
   _fbUnsubscribe=_teamUnsub=_accessReqUnsub=_accessRecordsUnsub=_accessControlUnsub=_portalJobsUnsub=_portalInvoicesUnsub=_portalProfilesUnsub=_portalAuthorizationsUnsub=_ownerJobFinanceUnsub=_ownerLegacyFinanceUnsub=null;
   clearTimeout(_portalLegacySyncTimer);_portalLegacySyncTimer=null;
   _teamCloudLoaded=false;_teamKnownCounts={};
+  _resetOwnerPortalBridge();
 }
 function _clearSensitiveLocalState(resetPersonal=false){
   const fresh=defState();
   if(resetPersonal){S=migrate(fresh);S._uid=FB_USER?.uid||'';S._savedAt=0;}
   TEAM_KEYS.forEach(k=>{S[k]=Array.isArray(fresh[k])?[]:fresh[k];});
   S.bizBoard=JSON.parse(JSON.stringify(fresh.bizBoard||{}));
-  window._teamSnap={};PORTAL_JOBS=[];PORTAL_INVOICES=[];PORTAL_PROFILES=[];PORTAL_AUTHORIZATIONS=[];OWNER_JOB_FINANCE=[];OWNER_LEGACY_FINANCE=[];
+  window._teamSnap={};PORTAL_JOBS=[];PORTAL_INVOICES=[];PORTAL_PROFILES=[];PORTAL_AUTHORIZATIONS=[];OWNER_JOB_FINANCE=[];OWNER_LEGACY_FINANCE=[];_resetOwnerPortalBridge();
   try{_lsSaveState(S);}catch(_){}
 }
 function _purgeLegacyDirectorLocalCopies(){
@@ -1972,8 +1973,9 @@ function fbSetupAccessAdmin(){
   },e=>_fbHandleSnapshotError(e,'access requests sync',err=>console.warn('access requests sync',err&&err.code||err)));
   _accessRecordsUnsub=fbDb.collection('access').onSnapshot(q=>{
     ACCESS_RECORDS=q.docs.map(d=>({id:d.id,...d.data()}));
+    _ownerPortalBridgeReady.access=true;_notifyOwnerPortalBridge();
     renderSyncSafe();
-  },e=>_fbHandleSnapshotError(e,'access records sync',err=>console.warn('access records sync',err&&err.code||err)));
+  },e=>_fbHandleSnapshotError(e,'access records sync',err=>{_ownerPortalBridgeReady.access=false;_notifyOwnerPortalBridge();console.warn('access records sync',err&&err.code||err)}));
   _accessControlUnsub=fbDb.collection('system').doc('access_control').onSnapshot(d=>{
     ACCESS_CONTROL=d.exists?{...ACCESS_CONTROL,...d.data(),configured:Array.isArray(d.data()?.compatibilityEmails)}:{...ACCESS_CONTROL,configured:false,enforced:false,phase:'compatibility',compatibilityEmails:[]};
     renderSyncSafe();
@@ -1997,9 +1999,10 @@ function fbSetupPortalOpsSync(){
   if(_isOwner()){
     _portalJobsUnsub=fbDb.collectionGroup('editor_jobs').onSnapshot(q=>{
       PORTAL_JOBS=q.docs.filter(d=>d.ref.parent.parent&&d.ref.parent.parent.parent.id==='editor_portals').map(d=>({id:d.id,_portalUid:d.ref.parent.parent.id,_path:d.ref.path,...d.data()}));
+      _ownerPortalBridgeReady.jobs=true;_notifyOwnerPortalBridge();
       _schedulePortalLegacySync();
       renderSyncSafe();
-    },e=>_fbHandleSnapshotError(e,'editor portal jobs sync',err=>console.warn('editor portal jobs sync',err&&err.code||err)));
+    },e=>_fbHandleSnapshotError(e,'editor portal jobs sync',err=>{_ownerPortalBridgeReady.jobs=false;_notifyOwnerPortalBridge();console.warn('editor portal jobs sync',err&&err.code||err)}));
   }else{
     // Firestore collection-group access is owner-only. Directors first read
     // their current external-editor relationships and then subscribe only to
@@ -2022,16 +2025,19 @@ function fbSetupPortalOpsSync(){
   }
   if(_isOwner())_portalInvoicesUnsub=fbDb.collectionGroup('editor_invoices').onSnapshot(q=>{
     PORTAL_INVOICES=q.docs.filter(d=>d.ref.parent.parent&&d.ref.parent.parent.parent.id==='editor_portals').map(d=>({id:d.id,_portalUid:d.ref.parent.parent.id,_path:d.ref.path,...d.data()}));
+    _ownerPortalBridgeReady.invoices=true;_notifyOwnerPortalBridge();
     renderSyncSafe();
-  },e=>_fbHandleSnapshotError(e,'editor portal invoices sync',err=>console.warn('editor portal invoices sync',err&&err.code||err)));
+  },e=>_fbHandleSnapshotError(e,'editor portal invoices sync',err=>{_ownerPortalBridgeReady.invoices=false;_notifyOwnerPortalBridge();console.warn('editor portal invoices sync',err&&err.code||err)}));
   if(_isOwner())_portalProfilesUnsub=fbDb.collectionGroup('editor_profile').onSnapshot(q=>{
     PORTAL_PROFILES=q.docs.filter(d=>d.ref.parent.parent&&d.ref.parent.parent.parent.id==='editor_portals').map(d=>({id:d.id,_portalUid:d.ref.parent.parent.id,_path:d.ref.path,...d.data()}));
+    _ownerPortalBridgeReady.profiles=true;_notifyOwnerPortalBridge();
     renderSyncSafe();
-  },e=>_fbHandleSnapshotError(e,'editor portal profiles sync',err=>console.warn('editor portal profiles sync',err&&err.code||err)));
+  },e=>_fbHandleSnapshotError(e,'editor portal profiles sync',err=>{_ownerPortalBridgeReady.profiles=false;_notifyOwnerPortalBridge();console.warn('editor portal profiles sync',err&&err.code||err)}));
   if(_isOwner())_portalAuthorizationsUnsub=fbDb.collectionGroup('invoice_authorizations').onSnapshot(q=>{
     PORTAL_AUTHORIZATIONS=q.docs.filter(d=>d.ref.parent.parent&&d.ref.parent.parent.parent.id==='editor_portals').map(d=>({id:d.id,_portalUid:d.ref.parent.parent.id,_path:d.ref.path,...d.data()}));
+    _ownerPortalBridgeReady.authorizations=true;_notifyOwnerPortalBridge();
     renderSyncSafe();
-  },e=>_fbHandleSnapshotError(e,'invoice authorizations sync',err=>console.warn('invoice authorizations sync',err&&err.code||err)));
+  },e=>_fbHandleSnapshotError(e,'invoice authorizations sync',err=>{_ownerPortalBridgeReady.authorizations=false;_notifyOwnerPortalBridge();console.warn('invoice authorizations sync',err&&err.code||err)}));
   if(_isOwner())_ownerJobFinanceUnsub=fbDb.collection('owner_job_finance').onSnapshot(q=>{
     OWNER_JOB_FINANCE=q.docs.map(d=>({id:d.id,...d.data()}));renderSyncSafe();
   },e=>_fbHandleSnapshotError(e,'owner job finance sync',err=>{OWNER_JOB_FINANCE=[];console.warn('owner job finance sync',err&&err.code||err);renderSyncSafe();}));
@@ -2043,7 +2049,7 @@ fbAuth.onAuthStateChanged(async user=>{
   _stopRoleSubscriptions();
   FB_USER=user;
   _authSettled=true;
-  APP_ACCESS=null;ACCESS_RESOLVED=!user;ACCESS_REQUESTS=[];ACCESS_RECORDS=[];PORTAL_JOBS=[];PORTAL_INVOICES=[];PORTAL_PROFILES=[];PORTAL_AUTHORIZATIONS=[];OWNER_JOB_FINANCE=[];OWNER_LEGACY_FINANCE=[];
+  APP_ACCESS=null;ACCESS_RESOLVED=!user;ACCESS_REQUESTS=[];ACCESS_RECORDS=[];PORTAL_JOBS=[];PORTAL_INVOICES=[];PORTAL_PROFILES=[];PORTAL_AUTHORIZATIONS=[];OWNER_JOB_FINANCE=[];OWNER_LEGACY_FINANCE=[];_resetOwnerPortalBridge();
   if(user){
     await resolveAppAccess();
     if(_appAccessAllowed()){
@@ -14408,6 +14414,32 @@ let PORTAL_PROFILES=[];
 let PORTAL_AUTHORIZATIONS=[];
 let OWNER_JOB_FINANCE=[];
 let OWNER_LEGACY_FINANCE=[];
+// オーナー画面の manager-features は下記の5つを再購読せず、この橋渡しから
+// 既存の owner 同期結果を受け取る。空の配列と未読込を区別するため、各値の
+// ready は onSnapshot が一度でも届いた時だけ true になる。
+let _ownerPortalBridgeReady={access:false,jobs:false,invoices:false,profiles:false,authorizations:false};
+const _ownerPortalBridgeListeners=new Set();
+function _ownerPortalBridgeSnapshot(){
+  if(!_isOwner())return{owner:false,ready:{access:false,jobs:false,invoices:false,profiles:false,authorizations:false},accessRecords:[],portalJobs:[],portalInvoices:[],portalProfiles:[],portalAuthorizations:[]};
+  return{owner:true,ready:{..._ownerPortalBridgeReady},accessRecords:ACCESS_RECORDS.slice(),portalJobs:PORTAL_JOBS.slice(),portalInvoices:PORTAL_INVOICES.slice(),portalProfiles:PORTAL_PROFILES.slice(),portalAuthorizations:PORTAL_AUTHORIZATIONS.slice()};
+}
+function _notifyOwnerPortalBridge(){
+  const snapshot=_ownerPortalBridgeSnapshot();
+  _ownerPortalBridgeListeners.forEach(listener=>{try{listener(snapshot)}catch(error){console.warn('owner portal bridge listener',error)}});
+}
+function _resetOwnerPortalBridge(){
+  _ownerPortalBridgeReady={access:false,jobs:false,invoices:false,profiles:false,authorizations:false};
+  _notifyOwnerPortalBridge();
+}
+window.EditflowOwnerDataBridge=Object.freeze({
+  snapshot:()=>_ownerPortalBridgeSnapshot(),
+  subscribe(listener){
+    if(typeof listener!=='function')return()=>{};
+    _ownerPortalBridgeListeners.add(listener);
+    try{listener(_ownerPortalBridgeSnapshot())}catch(error){console.warn('owner portal bridge initial listener',error)}
+    return()=>_ownerPortalBridgeListeners.delete(listener);
+  }
+});
 let _accessReqUnsub=null;
 let _accessRecordsUnsub=null;
 let _accessControlUnsub=null;
@@ -17426,7 +17458,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260829-14';
+const APP_VERSION='20260830-01';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -17501,6 +17533,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260829-14"></script>
+<script src="./manager-features.js?v=20260830-01"></script>
 </body>
 </html>

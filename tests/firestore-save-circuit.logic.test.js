@@ -99,6 +99,6 @@ test('quota notice never claims shared ledgers were safely cached on the device'
 });
 
 test('service worker cache and app version are bumped together', () => {
-  assert.match(index, /const APP_VERSION='20260829-14';/);
-  assert.match(sw, /const CACHE='mcshanai-20260829-14';/);
+  assert.match(index, /const APP_VERSION='20260830-01';/);
+  assert.match(sw, /const CACHE='mcshanai-20260830-01';/);
 });
