@@ -51,7 +51,7 @@ test('parent and child attachment editors, read-only viewer, and cards are wired
   assert.match(html, /function openPortalAttachmentViewer\(portalUid,id,subId\)/);
   assert.match(html, /function _readVideoAttachments\(root\)/);
   assert.match(html, /addSubVideoAttachmentRow\(this\)/);
-  assert.match(html, /attachments:canManageMaterials\?subAttachmentReads\[i\]\.items/);
+  assert.match(html, /attachments:canManageMaterials\?subAttachmentReads\.get\(el\)\.items/);
   assert.match(html, /attachments:canManageMaterials\?parentAttachmentRead\.items/);
   assert.match(html, /attachments:attachmentRead\.items/);
   assert.match(html, /rel="noopener noreferrer"/);

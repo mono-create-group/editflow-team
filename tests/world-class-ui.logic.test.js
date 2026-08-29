@@ -24,7 +24,7 @@ test('each editorial journey leads with one visually distinct primary action', (
   assert.equal((features.match(/onclick="claimBoardJob/g) || []).length, 1, 'the application detail has one claim CTA');
   assert.match(features, /この案件を受ける<\/button>/);
   assert.doesNotMatch(features, /最後の紫ボタン/);
-  assert.match(index, /const headerPrimary=managementKey\?managementActions:\(VIDEO_TAB==='overview'&&attentionTotal/);
+  assert.match(index, /const headerPrimary=managementKey\?managementActions:embeddedManagerKey\?'':\(VIDEO_TAB==='overview'&&attentionTotal/);
   assert.match(index, /class="ref-case-main"/);
   assert.match(index, /class="ref-case-actions"/);
   assert.match(index, /const utilityActions=`\$\{VIDEO_TAB==='overview'&&attentionTotal\?addJobAction:''\}/);

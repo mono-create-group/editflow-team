@@ -42,6 +42,28 @@ test('a 500-person fixture creates only the first 60 optional picker controls', 
   assert.match(summary.innerHTML, /編集者 499/);
 });
 
+test('assignee checkboxes keep a fixed width and full names can wrap', () => {
+  assert.match(html, /\.job-assignee-options input\[type="checkbox"\]\{width:18px;height:18px;min-width:18px/);
+  assert.match(html, /\.job-assignee-options label span\{[^}]*white-space:normal[^}]*overflow-wrap:anywhere/);
+});
+
+test('parent cases render lightweight child summaries and preserve unopened children on save', () => {
+  assert.match(modalSource, /JOB_MODAL_SUB_RECORDS=subs\.map\(_jobModalSubRecordClone\)/);
+  assert.match(modalSource, /subs\.map\(\(s,i\)=>_jobModalSubCompactHtml\(s,i,jbiz,ownerFinanceLocked\)\)/);
+  assert.match(modalSource, /function expandJobSubEditor\(button\)/);
+  assert.doesNotMatch(modalSource, /subs\.map\(\(s,i\)=>mkSubRow/);
+  assert.match(html, /const subShells=\[\.\.\.document\.querySelectorAll\('#j-sub-cont \.j-sub-shell'\)\]/);
+  assert.match(html, /if\(!el\)return _jobModalSubRecordClone\(stateRecord\)/);
+});
+
+test('child editor loads the full worker directory only when its worker select is opened', () => {
+  const rowSource=html.slice(html.indexOf('function mkSubRow('),html.indexOf('function addWorkerInline('));
+  assert.match(rowSource, /data-hydrated="0"/);
+  assert.match(rowSource, /onpointerdown="hydrateJobSubWorkerSelect\(this\)"/);
+  assert.doesNotMatch(rowSource, /\(S\.workers\|\|\[\]\)\.map/);
+  assert.match(modalSource, /function hydrateJobSubWorkerSelect\(select\)/);
+});
+
 test('dispatch parent and child cases use plain, distinct labels without changing the data schema', () => {
   assert.match(modalSource, /親案件名 \*/);
   assert.match(modalSource, /親案件に「9月分」などを入力し、ここに各動画名を追加します。/);

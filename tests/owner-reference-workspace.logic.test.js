@@ -8,8 +8,8 @@ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const css=fs.readFileSync(path.join(root,'owner-yellow-ui.css'),'utf8');
 
 test('owner overview renders a case-detail workspace instead of KPI-only cards',()=>{
-  assert.match(html,/function _videoReferenceWorkspace\(\{biz,all,active,title,addJobAction,tabs\}\)/);
-  assert.match(html,/const overview=_videoReferenceWorkspace\(\{biz,all,active,title,addJobAction,tabs\}\)/);
+  assert.match(html,/function _videoReferenceWorkspace\(\{biz,all,active,title,addJobAction,tabs,screenSwitch=''\}\)/);
+  assert.match(html,/const overview=_videoReferenceWorkspace\(\{biz,all,active,title,addJobAction,tabs,screenSwitch\}\)/);
   assert.ok(html.indexOf('const addJobAction=')<html.indexOf('const overview=_videoReferenceWorkspace'),'the primary action must exist before the workspace renders');
   assert.match(html,/if\(VIDEO_TAB==='overview'\)return`\$\{showBusinessSwitcher\?rBizBar\(\):''\}<div id="video-workspace" class="ref-owner-page">\$\{overview\}<\/div>`/);
   for(const token of ['ref-workspace-topbar','ref-case-main','ref-case-rail','ref-subcase-table','ref-chat-panel','ref-finance-panel'])assert.ok(html.includes(token),token);
@@ -48,7 +48,10 @@ test('global case navigation is icon-led but remains unambiguous and accessible'
   assert.match(css,/\.ref-primary-tabs>button,\.ref-more-tabs>summary[^}]*min-height:/);
   assert.match(css,/data-tooltip[^}]*focus-visible/);
   assert.match(css,/\.ref-tab-label\{[^}]*font-size:9px/);
-  assert.match(html,/class="ref-topbar-module" aria-label="案件一覧" title="案件一覧"/);
+  assert.match(html,/function _videoReferenceTopbar\(tabs=\[\]\)/);
+  assert.match(html,/class="ref-topbar-module" title="移動するページを選択"/);
+  assert.match(html,/<select aria-label="移動するページを選択" onchange="setVideoTab\(this\.value\)"/);
+  assert.match(html,/_videoReferenceTopbar\(tabs\)/);
 });
 
 test('reference workspace has bounded desktop and narrow mobile grids',()=>{

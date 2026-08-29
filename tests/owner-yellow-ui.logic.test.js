@@ -85,5 +85,7 @@ test('reference global navigation is icon-led, briefly labelled, and keeps large
   assert.match(css, /\.ref-more-tabs-menu\{[^}]*grid-template-columns:repeat\(2,minmax\(130px,1fr\)\)/);
   assert.match(css, /@media\(max-width:700px\)\{[\s\S]*?\.ref-owner-page\{margin:0 0 78px\}/);
   assert.match(css, /@media\(max-width:700px\)\{[\s\S]*?\.ref-topbar-module\{min-width:44px;min-height:44px/);
+  assert.match(css, /\.ref-topbar-module select\{[^}]*appearance:none/);
+  assert.match(css, /@media\(max-width:700px\)\{[\s\S]*?\.ref-topbar-module select\{position:absolute;inset:0;[^}]*opacity:0/);
   assert.match(css, /\.ref-primary-tabs>button,\.ref-more-tabs>summary\{flex-basis:52px;width:52px;min-width:52px;min-height:54px\}/);
 });

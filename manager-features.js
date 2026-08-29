@@ -73,6 +73,11 @@
     const client=legacyClients().find(row=>String(row.id)===String(clientId)||String(row.sourceRecordId||'')===String(clientId));
     return client?clientUnitPriceFor(client,accountId):null;
   }
+  function ownerClientAccounts(clientId){
+    if(!_isOwner())return[];
+    const lookup=String(clientId||''),client=legacyClients().find(row=>String(row.id)===lookup||String(row.sourceRecordId||'')===lookup);
+    return client?masterAccounts(client).map(account=>({id:String(account.id||''),name:String(account.name||'')})).filter(account=>account.id&&account.name):[];
+  }
   function ownerClientPricingSnapshot(clientId,accountId=''){
     if(!_isOwner()||!state.clientPricingReady)return null;
     const lookup=String(clientId||''),clients=legacyClients();
@@ -348,6 +353,7 @@
   function openBoardForm(){const el=document.getElementById('manager-board-publish');if(!el)return toast('掲載フォームを読み込んでいます','warn');el.open=true;el.scrollIntoView({behavior:'smooth',block:'start'});setTimeout(()=>document.getElementById('mb-editor')?.focus(),250)}
   rVideoOperations=function(...args){const base=originalVideoOperations(...args);if(!canManage())return base;const biz=['edit','haken'].includes(PBIZ)?PBIZ:'edit',jobs=managedJobs().filter(j=>portalJobBiz(j)===biz),sections=[];if(biz==='edit')sections.push(`<details id="manager-board-publish" class="manager-operation-disclosure"><summary class="btn btn-g">新しい編集代行案件を掲載する</summary><div class="manager-operation-body">${boardFormHtml(managedEditors())}</div></details>`);sections.push(`<details class="manager-operation-disclosure"><summary class="btn btn-g">案件内チャットを開く</summary><div class="manager-operation-body">${threadHtml(jobs)}</div></details>`);if(VIDEO_TAB==='overview'){const actions=`<section class="ref-manager-panel"><div class="ref-rail-heading"><b>案件の操作</b><span>管理</span></div>${sections.join('')}</section>`;return base.replace('<div id="manager-overview-actions"></div>',`<div id="manager-overview-actions">${actions}</div>`)}return base};
   rWorkers=editorPage;
+  window.managerVideoEditorsPage=editorPage;
   window.managerVideoClientsPage=clientsPage;
   window.managerVideoSchedulesPage=schedulesPage;
   window.managerVideoManualsPage=manualsPage;
@@ -582,7 +588,7 @@
     state.lifecycleTimer=setTimeout(()=>syncManagerLifecycle(),delay);
   }
 
-  window.saveClient=saveClientWithCatalog;window.confirmDelClient=confirmDelClientWithCatalog;window.managerSyncLegacyAssignments=syncLegacyAssignmentsForEditor;window.managerSaveClientUnitPrice=saveClientUnitPrice;window.getOwnerClientUnitPrice=ownerClientUnitPrice;window.managerOwnerClientUnitPrice=ownerClientUnitPrice;window.managerOwnerClientPricingSnapshot=ownerClientPricingSnapshot;window.managerClientPricingReady=()=>_isOwner()&&state.clientPricingReady;
+  window.saveClient=saveClientWithCatalog;window.confirmDelClient=confirmDelClientWithCatalog;window.managerSyncLegacyAssignments=syncLegacyAssignmentsForEditor;window.managerSaveClientUnitPrice=saveClientUnitPrice;window.getOwnerClientUnitPrice=ownerClientUnitPrice;window.managerOwnerClientUnitPrice=ownerClientUnitPrice;window.managerOwnerClientAccounts=ownerClientAccounts;window.managerOwnerClientPricingSnapshot=ownerClientPricingSnapshot;window.managerClientPricingReady=()=>_isOwner()&&state.clientPricingReady;
   window.managerRelationToggle=relationToggle;window.managerSaveRelation=saveRelation;window.managerSaveMasterAccount=saveMasterAccount;window.managerOpenMasterAccountEdit=openMasterAccountEdit;window.managerSaveMasterAccountEdit=saveMasterAccountEdit;window.managerOpenMasterAccountDelete=openMasterAccountDelete;window.managerConfirmMasterAccountDelete=confirmMasterAccountDelete;window.managerSaveCatalog=saveCatalog;window.managerSyncMasterCatalog=syncMasterCatalog;window.managerHydrateBoardCatalog=hydrateClients;window.managerHydrateBoardAccounts=hydrateAccounts;window.managerAddBoardAccount=addBoardAccount;window.managerAddBoardSubcase=addBoardSubcase;window.managerRemoveBoardSubcase=removeBoardSubcase;window.managerBoardDraftSetterChanged=boardDraftSetterChanged;window.managerRequestModeChanged=requestModeChanged;window.managerBoardAudienceChanged=boardAudienceChanged;window.managerOpenBoardForm=openBoardForm;window.managerPublishBoardJob=publishBoard;window.managerSaveManual=saveManual;window.managerMigrateExternalSettlement=migrateExternalSettlement;window.managerInvoiceAction=invoiceAction;window.managerSendMessage=sendMessage;window.managerReplySuggestion=replySuggestion;window.managerOpenChatworkNameCheck=openChatworkNameCheck;window.managerSaveChatworkNameCheck=saveChatworkNameCheck;window.__managerStatusLogic={normalizeChatworkName,legacyAssignmentCount,legacySyncEntriesForEditor,legacyUnlinkedEntriesForEditor,canSyncLegacyForEditor};window.__managerAccountLogic={mergeAccounts,visibleAccounts,editAccountList,deleteAccountList,addOrReviveAccount,catalogAccountChange,mergeMasterCatalogAccounts,catalogAccountsFromMaster};window.__managerCatalogSyncLogic={catalogDocIdForClient,mergeMasterCatalogAccounts};window.__managerBoardSubcaseLogic={boardSubcaseRowHtml,boardDraftSetterChanged};window.__managerPricingLogic={priceValue,accountPriceMap,clientUnitPriceFor};window.__managerExternalPrivacyLogic={hasExternalSettlement};
   fbAuth.onAuthStateChanged(()=>scheduleManagerLifecycle(800));
   window.addEventListener('pageshow',()=>scheduleManagerLifecycle());
