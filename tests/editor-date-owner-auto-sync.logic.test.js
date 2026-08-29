@@ -37,6 +37,7 @@ test('an editor draft date updates only the linked legacy child and is idempoten
     _portalField: (job, key, fallback) => Object.prototype.hasOwnProperty.call(job, key) ? (job[key] || null) : fallback,
     _editorDraftDateSetter: (job, fallback = 'creator') => job?.editorDraftDateSetter === 'editor' ? 'editor' : job?.editorDraftDateSetter === 'creator' ? 'creator' : fallback,
     _videoAttachments: rows => Array.isArray(rows) ? rows : [],
+    _caseManualIds: rows => Array.isArray(rows) ? rows.map(String) : [],
     _videoUpdatedMillis: value => value?.toMillis?.() || Number(value || 0),
     _myEmail: () => 'owner@example.test',
     _isOwner: () => true,

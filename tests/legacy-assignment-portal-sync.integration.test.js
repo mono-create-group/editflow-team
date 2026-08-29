@@ -36,6 +36,7 @@ test('和光8件と清水7件を、みゆう本人のポータルだけへ重複
     _legacyPortalJobId:(parentId,subId)=>`legacy_${parentId}_${subId}`.replace(/[^A-Za-z0-9_-]/g,'_'),
     _legacyPortalAccessForWorker:wid=>wid==='worker-miyuu'?{id:'uid-miyuu',email:'miyuu@example.test',name:'みゆう',directorUid:'uid-miura'}:null,
     _editorDraftDateSetter:r=>r.editorDraftDateSetter==='creator'?'creator':'editor',_videoAttachments:rows=>rows||[],_paymentWorkerName:()=>'',
+    _caseManualIds:rows=>Array.isArray(rows)?[...new Set(rows.map(String))].slice(0,20):[],
     _myEmail:()=> 'owner@example.test',toast:()=>{},save:()=>{saved.count++},
     firebase:{firestore:{FieldValue:{serverTimestamp:()=>({serverTimestamp:true})}}},console,Date,String,Number,Array,Set,Map,Promise,
   };

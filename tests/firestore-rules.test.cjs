@@ -346,6 +346,13 @@ async function expectAllowed(label, promise) {
       doc(owner, 'editor_portals', 'external1', 'editor_jobs', 'legacy-added-order-seven'),
       { ...legacyUnscheduledExternalJob, legacySubtaskId: 'legacy-subtask-miyuu-7', subtaskIndex: 7 }
     ));
+    await expectAllowed('owner adds linked manuals and a caution to an existing synchronized job', updateDoc(
+      doc(owner, 'editor_portals', 'external1', 'editor_jobs', 'legacy-no-delivery-date'),
+      {
+        manualIds: ['assigned'], parentManualIds: ['global'],
+        caution: '色調整の指示を最初に確認', parentCaution: '共通の注意事項', updatedAt: 2,
+      }
+    ));
     await expectDenied('legacy synchronization rejects a negative added order', setDoc(
       doc(owner, 'editor_portals', 'external1', 'editor_jobs', 'legacy-added-order-negative'),
       { ...legacyUnscheduledExternalJob, legacySubtaskId: 'legacy-subtask-miyuu-negative', subtaskIndex: -1 }

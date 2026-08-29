@@ -67,6 +67,7 @@ test('saving one legacy subcase draft schedule does not alter its parent or sibl
       ],
     }] },
     _videoCanEdit: () => true,
+    SELF_WID: '__self',
     document: { getElementById: id => ({ value: id === 'vs-editor-draft' ? '2026-09-10' : '2026-09-11' }) },
     Date: { now: () => 1234 },
     _myEmail: () => 'manager@example.test',

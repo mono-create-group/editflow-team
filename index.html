@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260829-09"></script>
+<script src="./billing-terms.js?v=20260829-10"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -995,7 +995,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260829-09">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260829-10">
 </head>
 <body class="owner-yellow-ui">
 
@@ -6014,6 +6014,8 @@ function changeEditorDraftDateSetter(select,target){
   if(!input)return;
   input.disabled=select.value==='editor';
   if(select.value==='editor')input.value='';
+  if(typeof target!=='string')updateJobSubInternalRules(select?.closest?.('.j-sub-row'));
+  else updateJobInternalScheduleRules();
 }
 function _videoDeadlineExemptStatus(status){return VIDEO_OVERDUE_EXCLUDED_STATUSES.has(String(status||''));}
 function _videoPhase(status){return VIDEO_PHASES.find(p=>p.statuses.includes(status))||VIDEO_PHASES[0];}
@@ -6289,8 +6291,8 @@ function _findVideoSubcase(parent,subId){
   return index<0?null:{index,sub:parent.subtasks[index]};
 }
 function _videoSubcaseDetailHtml(parent,sub,{canEdit=false,onSave='',openParent=''}={}){
-  const parentMaterials=_videoCaseMaterials(parent?.attachments,parent||{}),childMaterials=_videoCaseMaterials(sub?.attachments,sub||{}),parentUrls=new Set(parentMaterials.map(item=>item.url)),childOnly=childMaterials.filter(item=>!parentUrls.has(item.url)),materials=[...parentMaterials,...childOnly],note=String(sub?.instructions||sub?.notes||parent?.instructions||parent?.notes||'').trim(),setter=_editorDraftDateSetter(sub);
-  return`<div class="mhdr"><div class="mtitle">サブ案件の詳細</div><button class="mclose" onclick="closeModal()">✕</button></div><div class="video-breadcrumb">${esc(parent?.title||'親案件')} / サブ案件</div><div class="fg"><div class="fl">案件名</div><div style="font-size:16px;font-weight:800;padding:8px 0">${esc(sub?.title||'サブ案件')}</div></div><div class="frow"><div class="fg"><div class="fl">ステータス</div><div>${esc(videoStatusLabel(sub?.status||'未着手'))}</div></div><div class="fg"><div class="fl">担当者</div><div>${esc(_videoSubtaskAssignee(sub?.workerId,new Map((S.workers||[]).map(w=>[w.id,w.name||'']))))}</div></div></div><div style="font-size:12px;font-weight:800;color:var(--t2);margin:10px 0 6px">日程</div><div class="frow"><div class="fg"><div class="fl">編集者初稿の設定者</div><select id="vs-editor-draft-setter" ${canEdit?'':'disabled'} onchange="changeEditorDraftDateSetter(this,'vs-editor-draft')"><option value="creator" ${setter==='creator'?'selected':''}>案件追加者が設定</option><option value="editor" ${setter==='editor'?'selected':''}>担当編集者が設定</option></select></div><div class="fg"><div class="fl">編集者初稿</div><input id="vs-editor-draft" type="date" value="${esc(sub?.editorDraftDate||'')}" ${canEdit&&setter==='creator'?'':'disabled'}></div></div><div class="frow"><div class="fg"><div class="fl">クライアント初稿</div><input id="vs-client-draft" type="date" value="${esc(sub?.clientDraftDate||'')}" ${canEdit?'':'disabled'}></div><div class="fg"><div class="fl">納期（予定）</div><input type="date" value="${esc(sub?.deliveryDate||'')}" disabled></div></div><div class="frow"><div class="fg"><div class="fl">納品日</div><input type="date" value="${esc(sub?.completedDeliveryDate||'')}" disabled></div><div class="fg"></div></div>${note?`<div class="fg"><div class="fl">指示・メモ</div><div style="white-space:pre-wrap;line-height:1.6;color:var(--t2)">${esc(note)}</div></div>`:''}<div class="video-attachment-editor"><div class="video-attachment-heading"><div><b>素材・資料</b><span>リンクを新しいタブで開きます</span></div></div>${_videoAttachmentLinksHtml(materials)||'<div class="video-attachment-hint">添付された素材・資料はありません。</div>'}</div><div class="mfooter"><button class="btn btn-g" onclick="closeModal()">閉じる</button>${openParent?`<button class="btn btn-g" onclick="${esc(openParent)}">親案件を開く</button>`:''}${canEdit&&onSave?`<button class="btn btn-p" onclick="${esc(onSave)}">設定を保存</button>`:''}</div>`;
+  const parentMaterials=_videoCaseMaterials(parent?.attachments,parent||{}),childMaterials=_videoCaseMaterials(sub?.attachments,sub||{}),parentUrls=new Set(parentMaterials.map(item=>item.url)),childOnly=childMaterials.filter(item=>!parentUrls.has(item.url)),materials=[...parentMaterials,...childOnly],note=String(sub?.instructions||sub?.notes||parent?.instructions||parent?.notes||'').trim(),setter=_editorDraftDateSetter(sub),internal=sub?.workerId===SELF_WID,caution=String(sub?.caution||parent?.caution||'').trim(),manualIds=_caseManualIds(sub?.manualIds).length?_caseManualIds(sub.manualIds):_caseManualIds(parent?.manualIds),manualCards=_jobCaseManualCardsHtml(manualIds,[sub?.workerId]);
+  return`<div class="mhdr"><div class="mtitle">サブ案件の詳細</div><button class="mclose" onclick="closeModal()">✕</button></div><div class="video-breadcrumb">${esc(parent?.title||'親案件')} / サブ案件</div><div class="fg"><div class="fl">案件名</div><div style="font-size:16px;font-weight:800;padding:8px 0">${esc(sub?.title||'サブ案件')}</div></div><div class="frow"><div class="fg"><div class="fl">ステータス</div><div>${esc(videoStatusLabel(sub?.status||'未着手'))}</div></div><div class="fg"><div class="fl">担当者</div><div>${esc(_videoSubtaskAssignee(sub?.workerId,new Map((S.workers||[]).map(w=>[w.id,w.name||'']))))}</div></div></div><div style="font-size:12px;font-weight:800;color:var(--t2);margin:10px 0 6px">日程</div><div class="frow"><div class="fg"><div class="fl">編集者初稿の設定者</div><select id="vs-editor-draft-setter" ${canEdit?'':'disabled'} onchange="changeEditorDraftDateSetter(this,'vs-editor-draft')"><option value="creator" ${setter==='creator'?'selected':''}>案件追加者が設定</option><option value="editor" ${setter==='editor'?'selected':''}>担当編集者が設定</option></select></div><div class="fg"><div class="fl">編集者初稿${internal?'（任意）':''}</div><input id="vs-editor-draft" type="date" value="${esc(sub?.editorDraftDate||'')}" ${canEdit&&setter==='creator'?'':'disabled'}>${internal?'<div class="fhint">mono.create社内対応のため、未設定でも保存できます。</div>':''}</div></div><div class="frow"><div class="fg"><div class="fl">クライアント初稿</div><input id="vs-client-draft" type="date" value="${esc(sub?.clientDraftDate||'')}" ${canEdit?'':'disabled'}></div><div class="fg"><div class="fl">納期（予定）</div><input type="date" value="${esc(sub?.deliveryDate||'')}" disabled></div></div><div class="frow"><div class="fg"><div class="fl">納品日${internal?'（オーナーが記録）':''}</div><input id="vs-completed-delivery" type="date" value="${esc(sub?.completedDeliveryDate||'')}" ${canEdit&&internal?'':'disabled'}>${internal?'<div class="fhint">社内対応の実際の納品日を記録します。</div>':''}</div><div class="fg"></div></div>${caution?`<section class="job-case-caution" aria-label="案件の注意事項"><b>注意事項</b><div>${esc(caution)}</div></section>`:''}${manualCards}${note?`<div class="fg"><div class="fl">指示・メモ</div><div style="white-space:pre-wrap;line-height:1.6;color:var(--t2)">${esc(note)}</div></div>`:''}<div class="video-attachment-editor"><div class="video-attachment-heading"><div><b>素材・資料</b><span>リンクを新しいタブで開きます</span></div></div>${_videoAttachmentLinksHtml(materials)||'<div class="video-attachment-hint">添付された素材・資料はありません。</div>'}</div><div class="mfooter"><button class="btn btn-g" onclick="closeModal()">閉じる</button>${openParent?`<button class="btn btn-g" onclick="${esc(openParent)}">親案件を開く</button>`:''}${canEdit&&onSave?`<button class="btn btn-p" onclick="${esc(onSave)}">設定を保存</button>`:''}</div>`;
 }
 function openLegacySubcaseDetail(jobId,subId){
   const parent=(S.jobs||[]).find(job=>job.id===jobId),found=_findVideoSubcase(parent,subId);if(!parent||!found)return;
@@ -6300,10 +6302,10 @@ function openLegacySubcaseDetail(jobId,subId){
 function saveLegacySubcaseDraftDates(jobId,subId){
   if(!_videoCanEdit())return toast('権限がありません','err');
   const parent=(S.jobs||[]).find(job=>job.id===jobId),found=_findVideoSubcase(parent,subId);if(!parent||!found)return toast('サブ案件が見つかりません','err');
-  const at=Date.now(),editorDraftDateSetter=document.getElementById('vs-editor-draft-setter')?.value||'editor',editorDraftDate=document.getElementById('vs-editor-draft')?.value||null,clientDraftDate=document.getElementById('vs-client-draft')?.value||null;
-  if(editorDraftDateSetter==='creator'&&!editorDraftDate)return toast('案件追加者が設定する場合は、編集者初稿日を入力してください','warn');
-  parent.subtasks=parent.subtasks.map((sub,index)=>index===found.index?{...sub,editorDraftDateSetter,editorDraftDate,clientDraftDate,updatedAt:at,updatedBy:_myEmail()}:sub);
-  parent.updatedAt=at;parent.updatedBy=_myEmail();parent.statusHistory=[...(parent.statusHistory||[]).slice(-99),{at,by:_myEmail(),type:'subcase_schedule_update',subId:String(subId),editorDraftDateSetter,editorDraftDate,clientDraftDate}];
+  const at=Date.now(),internal=found.sub.workerId===SELF_WID,editorDraftDateSetter=document.getElementById('vs-editor-draft-setter')?.value||'editor',editorDraftDate=document.getElementById('vs-editor-draft')?.value||null,clientDraftDate=document.getElementById('vs-client-draft')?.value||null,completedDeliveryDate=internal?(document.getElementById('vs-completed-delivery')?.value||null):(found.sub.completedDeliveryDate||null);
+  if(!internal&&editorDraftDateSetter==='creator'&&!editorDraftDate)return toast('案件追加者が設定する場合は、編集者初稿日を入力してください','warn');
+  parent.subtasks=parent.subtasks.map((sub,index)=>index===found.index?{...sub,editorDraftDateSetter,editorDraftDate,clientDraftDate,completedDeliveryDate,updatedAt:at,updatedBy:_myEmail()}:sub);
+  parent.updatedAt=at;parent.updatedBy=_myEmail();parent.statusHistory=[...(parent.statusHistory||[]).slice(-99),{at,by:_myEmail(),type:'subcase_schedule_update',subId:String(subId),editorDraftDateSetter,editorDraftDate,clientDraftDate,completedDeliveryDate}];
   save();closeModal();render();toast('サブ案件の初稿設定を保存しました');
 }
 function openPortalSubcaseDetail(portalUid,jobId,subId){
@@ -6405,7 +6407,7 @@ function _portalLegacyId(portalUid,id){return('ep_'+String(portalUid).slice(0,10
 function _newPortalLegacyJob(j){
   const client=(S.clients||[]).find(c=>!c.deleted&&(String(c.id||'')===String(j.sourceClientId||'')||String(c.name||'').trim()===String(j.clientDisplay||'').trim())),access=(ACCESS_RECORDS||[]).find(x=>x.id===j._portalUid),workerId=access?.workerId||null,at=Number(j.updatedAt)||Date.now();
   const biz=_portalVideoBiz(j),billingSnapshot=_paymentRecipientSnapshot(workerId,{});
-	  return{id:j.linkedLegacyJobId,biz,jobType:'edit',title:j.title||(biz==='haken'?'編集者直接依頼':'編集代行案件'),clientId:client?.id||null,accountId:j.accountId||null,accountName:j.accountDisplay||null,workerId,workerIds:workerId?[workerId]:[],...billingSnapshot,scope:'その他',status:j.status||'受注済み',sharedDate:j.sharedDate||String(j.createdAt?new Date(j.createdAt).toISOString().slice(0,10):today()),deliveryDate:j.deliveryDate||j.deadline||null,completedDeliveryDate:j.completedDeliveryDate||null,editorDraftDate:j.editorDraftDate||null,editorDraftDateSetter:_editorDraftDateSetter(j),clientDraftDate:j.clientDraftDate||null,thumbnailDate:j.thumbnailDate||null,invoiceDate:null,dueDate:null,paymentDate:null,paidAt:null,payoutDate:null,unitPrice:0,workerPay:0,profit:0,ownerFinanceId:j._ownerFinanceId||j.linkedLegacyJobId||'',notes:j.instructions||'',requestUrl:j.requestUrl||'',sourceUrl:j.sourceUrl||'',progressNote:j.progress||'',progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:[],progressEvents:Array.isArray(j.progressEvents)?j.progressEvents:[],workflow:j.workflow||null,lastProgressChangedByUid:j.lastProgressChangedByUid||null,lastProgressChangedByEmail:j.lastProgressChangedByEmail||null,lastProgressChangedByRole:j.lastProgressChangedByRole||null,evidenceUrl:j.evidenceUrl||'',blocker:j.blocker||'',attachments:_videoAttachments(j.attachments),portalUid:j._portalUid,portalJobId:j.id,source:'editor_portal',opsChecklist:[],createdAt:new Date().toISOString(),updatedAt:at,updatedBy:j.updatedBy||j.editorEmail||_myEmail()};
+	  return{id:j.linkedLegacyJobId,biz,jobType:'edit',title:j.title||(biz==='haken'?'編集者直接依頼':'編集代行案件'),clientId:client?.id||null,accountId:j.accountId||null,accountName:j.accountDisplay||null,workerId,workerIds:workerId?[workerId]:[],...billingSnapshot,scope:'その他',status:j.status||'受注済み',sharedDate:j.sharedDate||String(j.createdAt?new Date(j.createdAt).toISOString().slice(0,10):today()),deliveryDate:j.deliveryDate||j.deadline||null,completedDeliveryDate:j.completedDeliveryDate||null,editorDraftDate:j.editorDraftDate||null,editorDraftDateSetter:_editorDraftDateSetter(j),clientDraftDate:j.clientDraftDate||null,thumbnailDate:j.thumbnailDate||null,invoiceDate:null,dueDate:null,paymentDate:null,paidAt:null,payoutDate:null,unitPrice:0,workerPay:0,profit:0,ownerFinanceId:j._ownerFinanceId||j.linkedLegacyJobId||'',notes:j.instructions||'',manualIds:_caseManualIds(j.parentManualIds?.length?j.parentManualIds:j.manualIds),caution:String(j.parentCaution||j.caution||'').slice(0,2000),requestUrl:j.requestUrl||'',sourceUrl:j.sourceUrl||'',progressNote:j.progress||'',progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:[],progressEvents:Array.isArray(j.progressEvents)?j.progressEvents:[],workflow:j.workflow||null,lastProgressChangedByUid:j.lastProgressChangedByUid||null,lastProgressChangedByEmail:j.lastProgressChangedByEmail||null,lastProgressChangedByRole:j.lastProgressChangedByRole||null,evidenceUrl:j.evidenceUrl||'',blocker:j.blocker||'',attachments:_videoAttachments(j.attachments),portalUid:j._portalUid,portalJobId:j.id,source:'editor_portal',opsChecklist:[],createdAt:new Date().toISOString(),updatedAt:at,updatedBy:j.updatedBy||j.editorEmail||_myEmail()};
 }
 function _portalField(j,key,fallback){return Object.prototype.hasOwnProperty.call(j,key)?(j[key]||null):fallback;}
 function _legacyPortalJobId(parentId,subId){
@@ -6423,6 +6425,30 @@ function _legacyPortalAccessForWorker(workerId){
   const wid=String(workerId||'');if(!wid||wid===SELF_WID)return null;
   const matches=(ACCESS_RECORDS||[]).filter(row=>row&&row.approved===true&&String(row.workerId||'')===wid&&Array.isArray(row.roles)&&row.roles.some(role=>['動画編集者','動画編集ディレクター'].includes(role)));
   return matches.length===1?matches[0]:null;
+}
+function _caseManualIds(value){
+  return[...new Set((Array.isArray(value)?value:[]).map(id=>String(id||'').trim()).filter(Boolean))].slice(0,20);
+}
+function _jobCaseManualCatalog(workerIds=[]){
+  if(typeof window.managerSelectableManualsForCase!=='function')return[];
+  const targetUids=[...new Set((workerIds||[]).map(workerId=>_legacyPortalAccessForWorker(workerId)?.id||'').filter(Boolean))];
+  const catalogs=(targetUids.length?targetUids:['']).map(uid=>window.managerSelectableManualsForCase(uid)||[]);
+  if(!catalogs.length)return[];
+  const commonIds=new Set(catalogs[0].map(manual=>String(manual.id||'')));
+  catalogs.slice(1).forEach(catalog=>{const ids=new Set(catalog.map(manual=>String(manual.id||'')));[...commonIds].forEach(id=>{if(!ids.has(id))commonIds.delete(id);});});
+  return catalogs[0].filter(manual=>commonIds.has(String(manual.id||'')));
+}
+function _jobCaseManualOptions(selectedIds=[],workerIds=[]){
+  const selected=new Set(_caseManualIds(selectedIds)),catalog=_jobCaseManualCatalog(workerIds),known=new Set(catalog.map(manual=>String(manual.id||'')));
+  const options=catalog.map(manual=>`<option value="${esc(manual.id)}" ${selected.has(String(manual.id))?'selected':''}>${manual.required?'必読・':''}${esc(manual.title||'マニュアル')}</option>`);
+  selected.forEach(id=>{if(!known.has(id))options.push(`<option value="${esc(id)}" selected>紐づけ済みマニュアル</option>`);});
+  return options.join('');
+}
+function _selectedJobCaseManualIds(select){return _caseManualIds([...(select?.selectedOptions||[])].map(option=>option.value));}
+function _jobCaseManualCardsHtml(manualIds=[],workerIds=[]){
+  const ids=_caseManualIds(manualIds),catalog=_jobCaseManualCatalog(workerIds),byId=new Map(catalog.map(manual=>[String(manual.id||''),manual]));
+  if(!ids.length)return'';
+  return`<section class="job-linked-manuals" aria-label="この案件のマニュアル"><b>この案件のマニュアル</b><div>${ids.map(id=>{const manual=byId.get(id);return`<span>${esc(manual?.title||'紐づけ済みマニュアル')}</span>`;}).join('')}</div></section>`;
 }
 function _legacyPortalWorkerId(parent,record,hasChildren){
   const explicit=String(record?.workerId||'').trim();
@@ -6467,12 +6493,12 @@ async function syncLegacyAssignedSubtasksToPortal(jobOrId,{silent=false,targetUi
         if(Number.isInteger(existing.subtaskIndex)){alreadyRows.add(item.portalJobId);continue;}
         batch.set(item.ref,{subtaskIndex:item.subtaskIndex,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:_myEmail()},{merge:true});writeCount++;continue;
       }
-      const title=String(item.record.title||parent.title||'案件').slice(0,120),parentName=String(parent.title||title).slice(0,120),clientDisplay=String(client?.name||parent.clientName||'クライアント未設定'),instructions=String(item.record.instructions||item.record.notes||parent.notes||'').slice(0,3000),requestUrl=String(item.record.requestUrl||parent.requestUrl||''),sourceUrl=String(item.record.sourceUrl||parent.sourceUrl||''),attachments=_videoAttachments([...(parent.attachments||[]),...(item.record.attachments||[])]);
+      const title=String(item.record.title||parent.title||'案件').slice(0,120),parentName=String(parent.title||title).slice(0,120),clientDisplay=String(client?.name||parent.clientName||'クライアント未設定'),instructions=String(item.record.instructions||item.record.notes||parent.notes||'').slice(0,3000),requestUrl=String(item.record.requestUrl||parent.requestUrl||''),sourceUrl=String(item.record.sourceUrl||parent.sourceUrl||''),attachments=_videoAttachments([...(parent.attachments||[]),...(item.record.attachments||[])]),parentManualIds=_caseManualIds(parent.manualIds),manualIds=_caseManualIds(item.record.manualIds).length?_caseManualIds(item.record.manualIds):parentManualIds,parentCaution=String(parent.caution||'').slice(0,2000),caution=String(item.record.caution||parentCaution).slice(0,2000);
       if(existing){
         const keepEditorDraft=item.setter==='editor'&&_editorDraftDateSetter(existing)==='editor'?String(existing.editorDraftDate||''):item.draft;
-        batch.set(item.ref,{title,subtaskIndex:item.subtaskIndex,clientDisplay,deadline:item.deliveryDate,requestUrl,sourceUrl,sharedDate:String(item.record.sharedDate||parent.sharedDate||''),editorDraftDateSetter:item.setter,editorDraftDate:keepEditorDraft,clientDraftDate:String(item.record.clientDraftDate||parent.clientDraftDate||''),thumbnailDate:String(item.record.thumbnailDate||parent.thumbnailDate||''),deliveryDate:item.deliveryDate,instructions,urgent:false,attachments,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:_myEmail()},{merge:true});writeCount++;
+        batch.set(item.ref,{title,subtaskIndex:item.subtaskIndex,clientDisplay,deadline:item.deliveryDate,requestUrl,sourceUrl,sharedDate:String(item.record.sharedDate||parent.sharedDate||''),editorDraftDateSetter:item.setter,editorDraftDate:keepEditorDraft,clientDraftDate:String(item.record.clientDraftDate||parent.clientDraftDate||''),thumbnailDate:String(item.record.thumbnailDate||parent.thumbnailDate||''),deliveryDate:item.deliveryDate,instructions,manualIds,parentManualIds,caution,parentCaution,urgent:false,attachments,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:_myEmail()},{merge:true});writeCount++;
       }else{
-        batch.set(item.ref,{recordType:'editor_portal_job',businessType:jobBiz(parent)==='haken'?'dispatch':'edit_agency',title,caseName:parentName,parentCaseId:`legacy:${parent.id}`,parentCaseName:parentName,subtaskIndex:item.subtaskIndex,clientId:String(parent.clientId||''),clientDisplay,accountId:String(parent.accountId||''),accountDisplay:String(parent.accountName||''),deadline:item.deliveryDate,requestUrl,sourceUrl,sharedDate:String(item.record.sharedDate||parent.sharedDate||''),editorDraftDate:item.draft,editorDraftDateSetter:item.setter,clientDraftDate:String(item.record.clientDraftDate||parent.clientDraftDate||''),thumbnailDate:String(item.record.thumbnailDate||parent.thumbnailDate||''),deliveryDate:item.deliveryDate,instructions,urgent:false,status:item.status,progress:String(item.record.progress||''),evidenceUrl:String(item.record.evidenceUrl||''),blocker:String(item.record.blocker||''),submittedByUid:item.access.id,editorUid:item.access.id,editorEmail:String(item.access.email||''),editorName:String(item.access.name||_paymentWorkerName(item.workerId)||''),directorUid:String(item.access.directorUid||''),source:'legacy_sync',legacyParentId:String(parent.id),legacySubtaskId:item.subId,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp(),history:[{at:item.at,by:_myEmail(),type:'legacy_sync_created'}],attachments});writeCount++;
+        batch.set(item.ref,{recordType:'editor_portal_job',businessType:jobBiz(parent)==='haken'?'dispatch':'edit_agency',title,caseName:parentName,parentCaseId:`legacy:${parent.id}`,parentCaseName:parentName,subtaskIndex:item.subtaskIndex,clientId:String(parent.clientId||''),clientDisplay,accountId:String(parent.accountId||''),accountDisplay:String(parent.accountName||''),deadline:item.deliveryDate,requestUrl,sourceUrl,sharedDate:String(item.record.sharedDate||parent.sharedDate||''),editorDraftDate:item.draft,editorDraftDateSetter:item.setter,clientDraftDate:String(item.record.clientDraftDate||parent.clientDraftDate||''),thumbnailDate:String(item.record.thumbnailDate||parent.thumbnailDate||''),deliveryDate:item.deliveryDate,instructions,manualIds,parentManualIds,caution,parentCaution,urgent:false,status:item.status,progress:String(item.record.progress||''),evidenceUrl:String(item.record.evidenceUrl||''),blocker:String(item.record.blocker||''),submittedByUid:item.access.id,editorUid:item.access.id,editorEmail:String(item.access.email||''),editorName:String(item.access.name||_paymentWorkerName(item.workerId)||''),directorUid:String(item.access.directorUid||''),source:'legacy_sync',legacyParentId:String(parent.id),legacySubtaskId:item.subId,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp(),history:[{at:item.at,by:_myEmail(),type:'legacy_sync_created'}],attachments});writeCount++;
       }
     }
     if(failedRows.size===rows.length){if(!silent)toast(problems[0],'warn');return{synced:0,skipped:problems.length,problems};}
@@ -6494,7 +6520,7 @@ function _applyPortalToLegacy(j,createMissing=false){
   if(subIndex>=0){
     const sub=target.subtasks[subIndex],access=(ACCESS_RECORDS||[]).find(x=>x.id===j._portalUid),workerId=access?.workerId||sub.workerId||null,billingSnapshot=_paymentRecipientSnapshot(workerId,sub),updatedAt=_videoUpdatedMillis(j.updatedAt)||Date.now(),updatedBy=j.updatedBy||j.editorEmail||_myEmail();
     if(sub.portalUid&&sub.portalUid!==j._portalUid||sub.portalJobId&&sub.portalJobId!==j.id)return false;
-    const next={...sub,workerId,...billingSnapshot,status:j.status||sub.status,sharedDate:_portalField(j,'sharedDate',sub.sharedDate),editorDraftDate:_portalField(j,'editorDraftDate',sub.editorDraftDate),editorDraftDateSetter:_editorDraftDateSetter(j,_editorDraftDateSetter(sub)),clientDraftDate:_portalField(j,'clientDraftDate',sub.clientDraftDate),thumbnailDate:_portalField(j,'thumbnailDate',sub.thumbnailDate),deliveryDate:_portalField(j,'deliveryDate',j.deadline||sub.deliveryDate),completedDeliveryDate:_portalField(j,'completedDeliveryDate',sub.completedDeliveryDate),instructions:j.instructions||sub.instructions,requestUrl:_portalField(j,'requestUrl',sub.requestUrl),sourceUrl:_portalField(j,'sourceUrl',sub.sourceUrl),progress:j.progress||sub.progress,progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:(sub.progressMilestones||[]),progressEvents:Array.isArray(j.progressEvents)?j.progressEvents:(sub.progressEvents||[]),workflow:j.workflow||sub.workflow||null,evidenceUrl:j.evidenceUrl||sub.evidenceUrl,blocker:j.blocker||'',attachments:Array.isArray(j.attachments)?_videoAttachments(j.attachments):(sub.attachments||[]),portalUid:j._portalUid,portalJobId:j.id,updatedAt,updatedBy};
+    const next={...sub,workerId,...billingSnapshot,status:j.status||sub.status,sharedDate:_portalField(j,'sharedDate',sub.sharedDate),editorDraftDate:_portalField(j,'editorDraftDate',sub.editorDraftDate),editorDraftDateSetter:_editorDraftDateSetter(j,_editorDraftDateSetter(sub)),clientDraftDate:_portalField(j,'clientDraftDate',sub.clientDraftDate),thumbnailDate:_portalField(j,'thumbnailDate',sub.thumbnailDate),deliveryDate:_portalField(j,'deliveryDate',j.deadline||sub.deliveryDate),completedDeliveryDate:_portalField(j,'completedDeliveryDate',sub.completedDeliveryDate),instructions:j.instructions||sub.instructions,manualIds:Object.prototype.hasOwnProperty.call(j,'manualIds')?_caseManualIds(j.manualIds):_caseManualIds(sub.manualIds),caution:Object.prototype.hasOwnProperty.call(j,'caution')?String(j.caution||'').slice(0,2000):String(sub.caution||''),requestUrl:_portalField(j,'requestUrl',sub.requestUrl),sourceUrl:_portalField(j,'sourceUrl',sub.sourceUrl),progress:j.progress||sub.progress,progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:(sub.progressMilestones||[]),progressEvents:Array.isArray(j.progressEvents)?j.progressEvents:(sub.progressEvents||[]),workflow:j.workflow||sub.workflow||null,evidenceUrl:j.evidenceUrl||sub.evidenceUrl,blocker:j.blocker||'',attachments:Array.isArray(j.attachments)?_videoAttachments(j.attachments):(sub.attachments||[]),portalUid:j._portalUid,portalJobId:j.id,updatedAt,updatedBy};
     if(Object.keys(next).some(key=>JSON.stringify(sub[key])!==JSON.stringify(next[key]))){
       target.subtasks=target.subtasks.map((item,index)=>index===subIndex?next:item);target.updatedAt=updatedAt;target.updatedBy=updatedBy;target.statusHistory=[...(target.statusHistory||[]).slice(-99),{at:updatedAt,by:updatedBy,type:'portal_subcase_update',subId:String(sub.id||''),status:next.status,editorDraftDate:next.editorDraftDate,editorDraftDateSetter:next.editorDraftDateSetter,source:'editor_portal'}];changed=true;
     }
@@ -6502,7 +6528,7 @@ function _applyPortalToLegacy(j,createMissing=false){
   }
   if(!j.linkedLegacyJobId)return changed;
   if(target.portalUid&&target.portalUid!==j._portalUid||target.portalJobId&&target.portalJobId!==j.id)return false;
-	  const next={title:j.title||target.title,status:j.status||target.status,sharedDate:_portalField(j,'sharedDate',target.sharedDate),editorDraftDate:_portalField(j,'editorDraftDate',target.editorDraftDate),editorDraftDateSetter:_editorDraftDateSetter(j,_editorDraftDateSetter(target)),clientDraftDate:_portalField(j,'clientDraftDate',target.clientDraftDate),thumbnailDate:_portalField(j,'thumbnailDate',target.thumbnailDate),deliveryDate:_portalField(j,'deliveryDate',j.deadline||target.deliveryDate),completedDeliveryDate:_portalField(j,'completedDeliveryDate',target.completedDeliveryDate),notes:j.instructions||target.notes,requestUrl:_portalField(j,'requestUrl',target.requestUrl),sourceUrl:_portalField(j,'sourceUrl',target.sourceUrl),progressNote:j.progress||target.progressNote,progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:(target.progressMilestones||[]),progressEvents:Array.isArray(j.progressEvents)?j.progressEvents:(target.progressEvents||[]),workflow:j.workflow||target.workflow||null,lastProgressChangedByUid:j.lastProgressChangedByUid||target.lastProgressChangedByUid||null,lastProgressChangedByEmail:j.lastProgressChangedByEmail||target.lastProgressChangedByEmail||null,lastProgressChangedByRole:j.lastProgressChangedByRole||target.lastProgressChangedByRole||null,evidenceUrl:j.evidenceUrl||target.evidenceUrl,blocker:j.blocker||'',attachments:Array.isArray(j.attachments)?_videoAttachments(j.attachments):(target.attachments||[]),updatedAt:_videoUpdatedMillis(j.updatedAt)||Date.now(),updatedBy:j.updatedBy||j.editorEmail||_myEmail()};
+	  const next={title:j.title||target.title,status:j.status||target.status,sharedDate:_portalField(j,'sharedDate',target.sharedDate),editorDraftDate:_portalField(j,'editorDraftDate',target.editorDraftDate),editorDraftDateSetter:_editorDraftDateSetter(j,_editorDraftDateSetter(target)),clientDraftDate:_portalField(j,'clientDraftDate',target.clientDraftDate),thumbnailDate:_portalField(j,'thumbnailDate',target.thumbnailDate),deliveryDate:_portalField(j,'deliveryDate',j.deadline||target.deliveryDate),completedDeliveryDate:_portalField(j,'completedDeliveryDate',target.completedDeliveryDate),notes:j.instructions||target.notes,manualIds:Object.prototype.hasOwnProperty.call(j,'parentManualIds')?_caseManualIds(j.parentManualIds):Object.prototype.hasOwnProperty.call(j,'manualIds')?_caseManualIds(j.manualIds):_caseManualIds(target.manualIds),caution:Object.prototype.hasOwnProperty.call(j,'parentCaution')?String(j.parentCaution||'').slice(0,2000):Object.prototype.hasOwnProperty.call(j,'caution')?String(j.caution||'').slice(0,2000):String(target.caution||''),requestUrl:_portalField(j,'requestUrl',target.requestUrl),sourceUrl:_portalField(j,'sourceUrl',target.sourceUrl),progressNote:j.progress||target.progressNote,progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:(target.progressMilestones||[]),progressEvents:Array.isArray(j.progressEvents)?j.progressEvents:(target.progressEvents||[]),workflow:j.workflow||target.workflow||null,lastProgressChangedByUid:j.lastProgressChangedByUid||target.lastProgressChangedByUid||null,lastProgressChangedByEmail:j.lastProgressChangedByEmail||target.lastProgressChangedByEmail||null,lastProgressChangedByRole:j.lastProgressChangedByRole||target.lastProgressChangedByRole||null,evidenceUrl:j.evidenceUrl||target.evidenceUrl,blocker:j.blocker||'',attachments:Array.isArray(j.attachments)?_videoAttachments(j.attachments):(target.attachments||[]),updatedAt:_videoUpdatedMillis(j.updatedAt)||Date.now(),updatedBy:j.updatedBy||j.editorEmail||_myEmail()};
   if(Object.keys(next).some(k=>JSON.stringify(target[k])!==JSON.stringify(next[k]))){Object.assign(target,next);target.statusHistory=[...(target.statusHistory||[]).slice(-99),{at:next.updatedAt,by:next.updatedBy,status:next.status,note:next.progressNote,evidenceUrl:next.evidenceUrl,source:'editor_portal'}];changed=true;}
   return changed;
 }
@@ -6952,12 +6978,12 @@ function _videoReferenceTabs(tabs){
   // 編集代行では「編集者」は名簿・チーム管理を開く導線に統一する。
   // 旧来の編集者別集計は、同じデータを保ったまま「その他」に残す。
   const coreKeys=tabs.some(([key])=>key==='manager-editors')
-    ?['manage-board','manage-profit','manage-payment','manage-completed','manager-editors']
+    ?['manage-board','manage-profit','manage-payment','manage-completed','manager-editors','manager-clients']
     :['manage-board','manage-profit','manage-payment','manage-completed','manage-worker'];
   let primary=coreKeys.map(key=>tabs.find(([tabKey])=>tabKey===key)).filter(Boolean);
   if(!primary.length)primary=tabs.slice(0,5);
   const primaryKeys=new Set(primary.map(([key])=>key)),extra=tabs.filter(([key])=>!primaryKeys.has(key));
-  const shortLabels={'manage-board':'案件','manage-profit':'利益','manage-payment':'支払','manage-completed':'完了','manage-worker':'編集者別','manager-editors':'編集者'};
+  const shortLabels={'manage-board':'案件','manage-profit':'利益','manage-payment':'支払','manage-completed':'完了','manage-worker':'編集者別','manager-editors':'編集者','manager-clients':'顧客'};
   const iconButton=([key,label])=>{const name=_videoReferenceTabLabel(label),short=shortLabels[key]||name.slice(0,4);return`<button type="button" aria-label="${esc(name)}" title="${esc(name)}" data-tooltip="${esc(name)}" ${VIDEO_TAB===key?'aria-current="page"':''} onclick="setVideoTab('${key}')">${_videoReferenceTabIcon(key)}<span class="ref-tab-label" aria-hidden="true">${esc(short)}</span></button>`};
   return`<nav class="ref-global-tabs" aria-label="案件管理ページ"><div class="ref-primary-tabs">${primary.map(iconButton).join('')}</div>${extra.length?`<details class="ref-more-tabs" ${extra.some(([key])=>key===VIDEO_TAB)?'data-active="true"':''}><summary aria-label="その他のページ" title="その他のページ">${_videoReferenceTabIcon('manage-list')}<span class="ref-tab-label" aria-hidden="true">その他</span></summary><div class="ref-more-tabs-menu">${extra.map(([key,label])=>{const name=_videoReferenceTabLabel(label);return`<button type="button" ${VIDEO_TAB===key?'aria-current="page"':''} onclick="setVideoTab('${key}')">${_videoReferenceTabIcon(key)}<span>${esc(name)}</span></button>`}).join('')}</div></details>`:''}</nav>`;
 }
@@ -7391,23 +7417,41 @@ ${sorted.map(cl=>{
 </div>`;
 }
 
+function _boardSubcaseStatus(sub){return sub?.done?'完了':String(sub?.status||'未着手');}
+function _boardMixedSubcases(job){
+  const parentStatus=String(job?.status||'未着手');
+  return(job?.subtasks||[]).map((sub,index)=>({parent:job,sub,index,status:_boardSubcaseStatus(sub)})).filter(ref=>!['完了','キャンセル'].includes(ref.status)&&ref.status!==parentStatus);
+}
+function _boardSubcaseRefs(base,status){return(base||[]).flatMap(_boardMixedSubcases).filter(ref=>ref.status===status);}
+function _boardMixedStatusSummaryHtml(job){
+  const counts=new Map();_boardMixedSubcases(job).forEach(ref=>counts.set(ref.status,(counts.get(ref.status)||0)+1));
+  if(!counts.size)return'';
+  return`<div class="board-mixed-subcase-alert" aria-label="親案件と状態が異なるサブ案件">${[...counts.entries()].map(([status,count])=>`<span class="badge ${SCOLBG[status]||'bk'}">↓ サブ案件 ${esc(status)} ${count}件</span>`).join('')}</div>`;
+}
+function rProjSubcaseShortcut(ref){
+  const parent=ref.parent,sub=ref.sub,subId=String(sub?.id||ref.index),label=`${parent?.title||'親案件'} / ${sub?.title||`サブ案件${ref.index+1}`}`;
+  return`<button type="button" class="board-subcase-shortcut" onclick="openLegacySubcaseDetail(${esc(JSON.stringify(String(parent?.id||'')))},${esc(JSON.stringify(subId))})" aria-label="${esc(label)}の詳細を開く"><span class="board-subcase-shortcut-mark">↳</span><span class="board-subcase-shortcut-copy"><small>${esc(parent?.title||'親案件')}</small><b>${esc(sub?.title||`サブ案件${ref.index+1}`)}</b></span><span class="badge ${SCOLBG[ref.status]||'bk'}">${esc(ref.status)}</span></button>`;
+}
 function rProjBoard(){
   const statuses=bizCfg().board;
   const base=BJOBS().filter(j=>!j.deleted&&j.status!=='完了'&&j.status!=='キャンセル');
   // 事業のボード列に無いステータスの案件も必ずどこかに出す(消失防止)
   const others=sortJobs(base.filter(j=>statuses.indexOf(j.status)<0));
+  const otherRefs=base.flatMap(_boardMixedSubcases).filter(ref=>!statuses.includes(ref.status));
   return`<div class="board-wrap">
 ${statuses.map(st=>{
-  const jobs=sortJobs(base.filter(j=>j.status===st));
+  const jobs=sortJobs(base.filter(j=>j.status===st)),subcaseRefs=_boardSubcaseRefs(base,st);
   return`<div class="board-col">
     <div class="board-col-hdr" style="background:${BOARD_COL[st]||'#6b7280'}20;color:${BOARD_COL[st]||'#6b7280'}">
-      <span>${st}</span><span style="font-size:11px">${jobs.length}</span>
+      <span>${st}</span><span style="font-size:11px">親 ${jobs.length}・子 ${subcaseRefs.length}</span>
     </div>
+    ${subcaseRefs.map(rProjSubcaseShortcut).join('')}
     ${jobs.map(j=>rProjCard(j)).join('')}
     <button class="add-day-btn" style="margin-top:4px" onclick="openJobModal(null,'${st}')">＋ 追加</button>
   </div>`;}).join('')}
-${others.length?`<div class="board-col">
-    <div class="board-col-hdr" style="background:#6b728020;color:#6b7280"><span>その他</span><span style="font-size:11px">${others.length}</span></div>
+${others.length||otherRefs.length?`<div class="board-col">
+    <div class="board-col-hdr" style="background:#6b728020;color:#6b7280"><span>その他</span><span style="font-size:11px">親 ${others.length}・子 ${otherRefs.length}</span></div>
+    ${otherRefs.map(rProjSubcaseShortcut).join('')}
     ${others.map(j=>rProjCard(j)).join('')}
   </div>`:''}
 </div>`;
@@ -7502,6 +7546,7 @@ function rProjCard(j){
       :`<button class="btn btn-xs" onclick="event.stopPropagation();markJobPaid('${j.id}')" style="border:1px solid var(--green);color:var(--green);background:transparent;padding:2px 7px;border-radius:100px;font-size:10px;cursor:pointer">💰 入金済みにする</button>`
     ):''}
   </div>
+  ${_boardMixedStatusSummaryHtml(j)}
   ${j.editorDraftDate&&cbz.lbl.d1s?`<div class="proj-due-label ${urgCls(j.editorDraftDate)}">${cbz.lbl.d1s}: ${j.editorDraftDate} (${fmt(j.editorDraftDate)})</div>`:''}
   ${j.clientDraftDate&&cbz.lbl.d2s?`<div class="proj-due-label ${urgCls(j.clientDraftDate)}">${cbz.lbl.d2s}: ${j.clientDraftDate} (${fmt(j.clientDraftDate)})</div>`:''}
   ${_isOwner()&&j.invoiceDate?`<div class="proj-due-label ${urgCls(j.invoiceDate)}">🧾 請求書: ${j.invoiceDate} (${fmt(j.invoiceDate)})</div>`:''}
@@ -12926,6 +12971,34 @@ function _renderJobAssigneeSummary(){
     else if(ids.length>1){payment.textContent='複数担当の支払は、サブ案件ごとの作業担当者から自動で決まります。';payment.style.color='var(--t2)';}
     else{payment.textContent='支払先：作業担当者を選択してください';payment.style.color='var(--red)';}
   }
+  if(typeof updateJobInternalScheduleRules==='function')updateJobInternalScheduleRules();
+}
+function _jobModalInternalOnly(){
+  const ids=_jobModalWorkerIds();
+  return ids.length>0&&ids.every(id=>id===SELF_WID);
+}
+function updateJobInternalScheduleRules(){
+  const internal=_jobModalInternalOnly(),hasSubs=!!document.querySelector('#j-sub-cont .j-sub-shell');
+  const draftLabel=document.getElementById('jl-editor-draft'),draftHint=document.getElementById('j-editor-draft-hint');
+  if(draftLabel)draftLabel.textContent=`編集者 初稿${internal?'（任意）':''}`;
+  if(draftHint)draftHint.textContent=hasSubs?'子案件ごとに下の欄で設定します。':internal?'mono.create社内対応のため、未設定でも保存できます。':document.getElementById('j-editor-draft-setter')?.value==='creator'?'案件追加時に入力します。':'担当編集者の画面で入力します。';
+  const completed=document.getElementById('j-completed-delivery'),completedLabel=document.getElementById('j-completed-delivery-label'),completedHint=document.getElementById('j-completed-delivery-hint');
+  const editable=internal&&!hasSubs;
+  if(completed)completed.disabled=!editable;
+  if(completedLabel)completedLabel.textContent=editable?'納品日（オーナーが記録）':'納品日';
+  if(completedHint)completedHint.textContent=hasSubs?'子案件ごとに納品日を記録します。':editable?'社内対応の実際の納品日を記録します。':'先方OK後に担当編集者が記録します。納品日が未記録の案件には報酬が発生しません。';
+}
+function updateJobSubInternalRules(row){
+  if(!row)return;
+  const internal=row.querySelector('.j-sub-worker')?.value===SELF_WID,setter=row.querySelector('.j-sub-editor-setter')?.value||'creator';
+  const draftLabel=row.querySelector('.j-sub-editor-label'),draftHint=row.querySelector('.j-sub-editor-hint'),draft=row.querySelector('.j-sub-editor');
+  if(draftLabel)draftLabel.textContent=`編集者初稿${internal?'（任意）':''}`;
+  if(draftHint)draftHint.textContent=internal?'mono.create社内対応のため、未設定でも保存できます。':'';
+  if(draft)draft.disabled=setter==='editor';
+  const completed=row.querySelector('.j-sub-completed-delivery'),completedLabel=row.querySelector('.j-sub-completed-delivery-label'),completedHint=row.querySelector('.j-sub-completed-delivery-hint');
+  if(completed)completed.disabled=!internal;
+  if(completedLabel)completedLabel.textContent=internal?'納品日（オーナーが記録）':'納品日（担当編集者が記録）';
+  if(completedHint)completedHint.textContent=internal?'社内対応の実際の納品日を記録します。':'未記録の案件には報酬が発生しません。';
 }
 function toggleJobAssigneePicker(){
   const picker=document.getElementById('j-worker-picker');
@@ -12989,12 +13062,13 @@ function applyOwnerClientPriceFromMaster(){
   updSubPrices();
 }
 let JOB_MODAL_SUB_RECORDS=[];
+let JOB_MODAL_SUB_ADD_BUSY=false;
 function _jobModalSubRecordClone(record={}){
   return{...record,attachments:_videoAttachments(record.attachments)};
 }
 function _jobModalSubCompactHtml(record,index,biz,financeLocked=false){
   const workerId=String(record?.workerId||''),workerName=workerId?_jobModalWorkerLabel(workerId):'未割当';
-  const dates=[record?.editorDraftDate?`編集者初稿 ${record.editorDraftDate}`:'',record?.clientDraftDate?`クライアント初稿 ${record.clientDraftDate}`:'',record?.deliveryDate?`納期 ${record.deliveryDate}`:''].filter(Boolean);
+  const dates=[record?.editorDraftDate?`編集者初稿 ${record.editorDraftDate}`:'',record?.clientDraftDate?`クライアント初稿 ${record.clientDraftDate}`:'',record?.deliveryDate?`納期 ${record.deliveryDate}`:'',record?.completedDeliveryDate?`納品日 ${record.completedDeliveryDate}`:''].filter(Boolean);
   return`<div class="j-sub-shell" data-state-index="${index}"><div class="job-sub-compact"><div class="job-sub-compact-main"><b class="job-sub-compact-title">${esc(record?.title||`サブ案件 ${index+1}`)}</b><div class="job-sub-compact-meta"><span>${esc(videoStatusLabel(record?.status||'未着手'))}</span><span>担当 ${esc(workerName)}</span>${dates.map(value=>`<span>${esc(value)}</span>`).join('')}</div></div><div class="job-sub-compact-actions"><button type="button" class="btn btn-g btn-xs" onclick="expandJobSubEditor(this)">編集</button>${financeLocked?'':`<button type="button" class="btn btn-g btn-xs" onclick="removeJobSubEditor(this)" aria-label="${esc(record?.title||'サブ案件')}を削除">✕</button>`}</div></div></div>`;
 }
 function _readJobSubEditorState(shell){
@@ -13017,8 +13091,10 @@ function _readJobSubEditorState(shell){
     sharedDate:row.querySelector('.j-sub-shared')?.value||null,
     editorDraftDateSetter:row.querySelector('.j-sub-editor-setter')?.value||_editorDraftDateSetter(previous),
     editorDraftDate:row.querySelector('.j-sub-editor')?.value||null,clientDraftDate:row.querySelector('.j-sub-client')?.value||null,
-    deliveryDate:row.querySelector('.j-sub-deliver')?.value||null,invoiceDate:row.querySelector('.j-sub-invoice')?.value||null,
+    deliveryDate:row.querySelector('.j-sub-deliver')?.value||null,
+    completedDeliveryDate:workerId===SELF_WID?(row.querySelector('.j-sub-completed-delivery')?.value||null):(previous.completedDeliveryDate||null),invoiceDate:row.querySelector('.j-sub-invoice')?.value||null,
     dueDate:row.querySelector('.j-sub-due')?.value||null,paymentDate:row.querySelector('.j-sub-payment')?.value||null,payoutDate:row.querySelector('.j-sub-payout')?.value||null,
+    manualIds:_selectedJobCaseManualIds(row.querySelector('.j-sub-manuals')),caution:String(row.querySelector('.j-sub-caution')?.value||'').trim().slice(0,2000),
     requestUrl,sourceUrl,attachments:attachmentRead.items,
   }};
 }
@@ -13044,7 +13120,7 @@ function expandJobSubEditor(button){
 }
 function removeJobSubEditor(button){
   const shell=button?.closest('.j-sub-shell')||button?.closest('.j-sub-row');if(!shell)return;
-  shell.remove();updSubPrices();
+  shell.remove();updateJobInternalScheduleRules();updSubPrices();
 }
 function _jobModalSubWorkerInitialOptions(workerId){
   const id=String(workerId||'');
@@ -13126,6 +13202,10 @@ function openJobModal(id,preStatus,preClientId){
   <div class="fg"><div class="fl">共通の台本・依頼URL</div><input id="j-request" type="url" inputmode="url" maxlength="2000" value="${esc(j?.requestUrl||'')}" placeholder="https://..." ${canManageMaterials?'':'disabled'}><div class="fhint">子案件に個別URLがない場合、こちらを表示します。</div></div>
   <div class="fg"><div class="fl">共通の素材URL</div><input id="j-source" type="url" inputmode="url" maxlength="2000" value="${esc(j?.sourceUrl||'')}" placeholder="https://..." ${canManageMaterials?'':'disabled'}><div class="fhint">複数の素材は下の「＋ 追加」から登録できます。</div></div>
 </div>
+<div class="job-case-guidance-editor">
+  <div class="fg"><div class="fl">親案件共通の注意事項（任意）</div><textarea id="j-caution" maxlength="2000" placeholder="編集者が必ず確認する内容を入力します" ${canManageMaterials?'':'disabled'}>${esc(j?.caution||'')}</textarea><div class="fhint">案件詳細で、通常の指示より前に強調表示します。</div></div>
+  <div class="fg"><div class="fl">親案件共通のマニュアル（任意）</div><select id="j-manuals" multiple size="4" aria-label="親案件に紐づけるマニュアル" ${canManageMaterials?'':'disabled'}>${_jobCaseManualOptions(j?.manualIds||[],selectedWorkerIds)}</select><div class="fhint">担当編集者が閲覧できるマニュアルだけを選択できます。</div></div>
+</div>
 <div style="font-size:12px;font-weight:700;color:var(--t2);margin:10px 0 6px">📅 日程</div>
 <div class="frow">
   <div class="fg"><div class="fl" id="jl-shared">共有日</div><input type="date" id="j-shared" value="${j?.sharedDate||''}"></div>
@@ -13133,13 +13213,13 @@ function openJobModal(id,preStatus,preClientId){
 </div>
 <div class="frow" id="jf-drafts">
   <div class="fg"><div class="fl">編集者初稿の設定者</div><select id="j-editor-draft-setter" onchange="changeEditorDraftDateSetter(this,'j-editor-draft')" ${subs.length?'disabled':''}><option value="creator" ${parentDraftSetter==='creator'?'selected':''}>案件追加者が設定</option><option value="editor" ${parentDraftSetter==='editor'?'selected':''}>担当編集者が設定</option>${parentDraftSetter==='mixed'?'<option value="mixed" selected>子案件ごとに設定</option>':''}</select></div>
-  <div class="fg"><div class="fl" id="jl-d1">編集者 初稿</div><input type="date" id="j-editor-draft" value="${j?.editorDraftDate||''}" ${parentDraftSetter!=='creator'||subs.length?'disabled':''}><div style="font-size:10px;color:var(--t3);margin-top:3px">${subs.length?'子案件ごとに下の欄で設定します。':parentDraftSetter==='creator'?'案件追加時に入力します。':'担当編集者の画面で入力します。'}</div></div>
+  <div class="fg"><div class="fl" id="jl-editor-draft">編集者 初稿</div><input type="date" id="j-editor-draft" value="${j?.editorDraftDate||''}" ${parentDraftSetter!=='creator'||subs.length?'disabled':''}><div id="j-editor-draft-hint" style="font-size:10px;color:var(--t3);margin-top:3px">${subs.length?'子案件ごとに下の欄で設定します。':parentDraftSetter==='creator'?'案件追加時に入力します。':'担当編集者の画面で入力します。'}</div></div>
 </div>
 <div class="frow" id="jf-client-draft">
   <div class="fg"><div class="fl" id="jl-d2">クライアント提出 初稿</div><input type="date" id="j-client-draft" value="${j?.clientDraftDate||''}"></div>
   <div class="fg"></div>
 </div>
-	<div class="frow"><div class="fg"><div class="fl">納品日</div><input type="date" value="${j?.completedDeliveryDate||''}" disabled aria-label="担当編集者が記録する納品日"><div style="font-size:10px;color:var(--t3);margin-top:3px">先方OK後に担当編集者が記録します。納品日が未記録の案件には報酬が発生しません。</div></div><div class="fg"></div></div>
+	<div class="frow"><div class="fg"><div class="fl" id="j-completed-delivery-label">納品日</div><input id="j-completed-delivery" type="date" value="${j?.completedDeliveryDate||''}" disabled aria-label="実際の納品日"><div id="j-completed-delivery-hint" style="font-size:10px;color:var(--t3);margin-top:3px">先方OK後に担当編集者が記録します。納品日が未記録の案件には報酬が発生しません。</div></div><div class="fg"></div></div>
 	<div class="frow" id="jf-thumb">
   <div class="fg"><div class="fl">🖼 サムネイル納品日</div><input type="date" id="j-thumbnail" value="${j?.thumbnailDate||''}"></div>
   <div class="fg"></div>
@@ -13192,7 +13272,7 @@ function openJobModal(id,preStatus,preClientId){
 <div style="font-size:11px;line-height:1.55;color:var(--t3);margin:0 0 7px">必要な子案件だけ「編集」を押すと詳細項目を開きます。</div>
 <div id="j-sub-cont" data-finance-locked="${ownerFinanceLocked?'1':'0'}">${subs.map((s,i)=>_jobModalSubCompactHtml(s,i,jbiz,ownerFinanceLocked)).join('')}</div>
 <div style="display:flex;gap:6px;align-items:center;margin-bottom:5px">
-  <button class="btn btn-g btn-xs" onclick="addJobSubField()" ${ownerFinanceLocked?'disabled':''}>＋ サブ案件を追加</button>
+  <button type="button" id="j-add-subcase" class="btn btn-g btn-xs" onclick="addJobSubField()" ${ownerFinanceLocked?'disabled':''}>＋ サブ案件を追加</button>
   <span style="font-size:11px;color:var(--t3)">${ownerFinanceLocked?'金額台帳へ移行済みの過去案件は、親子構成と金額を固定しています。':'単価・支払を入力すると案件全体が自動計算'}</span>
 </div>
 </div>
@@ -13236,7 +13316,7 @@ function setJobBiz(k,init){
   BIZ_DEFS.forEach(b=>{const btn=document.getElementById('jb-'+b.k);if(btn)btn.className='btn btn-sm '+(b.k===k?'btn-p':'btn-g');});
   const setTxt=(id,t)=>{const e=document.getElementById(id);if(!e)return;if(e.childNodes[0]&&e.childNodes[0].nodeType===3)e.childNodes[0].nodeValue=t;else e.insertBefore(document.createTextNode(t),e.firstChild);};
   setTxt('jl-scope',cfg.lbl.scope);setTxt('jl-shared',cfg.lbl.shared);setTxt('jl-deliver',cfg.lbl.deliver);
-  setTxt('jl-d1',cfg.lbl.d1||'初稿(社内)');setTxt('jl-d2',cfg.lbl.d2||'クライアント提出');
+  setTxt('jl-editor-draft',cfg.lbl.d1||'初稿(社内)');setTxt('jl-d2',cfg.lbl.d2||'クライアント提出');
   setTxt('jl-unit',cfg.lbl.unit);setTxt('jl-wpay',cfg.lbl.wpay);setTxt('jl-profit',cfg.lbl.profit);
   setTxt('jl-monthly',cfg.lbl.monthly||'月額（円）');
   const shw=(id,v)=>{const e=document.getElementById(id);if(e)e.style.display=v?'':'none';};
@@ -13252,6 +13332,8 @@ function setJobBiz(k,init){
     document.querySelectorAll('#j-sub-cont .j-sub-d2-lbl').forEach(e=>{e.textContent=cfg.lbl.d2||'クライアント提出';});
     renderJobChecklist(k,null);
   }
+  updateJobInternalScheduleRules();
+  document.querySelectorAll('#j-sub-cont .j-sub-row').forEach(updateJobSubInternalRules);
   if(typeof updJobProfit==='function')updJobProfit();
 }
 function toggleJobTrial(){
@@ -13300,8 +13382,8 @@ function _paymentRecipientHint(workerId,record={}){
 function updSubPaymentRecipients(){
   document.querySelectorAll('#j-sub-cont .j-sub-row').forEach(row=>{
     const workerId=row.querySelector('.j-sub-worker')?.value||'',hint=row.querySelector('.j-sub-payment-recipient');
-    if(!hint)return;
-    const recipient=resolvePaymentRecipient(workerId);hint.textContent=_paymentRecipientHint(workerId,{});hint.style.color=recipient.ok?'var(--t2)':'var(--red)';
+    if(hint){const recipient=resolvePaymentRecipient(workerId);hint.textContent=_paymentRecipientHint(workerId,{});hint.style.color=recipient.ok?'var(--t2)':'var(--red)';}
+    updateJobSubInternalRules(row);
   });
   updSubPrices();
 }
@@ -13312,19 +13394,26 @@ function updJobProfit(){
   if(d){d.textContent=`¥${pr.toLocaleString()}`;d.style.color=pr>=0?'var(--green)':'var(--red)';}
 }
 function addJobSubField(){
-  const c=document.getElementById('j-sub-cont');
+  const c=document.getElementById('j-sub-cont'),button=document.getElementById('j-add-subcase');
   if(c?.dataset.financeLocked==='1')return toast('金額台帳へ移行済みの過去案件では、親子構成を変更できません','warn');
-  if(!_collapseOtherJobSubEditors(null))return;
-  const index=JOB_MODAL_SUB_RECORDS.push({})-1,d=document.createElement('div');
-  d.className='j-sub-shell';d.dataset.stateIndex=String(index);d.innerHTML=mkSubRow({},'サブ案件',_curJobBiz(),-1,false);
-  c.appendChild(d);d.querySelector('.j-sub-inp')?.focus();
+  if(JOB_MODAL_SUB_ADD_BUSY||button?.disabled)return;
+  JOB_MODAL_SUB_ADD_BUSY=true;
+  if(button){button.disabled=true;button.setAttribute('aria-busy','true');button.textContent='追加中…';}
+  try{
+    if(!_collapseOtherJobSubEditors(null))return;
+    const index=JOB_MODAL_SUB_RECORDS.push({})-1,d=document.createElement('div');
+    d.className='j-sub-shell';d.dataset.stateIndex=String(index);d.innerHTML=mkSubRow({},'サブ案件',_curJobBiz(),-1,false);
+    c.appendChild(d);updateJobInternalScheduleRules();updSubPaymentRecipients();d.querySelector('.j-sub-inp')?.focus();
+  }finally{
+    setTimeout(()=>{JOB_MODAL_SUB_ADD_BUSY=false;if(button&&button.isConnected){button.disabled=false;button.removeAttribute('aria-busy');button.textContent='＋ サブ案件を追加';}},600);
+  }
 }
 function mkSubRow(s,ph,bk,originalIndex=-1,financeLocked=false){
   const _bk=bk||_curJobBiz();
   const _bc=bizCfgOf(_bk);
   const st=s.status||_bc.statuses[0];
   const draftSetter=Object.keys(s||{}).length?_editorDraftDateSetter(s):'creator';
-  const isNew=!Object.keys(s||{}).length,masterPrice=isNew?_ownerMasterClientUnitPrice(document.getElementById('j-cl')?.value||''):null,subPrice=s.unitPrice||(masterPrice===null?'':masterPrice);
+  const isNew=!Object.keys(s||{}).length,internal=s.workerId===SELF_WID,masterPrice=isNew?_ownerMasterClientUnitPrice(document.getElementById('j-cl')?.value||''):null,subPrice=s.unitPrice||(masterPrice===null?'':masterPrice);
   return`<div class="j-sub-row" data-sub-id="${esc(s.id||'')}" data-original-index="${Number.isInteger(originalIndex)?originalIndex:-1}" style="background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);padding:10px;margin-bottom:8px">
   <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
     <div class="chk${s.done?' done':''}" onclick="this.classList.toggle('done');updSubPrices()" style="flex-shrink:0"></div>
@@ -13360,8 +13449,9 @@ function mkSubRow(s,ph,bk,originalIndex=-1,financeLocked=false){
     <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">編集者初稿の設定者</div>
       <select class="j-sub-editor-setter" style="font-size:12px;padding:4px 6px" onchange="changeEditorDraftDateSetter(this)"><option value="creator" ${draftSetter==='creator'?'selected':''}>案件追加者が設定</option><option value="editor" ${draftSetter==='editor'?'selected':''}>担当編集者が設定</option></select>
     </div>
-    <div><div class="j-sub-d1-lbl" style="font-size:10px;color:var(--t3);margin-bottom:2px">${_bc.lbl.d1||'初稿(社内)'}</div>
+    <div><div class="j-sub-d1-lbl j-sub-editor-label" style="font-size:10px;color:var(--t3);margin-bottom:2px">編集者初稿${internal?'（任意）':''}</div>
       <input class="j-sub-editor" type="date" value="${s.editorDraftDate||''}" style="font-size:12px;padding:4px 6px" ${draftSetter==='editor'?'disabled':''}>
+      <div class="j-sub-editor-hint" style="font-size:10px;color:var(--t3);margin-top:3px">${internal?'mono.create社内対応のため、未設定でも保存できます。':''}</div>
     </div>
     <div><div class="j-sub-d2-lbl" style="font-size:10px;color:var(--t3);margin-bottom:2px">${_bc.lbl.d2||'クライアント提出'}</div>
       <input class="j-sub-client" type="date" value="${s.clientDraftDate||''}" style="font-size:12px;padding:4px 6px">
@@ -13369,9 +13459,9 @@ function mkSubRow(s,ph,bk,originalIndex=-1,financeLocked=false){
 	<div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">納期（予定・任意）</div>
 	  <input class="j-sub-deliver" type="date" value="${s.deliveryDate||''}" style="font-size:12px;padding:4px 6px">
 	</div>
-	<div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">納品日（担当編集者が記録）</div>
-	  <input type="date" value="${s.completedDeliveryDate||''}" style="font-size:12px;padding:4px 6px" disabled>
-	  <div style="font-size:10px;color:var(--t3);margin-top:3px">未記録の案件には報酬が発生しません。</div>
+	<div><div class="j-sub-completed-delivery-label" style="font-size:10px;color:var(--t3);margin-bottom:2px">${internal?'納品日（オーナーが記録）':'納品日（担当編集者が記録）'}</div>
+	  <input class="j-sub-completed-delivery" type="date" value="${s.completedDeliveryDate||''}" style="font-size:12px;padding:4px 6px" ${internal?'':'disabled'}>
+	  <div class="j-sub-completed-delivery-hint" style="font-size:10px;color:var(--t3);margin-top:3px">${internal?'社内対応の実際の納品日を記録します。':'未記録の案件には報酬が発生しません。'}</div>
 	</div>
 	    <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">請求書提出日</div><input class="j-sub-invoice" type="date" value="${s.invoiceDate||''}" style="font-size:12px;padding:4px 6px"></div>
 	    <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">支払期日</div><input class="j-sub-due" type="date" value="${s.dueDate||''}" style="font-size:12px;padding:4px 6px"></div>
@@ -13381,6 +13471,10 @@ function mkSubRow(s,ph,bk,originalIndex=-1,financeLocked=false){
 	  <div class="frow" style="margin-top:8px">
 	    <div class="fg"><div class="fl">この子案件だけの台本・依頼URL（任意）</div><input class="j-sub-request" type="url" inputmode="url" maxlength="2000" value="${esc(s.requestUrl||'')}" placeholder="空欄なら親案件の共通URLを使用"></div>
 	    <div class="fg"><div class="fl">この子案件だけの素材URL（任意）</div><input class="j-sub-source" type="url" inputmode="url" maxlength="2000" value="${esc(s.sourceUrl||'')}" placeholder="空欄なら親案件の共通URLを使用"></div>
+	  </div>
+	  <div class="frow job-sub-guidance-editor" style="margin-top:8px">
+	    <div class="fg"><div class="fl">この子案件だけのマニュアル（任意）</div><select class="j-sub-manuals" multiple size="4" aria-label="この子案件に紐づけるマニュアル">${_jobCaseManualOptions(s.manualIds||[],[s.workerId])}</select><div class="fhint">未選択なら親案件のマニュアルを使います。</div></div>
+	    <div class="fg"><div class="fl">この子案件だけの注意事項（任意）</div><textarea class="j-sub-caution" maxlength="2000" placeholder="未入力なら親案件の注意事項を使います">${esc(s.caution||'')}</textarea></div>
 	  </div>
 	  ${_videoAttachmentEditorHtml(s.attachments||[],'addSubVideoAttachmentRow(this)','',{title:'この子案件だけの素材・資料（任意）',description:'親案件とは別のリンクがある場合だけ追加'})}
 	</div>`;
@@ -13437,7 +13531,11 @@ function saveJob(){
   const requestedStatus=document.getElementById('j-stat').value;
   if(current?.portalJobId&&requestedStatus!==current.status&&EDITOR_OWNED_VIDEO_STATUSES.has(requestedStatus)){toast('この進捗は担当編集者本人が編集者ポータルから更新してください','warn');return;}
   const oldSubs=current?.subtasks||[];
+  const selWorkerIds=_jobModalWorkerIds();
+  const parentInternalOnly=selWorkerIds.length>0&&selWorkerIds.every(id=>id===SELF_WID);
   const subShells=[...document.querySelectorAll('#j-sub-cont .j-sub-shell')],subEls=subShells.map(shell=>shell.querySelector('.j-sub-row')).filter(Boolean);
+  const stateIndexes=subShells.map(shell=>Number(shell.dataset.stateIndex));
+  if(stateIndexes.some(index=>!Number.isInteger(index)||index<0)||new Set(stateIndexes).size!==stateIndexes.length){toast('サブ案件の読み込みが重複したため、保存を中止しました。案件を開き直してください','warn');return;}
   const canManageMaterials=_videoCanEdit()&&['edit','haken'].includes(document.getElementById('j-biz')?.value||jobBiz(current));
   const parentAttachmentRead=canManageMaterials?_readVideoAttachments(document.getElementById('j-attachment-list')):{error:'',items:_videoAttachments(current?.attachments)};
   if(parentAttachmentRead.error){toast(parentAttachmentRead.error,'warn');return;}
@@ -13448,7 +13546,7 @@ function saveJob(){
   const subAttachmentError=[...subAttachmentReads.values()].find(result=>result.error);if(subAttachmentError){toast(subAttachmentError.error,'warn');return;}
   const parentEditorDraftDateSetter=document.getElementById('j-editor-draft-setter')?.value||_editorDraftDateSetter(current),parentEditorDraftDate=document.getElementById('j-editor-draft')?.value||null;
   const hasSubtasks=_isOwner()?subShells.length:oldSubs.length;
-  if(!hasSubtasks&&bizCfgOf(document.getElementById('j-biz')?.value||jobBiz(current)).show.d1&&parentEditorDraftDateSetter==='creator'&&!parentEditorDraftDate){toast('案件追加者が設定する場合は、編集者初稿日を入力してください','warn');return;}
+  if(!hasSubtasks&&!parentInternalOnly&&bizCfgOf(document.getElementById('j-biz')?.value||jobBiz(current)).show.d1&&parentEditorDraftDateSetter==='creator'&&!parentEditorDraftDate){toast('案件追加者が設定する場合は、編集者初稿日を入力してください','warn');return;}
   let subLinkError='';
   const parsedSubtasks=subShells.map(shell=>{
     const el=shell.querySelector('.j-sub-row'),stateIndex=Number(shell.dataset.stateIndex),stateRecord=JOB_MODAL_SUB_RECORDS[stateIndex]||{};
@@ -13473,10 +13571,12 @@ function saveJob(){
       editorDraftDate:el.querySelector('.j-sub-editor')?.value||null,
       clientDraftDate:el.querySelector('.j-sub-client')?.value||null,
       deliveryDate:el.querySelector('.j-sub-deliver')?.value||null,
+      completedDeliveryDate:workerId===SELF_WID?(el.querySelector('.j-sub-completed-delivery')?.value||null):(previous.completedDeliveryDate||null),
       invoiceDate:el.querySelector('.j-sub-invoice')?.value||null,
       dueDate:el.querySelector('.j-sub-due')?.value||null,
       paymentDate:el.querySelector('.j-sub-payment')?.value||null,
       payoutDate:el.querySelector('.j-sub-payout')?.value||null,
+      manualIds:_selectedJobCaseManualIds(el.querySelector('.j-sub-manuals')),caution:String(el.querySelector('.j-sub-caution')?.value||'').trim().slice(0,2000),
       requestUrl,sourceUrl,
       attachments:canManageMaterials?subAttachmentReads.get(el).items:_videoAttachments(previous.attachments),
     };
@@ -13484,7 +13584,7 @@ function saveJob(){
   if(subLinkError){toast(subLinkError,'warn');return;}
   for(const sub of parsedSubtasks){
     const label=String(sub.title||'サブ案件');
-    if(_editorDraftDateSetter(sub)==='creator'&&!sub.editorDraftDate){toast(`「${label}」の編集者初稿日を入力してください`,'warn');return;}
+    if(sub.workerId!==SELF_WID&&_editorDraftDateSetter(sub)==='creator'&&!sub.editorDraftDate){toast(`「${label}」の編集者初稿日を入力してください`,'warn');return;}
     const dateError=_jobScheduleError(sub);if(dateError){toast(`「${label}」：${dateError}`,'warn');return;}
   }
   const subtasks=_isOwner()?parsedSubtasks:oldSubs;
@@ -13492,13 +13592,12 @@ function saveJob(){
   const aggregateDraftDate=subtasks.length?(subtasks.map(sub=>sub.editorDraftDate).filter(Boolean).sort()[0]||null):parentEditorDraftDate;
   const hasPricedSubs=subtasks.some(s=>s.unitPrice>0||s.workerPay>0);
   const unitPrice=_isOwner()?(hasPricedSubs?subtasks.reduce((s,sub)=>s+(sub.unitPrice||0),0):(parseInt(document.getElementById('j-unit')?.value)||0)):(Number(current?.unitPrice)||0);
-  const selWorkerIds=_jobModalWorkerIds();
   const onlySelf=selWorkerIds.length===0||selWorkerIds.every(id=>id===SELF_WID);
   const workerPay=_isOwner()?(hasPricedSubs?subtasks.filter(s=>s.workerId!==SELF_WID).reduce((s,sub)=>s+(sub.workerPay||0),0):(onlySelf?0:parseInt(document.getElementById('j-wpay')?.value)||0)):(Number(current?.workerPay)||0);
   const isTrial=document.getElementById('j-trial-val')?.value==='1';
   const primaryWorkerId=selWorkerIds[0]||null,billingSnapshot=_paymentRecipientSnapshot(primaryWorkerId,current||{});
   const accountSelect=document.getElementById('j-account'),accountId=accountSelect?.value||null,accountName=accountId?(accountSelect?.selectedOptions?.[0]?.textContent||current?.accountName||''):null;
-  const data={title,biz:document.getElementById('j-biz')?.value||'edit',monthlyFee:_isOwner()?(parseInt(document.getElementById('j-monthly')?.value)||0):(Number(current?.monthlyFee)||0),jobType:document.getElementById('j-type')?.value||'edit',clientId:document.getElementById('j-cl').value||null,accountId,accountName,workerIds:selWorkerIds,workerId:primaryWorkerId,...billingSnapshot,scope:document.getElementById('j-scope').value||null,status:requestedStatus,isTrial,unitPrice,profit:_isOwner()?unitPrice:(Number(current?.profit)||unitPrice),workerPay,sharedDate:document.getElementById('j-shared').value||null,editorDraftDateSetter:aggregateDraftSetter,editorDraftDate:aggregateDraftDate,clientDraftDate:document.getElementById('j-client-draft').value||null,thumbnailDate:document.getElementById('j-thumbnail')?.value||null,deliveryDate:document.getElementById('j-deliver').value||null,requestUrl:canManageMaterials?parentRequestUrl:(current?.requestUrl||''),sourceUrl:canManageMaterials?parentSourceUrl:(current?.sourceUrl||''),invoiceDate:_isOwner()?(document.getElementById('j-invoice')?.value||null):(current?.invoiceDate||null),dueDate:_isOwner()?(document.getElementById('j-due')?.value||null):(current?.dueDate||null),paymentDate:_isOwner()?(document.getElementById('j-payin')?.value||null):(current?.paymentDate||null),paidAt:_isOwner()?(document.getElementById('j-paid-val')?.value||null):(current?.paidAt||null),payoutDate:_isOwner()?(document.getElementById('j-payout')?.value||null):(current?.payoutDate||null),salesRep:_isOwner()?(document.getElementById('j-sales-rep')?.value||null):(current?.salesRep||null),salesPay:_isOwner()?(parseInt(document.getElementById('j-sales-pay')?.value)||0):(Number(current?.salesPay)||0),notes:document.getElementById('j-notes').value.trim(),opsChecklist:readOpsChecklist(),subtasks,attachments:canManageMaterials?parentAttachmentRead.items:_videoAttachments(current?.attachments),updatedAt:Date.now(),updatedBy:_myEmail()};
+  const data={title,biz:document.getElementById('j-biz')?.value||'edit',monthlyFee:_isOwner()?(parseInt(document.getElementById('j-monthly')?.value)||0):(Number(current?.monthlyFee)||0),jobType:document.getElementById('j-type')?.value||'edit',clientId:document.getElementById('j-cl').value||null,accountId,accountName,workerIds:selWorkerIds,workerId:primaryWorkerId,...billingSnapshot,scope:document.getElementById('j-scope').value||null,status:requestedStatus,isTrial,unitPrice,profit:_isOwner()?unitPrice:(Number(current?.profit)||unitPrice),workerPay,sharedDate:document.getElementById('j-shared').value||null,editorDraftDateSetter:aggregateDraftSetter,editorDraftDate:aggregateDraftDate,clientDraftDate:document.getElementById('j-client-draft').value||null,thumbnailDate:document.getElementById('j-thumbnail')?.value||null,deliveryDate:document.getElementById('j-deliver').value||null,completedDeliveryDate:!hasSubtasks&&parentInternalOnly?(document.getElementById('j-completed-delivery')?.value||null):(current?.completedDeliveryDate||null),manualIds:canManageMaterials?_selectedJobCaseManualIds(document.getElementById('j-manuals')):_caseManualIds(current?.manualIds),caution:canManageMaterials?String(document.getElementById('j-caution')?.value||'').trim().slice(0,2000):String(current?.caution||''),requestUrl:canManageMaterials?parentRequestUrl:(current?.requestUrl||''),sourceUrl:canManageMaterials?parentSourceUrl:(current?.sourceUrl||''),invoiceDate:_isOwner()?(document.getElementById('j-invoice')?.value||null):(current?.invoiceDate||null),dueDate:_isOwner()?(document.getElementById('j-due')?.value||null):(current?.dueDate||null),paymentDate:_isOwner()?(document.getElementById('j-payin')?.value||null):(current?.paymentDate||null),paidAt:_isOwner()?(document.getElementById('j-paid-val')?.value||null):(current?.paidAt||null),payoutDate:_isOwner()?(document.getElementById('j-payout')?.value||null):(current?.payoutDate||null),salesRep:_isOwner()?(document.getElementById('j-sales-rep')?.value||null):(current?.salesRep||null),salesPay:_isOwner()?(parseInt(document.getElementById('j-sales-pay')?.value)||0):(Number(current?.salesPay)||0),notes:document.getElementById('j-notes').value.trim(),opsChecklist:readOpsChecklist(),subtasks,attachments:canManageMaterials?parentAttachmentRead.items:_videoAttachments(current?.attachments),updatedAt:Date.now(),updatedBy:_myEmail()};
   // Once finance is moved to an owner-only ledger, shared/mcapp must never
   // receive those amounts again. Dates and operational fields remain editable.
   const sharedData=financeProtected
@@ -17097,7 +17196,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260829-09';
+const APP_VERSION='20260829-10';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -17171,6 +17270,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260829-09"></script>
+<script src="./manager-features.js?v=20260829-10"></script>
 </body>
 </html>

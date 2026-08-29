@@ -32,7 +32,7 @@ test('a 500-person fixture creates only the first 60 optional picker controls', 
     S: { workers: Array.from({ length: 500 }, (_, i) => ({ id: `w${i}`, name: `編集者 ${i}` })) },
     SELF_WID: '__self',
     esc: value => String(value),
-    document: { getElementById: id => elements[id] || null },
+    document: { getElementById: id => elements[id] || null, querySelector: () => null },
   };
   vm.createContext(context);
   vm.runInContext(html.slice(html.indexOf('function _jobModalWorkerIds()'), html.indexOf('function openJobModal(')), context);
@@ -73,7 +73,7 @@ test('the large parent-case editor avoids full-screen backdrop blur work', () =>
 
 test('collapsed child cache retains scheduling, money, payment and link fields', () => {
   const cacheSource = html.slice(html.indexOf('function _readJobSubEditorState('), html.indexOf('function collapseJobSubEditor('));
-  for (const field of ['unitPrice', 'workerPay', 'editorDraftDate', 'clientDraftDate', 'deliveryDate', 'invoiceDate', 'dueDate', 'paymentDate', 'payoutDate', 'attachments']) {
+  for (const field of ['unitPrice', 'workerPay', 'editorDraftDate', 'clientDraftDate', 'deliveryDate', 'completedDeliveryDate', 'invoiceDate', 'dueDate', 'paymentDate', 'payoutDate', 'attachments']) {
     assert.match(cacheSource, new RegExp(`${field}:`), `${field} is retained when collapsing an editor`);
   }
   assert.match(cacheSource, /requestUrl,sourceUrl,attachments:attachmentRead\.items/);
@@ -93,10 +93,11 @@ test('collapsing a child records its edited values without loading the worker di
   const shell = { dataset: { stateIndex: '0' }, querySelector: selector => selector === '.j-sub-row' ? row : values[selector] || null };
   const row = { querySelector: selector => values[selector] || null };
   const context = {
+    SELF_WID: '__self',
     JOB_MODAL_SUB_RECORDS: [{ id: 'sub-100', completedDeliveryDate: '2026-09-06' }],
     _videoSafeUrl: value => value.startsWith('https://') ? value : '', _videoCanEdit: () => false, _curJobBiz: () => 'edit',
     _videoAttachments: items => items || [], _paymentRecipientSnapshot: workerId => ({ billingWorkerId: workerId }),
-    _editorDraftDateSetter: () => 'creator', uid: () => 'new-id',
+    _editorDraftDateSetter: () => 'creator', _selectedJobCaseManualIds: () => [], uid: () => 'new-id',
   };
   vm.createContext(context);
   vm.runInContext(childSource, context);
@@ -107,8 +108,23 @@ test('collapsing a child records its edited values without loading the worker di
     status: '編集者進行中', workerId: 'editor-a', billingWorkerId: 'editor-a', sharedDate: '2026-08-29', editorDraftDateSetter: 'creator',
     editorDraftDate: '2026-09-01', clientDraftDate: '2026-09-03', deliveryDate: '2026-09-05', invoiceDate: '2026-09-20',
     dueDate: '2026-09-30', paymentDate: '2026-10-01', payoutDate: '2026-10-02', requestUrl: 'https://example.test/script',
-    sourceUrl: 'https://example.test/assets', attachments: [],
+    sourceUrl: 'https://example.test/assets', manualIds: [], caution: '', attachments: [],
   });
+});
+
+test('internal work makes editor draft optional and lets the owner record actual delivery', () => {
+  assert.match(html, /const parentInternalOnly=selWorkerIds\.length>0&&selWorkerIds\.every\(id=>id===SELF_WID\)/);
+  assert.match(html, /if\(!hasSubtasks&&!parentInternalOnly&&bizCfgOf/);
+  assert.match(html, /if\(sub\.workerId!==SELF_WID&&_editorDraftDateSetter\(sub\)==='creator'&&!sub\.editorDraftDate\)/);
+  assert.match(html, /completedDeliveryDate:workerId===SELF_WID\?\(el\.querySelector\('\.j-sub-completed-delivery'\)\?\.value\|\|null\):\(previous\.completedDeliveryDate\|\|null\)/);
+  assert.match(html, /completedDeliveryDate:!hasSubtasks&&parentInternalOnly\?/);
+});
+
+test('subcase add is guarded against rapid repeated activation and duplicate state indexes', () => {
+  assert.match(html, /if\(JOB_MODAL_SUB_ADD_BUSY\|\|button\?\.disabled\)return/);
+  assert.match(html, /button\.disabled=true/);
+  assert.match(html, /setTimeout\(\(\)=>\{JOB_MODAL_SUB_ADD_BUSY=false/);
+  assert.match(html, /new Set\(stateIndexes\)\.size!==stateIndexes\.length/);
 });
 
 test('child editor loads the full worker directory only when its worker select is opened', () => {

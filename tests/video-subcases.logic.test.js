@@ -100,6 +100,23 @@ test('legacy board cards show each subcase assignee and both draft dates', () =>
   assert.match(html, /mark=editor\?'編':'ク'/);
 });
 
+test('a child with a different active status appears as a shortcut in its own board column', () => {
+  const context = {};
+  vm.createContext(context);
+  vm.runInContext(`${functionSource('_boardSubcaseStatus')}\n${functionSource('_boardMixedSubcases')}\n${functionSource('_boardSubcaseRefs')}\nthis.refs=_boardSubcaseRefs;`, context);
+  const parent = { id:'parent-1', title:'9月分', status:'編集者進行中', subtasks:[
+    { id:'sub-1', title:'台本1', status:'修正中' },
+    { id:'sub-2', title:'台本2', status:'編集者進行中' },
+  ] };
+  assert.equal(context.refs([parent],'修正中').length,1);
+  assert.equal(context.refs([parent],'編集者進行中').length,0);
+  assert.match(html, /class="board-subcase-shortcut"/);
+  assert.match(html, /_boardMixedStatusSummaryHtml\(j\)/);
+  const shortcutSource=functionSource('rProjSubcaseShortcut');
+  assert.match(shortcutSource,/esc\(JSON\.stringify/);
+  assert.doesNotMatch(shortcutSource,/toggleJobSub|markJobPaid|saveJob/);
+});
+
 test('manager video workspace has accessible case context, next action, and responsive kanban primitives', () => {
   assert.match(html, /href="app-ui\.css"/);
   assert.match(html, /class="ref-breadcrumb"/);

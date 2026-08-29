@@ -130,6 +130,19 @@ service cloud.firestore {
         && (setter != 'creator' || data.get('editorDraftDate', '') != '');
     }
 
+    // Case documents keep only references to readable manuals, never their
+    // body or URL.  Each child receives its effective fallback list/text.
+    function validCaseManualLinks(data) {
+      return data.get('manualIds', []) is list
+        && data.get('manualIds', []).size() <= 20
+        && data.get('parentManualIds', []) is list
+        && data.get('parentManualIds', []).size() <= 20
+        && data.get('caution', '') is string
+        && data.get('caution', '').size() <= 2000
+        && data.get('parentCaution', '') is string
+        && data.get('parentCaution', '').size() <= 2000;
+    }
+
     function editorDraftDateChangeAllowed() {
       return resource.data.get('editorDraftDateSetter', 'editor') == 'editor'
         || request.resource.data.get('editorDraftDate', '') == resource.data.get('editorDraftDate', '');
@@ -1031,7 +1044,8 @@ service cloud.firestore {
             'instructions','urgent','status','progress','evidenceUrl','blocker',
             'workDate','startTime','endTime','submittedByUid','editorUid',
             'editorEmail','editorName','directorUid','source','createdAt','updatedAt','history',
-            'workflow','progressEvents','parentJobId','parentJobTitle','attachments','editorPayAmount','subtaskIndex'
+            'workflow','progressEvents','parentJobId','parentJobTitle','attachments','editorPayAmount','subtaskIndex',
+            'manualIds','parentManualIds','caution','parentCaution'
           ])
           && request.resource.data.recordType == 'editor_portal_job'
           && request.resource.data.submittedByUid == uid
@@ -1062,6 +1076,7 @@ service cloud.firestore {
           && validJobSchedule()
           && validEditorPayAmountForCreate()
           && validEditorDraftDateAssignment(request.resource.data)
+          && validCaseManualLinks(request.resource.data)
           && validCompletedJobEvidence()
           && validReviewWorkflow(request.resource.data)
           && validProgressEvents(request.resource.data)
@@ -1084,7 +1099,8 @@ service cloud.firestore {
             'instructions','urgent','status','progress','evidenceUrl','blocker',
             'workDate','startTime','endTime','submittedByUid','editorUid',
             'editorEmail','editorName','directorUid','source','createdAt','updatedAt','history',
-            'attachments','legacyParentId','legacySubtaskId','subtaskIndex'
+            'attachments','legacyParentId','legacySubtaskId','subtaskIndex',
+            'manualIds','parentManualIds','caution','parentCaution'
           ])
           && request.resource.data.recordType == 'editor_portal_job'
           && request.resource.data.get('source', '') == 'legacy_sync'
@@ -1112,6 +1128,7 @@ service cloud.firestore {
           && validJobStatus(request.resource.data.status)
           && validJobSchedule()
           && validEditorDraftDateAssignment(request.resource.data)
+          && validCaseManualLinks(request.resource.data)
           && validCompletedJobEvidence()
           && validAttachments(request.resource.data)
           && validSubtaskIndex(request.resource.data)
@@ -1152,7 +1169,8 @@ service cloud.firestore {
             'title','clientDisplay','deadline','sharedDate','editorDraftDate','editorDraftDateSetter',
             'clientDraftDate','thumbnailDate','deliveryDate','instructions','urgent','status',
             'correctionReason','updatedAt','updatedBy','history',
-            'workflow','progressEvents','attachments','requestUrl','sourceUrl'
+            'workflow','progressEvents','attachments','requestUrl','sourceUrl',
+            'manualIds','parentManualIds','caution','parentCaution'
           ])
           && validJobStatus(request.resource.data.status)
           && (request.resource.data.status == resource.data.status
@@ -1160,6 +1178,7 @@ service cloud.firestore {
             || validManagerReviewTransition())
           && validJobSchedule()
           && validEditorDraftDateAssignment(request.resource.data)
+          && validCaseManualLinks(request.resource.data)
           && validAttachments(request.resource.data)
           && validSubtaskIndex(request.resource.data)
           && validCompletedJobEvidence()
@@ -1175,7 +1194,8 @@ service cloud.firestore {
             'correctionReason','updatedAt','updatedBy','history','ownPay',
             'payableApproved','payableApprovedAt','payableMonth',
             'linkedLegacyJobId','integratedAt','integratedBy',
-            'workflow','progressEvents','attachments','requestUrl','sourceUrl','subtaskIndex'
+            'workflow','progressEvents','attachments','requestUrl','sourceUrl','subtaskIndex',
+            'manualIds','parentManualIds','caution','parentCaution'
           ])
           && validJobStatus(request.resource.data.status)
           && (request.resource.data.status == resource.data.status
@@ -1183,6 +1203,7 @@ service cloud.firestore {
             || validManagerReviewTransition())
           && validJobSchedule()
           && validEditorDraftDateAssignment(request.resource.data)
+          && validCaseManualLinks(request.resource.data)
           && validAttachments(request.resource.data)
           && validSubtaskIndex(request.resource.data)
           && validCompletedJobEvidence()
@@ -1436,7 +1457,7 @@ service cloud.firestore {
       allow create: if videoManager()
         && request.resource.data.keys().hasOnly([
           'businessType','title','caseName','parentCaseId','parentCaseName','clientId','clientName','accountId','accountName',
-          'summary','instructions','requestUrl','sourceUrl','attachments','editorDraftDate','editorDraftDateSetter',
+          'summary','instructions','requestUrl','sourceUrl','attachments','manualIds','parentManualIds','caution','parentCaution','editorDraftDate','editorDraftDateSetter',
           'clientDraftDate','thumbnailDate','deliveryDate','urgent','status',
           'audience','eligibleUids','directorUid','createdByUid','createdByName',
           'createdAt','updatedAt','assignedUid','assignedName','assignedAt','subtaskIndex'
@@ -1451,6 +1472,7 @@ service cloud.firestore {
         && request.resource.data.get('parentCaseName', '').size() <= 120
         && request.resource.data.status == 'open'
         && validEditorDraftDateAssignment(request.resource.data)
+        && validCaseManualLinks(request.resource.data)
         && validAttachments(request.resource.data)
         && validSubtaskIndex(request.resource.data)
         && request.resource.data.eligibleUids is list
@@ -1459,7 +1481,8 @@ service cloud.firestore {
       allow update: if videoManager()
         && (owner() || resource.data.get('directorUid', '') == request.auth.uid)
         && validAttachments(request.resource.data)
-        && validEditorDraftDateAssignment(request.resource.data);
+        && validEditorDraftDateAssignment(request.resource.data)
+        && validCaseManualLinks(request.resource.data);
       allow update: if canSeeBoard(resource.data)
         && resource.data.status == 'open'
         && resource.data.get('assignedUid', '') == ''

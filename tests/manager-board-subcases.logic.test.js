@@ -84,6 +84,6 @@ test('board publish keeps finance out of legacy/shared parent and child records'
 });
 
 test('single-job publishing remains supported through the default child row',()=>{
-  assert.match(manager,/\$\{boardSubcaseRowHtml\(\)\}/);
+  assert.match(manager,/\$\{boardSubcaseRowHtml\(safeId\(\),\{_manualTarget:initialTarget,_openAll:initialTarget===DIRECT_ALL_ID\}\)\}/);
   assert.match(manager,/if\(subcases\.items\.length>1&&!caseName\)/);
 });
