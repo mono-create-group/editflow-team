@@ -146,22 +146,17 @@ def notify_all(token: str) -> int:
         history = request(token, "GET", f"/rooms/{notice.room_id}/messages?force=1")
         states.append((notice, notice_state(history, notice)))
 
-    failures = 0
     for notice, state in states:
         if state == "duplicate":
             print(f"room {notice.room_id}: approved recovery notice already present")
             continue
-        try:
-            request(token, "POST", f"/rooms/{notice.room_id}/messages", {"body": notice.body, "self_unread": "0"})
-            posted_history = request(token, "GET", f"/rooms/{notice.room_id}/messages?force=1")
-            if notice_state(posted_history, notice) != "duplicate":
-                raise NotificationError(f"room {notice.room_id}: exact recovery notice was not confirmed")
-            print(f"room {notice.room_id}: approved recovery notice sent and verified")
-        except NotificationError as error:
-            failures += 1
-            print(str(error), file=sys.stderr)
+        request(token, "POST", f"/rooms/{notice.room_id}/messages", {"body": notice.body, "self_unread": "0"})
+        posted_history = request(token, "GET", f"/rooms/{notice.room_id}/messages?force=1")
+        if notice_state(posted_history, notice) != "duplicate":
+            raise NotificationError(f"room {notice.room_id}: exact recovery notice was not confirmed")
+        print(f"room {notice.room_id}: approved recovery notice sent and verified")
 
-    return 1 if failures else 0
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:

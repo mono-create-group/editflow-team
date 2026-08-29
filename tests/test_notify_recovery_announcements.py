@@ -93,6 +93,26 @@ https://mono-create-group.github.io/editflow-team/editor.html
         ])
         self.assertEqual([call.args[3]["body"] for call in post_calls], [notice.body for notice in MODULE.NOTICES])
 
+    def test_post_failure_stops_before_any_later_room(self):
+        empty = json.dumps([])
+        responses = [empty, empty, empty, MODULE.NotificationError("POST failed")]
+        with mock.patch.object(MODULE, "request", side_effect=responses) as request:
+            with self.assertRaises(MODULE.NotificationError):
+                MODULE.notify_all("test-token")
+        post_calls = [call for call in request.call_args_list if call.args[1] == "POST"]
+        self.assertEqual(len(post_calls), 1)
+        self.assertEqual(post_calls[0].args[2], "/rooms/434016937/messages")
+
+    def test_post_verification_failure_stops_before_any_later_room(self):
+        empty = json.dumps([])
+        responses = [empty, empty, empty, "{}", empty]
+        with mock.patch.object(MODULE, "request", side_effect=responses) as request:
+            with self.assertRaises(MODULE.NotificationError):
+                MODULE.notify_all("test-token")
+        post_calls = [call for call in request.call_args_list if call.args[1] == "POST"]
+        self.assertEqual(len(post_calls), 1)
+        self.assertEqual(post_calls[0].args[2], "/rooms/434016937/messages")
+
     def test_send_flag_is_required_without_network(self):
         with mock.patch.object(MODULE, "request") as request:
             self.assertEqual(MODULE.main([]), 2)
