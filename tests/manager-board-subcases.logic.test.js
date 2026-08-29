@@ -18,7 +18,10 @@ test('manager publish form supports an editable list of child cases',()=>{
   assert.match(manager,/担当編集者が設定/);
   assert.match(manager,/managerBoardDraftSetterChanged\(this\)/);
   assert.match(manager,/class="mb-subcase-client-draft"/);
+  assert.match(manager,/納期（予定・任意）/);
   assert.match(manager,/class="mb-subcase-instructions"/);
+  assert.match(manager,/この子案件だけの台本・依頼URL（任意）/);
+  assert.match(manager,/この子案件だけの素材URL（任意）/);
   assert.match(manager,/mb-subcase-attachments-/);
   assert.match(manager,/納品日は担当編集者が記録します/);
   for(const field of ['mb-subcase-unit','mb-subcase-pay','mb-subcase-invoice','mb-subcase-due','mb-subcase-payment','mb-subcase-payout'])assert.doesNotMatch(manager,new RegExp(field));
@@ -26,15 +29,17 @@ test('manager publish form supports an editable list of child cases',()=>{
   assert.match(manager,/id="mb-client-pricing-status"/);
 });
 
-test('manager validates every child case and preserves child-specific materials',()=>{
+test('manager validates every child case and preserves child-specific materials without requiring a planned deadline',()=>{
   assert.match(manager,/function readBoardSubcases\(\)/);
-  assert.match(manager,/すべての子案件に、案件名・納期（予定）・編集指示を入力してください/);
+  assert.match(manager,/すべての子案件に、案件名・編集指示を入力してください/);
+  assert.doesNotMatch(manager,/!title\|\|!deliveryDate\|\|!instructions/);
   assert.match(manager,/クライアント初稿は編集者初稿以降/);
   assert.match(manager,/案件追加者が設定する場合は、編集者初稿日を入力してください/);
   assert.match(manager,/editorDraftDateSetter=row\.querySelector\('\.mb-subcase-draft-setter'\)/);
   assert.match(manager,/editorDraftDateSetter,editorDraftDate/);
   assert.match(manager,/row\.querySelector\('\.video-attachment-list'\)/);
   assert.match(manager,/attachments:attachmentRead\.items/);
+  assert.match(manager,/URLは https:\/\/ または http:\/\/ で入力してください/);
   assert.doesNotMatch(manager,/paymentDate:_isOwner\(\)/);
   assert.doesNotMatch(manager,/payoutDate:_isOwner\(\)/);
   assert.match(manager,/subcases\.items\.length>1&&!caseName/);
@@ -49,6 +54,19 @@ test('published board jobs share one stable parent identifier while keeping each
   assert.match(manager,/editorDraftDateSetter:subcase\.editorDraftDateSetter,editorDraftDate:subcase\.editorDraftDate,clientDraftDate:subcase\.clientDraftDate/);
   assert.doesNotMatch(manager,/const data=\{[^}]*unitPrice:subcase\.unitPrice/);
   assert.match(rules,/'parentCaseId','parentCaseName'/);
+});
+
+test('board form supports parent-common resource links inherited by every child',()=>{
+  assert.match(manager,/id="mb-parent-request"/);
+  assert.match(manager,/id="mb-parent-source"/);
+  assert.match(manager,/'mb-parent-attachment-list'/);
+  assert.match(manager,/parentRequestUrl=document\.getElementById\('mb-parent-request'\)/);
+  assert.match(manager,/parentSourceUrl=document\.getElementById\('mb-parent-source'\)/);
+  assert.match(manager,/requestUrl=subcase\.requestUrl\|\|parentRequestUrl/);
+  assert.match(manager,/sourceUrl=subcase\.sourceUrl\|\|parentSourceUrl/);
+  assert.match(manager,/attachments=\[\.\.\.parentAttachmentRead\.items,\.\.\.subcase\.attachments\]/);
+  assert.match(manager,/requestUrl:parentRequestUrl,sourceUrl:parentSourceUrl/);
+  assert.match(manager,/attachments:parentAttachmentRead\.items/);
 });
 
 test('board publish keeps finance out of legacy/shared parent and child records',()=>{

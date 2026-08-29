@@ -405,7 +405,7 @@ def static_contract_checks() -> None:
         "let _teamCloudLoaded=false",
         "if(!_teamCloudLoaded){console.warn('team share save skipped: cloud snapshot is not loaded');return;}",
         "['jobs','clients','workers'].includes(k)&&known>0&&cur===0",
-        "if(!doc.exists){_teamCloudLoaded=true;_teamSave();return;}",
+        "if(!doc.exists){_teamCloudLoaded=true;_schedulePortalLegacySync();_teamSave();return;}",
         "if(Array.isArray(remote))_teamKnownCounts[k]=remote.length",
         "const TEAM_LEDGER_RESTORE_KEY='mc_team_ledger_restore_token'",
         "replaceLedgers&&TEAM_LEDGER_KEYS.includes(k)&&Array.isArray(remote)",

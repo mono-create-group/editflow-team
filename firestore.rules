@@ -1145,7 +1145,7 @@ service cloud.firestore {
             'title','clientDisplay','deadline','sharedDate','editorDraftDate','editorDraftDateSetter',
             'clientDraftDate','thumbnailDate','deliveryDate','instructions','urgent','status',
             'correctionReason','updatedAt','updatedBy','history',
-            'workflow','progressEvents','attachments'
+            'workflow','progressEvents','attachments','requestUrl','sourceUrl'
           ])
           && validJobStatus(request.resource.data.status)
           && (request.resource.data.status == resource.data.status
@@ -1167,7 +1167,7 @@ service cloud.firestore {
             'correctionReason','updatedAt','updatedBy','history','ownPay',
             'payableApproved','payableApprovedAt','payableMonth',
             'linkedLegacyJobId','integratedAt','integratedBy',
-            'workflow','progressEvents','attachments'
+            'workflow','progressEvents','attachments','requestUrl','sourceUrl'
           ])
           && validJobStatus(request.resource.data.status)
           && (request.resource.data.status == resource.data.status

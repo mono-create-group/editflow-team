@@ -24,10 +24,10 @@ test('theme covers desktop navigation, shared workspace surfaces, and financial 
 });
 
 test('reference-style owner shell is white and uses yellow only as an accent', () => {
-  assert.match(css, /#sidebar\{width:248px[^}]*background:#fff/);
+  assert.match(css, /#sidebar\{width:264px[^}]*background:#fff/);
   assert.match(css, /body::before\{display:none\}/);
   assert.match(css, /\.btn-p,\.btn\.primary\{background:var\(--owner-yellow\)!important/);
-  assert.match(css, /\.app-brand-logo\{display:block;width:min\(148px,100%\)/);
+  assert.match(css, /\.app-brand-logo\{display:block;width:min\(166px,100%\)/);
 });
 
 test('mobile drawer and bottom navigation remain bounded at narrow widths', () => {

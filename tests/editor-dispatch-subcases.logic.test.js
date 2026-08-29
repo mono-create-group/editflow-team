@@ -19,6 +19,10 @@ test('dispatch registration presents one parent and an editable child-case list'
   assert.match(source,/案件追加者が設定/);
   assert.match(source,/担当編集者が設定/);
   assert.match(source,/function dispatchDraftSetterChanged\(select\)/);
+  assert.match(source,/id="new-parent-request"/);
+  assert.match(source,/id="new-parent-source"/);
+  assert.match(source,/この子案件だけの台本・依頼URL（任意）/);
+  assert.match(source,/この子案件だけの素材URL（任意）/);
 });
 
 test('dispatch child cases require their pay and instructions, while actual delivery is recorded only after delivery',()=>{
@@ -46,6 +50,10 @@ test('dispatch writes each child atomically with a shared stable parent identity
   assert.match(source,/editorPayAmount:subcase\.editorPayAmount/);
   assert.match(source,/編集者支払額<\/b> ¥\$\{positiveYen\(j\.editorPayAmount\)\.toLocaleString\('ja-JP'\)\}/);
   assert.match(source,/editorDraftDateSetter:subcase\.editorDraftDateSetter/);
+  assert.match(source,/parentRequestUrl=\$\('#new-parent-request'\)/);
+  assert.match(source,/parentSourceUrl=\$\('#new-parent-source'\)/);
+  assert.match(source,/requestUrl=subcase\.requestUrl\|\|parentRequestUrl/);
+  assert.match(source,/sourceUrl=subcase\.sourceUrl\|\|parentSourceUrl/);
   assert.match(source,/batch\.set\(ref,data\);batch\.set\(ref\.collection\('events'\)\.doc\(\)/);
   assert.match(source,/await batch\.commit\(\)/);
 });

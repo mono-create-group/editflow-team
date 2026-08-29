@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260829-07"></script>
+<script src="./billing-terms.js?v=20260829-08"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -210,10 +210,12 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 .proc-count{font-size:11px;color:var(--amber);background:var(--adim);padding:1px 6px;border-radius:100px;font-weight:700}
 .subtask-list{margin-top:8px;display:flex;flex-direction:column;gap:4px;padding-left:2px}
 .sub-item{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--t2)}
-.sub-chk{width:15px;height:15px;border-radius:4px;border:2px solid var(--border);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.sub-chk{width:15px;height:15px;padding:0;border-radius:4px;border:2px solid var(--border);background:transparent;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s}
 .sub-chk:hover{border-color:var(--purple)}
 .sub-chk.done{background:var(--green);border-color:var(--green)}
 .sub-chk.done::after{content:'✓';color:#fff;font-size:9px;font-weight:700}
+.subcase-card-item{align-items:flex-start;gap:8px}.subcase-card-item>.sub-chk{margin-top:12px}.subcase-card-link{min-width:0;flex:1;border:0;background:transparent;padding:0;color:inherit;text-align:left;font:inherit;cursor:pointer}.subcase-card-link:focus-visible{outline:2px solid var(--purple);outline-offset:2px;border-radius:8px}
+.video-draft-meta{display:inline-flex;align-items:center;gap:5px;min-width:0;white-space:nowrap}.video-draft-mark{width:22px;height:22px;border:1.5px solid currentColor;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex:0 0 22px;background:#fff;color:#4b5563;font-size:11px;font-weight:900;line-height:1}.video-draft-meta b{font-weight:750}
 
 /* ─── WEEK CALENDAR ─── */
 .week-nav{display:flex;align-items:center;gap:10px;margin-bottom:14px}
@@ -992,7 +994,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260829-07">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260829-08">
 </head>
 <body class="owner-yellow-ui">
 
@@ -1002,10 +1004,10 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
   <div class="logo"><img class="app-brand-logo" src="./editflow-logo.svg" alt="EditFlow"></div>
   <div id="nav-items"></div>
   <div class="nav-sep"></div>
-  <div class="nav-item" data-view="customize"><span class="nav-icon">🛠</span>カスタマイズ</div>
-  <div class="nav-item" data-view="accounts"><span class="nav-icon">👥</span>アカウント</div>
-  <div class="nav-item" data-view="igaccounts"><span class="nav-icon">📷</span>IGアカウント</div>
-  <div class="nav-item" data-view="settings"><span class="nav-icon">⚙️</span>設定</div>
+  <div class="nav-item" data-view="customize"><span class="nav-icon"><svg class="owner-nav-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6 4-4 4 4-4 4zM3 21l6-6"></path><path d="m7 3 3 3-4 4-3-3zM12 12l9 9"></path></svg></span><span class="nav-label">カスタマイズ</span></div>
+  <div class="nav-item" data-view="accounts"><span class="nav-icon"><svg class="owner-nav-svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><circle cx="17" cy="9" r="2.5"></circle><path d="M3 20a6 6 0 0 1 12 0M14 15a5 5 0 0 1 7 5"></path></svg></span><span class="nav-label">アカウント</span></div>
+  <div class="nav-item" data-view="igaccounts"><span class="nav-icon"><svg class="owner-nav-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17.5" cy="6.5" r="1"></circle></svg></span><span class="nav-label">IGアカウント</span></div>
+  <div class="nav-item" data-view="settings"><span class="nav-icon"><svg class="owner-nav-svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1z"></path></svg></span><span class="nav-label">設定</span></div>
   <div class="nav-sep"></div>
   <div id="gcal-ui" style="padding:0 14px 8px"></div>
   <div id="auth-ui" style="padding:0 14px 10px"></div>
@@ -1554,7 +1556,7 @@ function fbSetupTeamSync(){
   _teamCloudLoaded=false;_teamLedgerRestoreAck='';_teamKnownCounts={};
   _teamUnsub=fbDb.collection('shared').doc('mcapp').onSnapshot(doc=>{
     if(TEAM_SHARE_OK!==true){TEAM_SHARE_OK=true;renderAuthUI();}
-    if(!doc.exists){_teamCloudLoaded=true;_teamSave();return;}
+    if(!doc.exists){_teamCloudLoaded=true;_schedulePortalLegacySync();_teamSave();return;}
     const d=doc.data()||{};
     const restoreToken=typeof d.ledgerRestoreToken==='string'?d.ledgerRestoreToken:'';
     let appliedRestoreToken='';try{appliedRestoreToken=localStorage.getItem(TEAM_LEDGER_RESTORE_KEY)||'';}catch(_){}
@@ -1593,6 +1595,7 @@ function fbSetupTeamSync(){
     // acknowledgement empty so Firestore rejects a stale jobs payload.
     _teamLedgerRestoreAck=ledgerRestoreReady&&ledgerLocalStateSafe?restoreToken:'';
     _teamCloudLoaded=true;
+    _schedulePortalLegacySync();
     if(changed)renderSyncSafe();
   },e=>{const c=e&&e.code;if(c==='permission-denied'&&TEAM_SHARE_OK!==false){TEAM_SHARE_OK=false;renderAuthUI();}console.warn('team share sync:',c||e);});
   // salesLeads分割doc(mcapp_leads_0..3)の購読。各shardは部分集合なのでid+updatedAtでマージ(削除しない)
@@ -1700,6 +1703,7 @@ function _stopRoleSubscriptions(){
   [_fbUnsubscribe,_teamUnsub,_accessReqUnsub,_accessRecordsUnsub,_accessControlUnsub,_portalJobsUnsub,_portalInvoicesUnsub,_portalProfilesUnsub,_portalAuthorizationsUnsub,_ownerJobFinanceUnsub,_ownerLegacyFinanceUnsub].forEach(u=>{try{if(u)u();}catch(_){}});
   (_slShardUnsubs||[]).forEach(u=>{try{if(u)u();}catch(_){}});_slShardUnsubs=[];
   _fbUnsubscribe=_teamUnsub=_accessReqUnsub=_accessRecordsUnsub=_accessControlUnsub=_portalJobsUnsub=_portalInvoicesUnsub=_portalProfilesUnsub=_portalAuthorizationsUnsub=_ownerJobFinanceUnsub=_ownerLegacyFinanceUnsub=null;
+  clearTimeout(_portalLegacySyncTimer);_portalLegacySyncTimer=null;
   _teamCloudLoaded=false;_teamKnownCounts={};
 }
 function _clearSensitiveLocalState(resetPersonal=false){
@@ -1792,11 +1796,25 @@ function fbSetupAccessAdmin(){
     renderSyncSafe();
   },e=>console.warn('access control sync',e&&e.code||e));
 }
+let _portalLegacySyncTimer=null;
+function _syncPortalJobsIntoLegacy(){
+  if(!_isOwner()||!_teamCloudLoaded)return false;
+  let changed=false;
+  (PORTAL_JOBS||[]).forEach(job=>{if(_applyPortalToLegacy(job,false))changed=true;});
+  if(changed){save();renderSyncSafe();}
+  return changed;
+}
+function _schedulePortalLegacySync(){
+  if(!_isOwner())return;
+  clearTimeout(_portalLegacySyncTimer);
+  _portalLegacySyncTimer=setTimeout(()=>{_portalLegacySyncTimer=null;_syncPortalJobsIntoLegacy();},60);
+}
 function fbSetupPortalOpsSync(){
   if(!(_isOwner()||hasAppRole('動画編集ディレクター')))return;
   if(_isOwner()){
     _portalJobsUnsub=fbDb.collectionGroup('editor_jobs').onSnapshot(q=>{
       PORTAL_JOBS=q.docs.filter(d=>d.ref.parent.parent&&d.ref.parent.parent.parent.id==='editor_portals').map(d=>({id:d.id,_portalUid:d.ref.parent.parent.id,_path:d.ref.path,...d.data()}));
+      _schedulePortalLegacySync();
       renderSyncSafe();
     },e=>console.warn('editor portal jobs sync',e&&e.code||e));
   }else{
@@ -6148,19 +6166,22 @@ function _videoAttachmentViewerHtml(title,items){
 function openLegacyAttachmentViewer(id,subId){
   const job=(S.jobs||[]).find(item=>item.id===id);if(!job)return;
   const sub=String(subId??'')===''||String(subId)==='-1'?null:(job.subtasks||[]).find((item,index)=>String(item?.id||index)===String(subId))||null;
-  openModal(_videoAttachmentViewerHtml(sub?.title||job.title,_videoCaseMaterials(sub?.attachments,sub?{}:job)));
+  const materials=sub?_videoCaseMaterials([...(job.attachments||[]),...(sub.attachments||[])],{requestUrl:sub.requestUrl||job.requestUrl,sourceUrl:sub.sourceUrl||job.sourceUrl}):_videoCaseMaterials(job.attachments,job);
+  openModal(_videoAttachmentViewerHtml(sub?.title||job.title,materials));
 }
 function openPortalAttachmentViewer(portalUid,id,subId){
   const job=(PORTAL_JOBS||[]).find(item=>item._portalUid===portalUid&&item.id===id);if(!job)return;
   const sub=String(subId??'')===''||String(subId)==='-1'?null:(job.subtasks||[]).find((item,index)=>String(item?.id||index)===String(subId))||null;
-  openModal(_videoAttachmentViewerHtml(sub?.title||job.title,_videoCaseMaterials(sub?.attachments,sub?{}:job)));
+  const materials=sub?_videoCaseMaterials([...(job.attachments||[]),...(sub.attachments||[])],{requestUrl:sub.requestUrl||job.requestUrl,sourceUrl:sub.sourceUrl||job.sourceUrl}):_videoCaseMaterials(job.attachments,job);
+  openModal(_videoAttachmentViewerHtml(sub?.title||job.title,materials));
 }
 function _videoAttachmentEditorRow(item={}){
   const type=_videoAttachmentType(item.type),url=_videoSafeUrl(item.url||'');
   return`<div class="video-attachment-row"><select class="video-attachment-type" aria-label="資料の種類">${VIDEO_ATTACHMENT_TYPES.map(name=>`<option value="${name}"${type===name?' selected':''}>${name}</option>`).join('')}</select><input class="video-attachment-title" maxlength="160" value="${esc(item.title||'')}" placeholder="表示名（例：台本101）" aria-label="表示名"><input class="video-attachment-url" type="url" inputmode="url" maxlength="2000" value="${esc(url)}" placeholder="https://..." aria-label="URL"><button type="button" class="btn btn-g btn-xs" onclick="this.closest('.video-attachment-row').remove()" aria-label="この素材を削除">✕</button></div>`;
 }
-function _videoAttachmentEditorHtml(items,addAction,listId=''){
-  return`<div class="video-attachment-editor"><div class="video-attachment-heading"><div><b>素材・資料</b><span>素材・台本・参考動画などのURLを追加できます</span></div><button type="button" class="btn btn-g btn-xs" onclick="${addAction}">＋ 追加</button></div><div${listId?` id="${esc(listId)}"`:''} class="video-attachment-list">${_videoAttachments(items).map(_videoAttachmentEditorRow).join('')}</div><div class="video-attachment-hint">URLは http:// または https:// で始まるものだけ保存できます。最大20件。</div></div>`;
+function _videoAttachmentEditorHtml(items,addAction,listId='',options={}){
+  const title=String(options.title||'素材・資料'),description=String(options.description||'素材・台本・参考動画などのURLを追加できます');
+  return`<div class="video-attachment-editor"><div class="video-attachment-heading"><div><b>${esc(title)}</b><span>${esc(description)}</span></div><button type="button" class="btn btn-g btn-xs" onclick="${addAction}">＋ 追加</button></div><div${listId?` id="${esc(listId)}"`:''} class="video-attachment-list">${_videoAttachments(items).map(_videoAttachmentEditorRow).join('')}</div><div class="video-attachment-hint">URLは http:// または https:// で始まるものだけ保存できます。最大20件。</div></div>`;
 }
 function addVideoAttachmentRow(list){
   const target=typeof list==='string'?document.querySelector(list):list;if(!target)return;
@@ -6201,6 +6222,10 @@ function _videoWorkflowLabel(workflow){return({editing:'編集作業中',directo
 function _videoCurrentProgressLabel(job){const status=String(job?.status||'');if(['修正中','FB待ち','確認待ち'].includes(status))return videoStatusLabel(status);return _videoWorkflowLabel(_videoWorkflow(job));}
 function _videoNextOwner(job){const stage=_videoWorkflow(job).stage;return stage==='director_review'?'動画編集ディレクター':stage==='client_submission'||stage==='client_review'?'ディレクター／クライアント':stage==='delivered'?'完了':'担当編集者';}
 function _videoCaseSummary(job){return`<div class="video-case-summary"><span>現在の進捗 <b>${esc(_videoCurrentProgressLabel(job))}</b></span><span>次に対応する人 <b>${esc(_videoNextOwner(job))}</b></span><span>納期（予定） <b>${esc(job.deadline||'未設定')}</b></span>${job.completedDeliveryDate?`<span>納品日 <b>${esc(job.completedDeliveryDate)}</b></span>`:''}</div>`;}
+function _videoDraftMetaHtml(kind,date,note=''){
+  const editor=kind==='editor',fullLabel=editor?'編集者初稿':'クライアント初稿',mark=editor?'編':'ク',value=date||'未設定';
+  return`<span class="video-draft-meta" aria-label="${esc(`${fullLabel} ${value}${note?` ${note}`:''}`)}"><span class="video-draft-mark" aria-hidden="true">${mark}</span><span>初稿 <b>${esc(value)}</b>${note?` <small>（${esc(note)}）</small>`:''}</span></span>`;
+}
 function _videoDraftDateSummary(job){return`<div class="video-card-dates"><span>編集者初稿 <b>${esc(job.editorDraftDate||'未設定')}</b>（${esc(_editorDraftDateSetterLabel(job))}が設定）</span><span>クライアント初稿 <b>${esc(job.clientDraftDate||'未設定')}</b></span><span>納期（予定） <b>${esc(job.deadline||'未設定')}</b></span><span>納品日 <b>${esc(job.completedDeliveryDate||'未記録')}</b></span></div>`;}
 function _videoWorkflowEventLabel(type){return({editor_submitted:'編集者が稿を提出',director_approved:'DのOKを記録',client_submitted:'クライアントへ提出',client_revision_requested:'クライアントから修正指示',editor_delivery_completed:'編集者が納品を完了',client_approved_delivered:'クライアントOK・納品（旧記録）'})[type]||'進捗を更新';}
 function _videoWorkflowHtml(job,portalUid){const w=_videoWorkflow(job),events=Array.isArray(job?.progressEvents)?job.progressEvents:[],actions=w.stage==='director_review'?[['directorApprove','DのOKを記録']]:w.stage==='client_submission'?[['clientSubmitted','クライアントへの提出を記録']]:w.stage==='client_review'?[['clientRevision','修正指示を記録']]:[],history=events.slice(-8).reverse(),deliveryNotice=w.stage==='client_review'&&!job.completedDeliveryDate?'<div class="notice" style="margin-top:8px;box-shadow:none"><b>先方からOKが出たら、担当編集者が納品日と納品の証跡URLを記録して完了にします。</b><div style="font-size:12px;color:var(--t2);margin-top:3px">納品日が未記録の案件には報酬が発生しません。</div></div>':'';return`<div class="card" style="margin:8px 0;background:var(--card2)"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b style="font-size:14px">進捗共有</b><span class="badge bk">${Number(w.round)}回目・現在：${esc(_videoCurrentProgressLabel(job))}</span></div><div style="font-size:14px;color:var(--t2);line-height:1.6;margin-top:6px">編集者提出 → D確認 → 先方提出 → 修正指示 → 再D確認を、回数付きで残します。</div>${actions.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${actions.map(([action,label])=>`<button class="btn btn-g btn-xs" onclick="advancePortalWorkflow('${esc(portalUid)}','${esc(job.id)}','${action}')">${label}</button>`).join('')}</div>`:''}${deliveryNotice}${history.length?`<details style="margin-top:8px"><summary style="font-size:14px;font-weight:700;cursor:pointer">進捗履歴を見る（${events.length}件）</summary><div style="display:grid;gap:5px;margin-top:7px">${history.map(event=>`<div style="font-size:14px;color:var(--t2);line-height:1.6"><b>第${Number(event.round)||1}回</b> ・ ${esc(_videoWorkflowEventLabel(event.type))}${event.reason?`<br><span style="color:var(--red)">修正内容：${esc(event.reason)}</span>`:''}</div>`).join('')}</div></details>`:''}</div>`;}
@@ -6263,7 +6288,7 @@ function _findVideoSubcase(parent,subId){
   return index<0?null:{index,sub:parent.subtasks[index]};
 }
 function _videoSubcaseDetailHtml(parent,sub,{canEdit=false,onSave='',openParent=''}={}){
-  const materials=_videoCaseMaterials(sub?.attachments,sub||{}),note=String(sub?.instructions||sub?.notes||parent?.instructions||parent?.notes||'').trim(),setter=_editorDraftDateSetter(sub);
+  const parentMaterials=_videoCaseMaterials(parent?.attachments,parent||{}),childMaterials=_videoCaseMaterials(sub?.attachments,sub||{}),parentUrls=new Set(parentMaterials.map(item=>item.url)),childOnly=childMaterials.filter(item=>!parentUrls.has(item.url)),materials=[...parentMaterials,...childOnly],note=String(sub?.instructions||sub?.notes||parent?.instructions||parent?.notes||'').trim(),setter=_editorDraftDateSetter(sub);
   return`<div class="mhdr"><div class="mtitle">サブ案件の詳細</div><button class="mclose" onclick="closeModal()">✕</button></div><div class="video-breadcrumb">${esc(parent?.title||'親案件')} / サブ案件</div><div class="fg"><div class="fl">案件名</div><div style="font-size:16px;font-weight:800;padding:8px 0">${esc(sub?.title||'サブ案件')}</div></div><div class="frow"><div class="fg"><div class="fl">ステータス</div><div>${esc(videoStatusLabel(sub?.status||'未着手'))}</div></div><div class="fg"><div class="fl">担当者</div><div>${esc(_videoSubtaskAssignee(sub?.workerId,new Map((S.workers||[]).map(w=>[w.id,w.name||'']))))}</div></div></div><div style="font-size:12px;font-weight:800;color:var(--t2);margin:10px 0 6px">日程</div><div class="frow"><div class="fg"><div class="fl">編集者初稿の設定者</div><select id="vs-editor-draft-setter" ${canEdit?'':'disabled'} onchange="changeEditorDraftDateSetter(this,'vs-editor-draft')"><option value="creator" ${setter==='creator'?'selected':''}>案件追加者が設定</option><option value="editor" ${setter==='editor'?'selected':''}>担当編集者が設定</option></select></div><div class="fg"><div class="fl">編集者初稿</div><input id="vs-editor-draft" type="date" value="${esc(sub?.editorDraftDate||'')}" ${canEdit&&setter==='creator'?'':'disabled'}></div></div><div class="frow"><div class="fg"><div class="fl">クライアント初稿</div><input id="vs-client-draft" type="date" value="${esc(sub?.clientDraftDate||'')}" ${canEdit?'':'disabled'}></div><div class="fg"><div class="fl">納期（予定）</div><input type="date" value="${esc(sub?.deliveryDate||'')}" disabled></div></div><div class="frow"><div class="fg"><div class="fl">納品日</div><input type="date" value="${esc(sub?.completedDeliveryDate||'')}" disabled></div><div class="fg"></div></div>${note?`<div class="fg"><div class="fl">指示・メモ</div><div style="white-space:pre-wrap;line-height:1.6;color:var(--t2)">${esc(note)}</div></div>`:''}<div class="video-attachment-editor"><div class="video-attachment-heading"><div><b>素材・資料</b><span>リンクを新しいタブで開きます</span></div></div>${_videoAttachmentLinksHtml(materials)||'<div class="video-attachment-hint">添付された素材・資料はありません。</div>'}</div><div class="mfooter"><button class="btn btn-g" onclick="closeModal()">閉じる</button>${openParent?`<button class="btn btn-g" onclick="${esc(openParent)}">親案件を開く</button>`:''}${canEdit&&onSave?`<button class="btn btn-p" onclick="${esc(onSave)}">設定を保存</button>`:''}</div>`;
 }
 function openLegacySubcaseDetail(jobId,subId){
@@ -6289,7 +6314,7 @@ function _videoCard(j){
   const isParent=!!j._aggregateParent,overdue=_videoIsOverdue(j),alert=_videoDeadlineAlert(j),click=j._source==='portal'?`openPortalJobModal('${j._portalUid}','${j.id}')`:_isOwner()?`openJobModal('${j.id}')`:`openVideoLegacySafeModal('${j.id}')`;
   const openMaterials=(subIndex)=>j._source==='portal'?`openPortalAttachmentViewer('${j._portalUid}','${j.id}',${subIndex})`:`openLegacyAttachmentViewer('${j.id}',${subIndex})`;
   const subtasks=_videoSortJobs(j.subtasks||[]);
-  const subtaskHtml=subtasks.length?`<details class="video-subcase-list" aria-label="${esc(j.title)}のサブ案件"><summary class="video-subcase-head"><span>↳ サブ案件</span><span>${subtasks.length}件</span></summary><div class="video-subcase-children">${subtasks.map(s=>{const subOverdue=_videoIsOverdue(s),subAlert=_videoDeadlineAlert(s),color=subAlert?.level==='danger'||subOverdue?'var(--red)':subAlert?.level==='warning'?'var(--amber)':BOARD_COL[s.status]||'var(--pl)',badge=SCOLBG[s.status]||'bk',materials=_videoAttachments(s.attachments),subId=String(s.id||''),openSubcase=s._portalChildJobId?`openPortalJobModal(${JSON.stringify(s._portalChildPortalUid)},${JSON.stringify(s._portalChildJobId)})`:j._source==='portal'?`openPortalSubcaseDetail(${JSON.stringify(j._portalUid)},${JSON.stringify(j.id)},${JSON.stringify(subId)})`:`openLegacySubcaseDetail(${JSON.stringify(j.id)},${JSON.stringify(subId)})`;return`<button type="button" class="video-subcase-row ${subAlert?`video-deadline-${subAlert.level}`:''}" style="--subcase-color:${color}" onclick="${esc(openSubcase)}" aria-label="${esc(s.title)}の詳細を開く"><div class="video-subcase-title">${esc(s.title)}</div><span class="badge ${badge} video-subcase-status">${esc(videoStatusLabel(s.status))}</span><div class="video-subcase-meta"><span>担当 ${esc(s.assignee)}</span>${_videoDeadlineAlertHtml(subAlert)}<span>編集者初稿 ${esc(s.editorDraftDate||'未設定')}（${esc(_editorDraftDateSetterLabel(s))}が設定）</span><span>クライアント初稿 ${esc(s.clientDraftDate||'未設定')}</span><span style="color:${subOverdue?'var(--red)':'var(--t3)'}">納期（予定） ${esc(s.deadline||'未設定')}</span><span>納品日 ${esc(s.completedDeliveryDate||'未記録')}</span>${materials.length?`<span class="video-material-count">素材 ${materials.length}件</span>`:''}</div></button>`;}).join('')}</div></details>`:'';
+  const subtaskHtml=subtasks.length?`<details class="video-subcase-list" aria-label="${esc(j.title)}のサブ案件"><summary class="video-subcase-head"><span>↳ サブ案件</span><span>${subtasks.length}件</span></summary><div class="video-subcase-children">${subtasks.map(s=>{const subOverdue=_videoIsOverdue(s),subAlert=_videoDeadlineAlert(s),color=subAlert?.level==='danger'||subOverdue?'var(--red)':subAlert?.level==='warning'?'var(--amber)':BOARD_COL[s.status]||'var(--pl)',badge=SCOLBG[s.status]||'bk',materials=_videoAttachments(s.attachments),subId=String(s.id||''),openSubcase=s._portalChildJobId?`openPortalJobModal(${JSON.stringify(s._portalChildPortalUid)},${JSON.stringify(s._portalChildJobId)})`:j._source==='portal'?`openPortalSubcaseDetail(${JSON.stringify(j._portalUid)},${JSON.stringify(j.id)},${JSON.stringify(subId)})`:`openLegacySubcaseDetail(${JSON.stringify(j.id)},${JSON.stringify(subId)})`;return`<button type="button" class="video-subcase-row ${subAlert?`video-deadline-${subAlert.level}`:''}" style="--subcase-color:${color}" onclick="${esc(openSubcase)}" aria-label="${esc(s.title)}の詳細を開く"><div class="video-subcase-title">${esc(s.title)}</div><span class="badge ${badge} video-subcase-status">${esc(videoStatusLabel(s.status))}</span><div class="video-subcase-meta"><span>担当 ${esc(s.assignee)}</span>${_videoDeadlineAlertHtml(subAlert)}${_videoDraftMetaHtml('editor',s.editorDraftDate)}${_videoDraftMetaHtml('client',s.clientDraftDate)}<span style="color:${subOverdue?'var(--red)':'var(--t3)'}">納期（予定） ${esc(s.deadline||'未設定')}</span><span>納品日 ${esc(s.completedDeliveryDate||'未記録')}</span>${materials.length?`<span class="video-material-count">素材 ${materials.length}件</span>`:''}</div></button>`;}).join('')}</div></details>`:'';
   const materials=_videoAttachments(j.attachments);
   const parentSummary=`<div class="video-case-summary"><span>サブ案件 <b>${subtasks.length}件</b></span><span>進行中 <b>${subtasks.filter(s=>!['完了','キャンセル'].includes(String(s.status||''))).length}件</b></span><span>最短の納期（予定） <b>${esc(j.deadline||'未設定')}</b></span></div>`;
   const main=isParent?`<div class="video-job-main video-job-parent-main"><div class="video-job-title-row"><b class="video-job-title">${esc(j.title)}</b><span class="badge bk">親案件・集計</span></div><div style="font-size:10.5px;color:var(--t3);margin-top:3px">${esc(j.clientDisplay||'クライアント未設定')} ・ ${esc(j.assignee)}</div>${_videoDeadlineAlertHtml(alert)}${parentSummary}</div>`:`<button type="button" class="video-job-main" onclick="${click}" aria-label="${esc(j.title)}を開く"><div class="video-job-title-row"><b class="video-job-title">${esc(j.title)}</b>${j._source==='portal'?'<span class="badge bk">直接依頼</span>':''}</div><div style="font-size:10.5px;color:var(--t3);margin-top:3px">${esc(j.clientDisplay||'クライアント未設定')} ・ ${esc(j.assignee)}</div>${_videoDeadlineAlertHtml(alert)}${_videoCaseSummary(j)}${_videoDraftDateSummary(j)}${j.blocker?`<div style="font-size:10.5px;color:var(--red);margin-top:4px">停止理由あり</div>`:''}</button>`;
@@ -6334,7 +6359,7 @@ function openPortalJobModal(portalUid,id){
 <div class="frow"><div class="fg"><div class="fl">受注日</div><input id="vp-shared" type="date" value="${esc(j.sharedDate||'')}" ${canEdit?'':'disabled'}></div><div class="fg"><div class="fl">編集者初稿の設定者</div><select id="vp-editor-draft-setter" ${canEdit?'':'disabled'} onchange="changeEditorDraftDateSetter(this,'vp-editor-draft')"><option value="creator" ${draftSetter==='creator'?'selected':''}>案件追加者が設定</option><option value="editor" ${draftSetter==='editor'?'selected':''}>担当編集者が設定</option></select></div></div>
 <div class="frow"><div class="fg"><div class="fl">編集者 初稿</div><input id="vp-editor-draft" type="date" value="${esc(j.editorDraftDate||'')}" ${canEdit&&draftSetter==='creator'?'':'disabled'}><div style="font-size:10px;color:var(--t3);margin-top:3px">${draftSetter==='creator'?'ここで案件追加者が設定します。':'担当編集者の画面で設定します。'}</div></div><div class="fg"><div class="fl">クライアント提出 初稿</div><input id="vp-client-draft" type="date" value="${esc(j.clientDraftDate||'')}" ${canEdit?'':'disabled'}></div></div>
 <div class="frow"><div class="fg"><div class="fl">サムネイル納品日</div><input id="vp-thumbnail" type="date" value="${esc(j.thumbnailDate||'')}" ${canEdit?'':'disabled'}></div><div class="fg"></div></div>
-<div class="frow"><div class="fg"><div class="fl">納期（予定）</div><input id="vp-deadline" type="date" value="${esc(deliveryDate)}" ${canEdit?'':'disabled'}></div><div class="fg"><div class="fl">納品日</div><input type="date" value="${esc(completedDeliveryDate)}" disabled aria-label="担当編集者が記録する納品日"><div style="font-size:10px;color:var(--t3);margin-top:3px">先方OK後に、担当編集者が記録します。未記録の案件には報酬が発生しません。</div></div></div>
+	<div class="frow"><div class="fg"><div class="fl">納期（予定・任意）</div><input id="vp-deadline" type="date" value="${esc(deliveryDate)}" ${canEdit?'':'disabled'}></div><div class="fg"><div class="fl">納品日</div><input type="date" value="${esc(completedDeliveryDate)}" disabled aria-label="担当編集者が記録する納品日"><div style="font-size:10px;color:var(--t3);margin-top:3px">先方OK後に、担当編集者が記録します。未記録の案件には報酬が発生しません。</div></div></div>
 <div class="fg"><div class="fl">ステータス</div><select id="vp-status" ${canEdit?'':'disabled'}>${bizStatOpts(portalBiz,j.status)}</select></div>
 	<div class="fg"><div class="fl">指示・確認メモ</div><textarea id="vp-instructions" ${canEdit?'':'disabled'}>${esc(j.instructions||'')}</textarea></div>
 	${canEdit?_videoAttachmentEditorHtml(j.attachments||[],"addVideoAttachmentRow(document.getElementById('vp-attachment-list'))",'vp-attachment-list'):`<div class="video-attachment-editor"><div class="video-attachment-heading"><div><b>素材・資料</b><span>閲覧のみ</span></div></div>${_videoAttachmentLinksHtml(_videoCaseMaterials(j.attachments,j))||'<div class="video-attachment-hint">添付された素材・資料はありません。</div>'}</div>`}
@@ -6352,7 +6377,6 @@ async function savePortalJobAdmin(portalUid,id){
   const at=Date.now(),deliveryDate=document.getElementById('vp-deadline').value,editorDraftDateSetter=document.getElementById('vp-editor-draft-setter')?.value||'editor',schedule={sharedDate:document.getElementById('vp-shared').value,editorDraftDate:document.getElementById('vp-editor-draft').value,clientDraftDate:document.getElementById('vp-client-draft').value,thumbnailDate:document.getElementById('vp-thumbnail').value,deliveryDate};
   if(editorDraftDateSetter==='creator'&&!schedule.editorDraftDate)return toast('案件追加者が設定する場合は、編集者初稿日を入力してください','warn');
   const scheduleError=_jobScheduleError(schedule);if(scheduleError)return toast(scheduleError,'warn');
-  if(!deliveryDate&&j.source!=='direct_client')return toast('納期（予定）を入力してください','warn');
   const attachmentRead=_readVideoAttachments(document.getElementById('vp-attachment-list'));if(attachmentRead.error)return toast(attachmentRead.error,'warn');
   const data={title:document.getElementById('vp-title').value.trim(),clientDisplay:document.getElementById('vp-client').value.trim(),deadline:deliveryDate,...schedule,editorDraftDateSetter,status:requestedStatus,instructions:document.getElementById('vp-instructions').value.trim(),attachments:attachmentRead.items,correctionReason:document.getElementById('vp-correction').value.trim(),updatedAt:at,updatedBy:_myEmail(),history:[...(j.history||[]).slice(-49),{at,by:_myEmail(),type:'manager_update',status:requestedStatus,editorDraftDateSetter}]};
   if(_isOwner()&&!external){
@@ -6380,7 +6404,7 @@ function _portalLegacyId(portalUid,id){return('ep_'+String(portalUid).slice(0,10
 function _newPortalLegacyJob(j){
   const client=(S.clients||[]).find(c=>!c.deleted&&(String(c.id||'')===String(j.sourceClientId||'')||String(c.name||'').trim()===String(j.clientDisplay||'').trim())),access=(ACCESS_RECORDS||[]).find(x=>x.id===j._portalUid),workerId=access?.workerId||null,at=Number(j.updatedAt)||Date.now();
   const biz=_portalVideoBiz(j),billingSnapshot=_paymentRecipientSnapshot(workerId,{});
-	  return{id:j.linkedLegacyJobId,biz,jobType:'edit',title:j.title||(biz==='haken'?'編集者直接依頼':'編集代行案件'),clientId:client?.id||null,accountId:j.accountId||null,accountName:j.accountDisplay||null,workerId,workerIds:workerId?[workerId]:[],...billingSnapshot,scope:'その他',status:j.status||'受注済み',sharedDate:j.sharedDate||String(j.createdAt?new Date(j.createdAt).toISOString().slice(0,10):today()),deliveryDate:j.deliveryDate||j.deadline||null,completedDeliveryDate:j.completedDeliveryDate||null,editorDraftDate:j.editorDraftDate||null,editorDraftDateSetter:_editorDraftDateSetter(j),clientDraftDate:j.clientDraftDate||null,thumbnailDate:j.thumbnailDate||null,invoiceDate:null,dueDate:null,paymentDate:null,paidAt:null,payoutDate:null,unitPrice:0,workerPay:0,profit:0,ownerFinanceId:j._ownerFinanceId||j.linkedLegacyJobId||'',notes:j.instructions||'',progressNote:j.progress||'',progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:[],progressEvents:Array.isArray(j.progressEvents)?j.progressEvents:[],workflow:j.workflow||null,lastProgressChangedByUid:j.lastProgressChangedByUid||null,lastProgressChangedByEmail:j.lastProgressChangedByEmail||null,lastProgressChangedByRole:j.lastProgressChangedByRole||null,evidenceUrl:j.evidenceUrl||'',blocker:j.blocker||'',attachments:_videoAttachments(j.attachments),portalUid:j._portalUid,portalJobId:j.id,source:'editor_portal',opsChecklist:[],createdAt:new Date().toISOString(),updatedAt:at,updatedBy:j.updatedBy||j.editorEmail||_myEmail()};
+	  return{id:j.linkedLegacyJobId,biz,jobType:'edit',title:j.title||(biz==='haken'?'編集者直接依頼':'編集代行案件'),clientId:client?.id||null,accountId:j.accountId||null,accountName:j.accountDisplay||null,workerId,workerIds:workerId?[workerId]:[],...billingSnapshot,scope:'その他',status:j.status||'受注済み',sharedDate:j.sharedDate||String(j.createdAt?new Date(j.createdAt).toISOString().slice(0,10):today()),deliveryDate:j.deliveryDate||j.deadline||null,completedDeliveryDate:j.completedDeliveryDate||null,editorDraftDate:j.editorDraftDate||null,editorDraftDateSetter:_editorDraftDateSetter(j),clientDraftDate:j.clientDraftDate||null,thumbnailDate:j.thumbnailDate||null,invoiceDate:null,dueDate:null,paymentDate:null,paidAt:null,payoutDate:null,unitPrice:0,workerPay:0,profit:0,ownerFinanceId:j._ownerFinanceId||j.linkedLegacyJobId||'',notes:j.instructions||'',requestUrl:j.requestUrl||'',sourceUrl:j.sourceUrl||'',progressNote:j.progress||'',progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:[],progressEvents:Array.isArray(j.progressEvents)?j.progressEvents:[],workflow:j.workflow||null,lastProgressChangedByUid:j.lastProgressChangedByUid||null,lastProgressChangedByEmail:j.lastProgressChangedByEmail||null,lastProgressChangedByRole:j.lastProgressChangedByRole||null,evidenceUrl:j.evidenceUrl||'',blocker:j.blocker||'',attachments:_videoAttachments(j.attachments),portalUid:j._portalUid,portalJobId:j.id,source:'editor_portal',opsChecklist:[],createdAt:new Date().toISOString(),updatedAt:at,updatedBy:j.updatedBy||j.editorEmail||_myEmail()};
 }
 function _portalField(j,key,fallback){return Object.prototype.hasOwnProperty.call(j,key)?(j[key]||null):fallback;}
 function _legacyPortalJobId(parentId,subId){
@@ -6442,7 +6466,7 @@ async function syncLegacyAssignedSubtasksToPortal(jobOrId,{silent=false,targetUi
       const title=String(item.record.title||parent.title||'案件').slice(0,120),parentName=String(parent.title||title).slice(0,120),clientDisplay=String(client?.name||parent.clientName||'クライアント未設定'),instructions=String(item.record.instructions||item.record.notes||parent.notes||'').slice(0,3000),requestUrl=String(item.record.requestUrl||parent.requestUrl||''),sourceUrl=String(item.record.sourceUrl||parent.sourceUrl||''),attachments=_videoAttachments([...(parent.attachments||[]),...(item.record.attachments||[])]);
       if(existing){
         const keepEditorDraft=item.setter==='editor'&&_editorDraftDateSetter(existing)==='editor'?String(existing.editorDraftDate||''):item.draft;
-        batch.set(item.ref,{title,clientDisplay,deadline:item.deliveryDate,sharedDate:String(item.record.sharedDate||parent.sharedDate||''),editorDraftDateSetter:item.setter,editorDraftDate:keepEditorDraft,clientDraftDate:String(item.record.clientDraftDate||parent.clientDraftDate||''),thumbnailDate:String(item.record.thumbnailDate||parent.thumbnailDate||''),deliveryDate:item.deliveryDate,instructions,urgent:false,attachments,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:_myEmail()},{merge:true});writeCount++;
+        batch.set(item.ref,{title,clientDisplay,deadline:item.deliveryDate,requestUrl,sourceUrl,sharedDate:String(item.record.sharedDate||parent.sharedDate||''),editorDraftDateSetter:item.setter,editorDraftDate:keepEditorDraft,clientDraftDate:String(item.record.clientDraftDate||parent.clientDraftDate||''),thumbnailDate:String(item.record.thumbnailDate||parent.thumbnailDate||''),deliveryDate:item.deliveryDate,instructions,urgent:false,attachments,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:_myEmail()},{merge:true});writeCount++;
       }else{
         batch.set(item.ref,{recordType:'editor_portal_job',businessType:jobBiz(parent)==='haken'?'dispatch':'edit_agency',title,caseName:parentName,parentCaseId:`legacy:${parent.id}`,parentCaseName:parentName,clientId:String(parent.clientId||''),clientDisplay,accountId:String(parent.accountId||''),accountDisplay:String(parent.accountName||''),deadline:item.deliveryDate,requestUrl,sourceUrl,sharedDate:String(item.record.sharedDate||parent.sharedDate||''),editorDraftDate:item.draft,editorDraftDateSetter:item.setter,clientDraftDate:String(item.record.clientDraftDate||parent.clientDraftDate||''),thumbnailDate:String(item.record.thumbnailDate||parent.thumbnailDate||''),deliveryDate:item.deliveryDate,instructions,urgent:false,status:item.status,progress:String(item.record.progress||''),evidenceUrl:String(item.record.evidenceUrl||''),blocker:String(item.record.blocker||''),submittedByUid:item.access.id,editorUid:item.access.id,editorEmail:String(item.access.email||''),editorName:String(item.access.name||_paymentWorkerName(item.workerId)||''),directorUid:String(item.access.directorUid||''),source:'legacy_sync',legacyParentId:String(parent.id),legacySubtaskId:item.subId,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp(),history:[{at:item.at,by:_myEmail(),type:'legacy_sync_created'}],attachments});writeCount++;
       }
@@ -6462,11 +6486,11 @@ function _applyPortalToLegacy(j,createMissing=false){
   let target=(S.jobs||[]).find(x=>String(x.id)===linkedId||String(x.boardParentCaseId||'')===linkedId),changed=false;
   if(!target&&createMissing&&_isOwner()){target=_newPortalLegacyJob(j);S.jobs.unshift(target);changed=true;}
   if(!target)return false;
-  const subIndex=(target.subtasks||[]).findIndex(sub=>String(sub?.id||'')===String(j.id||'')||String(sub?.portalJobId||'')===String(j.id||''));
+  const subIndex=(target.subtasks||[]).findIndex(sub=>String(sub?.id||'')===String(j.legacySubtaskId||j.id||'')||String(sub?.portalJobId||'')===String(j.id||''));
   if(subIndex>=0){
-    const sub=target.subtasks[subIndex],access=(ACCESS_RECORDS||[]).find(x=>x.id===j._portalUid),workerId=access?.workerId||sub.workerId||null,billingSnapshot=_paymentRecipientSnapshot(workerId,sub),updatedAt=Number(j.updatedAt)||Date.now(),updatedBy=j.updatedBy||j.editorEmail||_myEmail();
+    const sub=target.subtasks[subIndex],access=(ACCESS_RECORDS||[]).find(x=>x.id===j._portalUid),workerId=access?.workerId||sub.workerId||null,billingSnapshot=_paymentRecipientSnapshot(workerId,sub),updatedAt=_videoUpdatedMillis(j.updatedAt)||Date.now(),updatedBy=j.updatedBy||j.editorEmail||_myEmail();
     if(sub.portalUid&&sub.portalUid!==j._portalUid||sub.portalJobId&&sub.portalJobId!==j.id)return false;
-    const next={...sub,workerId,...billingSnapshot,status:j.status||sub.status,sharedDate:_portalField(j,'sharedDate',sub.sharedDate),editorDraftDate:_portalField(j,'editorDraftDate',sub.editorDraftDate),editorDraftDateSetter:_editorDraftDateSetter(j,_editorDraftDateSetter(sub)),clientDraftDate:_portalField(j,'clientDraftDate',sub.clientDraftDate),thumbnailDate:_portalField(j,'thumbnailDate',sub.thumbnailDate),deliveryDate:_portalField(j,'deliveryDate',j.deadline||sub.deliveryDate),completedDeliveryDate:_portalField(j,'completedDeliveryDate',sub.completedDeliveryDate),instructions:j.instructions||sub.instructions,progress:j.progress||sub.progress,progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:(sub.progressMilestones||[]),progressEvents:Array.isArray(j.progressEvents)?j.progressEvents:(sub.progressEvents||[]),workflow:j.workflow||sub.workflow||null,evidenceUrl:j.evidenceUrl||sub.evidenceUrl,blocker:j.blocker||'',attachments:Array.isArray(j.attachments)?_videoAttachments(j.attachments):(sub.attachments||[]),portalUid:j._portalUid,portalJobId:j.id,updatedAt,updatedBy};
+    const next={...sub,workerId,...billingSnapshot,status:j.status||sub.status,sharedDate:_portalField(j,'sharedDate',sub.sharedDate),editorDraftDate:_portalField(j,'editorDraftDate',sub.editorDraftDate),editorDraftDateSetter:_editorDraftDateSetter(j,_editorDraftDateSetter(sub)),clientDraftDate:_portalField(j,'clientDraftDate',sub.clientDraftDate),thumbnailDate:_portalField(j,'thumbnailDate',sub.thumbnailDate),deliveryDate:_portalField(j,'deliveryDate',j.deadline||sub.deliveryDate),completedDeliveryDate:_portalField(j,'completedDeliveryDate',sub.completedDeliveryDate),instructions:j.instructions||sub.instructions,requestUrl:_portalField(j,'requestUrl',sub.requestUrl),sourceUrl:_portalField(j,'sourceUrl',sub.sourceUrl),progress:j.progress||sub.progress,progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:(sub.progressMilestones||[]),progressEvents:Array.isArray(j.progressEvents)?j.progressEvents:(sub.progressEvents||[]),workflow:j.workflow||sub.workflow||null,evidenceUrl:j.evidenceUrl||sub.evidenceUrl,blocker:j.blocker||'',attachments:Array.isArray(j.attachments)?_videoAttachments(j.attachments):(sub.attachments||[]),portalUid:j._portalUid,portalJobId:j.id,updatedAt,updatedBy};
     if(Object.keys(next).some(key=>JSON.stringify(sub[key])!==JSON.stringify(next[key]))){
       target.subtasks=target.subtasks.map((item,index)=>index===subIndex?next:item);target.updatedAt=updatedAt;target.updatedBy=updatedBy;target.statusHistory=[...(target.statusHistory||[]).slice(-99),{at:updatedAt,by:updatedBy,type:'portal_subcase_update',subId:String(sub.id||''),status:next.status,editorDraftDate:next.editorDraftDate,editorDraftDateSetter:next.editorDraftDateSetter,source:'editor_portal'}];changed=true;
     }
@@ -6474,7 +6498,7 @@ function _applyPortalToLegacy(j,createMissing=false){
   }
   if(!j.linkedLegacyJobId)return changed;
   if(target.portalUid&&target.portalUid!==j._portalUid||target.portalJobId&&target.portalJobId!==j.id)return false;
-	  const next={title:j.title||target.title,status:j.status||target.status,sharedDate:_portalField(j,'sharedDate',target.sharedDate),editorDraftDate:_portalField(j,'editorDraftDate',target.editorDraftDate),editorDraftDateSetter:_editorDraftDateSetter(j,_editorDraftDateSetter(target)),clientDraftDate:_portalField(j,'clientDraftDate',target.clientDraftDate),thumbnailDate:_portalField(j,'thumbnailDate',target.thumbnailDate),deliveryDate:_portalField(j,'deliveryDate',j.deadline||target.deliveryDate),completedDeliveryDate:_portalField(j,'completedDeliveryDate',target.completedDeliveryDate),notes:j.instructions||target.notes,progressNote:j.progress||target.progressNote,progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:(target.progressMilestones||[]),progressEvents:Array.isArray(j.progressEvents)?j.progressEvents:(target.progressEvents||[]),workflow:j.workflow||target.workflow||null,lastProgressChangedByUid:j.lastProgressChangedByUid||target.lastProgressChangedByUid||null,lastProgressChangedByEmail:j.lastProgressChangedByEmail||target.lastProgressChangedByEmail||null,lastProgressChangedByRole:j.lastProgressChangedByRole||target.lastProgressChangedByRole||null,evidenceUrl:j.evidenceUrl||target.evidenceUrl,blocker:j.blocker||'',attachments:Array.isArray(j.attachments)?_videoAttachments(j.attachments):(target.attachments||[]),updatedAt:Number(j.updatedAt)||Date.now(),updatedBy:j.updatedBy||j.editorEmail||_myEmail()};
+	  const next={title:j.title||target.title,status:j.status||target.status,sharedDate:_portalField(j,'sharedDate',target.sharedDate),editorDraftDate:_portalField(j,'editorDraftDate',target.editorDraftDate),editorDraftDateSetter:_editorDraftDateSetter(j,_editorDraftDateSetter(target)),clientDraftDate:_portalField(j,'clientDraftDate',target.clientDraftDate),thumbnailDate:_portalField(j,'thumbnailDate',target.thumbnailDate),deliveryDate:_portalField(j,'deliveryDate',j.deadline||target.deliveryDate),completedDeliveryDate:_portalField(j,'completedDeliveryDate',target.completedDeliveryDate),notes:j.instructions||target.notes,requestUrl:_portalField(j,'requestUrl',target.requestUrl),sourceUrl:_portalField(j,'sourceUrl',target.sourceUrl),progressNote:j.progress||target.progressNote,progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:(target.progressMilestones||[]),progressEvents:Array.isArray(j.progressEvents)?j.progressEvents:(target.progressEvents||[]),workflow:j.workflow||target.workflow||null,lastProgressChangedByUid:j.lastProgressChangedByUid||target.lastProgressChangedByUid||null,lastProgressChangedByEmail:j.lastProgressChangedByEmail||target.lastProgressChangedByEmail||null,lastProgressChangedByRole:j.lastProgressChangedByRole||target.lastProgressChangedByRole||null,evidenceUrl:j.evidenceUrl||target.evidenceUrl,blocker:j.blocker||'',attachments:Array.isArray(j.attachments)?_videoAttachments(j.attachments):(target.attachments||[]),updatedAt:_videoUpdatedMillis(j.updatedAt)||Date.now(),updatedBy:j.updatedBy||j.editorEmail||_myEmail()};
   if(Object.keys(next).some(k=>JSON.stringify(target[k])!==JSON.stringify(next[k]))){Object.assign(target,next);target.statusHistory=[...(target.statusHistory||[]).slice(-99),{at:next.updatedAt,by:next.updatedBy,status:next.status,note:next.progressNote,evidenceUrl:next.evidenceUrl,source:'editor_portal'}];changed=true;}
   return changed;
 }
@@ -7478,7 +7502,7 @@ function rProjCard(j){
   ${j.clientDraftDate&&cbz.lbl.d2s?`<div class="proj-due-label ${urgCls(j.clientDraftDate)}">${cbz.lbl.d2s}: ${j.clientDraftDate} (${fmt(j.clientDraftDate)})</div>`:''}
   ${_isOwner()&&j.invoiceDate?`<div class="proj-due-label ${urgCls(j.invoiceDate)}">🧾 請求書: ${j.invoiceDate} (${fmt(j.invoiceDate)})</div>`:''}
   ${j.deliveryDate?`<div class="proj-due-label ${uc}">${cbz.lbl.deliverS}: ${j.deliveryDate} (${fmt(j.deliveryDate)})</div>`:''}
-  ${(j.subtasks||[]).length?`<details class="subtask-list" onclick="event.stopPropagation()"><summary class="video-subcase-head">↳ サブ案件 <span>${(j.subtasks||[]).length}件</span></summary><div>${(j.subtasks||[]).map((s,i)=>`<div class="sub-item"><div class="sub-chk ${s.done?'done':''}" onclick="event.stopPropagation();toggleJobSub('${j.id}',${i})"></div><span style="${s.done?'text-decoration:line-through;color:var(--t3)':''}font-size:11px">${esc(s.title)}</span></div>`).join('')}</div></details>`:''}
+  ${(j.subtasks||[]).length?`<details class="subtask-list" onclick="event.stopPropagation()"><summary class="video-subcase-head">↳ サブ案件 <span>${(j.subtasks||[]).length}件</span></summary><div>${(j.subtasks||[]).map((s,i)=>{const subAssignee=s.workerId===SELF_WID?'mono.create社内対応':(S.workers.find(w=>w.id===s.workerId)?.name||s.assignee||'未割当'),subId=String(s.id||i);return`<div class="sub-item subcase-card-item"><button type="button" class="sub-chk ${s.done?'done':''}" onclick="event.stopPropagation();toggleJobSub('${j.id}',${i})" aria-label="${esc(s.title||`サブ案件${i+1}`)}を${s.done?'未完了':'完了'}にする"></button><button type="button" class="subcase-card-link" onclick="event.stopPropagation();openLegacySubcaseDetail(${JSON.stringify(j.id)},${JSON.stringify(subId)})" aria-label="${esc(s.title||`サブ案件${i+1}`)}の詳細を開く"><span class="video-subcase-title" style="${s.done?'text-decoration:line-through;color:var(--t3)':''}">${esc(s.title||`サブ案件${i+1}`)}</span><span class="video-subcase-meta"><span>担当者 ${esc(subAssignee)}</span>${_videoDraftMetaHtml('editor',s.editorDraftDate)}${_videoDraftMetaHtml('client',s.clientDraftDate)}</span></button></div>`;}).join('')}</div></details>`:''}
 </div>`;
 }
 
@@ -7895,7 +7919,7 @@ function rJobItem(j){
   const wNames=getJobWorkerNames(j);
   const pr=jobProfit(j),ti=jobTotalIn(j),to=jobTotalOut(j);
   const subDone=(j.subtasks||[]).filter(s=>s.done).length, subTot=(j.subtasks||[]).length;
-  const subRows=(j.subtasks||[]).map((s,i)=>{const w=S.workers.find(x=>x.id===s.workerId),name=s.workerId===SELF_WID?'mono.create社内対応':w?.name||'未割当',status=s.done?'完了':(s.status||'未着手'),subId=String(s.id||i),openSubcase=`openLegacySubcaseDetail(${JSON.stringify(j.id)},${JSON.stringify(subId)})`;return`<button type="button" class="video-subcase-row" onclick="event.stopPropagation();${esc(openSubcase)}" aria-label="${esc(s.title||`サブ案件${i+1}`)}の詳細を開く"><div class="video-subcase-title">${esc(s.title||`サブ案件${i+1}`)}</div><span class="badge ${SCOLBG[status]||'bk'} video-subcase-status">${esc(status)}</span><div class="video-subcase-meta"><span>担当 ${esc(name)}</span><span>編集者初稿 ${esc(s.editorDraftDate||'未設定')}</span><span>クライアント初稿 ${esc(s.clientDraftDate||'未設定')}</span><span>納期（予定） ${esc(s.deliveryDate||'未設定')}</span>${s.completedDeliveryDate?`<span>納品日 ${esc(s.completedDeliveryDate)}</span>`:''}${_isOwner()&&Number(s.unitPrice||0)?`<span>¥${Number(s.unitPrice).toLocaleString()}</span>`:''}${_isOwner()&&Number(s.workerPay||0)?`<span>支払 ¥${Number(s.workerPay).toLocaleString()}</span>`:''}</div></button>`;}).join('');
+  const subRows=(j.subtasks||[]).map((s,i)=>{const w=S.workers.find(x=>x.id===s.workerId),name=s.workerId===SELF_WID?'mono.create社内対応':w?.name||'未割当',status=s.done?'完了':(s.status||'未着手'),subId=String(s.id||i),openSubcase=`openLegacySubcaseDetail(${JSON.stringify(j.id)},${JSON.stringify(subId)})`;return`<button type="button" class="video-subcase-row" onclick="event.stopPropagation();${esc(openSubcase)}" aria-label="${esc(s.title||`サブ案件${i+1}`)}の詳細を開く"><div class="video-subcase-title">${esc(s.title||`サブ案件${i+1}`)}</div><span class="badge ${SCOLBG[status]||'bk'} video-subcase-status">${esc(status)}</span><div class="video-subcase-meta"><span>担当 ${esc(name)}</span>${_videoDraftMetaHtml('editor',s.editorDraftDate)}${_videoDraftMetaHtml('client',s.clientDraftDate)}<span>納期（予定） ${esc(s.deliveryDate||'未設定')}</span>${s.completedDeliveryDate?`<span>納品日 ${esc(s.completedDeliveryDate)}</span>`:''}${_isOwner()&&Number(s.unitPrice||0)?`<span>¥${Number(s.unitPrice).toLocaleString()}</span>`:''}${_isOwner()&&Number(s.workerPay||0)?`<span>支払 ¥${Number(s.workerPay).toLocaleString()}</span>`:''}</div></button>`;}).join('');
   return`<div class="job-item-wrap"><div class="job-item" onclick="openJobModal('${j.id}')">
   <span class="badge ${SCOLBG[j.status]||'bk'}">${j.status}</span>
   <span class="job-title">${esc(j.title)}</span>
@@ -13003,7 +13027,7 @@ function openJobModal(id,preStatus,preClientId){
   const subs=j?.subtasks||[];
   JOB_MODAL_SUB_RECORDS=subs.map(_jobModalSubRecordClone);
   const canManageMaterials=_videoCanEdit()&&['edit','haken'].includes(jbiz);
-  const materialSection=canManageMaterials?_videoAttachmentEditorHtml(j?.attachments||[],"addVideoAttachmentRow(document.getElementById('j-attachment-list'))",'j-attachment-list'):`<div class="video-attachment-editor"><div class="video-attachment-heading"><div><b>素材・資料</b><span>閲覧のみ</span></div></div>${_videoAttachmentLinksHtml(_videoCaseMaterials(j?.attachments,j))||'<div class="video-attachment-hint">添付された素材・資料はありません。</div>'}</div>`;
+  const materialSection=canManageMaterials?_videoAttachmentEditorHtml(j?.attachments||[],"addVideoAttachmentRow(document.getElementById('j-attachment-list'))",'j-attachment-list',{title:'親案件共通の素材・資料リンク',description:'すべての子案件で使うDrive・Notion・台本置き場など'}) :`<div class="video-attachment-editor"><div class="video-attachment-heading"><div><b>親案件共通の素材・資料リンク</b><span>閲覧のみ</span></div></div>${_videoAttachmentLinksHtml(_videoCaseMaterials(j?.attachments,j))||'<div class="video-attachment-hint">親案件共通の素材・資料はありません。</div>'}</div>`;
   const parentDraftSetter=j?_editorDraftDateSetter(j):'creator';
   const suggestedUnitPrice=!j?_ownerMasterClientUnitPrice(preClientId||''):null,up=j?(j.unitPrice||j.profit||0):(suggestedUnitPrice||0), wp=j?.workerPay||0;
   const pr=up-wp;
@@ -13055,10 +13079,15 @@ function openJobModal(id,preStatus,preClientId){
     <select id="j-scope">${bizScopeOpts(jbiz,j?.scope||'')}</select>
   </div>
 </div>
+<div style="font-size:12px;font-weight:700;color:var(--t2);margin:10px 0 6px">🔗 親案件共通のリンク</div>
+<div class="frow">
+  <div class="fg"><div class="fl">共通の台本・依頼URL</div><input id="j-request" type="url" inputmode="url" maxlength="2000" value="${esc(j?.requestUrl||'')}" placeholder="https://..." ${canManageMaterials?'':'disabled'}><div class="fhint">子案件に個別URLがない場合、こちらを表示します。</div></div>
+  <div class="fg"><div class="fl">共通の素材URL</div><input id="j-source" type="url" inputmode="url" maxlength="2000" value="${esc(j?.sourceUrl||'')}" placeholder="https://..." ${canManageMaterials?'':'disabled'}><div class="fhint">複数の素材は下の「＋ 追加」から登録できます。</div></div>
+</div>
 <div style="font-size:12px;font-weight:700;color:var(--t2);margin:10px 0 6px">📅 日程</div>
 <div class="frow">
   <div class="fg"><div class="fl" id="jl-shared">共有日</div><input type="date" id="j-shared" value="${j?.sharedDate||''}"></div>
-  <div class="fg"><div class="fl" id="jl-deliver">納期（予定）</div><input type="date" id="j-deliver" value="${j?.deliveryDate||''}"></div>
+	  <div class="fg"><div class="fl" id="jl-deliver">納期（予定・任意）</div><input type="date" id="j-deliver" value="${j?.deliveryDate||''}"></div>
 </div>
 <div class="frow" id="jf-drafts">
   <div class="fg"><div class="fl">編集者初稿の設定者</div><select id="j-editor-draft-setter" onchange="changeEditorDraftDateSetter(this,'j-editor-draft')" ${subs.length?'disabled':''}><option value="creator" ${parentDraftSetter==='creator'?'selected':''}>案件追加者が設定</option><option value="editor" ${parentDraftSetter==='editor'?'selected':''}>担当編集者が設定</option>${parentDraftSetter==='mixed'?'<option value="mixed" selected>子案件ごとに設定</option>':''}</select></div>
@@ -13293,7 +13322,7 @@ function mkSubRow(s,ph,bk,originalIndex=-1,financeLocked=false){
     <div><div class="j-sub-d2-lbl" style="font-size:10px;color:var(--t3);margin-bottom:2px">${_bc.lbl.d2||'クライアント提出'}</div>
       <input class="j-sub-client" type="date" value="${s.clientDraftDate||''}" style="font-size:12px;padding:4px 6px">
     </div>
-	<div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">納期（予定）</div>
+	<div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">納期（予定・任意）</div>
 	  <input class="j-sub-deliver" type="date" value="${s.deliveryDate||''}" style="font-size:12px;padding:4px 6px">
 	</div>
 	<div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">納品日（担当編集者が記録）</div>
@@ -13305,7 +13334,11 @@ function mkSubRow(s,ph,bk,originalIndex=-1,financeLocked=false){
 	    <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">入金予定日</div><input class="j-sub-payment" type="date" value="${s.paymentDate||''}" style="font-size:12px;padding:4px 6px"></div>
 	    <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">支払日</div><input class="j-sub-payout" type="date" value="${s.payoutDate||''}" style="font-size:12px;padding:4px 6px"></div>
 	  </div>
-	  ${_videoAttachmentEditorHtml(s.attachments||[],'addSubVideoAttachmentRow(this)')}
+	  <div class="frow" style="margin-top:8px">
+	    <div class="fg"><div class="fl">この子案件だけの台本・依頼URL（任意）</div><input class="j-sub-request" type="url" inputmode="url" maxlength="2000" value="${esc(s.requestUrl||'')}" placeholder="空欄なら親案件の共通URLを使用"></div>
+	    <div class="fg"><div class="fl">この子案件だけの素材URL（任意）</div><input class="j-sub-source" type="url" inputmode="url" maxlength="2000" value="${esc(s.sourceUrl||'')}" placeholder="空欄なら親案件の共通URLを使用"></div>
+	  </div>
+	  ${_videoAttachmentEditorHtml(s.attachments||[],'addSubVideoAttachmentRow(this)','',{title:'この子案件だけの素材・資料（任意）',description:'親案件とは別のリンクがある場合だけ追加'})}
 	</div>`;
 }
 function addWorkerInline(){
@@ -13364,13 +13397,15 @@ function saveJob(){
   const canManageMaterials=_videoCanEdit()&&['edit','haken'].includes(document.getElementById('j-biz')?.value||jobBiz(current));
   const parentAttachmentRead=canManageMaterials?_readVideoAttachments(document.getElementById('j-attachment-list')):{error:'',items:_videoAttachments(current?.attachments)};
   if(parentAttachmentRead.error){toast(parentAttachmentRead.error,'warn');return;}
+  const parentRequestRaw=canManageMaterials?String(document.getElementById('j-request')?.value||'').trim():String(current?.requestUrl||''),parentSourceRaw=canManageMaterials?String(document.getElementById('j-source')?.value||'').trim():String(current?.sourceUrl||''),parentRequestUrl=parentRequestRaw?_videoSafeUrl(parentRequestRaw):'',parentSourceUrl=parentSourceRaw?_videoSafeUrl(parentSourceRaw):'';
+  if(canManageMaterials&&parentRequestRaw&&!parentRequestUrl){toast('親案件の台本・依頼URLは http:// または https:// から始まる形で入力してください','warn');return;}
+  if(canManageMaterials&&parentSourceRaw&&!parentSourceUrl){toast('親案件の素材URLは http:// または https:// から始まる形で入力してください','warn');return;}
   const subAttachmentReads=new Map(subEls.map(el=>[el,canManageMaterials?_readVideoAttachments(el.querySelector('.video-attachment-list')):{error:'',items:[]}]))
   const subAttachmentError=[...subAttachmentReads.values()].find(result=>result.error);if(subAttachmentError){toast(subAttachmentError.error,'warn');return;}
   const parentEditorDraftDateSetter=document.getElementById('j-editor-draft-setter')?.value||_editorDraftDateSetter(current),parentEditorDraftDate=document.getElementById('j-editor-draft')?.value||null;
   const hasSubtasks=_isOwner()?subShells.length:oldSubs.length;
   if(!hasSubtasks&&bizCfgOf(document.getElementById('j-biz')?.value||jobBiz(current)).show.d1&&parentEditorDraftDateSetter==='creator'&&!parentEditorDraftDate){toast('案件追加者が設定する場合は、編集者初稿日を入力してください','warn');return;}
-  const currentBiz=document.getElementById('j-biz')?.value||jobBiz(current),videoScheduleRequired=['edit','haken'].includes(currentBiz);
-  if(videoScheduleRequired&&!hasSubtasks&&!document.getElementById('j-deliver')?.value){toast('納期（予定）を入力してください','warn');return;}
+  let subLinkError='';
   const parsedSubtasks=subShells.map(shell=>{
     const el=shell.querySelector('.j-sub-row'),stateIndex=Number(shell.dataset.stateIndex),stateRecord=JOB_MODAL_SUB_RECORDS[stateIndex]||{};
     if(!el)return _jobModalSubRecordClone(stateRecord);
@@ -13380,6 +13415,9 @@ function saveJob(){
     const savedId=String(el.dataset.subId||''),savedIndex=Number(el.dataset.originalIndex);
     const previous=(savedId?oldSubs.find(sub=>String(sub?.id||'')===savedId):Number.isInteger(savedIndex)&&savedIndex>=0?oldSubs[savedIndex]:stateRecord)||stateRecord;
     const workerId=el.querySelector('.j-sub-worker')?.value||null,billingSnapshot=_paymentRecipientSnapshot(workerId,previous);
+    const requestRaw=String(el.querySelector('.j-sub-request')?.value||'').trim(),sourceRaw=String(el.querySelector('.j-sub-source')?.value||'').trim(),requestUrl=requestRaw?_videoSafeUrl(requestRaw):'',sourceUrl=sourceRaw?_videoSafeUrl(sourceRaw):'';
+    if(requestRaw&&!requestUrl)subLinkError=`「${inp?.value.trim()||'サブ案件'}」の台本・依頼URLを確認してください`;
+    if(sourceRaw&&!sourceUrl)subLinkError=`「${inp?.value.trim()||'サブ案件'}」の素材URLを確認してください`;
     return{
       ...previous,id:previous.id||uid(),
       title:inp?.value.trim()||'',done:chk?.classList.contains('done')||false,
@@ -13395,13 +13433,14 @@ function saveJob(){
       dueDate:el.querySelector('.j-sub-due')?.value||null,
       paymentDate:el.querySelector('.j-sub-payment')?.value||null,
       payoutDate:el.querySelector('.j-sub-payout')?.value||null,
+      requestUrl,sourceUrl,
       attachments:canManageMaterials?subAttachmentReads.get(el).items:_videoAttachments(previous.attachments),
     };
   }).filter(s=>s.title);
+  if(subLinkError){toast(subLinkError,'warn');return;}
   for(const sub of parsedSubtasks){
     const label=String(sub.title||'サブ案件');
     if(_editorDraftDateSetter(sub)==='creator'&&!sub.editorDraftDate){toast(`「${label}」の編集者初稿日を入力してください`,'warn');return;}
-    if(videoScheduleRequired&&!sub.deliveryDate){toast(`「${label}」の納期（予定）を入力してください`,'warn');return;}
     const dateError=_jobScheduleError(sub);if(dateError){toast(`「${label}」：${dateError}`,'warn');return;}
   }
   const subtasks=_isOwner()?parsedSubtasks:oldSubs;
@@ -13415,7 +13454,7 @@ function saveJob(){
   const isTrial=document.getElementById('j-trial-val')?.value==='1';
   const primaryWorkerId=selWorkerIds[0]||null,billingSnapshot=_paymentRecipientSnapshot(primaryWorkerId,current||{});
   const accountSelect=document.getElementById('j-account'),accountId=accountSelect?.value||null,accountName=accountId?(accountSelect?.selectedOptions?.[0]?.textContent||current?.accountName||''):null;
-  const data={title,biz:document.getElementById('j-biz')?.value||'edit',monthlyFee:_isOwner()?(parseInt(document.getElementById('j-monthly')?.value)||0):(Number(current?.monthlyFee)||0),jobType:document.getElementById('j-type')?.value||'edit',clientId:document.getElementById('j-cl').value||null,accountId,accountName,workerIds:selWorkerIds,workerId:primaryWorkerId,...billingSnapshot,scope:document.getElementById('j-scope').value||null,status:requestedStatus,isTrial,unitPrice,profit:_isOwner()?unitPrice:(Number(current?.profit)||unitPrice),workerPay,sharedDate:document.getElementById('j-shared').value||null,editorDraftDateSetter:aggregateDraftSetter,editorDraftDate:aggregateDraftDate,clientDraftDate:document.getElementById('j-client-draft').value||null,thumbnailDate:document.getElementById('j-thumbnail')?.value||null,deliveryDate:document.getElementById('j-deliver').value||null,invoiceDate:_isOwner()?(document.getElementById('j-invoice')?.value||null):(current?.invoiceDate||null),dueDate:_isOwner()?(document.getElementById('j-due')?.value||null):(current?.dueDate||null),paymentDate:_isOwner()?(document.getElementById('j-payin')?.value||null):(current?.paymentDate||null),paidAt:_isOwner()?(document.getElementById('j-paid-val')?.value||null):(current?.paidAt||null),payoutDate:_isOwner()?(document.getElementById('j-payout')?.value||null):(current?.payoutDate||null),salesRep:_isOwner()?(document.getElementById('j-sales-rep')?.value||null):(current?.salesRep||null),salesPay:_isOwner()?(parseInt(document.getElementById('j-sales-pay')?.value)||0):(Number(current?.salesPay)||0),notes:document.getElementById('j-notes').value.trim(),opsChecklist:readOpsChecklist(),subtasks,attachments:canManageMaterials?parentAttachmentRead.items:_videoAttachments(current?.attachments),updatedAt:Date.now(),updatedBy:_myEmail()};
+  const data={title,biz:document.getElementById('j-biz')?.value||'edit',monthlyFee:_isOwner()?(parseInt(document.getElementById('j-monthly')?.value)||0):(Number(current?.monthlyFee)||0),jobType:document.getElementById('j-type')?.value||'edit',clientId:document.getElementById('j-cl').value||null,accountId,accountName,workerIds:selWorkerIds,workerId:primaryWorkerId,...billingSnapshot,scope:document.getElementById('j-scope').value||null,status:requestedStatus,isTrial,unitPrice,profit:_isOwner()?unitPrice:(Number(current?.profit)||unitPrice),workerPay,sharedDate:document.getElementById('j-shared').value||null,editorDraftDateSetter:aggregateDraftSetter,editorDraftDate:aggregateDraftDate,clientDraftDate:document.getElementById('j-client-draft').value||null,thumbnailDate:document.getElementById('j-thumbnail')?.value||null,deliveryDate:document.getElementById('j-deliver').value||null,requestUrl:canManageMaterials?parentRequestUrl:(current?.requestUrl||''),sourceUrl:canManageMaterials?parentSourceUrl:(current?.sourceUrl||''),invoiceDate:_isOwner()?(document.getElementById('j-invoice')?.value||null):(current?.invoiceDate||null),dueDate:_isOwner()?(document.getElementById('j-due')?.value||null):(current?.dueDate||null),paymentDate:_isOwner()?(document.getElementById('j-payin')?.value||null):(current?.paymentDate||null),paidAt:_isOwner()?(document.getElementById('j-paid-val')?.value||null):(current?.paidAt||null),payoutDate:_isOwner()?(document.getElementById('j-payout')?.value||null):(current?.payoutDate||null),salesRep:_isOwner()?(document.getElementById('j-sales-rep')?.value||null):(current?.salesRep||null),salesPay:_isOwner()?(parseInt(document.getElementById('j-sales-pay')?.value)||0):(Number(current?.salesPay)||0),notes:document.getElementById('j-notes').value.trim(),opsChecklist:readOpsChecklist(),subtasks,attachments:canManageMaterials?parentAttachmentRead.items:_videoAttachments(current?.attachments),updatedAt:Date.now(),updatedBy:_myEmail()};
   // Once finance is moved to an owner-only ledger, shared/mcapp must never
   // receive those amounts again. Dates and operational fields remain editable.
   const sharedData=financeProtected
@@ -13918,6 +13957,32 @@ function navMeta(id){
   if(id.startsWith('cp_')){const p=(S.customPages||[]).find(p=>`cp_${p.id}`===id);if(p)return{label:p.title,icon:p.icon||'📄'};}
   return{label:id,icon:'📄'};
 }
+function ownerNavIcon(id){
+  const paths={
+    guide:'<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21.5z"></path><path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13v16h4.5a2.5 2.5 0 0 1 2.5 2.5z"></path>',
+    editorportal:'<circle cx="12" cy="8" r="3"></circle><path d="M5 20a7 7 0 0 1 14 0"></path>',
+    videoedit:'<rect x="3" y="6" width="13" height="12" rx="2"></rect><path d="m16 10 5-3v10l-5-3"></path>',
+    videoschedules:'<rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M8 3v4M16 3v4M3 10h18"></path>',
+    videomanuals:'<path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M8 17h11M8 8h7M8 12h6"></path>',
+    videoinvoices:'<path d="M6 3h9l4 4v14H6z"></path><path d="M15 3v5h5M9 13h6M9 17h6"></path>',
+    videosuggestions:'<path d="M4 5h16v12H8l-4 4z"></path><path d="M8 9h8M8 13h5"></path>',
+    hpprojects:'<circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"></path>',
+    hpfee:'<rect x="3" y="6" width="18" height="13" rx="2"></rect><path d="M3 10h18M7 15h3"></path>',
+    salesleads:'<path d="M7 3h3l2 5-2 2a14 14 0 0 0 4 4l2-2 5 2v3a3 3 0 0 1-3 3C10 20 4 14 4 6a3 3 0 0 1 3-3z"></path>',
+    pipeline:'<rect x="3" y="7" width="18" height="13" rx="2"></rect><path d="M9 7V4h6v3M3 12h18M10 12v2h4v-2"></path>',
+    inquiries:'<rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m4 7 8 6 8-6"></path>',
+    crm:'<circle cx="9" cy="8" r="3"></circle><circle cx="17" cy="10" r="2"></circle><path d="M3 20a6 6 0 0 1 12 0M14 16a5 5 0 0 1 7 4"></path>',
+    bizboard:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path>',
+    posts:'<rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M8 3v4M16 3v4M3 10h18M8 14h3M13 14h3M8 18h3"></path>',
+    docs:'<path d="M3 7h7l2 2h9v11H3z"></path><path d="M3 7V4h7l2 3"></path>',
+    minutes:'<path d="M6 3h9l4 4v14H6z"></path><path d="M15 3v5h5M9 13h6M9 17h4"></path>',
+    customize:'<path d="m14 6 4-4 4 4-4 4zM3 21l6-6"></path><path d="m7 3 3 3-4 4-3-3zM12 12l9 9"></path>',
+    accounts:'<circle cx="9" cy="8" r="3"></circle><circle cx="17" cy="9" r="2.5"></circle><path d="M3 20a6 6 0 0 1 12 0M14 15a5 5 0 0 1 7 5"></path>',
+    igaccounts:'<rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17.5" cy="6.5" r="1"></circle>',
+    settings:'<circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1z"></path>'
+  };
+  return`<svg class="owner-nav-svg" viewBox="0 0 24 24" aria-hidden="true">${paths[id]||'<rect x="5" y="3" width="14" height="18" rx="2"></rect><path d="M8 8h8M8 12h8M8 16h5"></path>'}</svg>`;
+}
 // ナビのカテゴリー分け(2026-07-10 会長指示)。開閉状態は端末localStorage記憶。設定/カスタマイズは従来どおり下部固定。
 const NAV_CATS=[
   {id:'start',label:'はじめに',views:['guide']},
@@ -14376,7 +14441,7 @@ function renderNav(){
   const visible=cfg.filter(c=>!c.hidden&&isViewAllowed(c.id)&&!VIDEO_EMBEDDED_VIEW_IDS.has(c.id));
   const catState=getNavCatState();
   const navItemHTML=(c,draggable=false)=>{
-    const{label,icon}=navMeta(c.id);
+    const{label}=navMeta(c.id),icon=ownerNavIcon(c.id);
     const idx=cfg.indexOf(c);
     if(draggable){
       return`<div class="nav-item${V===c.id?' active':''}" data-view="${c.id}"
@@ -14386,9 +14451,9 @@ function renderNav(){
         ondragover="sideNavDragOver(event)"
         ondragleave="sideNavDragLeave(event)"
         ondrop="sideNavDrop(event,${idx})">
-        <span class="nav-drag-handle" title="ドラッグで並び替え">⠿</span><span class="nav-icon">${icon}</span>${label}</div>`;
+        <span class="nav-icon">${icon}</span><span class="nav-label">${label}</span><span class="nav-drag-handle" title="ドラッグで並び替え">⠿</span></div>`;
     }
-    return`<div class="nav-item${V===c.id?' active':''}" data-view="${c.id}"><span class="nav-icon">${icon}</span>${label}</div>`;
+    return`<div class="nav-item${V===c.id?' active':''}" data-view="${c.id}"><span class="nav-icon">${icon}</span><span class="nav-label">${label}</span></div>`;
   };
   const _role=myRole();
   const grouped=(draggable)=>{
@@ -14402,7 +14467,7 @@ function renderNav(){
       if(!items.length)return;
       const open=catState[cat.id]!==false;
       html+=`<div class="nav-cat">
-  <div class="nav-cat-hd" onclick="toggleNavCat('${cat.id}')"><span class="nav-cat-arrow">${open?'▾':'▸'}</span>${cat.label}<span style="flex:1"></span><span style="font-size:9px;opacity:.6">${items.length}</span></div>
+  <button type="button" class="nav-cat-hd" aria-expanded="${open}" onclick="toggleNavCat('${cat.id}')"><span>${cat.label}</span><span class="nav-cat-arrow" aria-hidden="true">${open?'⌄':'›'}</span></button>
   ${open?items.map(c=>navItemHTML(c,draggable)).join(''):''}
 </div>`;
     });
@@ -14423,10 +14488,10 @@ function renderNav(){
   // モバイルドロワー
   const dr=document.getElementById('mob-drawer-nav');if(!dr)return;
   dr.innerHTML=grouped(false)+`<div class="nav-sep"></div>
-  ${_owner?`<div class="nav-item${V==='customize'?' active':''}" data-view="customize"><span class="nav-icon">🛠</span>カスタマイズ</div>`:''}
-  ${_owner?`<div class="nav-item${V==='accounts'?' active':''}" data-view="accounts"><span class="nav-icon">👥</span>アカウント</div>`:''}
-  ${_owner?`<div class="nav-item${V==='igaccounts'?' active':''}" data-view="igaccounts"><span class="nav-icon">📷</span>IGアカウント</div>`:''}
-  ${_owner?`<div class="nav-item${V==='settings'?' active':''}" data-view="settings"><span class="nav-icon">⚙️</span>設定</div>`:''}`;
+  ${_owner?`<div class="nav-item${V==='customize'?' active':''}" data-view="customize"><span class="nav-icon">${ownerNavIcon('customize')}</span><span class="nav-label">カスタマイズ</span></div>`:''}
+  ${_owner?`<div class="nav-item${V==='accounts'?' active':''}" data-view="accounts"><span class="nav-icon">${ownerNavIcon('accounts')}</span><span class="nav-label">アカウント</span></div>`:''}
+  ${_owner?`<div class="nav-item${V==='igaccounts'?' active':''}" data-view="igaccounts"><span class="nav-icon">${ownerNavIcon('igaccounts')}</span><span class="nav-label">IGアカウント</span></div>`:''}
+  ${_owner?`<div class="nav-item${V==='settings'?' active':''}" data-view="settings"><span class="nav-icon">${ownerNavIcon('settings')}</span><span class="nav-label">設定</span></div>`:''}`;
   // 下タブバー同期
   document.querySelectorAll('.mnav-item').forEach(el=>{
     el.classList.toggle('active',el.dataset.view===V);
@@ -16988,7 +17053,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260829-07';
+const APP_VERSION='20260829-08';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -17062,6 +17127,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260829-07"></script>
+<script src="./manager-features.js?v=20260829-08"></script>
 </body>
 </html>

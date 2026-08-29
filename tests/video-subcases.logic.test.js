@@ -85,6 +85,21 @@ test('legacy video operations keep child cases inside parent details in every op
   }
 });
 
+test('legacy board cards show each subcase assignee and both draft dates', () => {
+  const start = html.indexOf('function rProjCard(j)');
+  const end = html.indexOf('// 今日・明日が期限', start);
+  assert.ok(start >= 0 && end > start, 'legacy board card renderer must exist');
+  const scope = html.slice(start, end);
+  assert.match(scope, /class="subcase-card-link"/);
+  assert.match(scope, /担当者 \$\{esc\(subAssignee\)\}/);
+  assert.match(scope, /_videoDraftMetaHtml\('editor',s\.editorDraftDate\)/);
+  assert.match(scope, /_videoDraftMetaHtml\('client',s\.clientDraftDate\)/);
+  assert.match(scope, /openLegacySubcaseDetail\(\$\{JSON\.stringify\(j\.id\)\}/);
+  assert.match(html, /\.subcase-card-link\{min-width:0;flex:1;/);
+  assert.match(html, /class="video-draft-mark" aria-hidden="true">\$\{mark\}<\/span><span>初稿/);
+  assert.match(html, /mark=editor\?'編':'ク'/);
+});
+
 test('manager video workspace has accessible case context, next action, and responsive kanban primitives', () => {
   assert.match(html, /href="app-ui\.css"/);
   assert.match(html, /class="ref-breadcrumb"/);

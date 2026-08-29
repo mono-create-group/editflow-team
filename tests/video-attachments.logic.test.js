@@ -47,6 +47,11 @@ test('legacy requestUrl and sourceUrl remain readable alongside new materials wi
 
 test('parent and child attachment editors, read-only viewer, and cards are wired', () => {
   assert.match(html, /素材・資料/);
+  assert.match(html, /id="j-request"/);
+  assert.match(html, /id="j-source"/);
+  assert.match(html, /class="j-sub-request"/);
+  assert.match(html, /class="j-sub-source"/);
+  assert.match(html, /空欄なら親案件の共通URLを使用/);
   assert.match(html, /function openLegacyAttachmentViewer\(id,subId\)/);
   assert.match(html, /function openPortalAttachmentViewer\(portalUid,id,subId\)/);
   assert.match(html, /function _readVideoAttachments\(root\)/);
@@ -58,11 +63,20 @@ test('parent and child attachment editors, read-only viewer, and cards are wired
   assert.match(html, /素材・資料は1案件につき20件までです/);
   assert.match(html, /data-sub-id="\$\{esc\(s\.id\|\|''\)\}"/);
   assert.match(html, /oldSubs\.find\(sub=>String\(sub\?\.id\|\|''\)===savedId\)/);
+  assert.match(html, /requestUrl:canManageMaterials\?parentRequestUrl/);
+  assert.match(html, /sourceUrl:canManageMaterials\?parentSourceUrl/);
+  assert.match(html, /requestUrl,sourceUrl,/);
+  assert.doesNotMatch(html, /「\$\{title\}」の納期（予定）を入力してください/);
 });
 
 test('published work keeps materials after an editor accepts it', () => {
+  assert.match(managerFeatures, /mb-parent-request/);
+  assert.match(managerFeatures, /mb-parent-source/);
+  assert.match(editorFeatures, /new-parent-request/);
+  assert.match(editorFeatures, /new-parent-source/);
   assert.match(managerFeatures, /mb-subcase-attachments-/);
-  assert.match(managerFeatures, /attachments:subcase\.attachments/);
+  assert.match(managerFeatures, /attachments=\[\.\.\.parentAttachmentRead\.items,\.\.\.subcase\.attachments\]\.slice\(0,20\)/);
+  assert.match(managerFeatures, /const data=\{[^]*requestUrl,sourceUrl,attachments,/);
   assert.match(editorFeatures, /attachments:Array\.isArray\(board\.attachments\)\?board\.attachments\.slice\(0,20\):\[\]/);
   assert.match(editorFeatures, /function editorResourceLinks\(job\)/);
 });
