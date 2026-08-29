@@ -44,8 +44,8 @@ test('dispatch child cases require their pay and instructions, while actual deli
 test('dispatch writes each child atomically with a shared stable parent identity',()=>{
   assert.match(source,/if\(feature\.dispatchSubmitting\)return/);
   assert.match(source,/const parentCaseId=id\(\),parentCaseName=requestedParentName\|\|subcases\.items\[0\]\.title/);
-  assert.match(source,/subcases\.items\.forEach\(subcase=>/);
-  assert.match(source,/caseName:parentCaseName,parentCaseId,parentCaseName/);
+  assert.match(source,/subcases\.items\.forEach\(\(subcase,subtaskIndex\)=>/);
+  assert.match(source,/caseName:parentCaseName,parentCaseId,parentCaseName,subtaskIndex/);
   assert.match(source,/clientId,sourceClientId:client\.sourceClientId\|\|client\.id,clientDisplay:client\.name/);
   assert.match(source,/editorPayAmount:subcase\.editorPayAmount/);
   assert.match(source,/編集者支払額<\/b> ¥\$\{positiveYen\(j\.editorPayAmount\)\.toLocaleString\('ja-JP'\)\}/);

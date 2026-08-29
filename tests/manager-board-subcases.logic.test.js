@@ -47,7 +47,7 @@ test('manager validates every child case and preserves child-specific materials 
 
 test('published board jobs share one stable parent identifier while keeping each child distinct',()=>{
   assert.match(manager,/const parentCaseId=safeId\(\),parentCaseName=caseName\|\|subcases\.items\[0\]\.title/);
-  assert.match(manager,/subcases\.items\.forEach\(subcase=>/);
+  assert.match(manager,/subcases\.items\.forEach\(\(subcase,subtaskIndex\)=>/);
   assert.match(manager,/doc\(subcase\.id\)/);
   assert.match(manager,/parentCaseId,parentCaseName/);
   assert.match(manager,/title:subcase\.title/);
@@ -72,7 +72,7 @@ test('board form supports parent-common resource links inherited by every child'
 test('board publish keeps finance out of legacy/shared parent and child records',()=>{
   assert.match(manager,/if\(_isOwner\(\)\)\{/);
   assert.match(manager,/S\.jobs\.unshift\(\{id:parentCaseId/);
-  assert.match(manager,/subtasks=subcases\.items\.map\(item=>\(\{/);
+  assert.match(manager,/subtasks=subcases\.items\.map\(\(item,subtaskIndex\)=>\(\{/);
   assert.match(manager,/editorDraftDateSetter:item\.editorDraftDateSetter/);
   assert.match(manager,/editorDraftDateSetter:parentDraftSetter/);
   assert.match(manager,/unitPrice:0,workerPay:0,profit:0/);

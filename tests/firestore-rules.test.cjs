@@ -338,6 +338,22 @@ async function expectAllowed(label, promise) {
       doc(owner, 'editor_portals', 'external1', 'editor_jobs', 'legacy-no-delivery-date'),
       legacyUnscheduledExternalJob
     ));
+    await expectAllowed('owner synchronizes a legacy child with its zero-based added order', setDoc(
+      doc(owner, 'editor_portals', 'external1', 'editor_jobs', 'legacy-added-order-zero'),
+      { ...legacyUnscheduledExternalJob, subtaskIndex: 0 }
+    ));
+    await expectAllowed('owner synchronizes a later legacy child with its added order', setDoc(
+      doc(owner, 'editor_portals', 'external1', 'editor_jobs', 'legacy-added-order-seven'),
+      { ...legacyUnscheduledExternalJob, legacySubtaskId: 'legacy-subtask-miyuu-7', subtaskIndex: 7 }
+    ));
+    await expectDenied('legacy synchronization rejects a negative added order', setDoc(
+      doc(owner, 'editor_portals', 'external1', 'editor_jobs', 'legacy-added-order-negative'),
+      { ...legacyUnscheduledExternalJob, legacySubtaskId: 'legacy-subtask-miyuu-negative', subtaskIndex: -1 }
+    ));
+    await expectDenied('legacy synchronization rejects a non-integer added order', setDoc(
+      doc(owner, 'editor_portals', 'external1', 'editor_jobs', 'legacy-added-order-fraction'),
+      { ...legacyUnscheduledExternalJob, legacySubtaskId: 'legacy-subtask-miyuu-fraction', subtaskIndex: 1.5 }
+    ));
     await expectAllowed('external editor saves progress on a legacy job while its delivery date stays blank', updateDoc(
       doc(external1, 'editor_portals', 'external1', 'editor_jobs', 'legacy-no-delivery-date'),
       {

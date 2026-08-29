@@ -18,6 +18,7 @@ test('assigned jobs lead with the active one-column list and a collapsed dispatc
 test('job type filters and near-deadline ordering use dedicated helpers', () => {
   assert.match(features, /function editorJobType\(job\)/);
   assert.match(features, /function editorJobSortByDeadline\(list\)/);
+  assert.match(features, /function editorJobSortByAddedOrder\(list\)/);
   assert.match(features, /setEditorJobsTypeFilter\('agency'\)/);
   assert.match(features, /setEditorJobsTypeFilter\('dispatch'\)/);
   assert.match(features, /showCompleted\?sortNewest\(visible\):editorJobSortByDeadline\(visible\)/);

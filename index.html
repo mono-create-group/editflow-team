@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260829-08"></script>
+<script src="./billing-terms.js?v=20260829-09"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -471,6 +471,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 /* ─── MODAL ─── */
 .overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(6px)}
+.overlay.job-modal-overlay{background:rgba(15,23,42,.5);backdrop-filter:none}
 .modal{background:var(--surface);border:1.5px solid var(--border);border-radius:18px;padding:24px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg)}
 .modal-lg{max-width:660px}
 .mhdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
@@ -994,7 +995,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260829-08">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260829-09">
 </head>
 <body class="owner-yellow-ui">
 
@@ -2953,10 +2954,10 @@ let _modalDirty=false;
 let _modalPointerDown=false;
 let _modalDragging=false;
 function markModalDirty(){_modalDirty=true;}
-function openModal(html){
+function openModal(html,overlayClass=''){
   document.getElementById('modal-overlay')?.remove();
   _modalDirty=false;_modalDragging=false;_modalPointerDown=false;
-  const el=document.createElement('div');el.className='overlay';el.id='modal-overlay';
+  const el=document.createElement('div');el.className=`overlay ${overlayClass}`;el.id='modal-overlay';
   el.innerHTML=`<div class="modal">${html}</div>`;
   // 長押しドラッグ中はオーバーレイ閉じを無効にする
   el.addEventListener('pointerdown',e=>{if(e.target===el){_modalPointerDown=true;_modalDragging=false;}});
@@ -2973,7 +2974,7 @@ function openModal(html){
   });
   document.body.appendChild(el);
 }
-function openModalLg(html){openModal(html);document.querySelector('.modal')?.classList.add('modal-lg');}
+function openModalLg(html,overlayClass=''){openModal(html,overlayClass);document.querySelector('.modal')?.classList.add('modal-lg');}
 function closeModal(){
   document.getElementById('modal-overlay')?.remove();
   document.getElementById('sheets-modal')?.remove();
@@ -6454,7 +6455,7 @@ async function syncLegacyAssignedSubtasksToPortal(jobOrId,{silent=false,targetUi
     if(setter==='creator'&&!draft){problems.push(`${record.title||'サブ案件'}：編集者初稿日が未入力`);return;}
     if(record.portalUid&&String(record.portalUid)!==String(access.id)){problems.push(`${record.title||'サブ案件'}：同期後に担当者が変更されています`);return;}
     const subId=String(record.id||parent.id),portalJobId=record.portalJobId||_legacyPortalJobId(parent.id,subId),deliveryDate=String(record.deliveryDate||parent.deliveryDate||''),at=Date.now();
-    candidates.push({record,access,workerId,subId,portalJobId,setter,draft,status,deliveryDate,at});
+    candidates.push({record,access,workerId,subId,portalJobId,subtaskIndex:index,setter,draft,status,deliveryDate,at});
   });
   if(!candidates.length){if(!silent&&problems.length)toast(problems[0],'warn');return{synced:0,skipped:problems.length,problems};}
   try{
@@ -6462,13 +6463,16 @@ async function syncLegacyAssignedSubtasksToPortal(jobOrId,{silent=false,targetUi
     for(const item of rows){
       const existing=item.snap.exists?item.snap.data():null;
       if(existing&&(existing.source!=='legacy_sync'||String(existing.legacyParentId||'')!==String(parent.id)||String(existing.legacySubtaskId||'')!==item.subId)){problems.push(`${item.record.title||'サブ案件'}：同期先IDが別案件で使用中`);failedRows.add(item.portalJobId);continue;}
-      if(existing&&onlyMissing){alreadyRows.add(item.portalJobId);continue;}
+      if(existing&&onlyMissing){
+        if(Number.isInteger(existing.subtaskIndex)){alreadyRows.add(item.portalJobId);continue;}
+        batch.set(item.ref,{subtaskIndex:item.subtaskIndex,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:_myEmail()},{merge:true});writeCount++;continue;
+      }
       const title=String(item.record.title||parent.title||'案件').slice(0,120),parentName=String(parent.title||title).slice(0,120),clientDisplay=String(client?.name||parent.clientName||'クライアント未設定'),instructions=String(item.record.instructions||item.record.notes||parent.notes||'').slice(0,3000),requestUrl=String(item.record.requestUrl||parent.requestUrl||''),sourceUrl=String(item.record.sourceUrl||parent.sourceUrl||''),attachments=_videoAttachments([...(parent.attachments||[]),...(item.record.attachments||[])]);
       if(existing){
         const keepEditorDraft=item.setter==='editor'&&_editorDraftDateSetter(existing)==='editor'?String(existing.editorDraftDate||''):item.draft;
-        batch.set(item.ref,{title,clientDisplay,deadline:item.deliveryDate,requestUrl,sourceUrl,sharedDate:String(item.record.sharedDate||parent.sharedDate||''),editorDraftDateSetter:item.setter,editorDraftDate:keepEditorDraft,clientDraftDate:String(item.record.clientDraftDate||parent.clientDraftDate||''),thumbnailDate:String(item.record.thumbnailDate||parent.thumbnailDate||''),deliveryDate:item.deliveryDate,instructions,urgent:false,attachments,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:_myEmail()},{merge:true});writeCount++;
+        batch.set(item.ref,{title,subtaskIndex:item.subtaskIndex,clientDisplay,deadline:item.deliveryDate,requestUrl,sourceUrl,sharedDate:String(item.record.sharedDate||parent.sharedDate||''),editorDraftDateSetter:item.setter,editorDraftDate:keepEditorDraft,clientDraftDate:String(item.record.clientDraftDate||parent.clientDraftDate||''),thumbnailDate:String(item.record.thumbnailDate||parent.thumbnailDate||''),deliveryDate:item.deliveryDate,instructions,urgent:false,attachments,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:_myEmail()},{merge:true});writeCount++;
       }else{
-        batch.set(item.ref,{recordType:'editor_portal_job',businessType:jobBiz(parent)==='haken'?'dispatch':'edit_agency',title,caseName:parentName,parentCaseId:`legacy:${parent.id}`,parentCaseName:parentName,clientId:String(parent.clientId||''),clientDisplay,accountId:String(parent.accountId||''),accountDisplay:String(parent.accountName||''),deadline:item.deliveryDate,requestUrl,sourceUrl,sharedDate:String(item.record.sharedDate||parent.sharedDate||''),editorDraftDate:item.draft,editorDraftDateSetter:item.setter,clientDraftDate:String(item.record.clientDraftDate||parent.clientDraftDate||''),thumbnailDate:String(item.record.thumbnailDate||parent.thumbnailDate||''),deliveryDate:item.deliveryDate,instructions,urgent:false,status:item.status,progress:String(item.record.progress||''),evidenceUrl:String(item.record.evidenceUrl||''),blocker:String(item.record.blocker||''),submittedByUid:item.access.id,editorUid:item.access.id,editorEmail:String(item.access.email||''),editorName:String(item.access.name||_paymentWorkerName(item.workerId)||''),directorUid:String(item.access.directorUid||''),source:'legacy_sync',legacyParentId:String(parent.id),legacySubtaskId:item.subId,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp(),history:[{at:item.at,by:_myEmail(),type:'legacy_sync_created'}],attachments});writeCount++;
+        batch.set(item.ref,{recordType:'editor_portal_job',businessType:jobBiz(parent)==='haken'?'dispatch':'edit_agency',title,caseName:parentName,parentCaseId:`legacy:${parent.id}`,parentCaseName:parentName,subtaskIndex:item.subtaskIndex,clientId:String(parent.clientId||''),clientDisplay,accountId:String(parent.accountId||''),accountDisplay:String(parent.accountName||''),deadline:item.deliveryDate,requestUrl,sourceUrl,sharedDate:String(item.record.sharedDate||parent.sharedDate||''),editorDraftDate:item.draft,editorDraftDateSetter:item.setter,clientDraftDate:String(item.record.clientDraftDate||parent.clientDraftDate||''),thumbnailDate:String(item.record.thumbnailDate||parent.thumbnailDate||''),deliveryDate:item.deliveryDate,instructions,urgent:false,status:item.status,progress:String(item.record.progress||''),evidenceUrl:String(item.record.evidenceUrl||''),blocker:String(item.record.blocker||''),submittedByUid:item.access.id,editorUid:item.access.id,editorEmail:String(item.access.email||''),editorName:String(item.access.name||_paymentWorkerName(item.workerId)||''),directorUid:String(item.access.directorUid||''),source:'legacy_sync',legacyParentId:String(parent.id),legacySubtaskId:item.subId,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp(),history:[{at:item.at,by:_myEmail(),type:'legacy_sync_created'}],attachments});writeCount++;
       }
     }
     if(failedRows.size===rows.length){if(!silent)toast(problems[0],'warn');return{synced:0,skipped:problems.length,problems};}
@@ -12993,8 +12997,46 @@ function _jobModalSubCompactHtml(record,index,biz,financeLocked=false){
   const dates=[record?.editorDraftDate?`編集者初稿 ${record.editorDraftDate}`:'',record?.clientDraftDate?`クライアント初稿 ${record.clientDraftDate}`:'',record?.deliveryDate?`納期 ${record.deliveryDate}`:''].filter(Boolean);
   return`<div class="j-sub-shell" data-state-index="${index}"><div class="job-sub-compact"><div class="job-sub-compact-main"><b class="job-sub-compact-title">${esc(record?.title||`サブ案件 ${index+1}`)}</b><div class="job-sub-compact-meta"><span>${esc(videoStatusLabel(record?.status||'未着手'))}</span><span>担当 ${esc(workerName)}</span>${dates.map(value=>`<span>${esc(value)}</span>`).join('')}</div></div><div class="job-sub-compact-actions"><button type="button" class="btn btn-g btn-xs" onclick="expandJobSubEditor(this)">編集</button>${financeLocked?'':`<button type="button" class="btn btn-g btn-xs" onclick="removeJobSubEditor(this)" aria-label="${esc(record?.title||'サブ案件')}を削除">✕</button>`}</div></div></div>`;
 }
+function _readJobSubEditorState(shell){
+  const row=shell?.querySelector('.j-sub-row');if(!row)return{record:null,error:''};
+  const index=Number(shell.dataset.stateIndex),previous=JOB_MODAL_SUB_RECORDS[index]||{};
+  const input=row.querySelector('.j-sub-inp'),workerId=row.querySelector('.j-sub-worker')?.value||null;
+  const requestRaw=String(row.querySelector('.j-sub-request')?.value||'').trim(),sourceRaw=String(row.querySelector('.j-sub-source')?.value||'').trim();
+  const requestUrl=requestRaw?_videoSafeUrl(requestRaw):'',sourceUrl=sourceRaw?_videoSafeUrl(sourceRaw):'';
+  const label=input?.value.trim()||`サブ案件 ${index+1}`;
+  if(requestRaw&&!requestUrl)return{record:null,error:`「${label}」の台本・依頼URLを確認してください`};
+  if(sourceRaw&&!sourceUrl)return{record:null,error:`「${label}」の素材URLを確認してください`};
+  const canManageMaterials=_videoCanEdit()&&['edit','haken'].includes(_curJobBiz());
+  const attachmentRead=canManageMaterials?_readVideoAttachments(row.querySelector('.video-attachment-list')):{error:'',items:_videoAttachments(previous.attachments)};
+  if(attachmentRead.error)return{record:null,error:attachmentRead.error};
+  const billingSnapshot=_paymentRecipientSnapshot(workerId,previous);
+  return{error:'',record:{
+    ...previous,id:previous.id||uid(),title:input?.value.trim()||'',done:row.querySelector('.chk')?.classList.contains('done')||false,
+    unitPrice:parseInt(row.querySelector('.j-sub-price')?.value)||0,workerPay:parseInt(row.querySelector('.j-sub-pay')?.value)||0,
+    status:row.querySelector('.j-sub-status')?.value||'未着手',workerId,...billingSnapshot,
+    sharedDate:row.querySelector('.j-sub-shared')?.value||null,
+    editorDraftDateSetter:row.querySelector('.j-sub-editor-setter')?.value||_editorDraftDateSetter(previous),
+    editorDraftDate:row.querySelector('.j-sub-editor')?.value||null,clientDraftDate:row.querySelector('.j-sub-client')?.value||null,
+    deliveryDate:row.querySelector('.j-sub-deliver')?.value||null,invoiceDate:row.querySelector('.j-sub-invoice')?.value||null,
+    dueDate:row.querySelector('.j-sub-due')?.value||null,paymentDate:row.querySelector('.j-sub-payment')?.value||null,payoutDate:row.querySelector('.j-sub-payout')?.value||null,
+    requestUrl,sourceUrl,attachments:attachmentRead.items,
+  }};
+}
+function collapseJobSubEditor(shell){
+  const row=shell?.querySelector('.j-sub-row');if(!row)return true;
+  const result=_readJobSubEditorState(shell);if(result.error){toast(result.error,'warn');return false;}
+  const index=Number(shell.dataset.stateIndex),locked=document.getElementById('j-sub-cont')?.dataset.financeLocked==='1';
+  JOB_MODAL_SUB_RECORDS[index]=_jobModalSubRecordClone(result.record);
+  shell.innerHTML=_jobModalSubCompactHtml(result.record,index,_curJobBiz(),locked);
+  updSubPrices();return true;
+}
+function _collapseOtherJobSubEditors(exceptShell){
+  const shells=[...document.querySelectorAll('#j-sub-cont .j-sub-shell')];
+  return shells.every(shell=>shell===exceptShell||collapseJobSubEditor(shell));
+}
 function expandJobSubEditor(button){
   const shell=button?.closest('.j-sub-shell');if(!shell||shell.querySelector('.j-sub-row'))return;
+  if(!_collapseOtherJobSubEditors(shell))return;
   const index=Number(shell.dataset.stateIndex),record=JOB_MODAL_SUB_RECORDS[index]||{},locked=document.getElementById('j-sub-cont')?.dataset.financeLocked==='1';
   shell.innerHTML=mkSubRow(record,`サブ案件 ${index+1}`,_curJobBiz(),index,locked);
   updSubPaymentRecipients();
@@ -13159,7 +13201,7 @@ function openJobModal(id,preStatus,preClientId){
   <button class="btn btn-g" onclick="closeModal()">キャンセル</button>
   ${j&&_isOwner()?`<button class="btn btn-red" onclick="delJob('${j.id}')">削除</button>`:''}
   <button class="btn btn-p" onclick="saveJob()">保存</button>
-</div>`);
+</div>`,'job-modal-overlay');
   document.getElementById('j-ttl')?.focus();
   _renderJobAssigneeSummary();
   setJobBiz(jbiz,true);
@@ -13272,6 +13314,7 @@ function updJobProfit(){
 function addJobSubField(){
   const c=document.getElementById('j-sub-cont');
   if(c?.dataset.financeLocked==='1')return toast('金額台帳へ移行済みの過去案件では、親子構成を変更できません','warn');
+  if(!_collapseOtherJobSubEditors(null))return;
   const index=JOB_MODAL_SUB_RECORDS.push({})-1,d=document.createElement('div');
   d.className='j-sub-shell';d.dataset.stateIndex=String(index);d.innerHTML=mkSubRow({},'サブ案件',_curJobBiz(),-1,false);
   c.appendChild(d);d.querySelector('.j-sub-inp')?.focus();
@@ -13286,6 +13329,7 @@ function mkSubRow(s,ph,bk,originalIndex=-1,financeLocked=false){
   <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
     <div class="chk${s.done?' done':''}" onclick="this.classList.toggle('done');updSubPrices()" style="flex-shrink:0"></div>
     <input class="j-sub-inp" value="${esc(s.title||'')}" placeholder="${ph||'サブタスク'}" style="flex:1" oninput="updSubPrices()">
+    <button type="button" class="btn btn-g btn-xs" onclick="collapseJobSubEditor(this.closest('.j-sub-shell'))">閉じる</button>
     ${financeLocked?'':`<button type="button" class="btn btn-g btn-xs" onclick="removeJobSubEditor(this)">✕</button>`}
   </div>
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:5px">
@@ -17053,7 +17097,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260829-08';
+const APP_VERSION='20260829-09';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -17127,6 +17171,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260829-08"></script>
+<script src="./manager-features.js?v=20260829-09"></script>
 </body>
 </html>

@@ -56,6 +56,61 @@ test('parent cases render lightweight child summaries and preserve unopened chil
   assert.match(html, /if\(!el\)return _jobModalSubRecordClone\(stateRecord\)/);
 });
 
+test('only one child editor stays open and edits are cached before another child opens', () => {
+  assert.match(modalSource, /function _readJobSubEditorState\(shell\)/);
+  assert.match(modalSource, /function collapseJobSubEditor\(shell\)/);
+  assert.match(modalSource, /JOB_MODAL_SUB_RECORDS\[index\]=_jobModalSubRecordClone\(result\.record\)/);
+  assert.match(modalSource, /function _collapseOtherJobSubEditors\(exceptShell\)/);
+  assert.match(modalSource, /if\(!_collapseOtherJobSubEditors\(shell\)\)return;/);
+  assert.match(html, /if\(!_collapseOtherJobSubEditors\(null\)\)return;/);
+  assert.match(html, /onclick="collapseJobSubEditor\(this\.closest\('\.j-sub-shell'\)\)">閉じる<\/button>/);
+});
+
+test('the large parent-case editor avoids full-screen backdrop blur work', () => {
+  assert.match(html, /\.overlay\.job-modal-overlay\{background:rgba\(15,23,42,\.5\);backdrop-filter:none\}/);
+  assert.match(modalSource, /<\/div>`,'job-modal-overlay'\);/);
+});
+
+test('collapsed child cache retains scheduling, money, payment and link fields', () => {
+  const cacheSource = html.slice(html.indexOf('function _readJobSubEditorState('), html.indexOf('function collapseJobSubEditor('));
+  for (const field of ['unitPrice', 'workerPay', 'editorDraftDate', 'clientDraftDate', 'deliveryDate', 'invoiceDate', 'dueDate', 'paymentDate', 'payoutDate', 'attachments']) {
+    assert.match(cacheSource, new RegExp(`${field}:`), `${field} is retained when collapsing an editor`);
+  }
+  assert.match(cacheSource, /requestUrl,sourceUrl,attachments:attachmentRead\.items/);
+});
+
+test('collapsing a child records its edited values without loading the worker directory', () => {
+  const childSource = html.slice(html.indexOf('function _readJobSubEditorState('), html.indexOf('function expandJobSubEditor('));
+  const field = value => ({ value });
+  const values = {
+    '.j-sub-inp': field('台本100'), '.j-sub-worker': field('editor-a'), '.j-sub-price': field('6000'), '.j-sub-pay': field('3000'),
+    '.j-sub-status': field('編集者進行中'), '.j-sub-shared': field('2026-08-29'), '.j-sub-editor-setter': field('creator'),
+    '.j-sub-editor': field('2026-09-01'), '.j-sub-client': field('2026-09-03'), '.j-sub-deliver': field('2026-09-05'),
+    '.j-sub-invoice': field('2026-09-20'), '.j-sub-due': field('2026-09-30'), '.j-sub-payment': field('2026-10-01'),
+    '.j-sub-payout': field('2026-10-02'), '.j-sub-request': field('https://example.test/script'), '.j-sub-source': field('https://example.test/assets'),
+    '.chk': { classList: { contains: () => true } },
+  };
+  const shell = { dataset: { stateIndex: '0' }, querySelector: selector => selector === '.j-sub-row' ? row : values[selector] || null };
+  const row = { querySelector: selector => values[selector] || null };
+  const context = {
+    JOB_MODAL_SUB_RECORDS: [{ id: 'sub-100', completedDeliveryDate: '2026-09-06' }],
+    _videoSafeUrl: value => value.startsWith('https://') ? value : '', _videoCanEdit: () => false, _curJobBiz: () => 'edit',
+    _videoAttachments: items => items || [], _paymentRecipientSnapshot: workerId => ({ billingWorkerId: workerId }),
+    _editorDraftDateSetter: () => 'creator', uid: () => 'new-id',
+  };
+  vm.createContext(context);
+  vm.runInContext(childSource, context);
+  const { record, error } = context._readJobSubEditorState(shell);
+  assert.equal(error, '');
+  assert.deepEqual(JSON.parse(JSON.stringify(record)), {
+    id: 'sub-100', completedDeliveryDate: '2026-09-06', title: '台本100', done: true, unitPrice: 6000, workerPay: 3000,
+    status: '編集者進行中', workerId: 'editor-a', billingWorkerId: 'editor-a', sharedDate: '2026-08-29', editorDraftDateSetter: 'creator',
+    editorDraftDate: '2026-09-01', clientDraftDate: '2026-09-03', deliveryDate: '2026-09-05', invoiceDate: '2026-09-20',
+    dueDate: '2026-09-30', paymentDate: '2026-10-01', payoutDate: '2026-10-02', requestUrl: 'https://example.test/script',
+    sourceUrl: 'https://example.test/assets', attachments: [],
+  });
+});
+
 test('child editor loads the full worker directory only when its worker select is opened', () => {
   const rowSource=html.slice(html.indexOf('function mkSubRow('),html.indexOf('function addWorkerInline('));
   assert.match(rowSource, /data-hydrated="0"/);
