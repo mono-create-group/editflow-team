@@ -27,6 +27,8 @@ test('management distinguishes planned due dates and delivery dates without a ma
 test('subcase cards open their own native button detail target', () => {
   assert.match(index, /function openLegacySubcaseDetail\(jobId,subId\)/);
   assert.match(index, /function openPortalSubcaseDetail\(portalUid,jobId,subId\)/);
+  assert.match(index, /window\.openLegacySubcaseDetail\s*=\s*openLegacySubcaseDetail/);
+  assert.match(index, /window\.openPortalSubcaseDetail\s*=\s*openPortalSubcaseDetail/);
   assert.match(index, /button\.video-subcase-row/);
   assert.match(index, /openLegacySubcaseDetail\(\$\{JSON\.stringify\(j\.id\)/);
   assert.match(index, /aria-label="\$\{esc\(s\.title\).*詳細を開く/);
