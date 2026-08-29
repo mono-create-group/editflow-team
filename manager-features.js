@@ -9,6 +9,11 @@
   const DIRECT_ALL_ID='__direct_all__';
   const isDirector=()=>hasAppRole('動画編集ディレクター')&&!_isOwner();
   const canManage=()=>_isOwner()||hasAppRole('動画編集ディレクター');
+  const quotaSnapshotError=(error,scope,fallback)=>{
+    if(window.EditflowFirestoreQuota?.handle?.(error,`manager ${scope}`))return true;
+    if(typeof fallback==='function')fallback(error);else console.warn(scope,error?.code||error);
+    return false;
+  };
   const safeId=()=>crypto.randomUUID?crypto.randomUUID():'id-'+Date.now()+'-'+Math.random().toString(16).slice(2);
   function legacyClients(){const rows=((S&&S.clients)||[]).filter(x=>!x.deleted).map(c=>({...c,_clientSource:'projects',sourceRecordId:c.id}));((S&&S.crmClients)||[]).filter(x=>!x.deleted).forEach(c=>{const found=rows.find(x=>nameKey(x.name)===nameKey(c.name));if(found){found._crmRecordId=c.id;found.accounts=mergeAccounts(found.accounts||[],c.accounts||[]);found.contact=found.contact||c.contact||'';found.phone=found.phone||c.phone||'';found.email=found.email||c.email||'';found.instagram=found.instagram||c.instagram||'';found.contractNote=found.contractNote||c.contractNote||'';found.bu=found.bu||c.bu||'';found.crmStatus=c.status||''}else rows.push({...c,id:`crm:${c.id}`,_clientSource:'crm',sourceRecordId:c.id,notes:c.contractNote||c.note||'',crmStatus:c.status||'',isTrial:['見込み','商談中'].includes(c.status)})});return rows}
   const legacyWorkers=()=>((S&&S.workers)||[]).filter(x=>!x.deleted);
@@ -95,6 +100,7 @@
   function stopNested(){state.nested.forEach(x=>{try{x()}catch(_){}});state.nested=[];state.catalog.clear();state.catalogRepairing.clear();state.assignmentSyncing.clear();state.invoices=[];state.authorizations=[];state.profiles=[];state.clientPricing.clear();state.clientPricingReady=false;state.portalJobsByEditor.clear();state.loaded.portalJobs.clear()}
   function cancelManagerRender(){if(state.renderFrame===null)return;if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(state.renderFrame);else clearTimeout(state.renderFrame);state.renderFrame=null}
   function stop(){state.unsubs.forEach(x=>{try{x()}catch(_){}});state.unsubs=[];stopNested();state.loaded.editors=false;state.started='';state.portalSignature=null;cancelManagerRender()}
+  window.EditflowFirestoreQuota?.registerStop?.(stop);
   function renderSafe(){
     if(state.renderFrame!==null)return;
     const run=()=>{state.renderFrame=null;try{renderSyncSafe()}catch(_){try{render()}catch(__){}}};
@@ -105,35 +111,35 @@
     stopNested();
     state.editors.forEach(e=>{
       const root=fbDb.collection('editor_portals').doc(e.id);
-      state.nested.push(root.collection('editor_jobs').onSnapshot(q=>{state.portalJobsByEditor.set(e.id,q.docs.map(d=>({id:d.id,_portalUid:e.id,...d.data()})));state.loaded.portalJobs.add(e.id);renderSafe()},x=>{state.loaded.portalJobs.delete(e.id);console.warn('portal jobs',x?.code||x);renderSafe()}));
-      state.nested.push(root.collection('client_catalog').onSnapshot(q=>{const catalogs=q.docs.map(d=>({id:d.id,...d.data()}));state.catalog.set(e.id,catalogs);if(_isOwner()&&e.editorKind!=='external')void syncMissingDirectCatalogsForEditor(e,catalogs);renderSafe()},x=>console.warn('catalog',x?.code||x)));
+      state.nested.push(root.collection('editor_jobs').onSnapshot(q=>{state.portalJobsByEditor.set(e.id,q.docs.map(d=>({id:d.id,_portalUid:e.id,...d.data()})));state.loaded.portalJobs.add(e.id);renderSafe()},x=>quotaSnapshotError(x,'portal jobs',err=>{state.loaded.portalJobs.delete(e.id);console.warn('portal jobs',err?.code||err);renderSafe()})));
+      state.nested.push(root.collection('client_catalog').onSnapshot(q=>{const catalogs=q.docs.map(d=>({id:d.id,...d.data()}));state.catalog.set(e.id,catalogs);if(_isOwner()&&e.editorKind!=='external')void syncMissingDirectCatalogsForEditor(e,catalogs);renderSafe()},x=>quotaSnapshotError(x,'catalog')));
       if(e.editorKind!=='external'){
-        state.nested.push(root.collection('editor_invoices').onSnapshot(q=>{state.invoices=state.invoices.filter(x=>x._portalUid!==e.id).concat(q.docs.map(d=>({id:d.id,_portalUid:e.id,...d.data()})));renderSafe()},x=>console.warn('invoice',x?.code||x)));
-        state.nested.push(root.collection('invoice_authorizations').onSnapshot(q=>{state.authorizations=state.authorizations.filter(x=>x._portalUid!==e.id).concat(q.docs.map(d=>({id:d.id,_portalUid:e.id,...d.data()})));renderSafe()},x=>console.warn('authorization',x?.code||x)));
-        state.nested.push(root.collection('editor_profile').doc('self').onSnapshot(d=>{state.profiles=state.profiles.filter(x=>x._portalUid!==e.id);if(d.exists)state.profiles.push({id:d.id,_portalUid:e.id,...d.data()});renderSafe()},x=>console.warn('profile',x?.code||x)));
+        state.nested.push(root.collection('editor_invoices').onSnapshot(q=>{state.invoices=state.invoices.filter(x=>x._portalUid!==e.id).concat(q.docs.map(d=>({id:d.id,_portalUid:e.id,...d.data()})));renderSafe()},x=>quotaSnapshotError(x,'invoice')));
+        state.nested.push(root.collection('invoice_authorizations').onSnapshot(q=>{state.authorizations=state.authorizations.filter(x=>x._portalUid!==e.id).concat(q.docs.map(d=>({id:d.id,_portalUid:e.id,...d.data()})));renderSafe()},x=>quotaSnapshotError(x,'authorization')));
+        state.nested.push(root.collection('editor_profile').doc('self').onSnapshot(d=>{state.profiles=state.profiles.filter(x=>x._portalUid!==e.id);if(d.exists)state.profiles.push({id:d.id,_portalUid:e.id,...d.data()});renderSafe()},x=>quotaSnapshotError(x,'profile')));
       }
     });
     // ディレクター本人の請求・精算だけは、配下編集者とは別に本人ポータルから読む。
     // 旧台帳や他ディレクターのポータルには触れない。
     if(isDirector()&&FB_USER?.uid){
       const uid=FB_USER.uid,root=fbDb.collection('editor_portals').doc(uid);
-      state.nested.push(root.collection('editor_invoices').onSnapshot(q=>{state.invoices=state.invoices.filter(x=>x._portalUid!==uid).concat(q.docs.map(d=>({id:d.id,_portalUid:uid,...d.data()})));renderSafe()},x=>console.warn('director invoice',x?.code||x)));
-      state.nested.push(root.collection('invoice_authorizations').onSnapshot(q=>{state.authorizations=state.authorizations.filter(x=>x._portalUid!==uid).concat(q.docs.map(d=>({id:d.id,_portalUid:uid,...d.data()})));renderSafe()},x=>console.warn('director authorization',x?.code||x)));
-      state.nested.push(root.collection('editor_profile').doc('self').onSnapshot(d=>{state.profiles=state.profiles.filter(x=>x._portalUid!==uid);if(d.exists)state.profiles.push({id:d.id,_portalUid:uid,...d.data()});renderSafe()},x=>console.warn('director profile',x?.code||x)));
+      state.nested.push(root.collection('editor_invoices').onSnapshot(q=>{state.invoices=state.invoices.filter(x=>x._portalUid!==uid).concat(q.docs.map(d=>({id:d.id,_portalUid:uid,...d.data()})));renderSafe()},x=>quotaSnapshotError(x,'director invoice')));
+      state.nested.push(root.collection('invoice_authorizations').onSnapshot(q=>{state.authorizations=state.authorizations.filter(x=>x._portalUid!==uid).concat(q.docs.map(d=>({id:d.id,_portalUid:uid,...d.data()})));renderSafe()},x=>quotaSnapshotError(x,'director authorization')));
+      state.nested.push(root.collection('editor_profile').doc('self').onSnapshot(d=>{state.profiles=state.profiles.filter(x=>x._portalUid!==uid);if(d.exists)state.profiles.push({id:d.id,_portalUid:uid,...d.data()});renderSafe()},x=>quotaSnapshotError(x,'director profile')));
     }
   }
   function start(){
-    if(!FB_USER||!ACCESS_RESOLVED||!canManage()||state.started===FB_USER.uid)return;
+    if(window.EditflowFirestoreQuota?.isOpen?.()||!FB_USER||!ACCESS_RESOLVED||!canManage()||state.started===FB_USER.uid)return;
     stop();state.started=FB_USER.uid;
     const aq=_isOwner()?fbDb.collection('access'):fbDb.collection('access').where('directorUid','==',FB_USER.uid);
-    state.unsubs.push(aq.onSnapshot(q=>{const nextEditors=q.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.approved===true&&rolesGrantVideoEditor(x.roles||[])),nextSignature=portalSubscriptionSignature(nextEditors);state.editors=nextEditors;state.loaded.editors=true;if(nextSignature!==state.portalSignature){state.portalSignature=nextSignature;subscribePortals()}renderSafe()},e=>{state.loaded.editors=false;console.warn('editor relations',e?.code||e);renderSafe()}));
+    state.unsubs.push(aq.onSnapshot(q=>{const nextEditors=q.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.approved===true&&rolesGrantVideoEditor(x.roles||[])),nextSignature=portalSubscriptionSignature(nextEditors);state.editors=nextEditors;state.loaded.editors=true;if(nextSignature!==state.portalSignature){state.portalSignature=nextSignature;subscribePortals()}renderSafe()},e=>quotaSnapshotError(e,'editor relations',err=>{state.loaded.editors=false;console.warn('editor relations',err?.code||err);renderSafe()})));
     const bq=_isOwner()?fbDb.collection('editor_job_board'):fbDb.collection('editor_job_board').where('directorUid','==',FB_USER.uid);
-    state.unsubs.push(bq.onSnapshot(q=>{state.board=q.docs.map(d=>({id:d.id,...d.data()}));renderSafe()},e=>console.warn('manager board',e?.code||e)));
+    state.unsubs.push(bq.onSnapshot(q=>{state.board=q.docs.map(d=>({id:d.id,...d.data()}));renderSafe()},e=>quotaSnapshotError(e,'manager board')));
     const mq=_isOwner()?fbDb.collection('editor_manuals'):fbDb.collection('editor_manuals').where('directorUid','==',FB_USER.uid);
-    state.unsubs.push(mq.onSnapshot(q=>{state.manuals=q.docs.map(d=>({id:d.id,...d.data()}));renderSafe()},e=>console.warn('manager manuals',e?.code||e)));
-    if(_isOwner())state.unsubs.push(fbDb.collection('owner_client_pricing').onSnapshot(q=>{state.clientPricing=new Map(q.docs.map(d=>[d.id,{id:d.id,...d.data()}]));state.clientPricingReady=true;renderSafe()},e=>{state.clientPricing.clear();state.clientPricingReady=false;console.warn('owner client pricing',e?.code||e);renderSafe()}));
-    state.unsubs.push(fbDb.collection('editor_schedules').onSnapshot(q=>{state.schedules=q.docs.map(d=>({id:d.id,...d.data()}));renderSafe()},e=>console.warn('manager schedules',e?.code||e)));
-    if(_isOwner())state.unsubs.push(fbDb.collection('editor_suggestions').orderBy('createdAt','desc').limit(100).onSnapshot(q=>{state.suggestions=q.docs.map(d=>({id:d.id,...d.data()}));renderSafe()},e=>console.warn('suggestions',e?.code||e)));
+    state.unsubs.push(mq.onSnapshot(q=>{state.manuals=q.docs.map(d=>({id:d.id,...d.data()}));renderSafe()},e=>quotaSnapshotError(e,'manager manuals')));
+    if(_isOwner())state.unsubs.push(fbDb.collection('owner_client_pricing').onSnapshot(q=>{state.clientPricing=new Map(q.docs.map(d=>[d.id,{id:d.id,...d.data()}]));state.clientPricingReady=true;renderSafe()},e=>quotaSnapshotError(e,'owner client pricing',err=>{state.clientPricing.clear();state.clientPricingReady=false;console.warn('owner client pricing',err?.code||err);renderSafe()})));
+    state.unsubs.push(fbDb.collection('editor_schedules').onSnapshot(q=>{state.schedules=q.docs.map(d=>({id:d.id,...d.data()}));renderSafe()},e=>quotaSnapshotError(e,'manager schedules')));
+    if(_isOwner())state.unsubs.push(fbDb.collection('editor_suggestions').orderBy('createdAt','desc').limit(100).onSnapshot(q=>{state.suggestions=q.docs.map(d=>({id:d.id,...d.data()}));renderSafe()},e=>quotaSnapshotError(e,'suggestions')));
   }
 
   const activeManagerUid=()=>typeof rolePreviewUid==='function'?rolePreviewUid():(FB_USER?.uid||'');

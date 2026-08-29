@@ -19,7 +19,7 @@
     @media(max-width:420px){.metric{grid-column:span 12}.who{max-width:46%}.btn{width:100%}.nav .btn,.actions .btn,.topbar .btn{width:auto}.actions .job-primary{width:100%}}
   </style>
   <link rel="stylesheet" href="app-ui.css">
-  <link rel="stylesheet" href="editor-yellow-ui.css?v=20260829-13">
+  <link rel="stylesheet" href="editor-yellow-ui.css?v=20260829-14">
 </head>
 <body class="editor-yellow-ui">
   <a class="app-skip-link" href="#app">メイン画面へ移動</a>
@@ -30,7 +30,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" onerror="portalSdkLoadFailed()"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js" onerror="portalSdkLoadFailed()"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js" onerror="portalSdkLoadFailed()"></script>
-  <script src="./billing-terms.js?v=20260829-13"></script>
+  <script src="./billing-terms.js?v=20260829-14"></script>
   <!-- PDF libraries are loaded only when an editor creates a PDF. -->
   <script>
   const PAGE_PARAMS=new URLSearchParams(location.search);
@@ -64,6 +64,42 @@
     }
     return '進捗を保存できませんでした。入力内容は送信されていません';
   }
+  let portalQuotaCircuitOpen=false,portalQuotaNoticeShown=false,portalQuotaWriteBlockInstalled=false;
+  const portalQuotaStops=new Set();
+  function portalIsQuotaError(error){const code=String(error?.code||'').toLowerCase(),message=String(error?.message||error||'').toLowerCase();return code.includes('resource-exhausted')||message.includes('quota exceeded')||message.includes('resource-exhausted')}
+  function portalSaveVisibleDrafts(){try{if($('#new-title'))saveCaseDraft();jobs.forEach(job=>{if($('#job-status-'+job.id))saveJobDraft(job.id)})}catch(error){console.warn('portal draft backup',error)}}
+  function portalQuotaNotice(){
+    if(document.getElementById('portal-quota-maintenance'))return;
+    const el=document.createElement('section');el.id='portal-quota-maintenance';el.className='card notice warn';el.setAttribute('role','alert');
+    el.style.cssText='position:fixed;z-index:100100;inset:0;display:grid;place-items:center;padding:14px;background:rgba(17,24,39,.58)';
+    el.innerHTML='<div class="card notice warn" style="width:min(620px,100%);box-shadow:0 14px 36px rgba(0,0,0,.28)"><b>クラウド接続を一時停止しました</b><p style="margin:5px 0 0">Firestoreの無料枠上限により、案件・進捗・DMの保存状況は確認できません。この画面からの保存・提出・送信は行いません。無料枠の回復後に再読み込みしてください。</p><button class="btn small" type="button" style="margin-top:9px" onclick="retryPortalFirestoreAfterQuota()">再読み込みして再接続</button></div>';
+    document.body.appendChild(el);
+  }
+  function retryPortalFirestoreAfterQuota(){const u=new URL(location.href);u.searchParams.set('firestoreRetry',String(Date.now()));location.assign(u.href)}
+  function portalStopRealtime(){const stop=new Set([...(unsubs||[]),...(portalUnsubs||[])]);stop.forEach(unsub=>{try{unsub?.()}catch(_){}});unsubs=[];portalUnsubs=[]}
+  function portalRegisterQuotaStop(fn){if(typeof fn!=='function')return()=>{};portalQuotaStops.add(fn);if(portalQuotaCircuitOpen){try{fn()}catch(err){console.warn('quota stop failed',err)}}return()=>portalQuotaStops.delete(fn)}
+  function portalWriteBlocked(){if(!portalQuotaCircuitOpen)return false;toast('クラウド接続停止中。再読み込み後に操作してください');return true}
+  function portalBlockFirestoreWritePrimitives(){
+    if(!db||portalQuotaWriteBlockInstalled)return;portalQuotaWriteBlockInstalled=true;
+    const rejectWrite=()=>Promise.reject(Object.assign(new Error('クラウド接続停止中。再読み込み後に操作してください'),{code:'resource-exhausted'}));
+    const guard=(sample,name)=>{const proto=sample&&Object.getPrototypeOf(sample),original=proto&&proto[name];if(typeof original!=='function'||original.__editflowQuotaGuard)return;const wrapped=function(...args){if(portalQuotaCircuitOpen)return rejectWrite();return original.apply(this,args)};wrapped.__editflowQuotaGuard=true;proto[name]=wrapped};
+    try{const collection=db.collection('__editflow_quota_guard__'),doc=collection.doc('__probe__'),batch=db.batch();['set','update','delete'].forEach(name=>guard(doc,name));guard(collection,'add');guard(batch,'commit');guard(db,'runTransaction')}catch(error){console.warn('Firestore write guard setup failed',error)}
+  }
+  function portalEnterQuotaCircuit(error,scope){
+    if(!portalIsQuotaError(error))return false;
+    if(portalQuotaCircuitOpen)return true;
+    portalQuotaCircuitOpen=true;portalSaveVisibleDrafts();portalBlockFirestoreWritePrimitives();
+    portalQuotaStops.forEach(stop=>{try{stop()}catch(err){console.warn('quota stop failed',err)}});
+    try{window.dispatchEvent(new Event('editor-quota-circuit'))}catch(_){}
+    try{Promise.resolve(db?.disableNetwork?.()).catch(err=>console.warn('Firestore network pause failed',err))}catch(err){console.warn('Firestore network pause failed',err)}
+    if(!portalQuotaNoticeShown){portalQuotaNoticeShown=true;portalQuotaNotice()}
+    console.warn(`${scope} paused after Firestore quota exhaustion`,error);return true;
+  }
+  function portalSnapshotError(error,scope,onNonQuota){if(portalEnterQuotaCircuit(error,scope))return true;if(typeof onNonQuota==='function')onNonQuota(error);else console.warn(scope,error?.code||error);return false}
+  portalRegisterQuotaStop(portalStopRealtime);
+  window.portalSnapshotError=portalSnapshotError;
+  window.portalWriteBlocked=portalWriteBlocked;
+  window.EditflowFirestoreQuota={handle:portalEnterQuotaCircuit,registerStop:portalRegisterQuotaStop,isOpen:()=>portalQuotaCircuitOpen,writeAllowed:()=>!portalQuotaCircuitOpen};
   let auth=null,db=null,user=null,access=null,accessRequest=null,profile={},jobs=[],portalJobsSource=[],previewLegacyJobs=[],invoices=[],authorizations=[],view='dashboard',unsubs=[],portalUnsubs=[],driveToken=null,driveConnectPromise=null,invoiceMonth=new Date().toISOString().slice(0,7),invoiceDue='',pdfBuilding=false,ADMIN_PREVIEW=false,PORTAL_UID='',snapshotRenderFrame=null,pdfLibrariesPromise=null;
   const AUTH_POPUP_TIMEOUT_MS=45000;
   const PORTAL_AUTH_URL='https://editflow-mono-create.firebaseapp.com/editor.html';
@@ -278,18 +314,19 @@
   }
   async function requestAccess(){if(ADMIN_PREVIEW)return;const name=($('#request-name')?.value||'').trim();if(!name)return toast('Chatwork表示名を入力してください');const data={uid:user.uid,email:user.email||'',name,photo:user.photoURL||'',status:'pending',lastRequestedAt:firebase.firestore.FieldValue.serverTimestamp()};try{await db.collection('accessRequests').doc(user.uid).set(data,{merge:true});toast('承認申請を送信しました')}catch(e){console.warn(e);toast('承認申請を送信できませんでした')}}
   function startPortal(){
+    if(portalQuotaCircuitOpen)return;
     portalUnsubs.forEach(u=>{try{u()}catch(_){}});portalUnsubs=[];portalJobsSource=[];previewLegacyJobs=[];combinePortalJobs();
     const root=db.collection('editor_portals').doc(portalUid()),next=[];
-    if(directBillingEnabled())next.push(root.collection('editor_profile').doc('self').onSnapshot(s=>{profile=s.exists?s.data():{};scheduleSnapshotRender()},e=>toast('請求者設定を読み込めません')));else{profile={};invoices=[];authorizations=[];}
-    next.push(root.collection('editor_jobs').onSnapshot(q=>{portalJobsSource=q.docs.map(d=>({id:d.id,...d.data()}));combinePortalJobs();scheduleSnapshotRender()},e=>toast('案件を読み込めません')));
-    if(ADMIN_PREVIEW)next.push(db.collection('shared').doc('mcapp').onSnapshot(s=>{previewLegacyJobs=s.exists?buildLegacyPreviewJobs(s.data()||{},access):[];combinePortalJobs();scheduleSnapshotRender()},e=>console.warn('legacy preview jobs',e?.code||e)));
+    if(directBillingEnabled())next.push(root.collection('editor_profile').doc('self').onSnapshot(s=>{profile=s.exists?s.data():{};scheduleSnapshotRender()},e=>portalSnapshotError(e,'請求者設定',()=>toast('請求者設定を読み込めません'))));else{profile={};invoices=[];authorizations=[];}
+    next.push(root.collection('editor_jobs').onSnapshot(q=>{portalJobsSource=q.docs.map(d=>({id:d.id,...d.data()}));combinePortalJobs();scheduleSnapshotRender()},e=>portalSnapshotError(e,'案件',()=>toast('案件を読み込めません'))));
+    if(ADMIN_PREVIEW)next.push(db.collection('shared').doc('mcapp').onSnapshot(s=>{previewLegacyJobs=s.exists?buildLegacyPreviewJobs(s.data()||{},access):[];combinePortalJobs();scheduleSnapshotRender()},e=>portalSnapshotError(e,'管理者プレビュー案件',err=>console.warn('legacy preview jobs',err?.code||err))));
     if(directBillingEnabled()){
-      next.push(root.collection('editor_invoices').onSnapshot(q=>{invoices=q.docs.map(d=>({id:d.id,...d.data()}));scheduleSnapshotRender()},e=>toast('請求書を読み込めません')));
-      next.push(root.collection('invoice_authorizations').onSnapshot(q=>{authorizations=q.docs.map(d=>({id:d.id,...d.data()}));scheduleSnapshotRender()},e=>toast('確定報酬を読み込めません')));
+      next.push(root.collection('editor_invoices').onSnapshot(q=>{invoices=q.docs.map(d=>({id:d.id,...d.data()}));scheduleSnapshotRender()},e=>portalSnapshotError(e,'請求書',()=>toast('請求書を読み込めません'))));
+      next.push(root.collection('invoice_authorizations').onSnapshot(q=>{authorizations=q.docs.map(d=>({id:d.id,...d.data()}));scheduleSnapshotRender()},e=>portalSnapshotError(e,'確定報酬',()=>toast('確定報酬を読み込めません'))));
     }
     portalUnsubs=next;unsubs.push(...next);
   }
-  function observeAccess(){const owner=OWNER_EMAILS.includes(String(user?.email||'').toLowerCase());ADMIN_PREVIEW=!!(PREVIEW_UID_PARAM&&owner);PORTAL_UID=ADMIN_PREVIEW?PREVIEW_UID_PARAM:user.uid;if(!ADMIN_PREVIEW)unsubs.push(db.collection('accessRequests').doc(user.uid).onSnapshot(s=>{accessRequest=s.exists?s.data():null;if(!access?.approved)pendingScreen()},e=>console.warn('access request',e)));unsubs.push(db.collection('access').doc(portalUid()).onSnapshot(s=>{access=s.exists?s.data():(owner&&!ADMIN_PREVIEW?{uid:user.uid,email:user.email||'',name:user.displayName||'オーナー',approved:true,owner:true,roles:['動画編集ディレクター'],editorKind:'direct'}:null);if(access?.approved&&hasVideoEditorPermission())startPortal();else{portalUnsubs.forEach(u=>{try{u()}catch(_){}});portalUnsubs=[];profile={};portalJobsSource=[];previewLegacyJobs=[];combinePortalJobs();invoices=[];authorizations=[];render()}},e=>{console.warn(e);access=null;accessLoadErrorScreen()}))}
+  function observeAccess(){if(portalQuotaCircuitOpen)return;const owner=OWNER_EMAILS.includes(String(user?.email||'').toLowerCase());ADMIN_PREVIEW=!!(PREVIEW_UID_PARAM&&owner);PORTAL_UID=ADMIN_PREVIEW?PREVIEW_UID_PARAM:user.uid;if(!ADMIN_PREVIEW)unsubs.push(db.collection('accessRequests').doc(user.uid).onSnapshot(s=>{accessRequest=s.exists?s.data():null;if(!access?.approved)pendingScreen()},e=>portalSnapshotError(e,'利用申請',err=>console.warn('access request',err))));unsubs.push(db.collection('access').doc(portalUid()).onSnapshot(s=>{access=s.exists?s.data():(owner&&!ADMIN_PREVIEW?{uid:user.uid,email:user.email||'',name:user.displayName||'オーナー',approved:true,owner:true,roles:['動画編集ディレクター'],editorKind:'direct'}:null);if(access?.approved&&hasVideoEditorPermission())startPortal();else{portalUnsubs.forEach(u=>{try{u()}catch(_){}});portalUnsubs=[];profile={};portalJobsSource=[];previewLegacyJobs=[];combinePortalJobs();invoices=[];authorizations=[];render()}},e=>portalSnapshotError(e,'アクセス権限',err=>{console.warn(err);access=null;accessLoadErrorScreen()})))}
 
   async function createJob(){const title=$('#new-title')?.value.trim(),clientDisplay=$('#new-client')?.value.trim(),deliveryDate=$('#new-deadline')?.value,instructions=$('#new-instructions')?.value.trim(),requestUrl=$('#new-request')?.value.trim(),sourceUrl=$('#new-source')?.value.trim(),schedule={sharedDate:$('#new-shared')?.value||'',editorDraftDate:$('#new-editor-draft')?.value||'',clientDraftDate:$('#new-client-draft')?.value||'',thumbnailDate:$('#new-thumbnail')?.value||'',deliveryDate};if(!title||!clientDisplay||!instructions)return toast('案件名・クライアント名・依頼内容は必須です');const dateError=scheduleError(schedule);if(dateError)return toast(dateError);if((requestUrl&&!safeUrl(requestUrl))||(sourceUrl&&!safeUrl(sourceUrl)))return toast('URLは https:// または http:// で入力してください');const jid=id(),at=now(),data={recordType:'editor_portal_job',title,clientDisplay,deadline:deliveryDate,...schedule,requestUrl,sourceUrl,instructions,urgent:!!$('#new-urgent')?.checked,status:'受注済み',progress:'',evidenceUrl:'',blocker:'',workDate:'',startTime:'',endTime:'',submittedByUid:user.uid,editorUid:user.uid,editorEmail:user.email||'',editorName:access?.name||user.displayName||'',source:'direct_client',createdAt:at,updatedAt:at,history:[{at,type:'created',by:user.uid,status:'受注済み'}]};if(DEMO){jobs.unshift({id:jid,...data});sessionStorage.removeItem(draftKey());render();return toast('案件を登録しました')};try{const ref=db.collection('editor_portals').doc(user.uid).collection('editor_jobs').doc(jid),ev=ref.collection('events').doc();const batch=db.batch();batch.set(ref,data);batch.set(ev,{at:firebase.firestore.FieldValue.serverTimestamp(),type:'created',byUid:user.uid,status:data.status,deliveryDate});await batch.commit();sessionStorage.removeItem(draftKey());toast('案件を登録しました')}catch(e){console.warn(e);toast('案件を登録できませんでした')}}
   async function saveJobProgress(jid){const j=jobs.find(x=>x.id===jid);if(!j)return;const evidence=$('#job-evidence-'+jid)?.value.trim()||'';if(evidence&&!safeUrl(evidence))return toast('提出した内容のURLを確認してください');const at=now(),status=$('#job-status-'+jid).value,deliveryDate=$('#job-delivery-'+jid).value,schedule={sharedDate:$('#job-shared-'+jid).value,editorDraftDate:$('#job-editor-draft-'+jid).value,clientDraftDate:$('#job-client-draft-'+jid).value,thumbnailDate:$('#job-thumbnail-'+jid).value,deliveryDate},data={status,deadline:deliveryDate,...schedule,progress:$('#job-progress-'+jid).value.trim(),evidenceUrl:evidence,blocker:$('#job-blocker-'+jid).value.trim(),workDate:$('#job-workdate-'+jid).value,startTime:$('#job-start-'+jid).value,endTime:$('#job-end-'+jid).value,updatedAt:at};const dateError=scheduleError(schedule);if(dateError)return toast(dateError);if(data.startTime&&data.endTime&&data.endTime<=data.startTime)return toast('終了時刻は開始時刻より後にしてください');if(status==='完了'&&!evidence)return toast('完了にする前に納品または確認した内容のURLを登録してください');if(status==='完了'&&data.blocker)return toast('完了にする前に停止理由を解消してください');if(DEMO){Object.assign(j,data);clearJobDraft(jid);render();return toast('進捗を保存しました')};try{const ref=db.collection('editor_portals').doc(user.uid).collection('editor_jobs').doc(jid),ev=ref.collection('events').doc();const batch=db.batch();batch.update(ref,data);batch.set(ev,{at:firebase.firestore.FieldValue.serverTimestamp(),type:'progress',byUid:user.uid,status,deliveryDate,hasEvidence:!!evidence,hasBlocker:!!data.blocker});await batch.commit();clearJobDraft(jid);toast('進捗を保存しました')}catch(e){console.warn(e);toast('進捗を保存できませんでした')}}
@@ -392,6 +429,22 @@
   invoiceCreatePanel=function(){const authorization=activeAuthorization(invoiceMonth),count=authorization?.jobIds?.length||0,ready=authorization&&invoiceReadyOn({invoiceAvailableOn:authorization.invoiceAvailableOn});return`<div class="card"><div class="section-title"><h2>通常の請求書を作成</h2><span>納品日から自動計算</span></div><div class="form-grid"><div class="field"><label for="manual-invoice-delivery-date">納品日 *</label><input id="manual-invoice-delivery-date" type="date" oninput="renderManualInvoiceTerms()"></div><div id="manual-invoice-terms" class="card notice" style="box-shadow:none">納品日を入力してください。</div><div class="field full"><label for="manual-invoice-description">請求内容 *</label><input id="manual-invoice-description" maxlength="200" placeholder="例：ショート動画編集 5本"></div><div class="field"><label for="manual-invoice-amount">税抜金額 *</label><input id="manual-invoice-amount" type="number" min="1" step="1" placeholder="例：12500"></div><div class="field"><label for="manual-invoice-tax">税率</label><select id="manual-invoice-tax"><option value="0">0%</option><option value="10" ${Number(profile.taxRate||0)===10?'selected':''}>10%</option></select></div></div><div class="actions"><button class="btn primary" type="button" onclick="draftManualInvoice()">請求書の下書きを作成</button></div><p class="muted">25日以前の納品は当月25日、26日以降は翌月25日から請求できます。</p></div><div class="card" style="margin-top:10px"><div class="section-title"><h2>確定済み報酬から自動作成</h2><span>表示する請求月</span></div><div class="field"><input id="invoice-month" type="month" value="${invoiceMonth}" onchange="invoiceMonth=this.value;render()"></div>${authorization?`<div class="notice" style="margin-top:10px"><b>管理者確定額 ¥${money(authorization.total)}</b><div class="muted">対象 ${count}件 ・ ${esc(invoiceScheduleText(authorization))}</div></div><div class="actions"><button class="btn" type="button" onclick="draftInvoice()" ${ready?'':'disabled'}>${ready?'確定額から下書き作成':`${esc(authorization.invoiceAvailableOn||'')}から作成可能`}</button></div>`:'<div class="empty">この月に請求可能な確定報酬はありません。</div>'}</div>`}
   draftInvoice=async function(){const month=invoiceMonth,authorization=activeAuthorization(month);if(!authorization)return toast('この月は管理者の報酬確定待ちです');const issueDate=authorization.invoiceAvailableOn||'',dueDate=authorization.paymentDueDate||'';if(!issueDate||!dueDate)return toast('納品日を基準にした請求日の確定待ちです');if(localDate()<issueDate)return toast(`${issueDate}から請求書を作成できます`);if(!authorization.invoiceDocumentId||Number(authorization.invoiceVersion)!==1)return toast('この報酬確定は修正版の作成待ちです');if(!profile.issuerName||!profile.bankName||!profile.bankNumber)return toast('先に「請求者設定」を完了してください');const jobIds=[...(authorization.jobIds||[])],lines=(authorization.lines||[]).map(x=>({...x})),key=await sha256Text(`${user.uid}|${authorization.id}|${authorization.revision}`);if(invoices.some(x=>x.authorizationId===authorization.id&&x.authorizationRevision===authorization.revision&&x.status!=='取消'))return toast('同じ確定報酬の請求書は既に作成済みです');const subtotal=Number(authorization.subtotal||0),taxByRate={...(authorization.taxByRate||{})},tax=Number(authorization.tax||0),at=now(),iid=authorization.invoiceDocumentId,data=scheduledInvoiceData({month,jobIds,lines,authorizationId:authorization.id,authorizationRevision:Number(authorization.revision),subtotal,taxByRate,tax,total:Number(authorization.total||subtotal+tax),issueDate,dueDate,version:Number(authorization.invoiceVersion),idempotencyKey:key,invoiceNumber:`MC-${month.replace('-','')}-${String(user.uid).slice(0,5).toUpperCase()}-${String(at).slice(-5)}`,at});if(DEMO){invoices.unshift({id:iid,...data});render();return toast('請求書の下書きを作成しました')}try{const ref=db.collection('editor_portals').doc(user.uid).collection('editor_invoices').doc(iid),ev=ref.collection('events').doc(),batch=db.batch();batch.set(ref,data);batch.set(ev,{at:firebase.firestore.FieldValue.serverTimestamp(),byUid:user.uid,status:'下書き',type:'created',authorizationId:authorization.id,authorizationRevision:Number(authorization.revision)});await batch.commit();toast('請求書の下書きを作成しました')}catch(e){console.warn(e);toast('請求書を作成できません')}}
   draftManualInvoice=async function(){const completedDeliveryDate=$('#manual-invoice-delivery-date')?.value||'',terms=invoiceTermsForDelivery(completedDeliveryDate),description=$('#manual-invoice-description')?.value.trim()||'',subtotal=Math.round(Number($('#manual-invoice-amount')?.value)||0),rate=Number($('#manual-invoice-tax')?.value)||0;if(!terms||!description||subtotal<=0)return toast('納品日・請求内容・金額を入力してください');if(!invoiceReadyOn(terms))return toast(`${terms.invoiceAvailableOn}から請求書を作成できます`);if(![0,10].includes(rate))return toast('税率を確認してください');if(!profile.issuerName||!profile.bankName||!profile.bankNumber)return toast('先に「請求者設定」を完了してください');const month=terms.invoiceMonth;if(invoices.some(x=>x.authorizationId==='manual'&&x.month===month&&!['取消','差戻し'].includes(x.status)))return toast('この月の通常請求書は既に作成済みです');const at=now(),iid=`manual-${month}-${String(user.uid).slice(0,8)}-${at}`,lineId=`manual-line-${at}`,tax=Math.round(subtotal*rate/100),taxByRate={[rate]:tax},data=scheduledInvoiceData({month,jobIds:[lineId],lines:[{jobId:lineId,title:description,serviceDescription:description,transactionDate:completedDeliveryDate,amount:subtotal,taxRate:rate}],authorizationId:'manual',authorizationRevision:0,subtotal,taxByRate,tax,total:subtotal+tax,issueDate:terms.invoiceAvailableOn,dueDate:terms.paymentDueDate,version:1,idempotencyKey:`manual:${user.uid}:${month}:${at}`,invoiceNumber:`MC-${month.replace('-','')}-${String(user.uid).slice(0,5).toUpperCase()}-${String(at).slice(-5)}`,at,historyType:'manual'});if(DEMO){invoices.unshift({id:iid,...data});render();return toast('請求書の下書きを作成しました')}try{const ref=db.collection('editor_portals').doc(user.uid).collection('editor_invoices').doc(iid),ev=ref.collection('events').doc(),batch=db.batch();batch.set(ref,data);batch.set(ev,{at:firebase.firestore.FieldValue.serverTimestamp(),byUid:user.uid,status:'下書き',type:'manual_created'});await batch.commit();toast('請求書の下書きを作成しました')}catch(e){console.warn(e);toast('請求書を作成できません')}}
+  // Keep every editor-side mutation behind the quota circuit, including legacy
+  // entry points that are replaced later by the portal feature extension.
+  function portalGuardWrite(fn){return async function(...args){if(!DEMO&&portalWriteBlocked())return;return fn.apply(this,args)}}
+  requestAccess=portalGuardWrite(requestAccess);
+  createJob=portalGuardWrite(createJob);
+  saveJobProgress=portalGuardWrite(saveJobProgress);
+  saveJobProgressRequired=saveJobProgress;
+  saveDisplayName=portalGuardWrite(saveDisplayName);
+  saveProfile=portalGuardWrite(saveProfile);
+  draftInvoice=portalGuardWrite(draftInvoice);
+  draftManualInvoice=portalGuardWrite(draftManualInvoice);
+  persistInvoiceFile=portalGuardWrite(persistInvoiceFile);
+  saveGeneratedInvoice=portalGuardWrite(saveGeneratedInvoice);
+  uploadInvoiceFile=portalGuardWrite(uploadInvoiceFile);
+  submitInvoice=portalGuardWrite(submitInvoice);
+  createRevision=portalGuardWrite(createRevision);
   const invoiceCardBeforeBillingTerms=invoiceCard;
   invoiceCard=function(x){const html=invoiceCardBeforeBillingTerms(x),schedule=x.invoiceAvailableOn&&x.paymentDueDate?`<div class="card notice" style="box-shadow:none;margin-top:8px"><b>請求日 ${esc(x.invoiceAvailableOn)}</b><div class="muted">支払予定日 ${esc(x.paymentDueDate)}</div></div>`:'';return html.replace('<div class="actions">',`${schedule}<div class="actions">`)}
 
@@ -419,8 +472,8 @@
   if(!DEMO&&'serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(error=>console.warn('service worker',error));
   </script>
   <script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
-  <script src="./editor-push.js?v=20260829-13"></script>
-  <script src="./direct-messages.js?v=20260829-13"></script>
-  <script src="./editor-features.js?v=20260829-13"></script>
+  <script src="./editor-push.js?v=20260829-14"></script>
+  <script src="./direct-messages.js?v=20260829-14"></script>
+  <script src="./editor-features.js?v=20260829-14"></script>
 </body>
 </html>

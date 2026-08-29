@@ -11,10 +11,37 @@
   const MAX_MESSAGE_LENGTH = 2000;
   const MAX_PREVIEW_LENGTH = 120;
   const MAX_MESSAGES = 100;
+  const CLOUD_WRITE_PAUSED_MESSAGE = 'クラウド接続停止中。再読み込み後に操作してください';
   let peerCache = [];
+  const activeWatchStops = new Set();
   const isObject = value => !!value && typeof value === 'object' && !Array.isArray(value);
   const trim = value => String(value == null ? '' : value).trim();
   const millis = value => value && typeof value.toMillis === 'function' ? value.toMillis() : Number(value || 0);
+  function quotaWatchError(error, scope) {
+    try { return global.EditflowFirestoreQuota?.handle?.(error, `direct messages ${scope}`) === true; } catch (_) { return false; }
+  }
+  // The page-level quota circuit has already stopped Firestore networking.
+  // Do not turn a user action into an in-memory "success" or queue it for a
+  // later implicit write: the person must deliberately reload and retry.
+  function assertCloudWriteAvailable() {
+    if (!global.EditflowFirestoreQuota?.isOpen?.()) return;
+    const error = new Error(CLOUD_WRITE_PAUSED_MESSAGE);
+    error.code = 'firestore-quota-circuit-open';
+    throw error;
+  }
+  function trackedStop(stop) {
+    let active = true;
+    const wrapped = () => {
+      if (!active) return;
+      active = false;
+      activeWatchStops.delete(wrapped);
+      try { stop(); } catch (_) {}
+    };
+    activeWatchStops.add(wrapped);
+    return wrapped;
+  }
+  function stopAllWatches() { [...activeWatchStops].forEach(stop => stop()); }
+  global.EditflowFirestoreQuota?.registerStop?.(stopAllWatches);
 
   function globals() {
     /* `typeof` also works when this file is loaded after a page-level `let`. */
@@ -141,6 +168,7 @@
   function otherParticipant(thread, uid) { return thread.participantA === uid ? thread.participantB : thread.participantA; }
 
   async function ensureThread(peerUid) {
+    assertCloudWriteAvailable();
     const { me, peer } = peerFor(peerUid);
     const id = threadId(me.uid, peer.id);
     if (!canWrite()) return { id, demo: true, participantA: [me.uid, peer.id].sort()[0], participantB: [me.uid, peer.id].sort()[1] };
@@ -157,6 +185,7 @@
   }
 
   async function send(peerUid, body) {
+    assertCloudWriteAvailable();
     const text = trim(body);
     if (!text || text.length > MAX_MESSAGE_LENGTH) throw new Error('invalid-direct-message-body');
     const { me, peer } = peerFor(peerUid);
@@ -190,6 +219,7 @@
   }
 
   async function markRead(threadIdValue) {
+    assertCloudWriteAvailable();
     const me = current();
     if (!me) throw new Error('not-signed-in');
     const id = trim(threadIdValue);
@@ -204,6 +234,7 @@
   }
 
   async function markAllRead(threadIds) {
+    assertCloudWriteAvailable();
     const me = current();
     if (!me) throw new Error('not-signed-in');
     const ids = [...new Set((Array.isArray(threadIds) ? threadIds : []).map(trim).filter(Boolean))].slice(0, 450);
@@ -280,7 +311,7 @@
 
   function watch(callback) {
     const me = current();
-    if (!me?.state.db || typeof callback !== 'function') return () => {};
+    if (global.EditflowFirestoreQuota?.isOpen?.() || !me?.state.db || typeof callback !== 'function') return () => {};
     let cancelled = false, queued = false;
     const emit = () => {
       if (queued || cancelled) return;
@@ -291,31 +322,33 @@
         try { callback(await list()); } catch (error) { if (!cancelled) callback([], error); }
       });
     };
-    const unsubs = [ownerThreadQuery(me).onSnapshot(emit, error => { if (!cancelled) callback([], error); })];
+    const unsubs = [ownerThreadQuery(me).onSnapshot(emit, error => { if (!cancelled && !quotaWatchError(error, 'threads')) callback([], error); })];
     // Current director/external conversations are watched by deterministic
     // document ID, never by a broad thread-list query.
     if (!isCurrentOwner(me)) peers().filter(peer => !isOwnerRecord(member(peer.uid) || peer, peer.email)).forEach(peer => {
       unsubs.push(me.state.db.collection('direct_threads').doc(threadId(me.uid, peer.uid)).onSnapshot(emit, error => {
         // A peer can move teams while a screen is open.  The denied old watch
         // is simply removed from the merged list; it is not a user-facing app error.
-        if (!cancelled && error?.code !== 'permission-denied') callback([], error);
+        if (!cancelled && error?.code !== 'permission-denied' && !quotaWatchError(error, 'peer thread')) callback([], error);
       }));
     });
     emit();
-    return () => { cancelled = true; unsubs.forEach(unsub => { try { unsub(); } catch (_) {} }); };
+    return trackedStop(() => { cancelled = true; unsubs.forEach(unsub => { try { unsub(); } catch (_) {} }); });
   }
   function watchMessages(threadIdValue, callback, limit = 50) {
     const me = current();
-    if (!me?.state.db || typeof callback !== 'function') return () => {};
+    if (global.EditflowFirestoreQuota?.isOpen?.() || !me?.state.db || typeof callback !== 'function') return () => {};
     const id = trim(threadIdValue);
-    return me.state.db.collection('direct_threads').doc(id).collection('messages').orderBy('createdAt', 'desc').limit(Math.max(1, Math.min(MAX_MESSAGES, Number(limit) || 50))).onSnapshot(snapshot => {
+    const unsub = me.state.db.collection('direct_threads').doc(id).collection('messages').orderBy('createdAt', 'desc').limit(Math.max(1, Math.min(MAX_MESSAGES, Number(limit) || 50))).onSnapshot(snapshot => {
       callback(snapshot.docs.map(doc => ({ id: doc.id, ...readData(doc.data()) })).reverse());
-    }, error => callback([], error));
+    }, error => { if (!quotaWatchError(error, 'messages')) callback([], error); });
+    return trackedStop(unsub);
   }
 
   global.EditflowDM = Object.freeze({
     version: '1.0.0', threadId, peers, canMessage: uid => { try { peerFor(uid); return true; } catch (_) { return false; } },
-    loadPeers, ensureThread, send, messages, list, markRead, markAllRead, watch, watchMessages,
-    limits: Object.freeze({ maxMessageLength: MAX_MESSAGE_LENGTH, maxMessages: MAX_MESSAGES })
+    loadPeers, ensureThread, send, messages, list, markRead, markAllRead, watch, watchMessages, stopAllWatches,
+    limits: Object.freeze({ maxMessageLength: MAX_MESSAGE_LENGTH, maxMessages: MAX_MESSAGES }),
+    cloudWritePausedMessage: CLOUD_WRITE_PAUSED_MESSAGE
   });
 })(window);

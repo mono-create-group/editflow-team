@@ -16,7 +16,7 @@ function sourceBetween(name, next) {
 }
 
 test('quota classifier catches Firestore resource exhaustion without matching ordinary failures', () => {
-  const context = {};
+  const context = { window: {} };
   vm.createContext(context);
   vm.runInContext(sourceBetween('_fbIsQuotaError', '_fbFailClosed') + '\nthis.isQuota = _fbIsQuotaError;', context);
   assert.equal(context.isQuota({ code: 'resource-exhausted' }), true);
@@ -92,13 +92,13 @@ test('sign-in presence is touched at most once per day unless identity changes',
 });
 
 test('quota notice never claims shared ledgers were safely cached on the device', () => {
-  const failClosed = sourceBetween('_fbFailClosed', 'fbSave');
-  assert.match(failClosed, /共有データは未保存の可能性があります/);
-  assert.match(failClosed, /入力内容を控え/);
-  assert.doesNotMatch(failClosed, /変更はこの端末に保存済みです/);
+  const notice = sourceBetween('_fbShowQuotaMaintenanceNotice', 'retryFirestoreAfterQuota');
+  assert.match(notice, /共有案件・顧客・進捗の保存状況は確認できません/);
+  assert.match(notice, /再読み込みして再接続/);
+  assert.doesNotMatch(notice, /共有.*保存済み/);
 });
 
 test('service worker cache and app version are bumped together', () => {
-  assert.match(index, /const APP_VERSION='20260829-13';/);
-  assert.match(sw, /const CACHE='mcshanai-20260829-13';/);
+  assert.match(index, /const APP_VERSION='20260829-14';/);
+  assert.match(sw, /const CACHE='mcshanai-20260829-14';/);
 });

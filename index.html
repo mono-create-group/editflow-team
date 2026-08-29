@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260829-13"></script>
+<script src="./billing-terms.js?v=20260829-14"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -995,7 +995,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260829-13">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260829-14">
 </head>
 <body class="owner-yellow-ui">
 
@@ -1246,23 +1246,79 @@ let _personalTaskBaseline=new Map();
 // 連鎖させないための回路遮断。ローカル保存は従来どおり継続する。
 let _fbQuotaBlocked=false;
 let _fbQuotaNoticeShown=false;
+let _fbQuotaReadCircuitOpen=false;
+const _fbQuotaExternalStops=new Set();
 let _fbPersonalSaveInFlight=false;
 let _fbPersonalSaveQueued=false;
 let _fbPersonalLastPayload='';
+let _fbQuotaWriteBlockInstalled=false;
 function _fbIsQuotaError(e){
   const code=String(e&&e.code||'').toLowerCase(),message=String(e&&e.message||e||'').toLowerCase();
   return code==='resource-exhausted'||message.includes('quota exceeded')||message.includes('resource-exhausted');
 }
+// Firestore の read quota を超えたタブは SDK が内部で再接続を続けるため、
+// ここで全購読とネットワークを明示的に止める。自動再接続はしない。
+function _fbShowQuotaMaintenanceNotice(){
+  if(typeof document==='undefined'||document.getElementById('firestore-quota-maintenance'))return;
+  const el=document.createElement('div');el.id='firestore-quota-maintenance';
+  el.setAttribute('role','alert');
+  el.style.cssText='position:fixed;z-index:100100;inset:0;display:grid;place-items:center;padding:14px;background:rgba(17,24,39,.58);color:#4f3100;font-size:13px;line-height:1.6';
+  el.innerHTML='<div style="width:min(620px,100%);background:#fff8e1;border:2px solid #d88a00;border-radius:14px;padding:18px;box-shadow:0 14px 36px rgba(0,0,0,.28)"><b style="display:block;margin-bottom:4px">クラウド接続を一時停止しました</b><span>Firestoreの無料枠上限により、共有案件・顧客・進捗の保存状況は確認できません。この画面からの保存・送信は行いません。無料枠の回復後に再読み込みしてください。</span><button type="button" class="btn btn-p btn-sm" style="display:block;margin-top:10px" onclick="retryFirestoreAfterQuota()">再読み込みして再接続</button></div>';
+  document.body.appendChild(el);
+}
+function _fbQuotaWriteError(){const error=new Error('クラウド接続停止中。再読み込み後に操作してください');error.code='failed-precondition';return error;}
+function _fbInstallQuotaWriteBlock(){
+  if(_fbQuotaWriteBlockInstalled)return;
+  _fbQuotaWriteBlockInstalled=true;
+  const guard=(sample,name)=>{
+    const proto=sample&&Object.getPrototypeOf(sample),original=proto&&proto[name];
+    if(typeof original!=='function'||original.__editflowQuotaGuard)return;
+    const wrapped=function(...args){if(_fbQuotaReadCircuitOpen)return Promise.reject(_fbQuotaWriteError());return original.apply(this,args)};
+    wrapped.__editflowQuotaGuard=true;wrapped.__editflowOriginal=original;proto[name]=wrapped;
+  };
+  try{
+    const collection=fbDb.collection('__editflow_quota_guard__'),doc=collection.doc('__probe__'),batch=fbDb.batch();
+    ['set','update','delete'].forEach(name=>guard(doc,name));
+    guard(collection,'add');guard(batch,'commit');guard(fbDb,'runTransaction');
+  }catch(error){console.warn('Firestore write guard setup failed',error)}
+}
+function retryFirestoreAfterQuota(){
+  // 利用者が明示的に選んだ時だけ新しい接続を開始する。短周期の自動再試行はしない。
+  const u=new URL(location.href);u.searchParams.set('firestoreRetry',String(Date.now()));location.assign(u.href);
+}
+function _fbEnterQuotaReadCircuit(e,scope){
+  if(!_fbIsQuotaError(e))return false;
+  if(_fbQuotaReadCircuitOpen)return true;
+  _fbQuotaBlocked=true;_fbQuotaReadCircuitOpen=true;
+  _fbInstallQuotaWriteBlock();
+  // 購読解除前に端末側の明示的な入力状態だけを退避する。共有データが保存済みとは扱わない。
+  try{_lsSaveState(S);}catch(_){}
+  try{_stopRoleSubscriptions();}catch(_){}
+  _fbQuotaExternalStops.forEach(stop=>{try{stop()}catch(_){}});
+  try{Promise.resolve(fbDb.disableNetwork()).catch(err=>console.warn('Firestore network pause failed',err));}catch(err){console.warn('Firestore network pause failed',err);}
+  if(!_fbQuotaNoticeShown){_fbQuotaNoticeShown=true;_fbShowQuotaMaintenanceNotice();}
+  console.warn(`${scope} read paused after Firestore quota exhaustion`,e);
+  return true;
+}
+window.EditflowFirestoreQuota=Object.freeze({
+  handle:(error,scope='Firestore')=>_fbEnterQuotaReadCircuit(error,scope),
+  registerStop:stop=>{
+    if(typeof stop!=='function')return()=>{};
+    _fbQuotaExternalStops.add(stop);
+    if(_fbQuotaReadCircuitOpen){try{stop()}catch(_){}}
+    return()=>_fbQuotaExternalStops.delete(stop);
+  },
+  isOpen:()=>_fbQuotaReadCircuitOpen,
+  writeAllowed:()=>!_fbQuotaReadCircuitOpen
+});
+function _fbHandleSnapshotError(e,scope,onNonQuota){
+  if(_fbEnterQuotaReadCircuit(e,scope))return true;
+  if(typeof onNonQuota==='function')onNonQuota(e);else console.warn(`${scope} snapshot error`,e&&e.code||e);
+  return false;
+}
 function _fbFailClosed(e,scope){
   if(!_fbIsQuotaError(e))return false;
-  _fbQuotaBlocked=true;
-  if(!_fbQuotaNoticeShown){
-    _fbQuotaNoticeShown=true;
-    const localSaved=_lsSaveState(S);
-    toast(localSaved
-      ?'クラウド保存の上限に達しました。個人データは端末に保存しましたが、案件・顧客など共有データは未保存の可能性があります。入力内容を控え、無料枠の回復後に再読み込みして、もう一度操作してください。'
-      :'クラウド保存の上限に達しました。端末保存も確認できないため、画面を閉じずに管理者へ連絡してください。','warn');
-  }
+  _fbEnterQuotaReadCircuit(e,scope);
   console.warn(`${scope} save paused after Firestore quota exhaustion`,e);
   return true;
 }
@@ -1411,7 +1467,7 @@ function fbSetupRealtimeSync(){
         toast('📱 他のデバイスから同期しました');
       }
     }
-  },e=>console.error('Firestore snapshot error:',e));
+  },e=>_fbHandleSnapshotError(e,'personal sync',err=>console.error('Firestore snapshot error:',err)));
 }
 
 // ===チーム共有（案件・クライアント・編集者を全アカウントで共有）===
@@ -1699,7 +1755,7 @@ function fbSetupTeamSync(){
     _teamLastPayload=_teamCloudBaseline(d);
     _schedulePortalLegacySync();
     if(changed)renderSyncSafe();
-  },e=>{const c=e&&e.code;if(c==='permission-denied'&&TEAM_SHARE_OK!==false){TEAM_SHARE_OK=false;renderAuthUI();}console.warn('team share sync:',c||e);});
+  },e=>_fbHandleSnapshotError(e,'team share sync',err=>{const c=err&&err.code;if(c==='permission-denied'&&TEAM_SHARE_OK!==false){TEAM_SHARE_OK=false;renderAuthUI();}console.warn('team share sync:',c||err);}));
   // salesLeads分割doc(mcapp_leads_0..3)の購読。各shardは部分集合なのでid+updatedAtでマージ(削除しない)
   _slShardUnsubs.forEach(u=>{try{u();}catch(_){}});
   _slShardUnsubs=[];
@@ -1732,7 +1788,7 @@ function fbSetupTeamSync(){
         // initial snapshots completed. Unchanged startup remains a no-op.
         if(_slLeadSignature(S.salesLeads||[])!==_slShardJson)_slShardsSave();
       }
-    },e=>console.warn('leads shard sync',i,(e&&e.code)||e)));
+    },e=>_fbHandleSnapshotError(e,`leads shard ${i} sync`,err=>console.warn('leads shard sync',i,(err&&err.code)||err))));
   }
 }
 // サインインしたアカウントの識別情報(uid/メール/名前/写真/最終サインイン)をチーム共有配列signinsへupsert。
@@ -1913,15 +1969,15 @@ function fbSetupAccessAdmin(){
   _accessReqUnsub=fbDb.collection('accessRequests').onSnapshot(q=>{
     ACCESS_REQUESTS=q.docs.map(d=>({id:d.id,...d.data()})).filter(x=>!x.status||x.status==='pending').sort((a,b)=>String(a.email||'').localeCompare(String(b.email||'')));
     renderSyncSafe();
-  },e=>console.warn('access requests sync',e&&e.code||e));
+  },e=>_fbHandleSnapshotError(e,'access requests sync',err=>console.warn('access requests sync',err&&err.code||err)));
   _accessRecordsUnsub=fbDb.collection('access').onSnapshot(q=>{
     ACCESS_RECORDS=q.docs.map(d=>({id:d.id,...d.data()}));
     renderSyncSafe();
-  },e=>console.warn('access records sync',e&&e.code||e));
+  },e=>_fbHandleSnapshotError(e,'access records sync',err=>console.warn('access records sync',err&&err.code||err)));
   _accessControlUnsub=fbDb.collection('system').doc('access_control').onSnapshot(d=>{
     ACCESS_CONTROL=d.exists?{...ACCESS_CONTROL,...d.data(),configured:Array.isArray(d.data()?.compatibilityEmails)}:{...ACCESS_CONTROL,configured:false,enforced:false,phase:'compatibility',compatibilityEmails:[]};
     renderSyncSafe();
-  },e=>console.warn('access control sync',e&&e.code||e));
+  },e=>_fbHandleSnapshotError(e,'access control sync',err=>console.warn('access control sync',err&&err.code||err)));
 }
 let _portalLegacySyncTimer=null;
 function _syncPortalJobsIntoLegacy(){
@@ -1943,7 +1999,7 @@ function fbSetupPortalOpsSync(){
       PORTAL_JOBS=q.docs.filter(d=>d.ref.parent.parent&&d.ref.parent.parent.parent.id==='editor_portals').map(d=>({id:d.id,_portalUid:d.ref.parent.parent.id,_path:d.ref.path,...d.data()}));
       _schedulePortalLegacySync();
       renderSyncSafe();
-    },e=>console.warn('editor portal jobs sync',e&&e.code||e));
+    },e=>_fbHandleSnapshotError(e,'editor portal jobs sync',err=>console.warn('editor portal jobs sync',err&&err.code||err)));
   }else{
     // Firestore collection-group access is owner-only. Directors first read
     // their current external-editor relationships and then subscribe only to
@@ -1953,7 +2009,7 @@ function fbSetupPortalOpsSync(){
       if(!uid||nested.has(uid))return;
       const unsub=fbDb.collection('editor_portals').doc(uid).collection('editor_jobs').onSnapshot(q=>{
         rows.set(uid,q.docs.map(d=>({id:d.id,_portalUid:uid,_path:d.ref.path,...d.data()})));publish();
-      },e=>{rows.delete(uid);publish();console.warn('scoped editor portal jobs',uid,e&&e.code||e);});
+      },e=>_fbHandleSnapshotError(e,`scoped editor portal jobs ${uid}`,err=>{rows.delete(uid);publish();console.warn('scoped editor portal jobs',uid,err&&err.code||err);}));
       nested.set(uid,unsub);
     };
     subscribeUid(FB_USER.uid);
@@ -1961,27 +2017,27 @@ function fbSetupPortalOpsSync(){
       const allowed=new Set([FB_USER.uid,...q.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.approved===true&&x.editorKind==='external').map(x=>x.id)]);
       allowed.forEach(subscribeUid);
       [...nested.keys()].forEach(uid=>{if(allowed.has(uid))return;try{nested.get(uid)?.();}catch(_){}nested.delete(uid);rows.delete(uid);});publish();
-    },e=>console.warn('scoped editor relations',e&&e.code||e));
+    },e=>_fbHandleSnapshotError(e,'scoped editor relations',err=>console.warn('scoped editor relations',err&&err.code||err)));
     _portalJobsUnsub=()=>{try{relationUnsub();}catch(_){}nested.forEach(unsub=>{try{unsub();}catch(_){}});nested.clear();rows.clear();};
   }
   if(_isOwner())_portalInvoicesUnsub=fbDb.collectionGroup('editor_invoices').onSnapshot(q=>{
     PORTAL_INVOICES=q.docs.filter(d=>d.ref.parent.parent&&d.ref.parent.parent.parent.id==='editor_portals').map(d=>({id:d.id,_portalUid:d.ref.parent.parent.id,_path:d.ref.path,...d.data()}));
     renderSyncSafe();
-  },e=>console.warn('editor portal invoices sync',e&&e.code||e));
+  },e=>_fbHandleSnapshotError(e,'editor portal invoices sync',err=>console.warn('editor portal invoices sync',err&&err.code||err)));
   if(_isOwner())_portalProfilesUnsub=fbDb.collectionGroup('editor_profile').onSnapshot(q=>{
     PORTAL_PROFILES=q.docs.filter(d=>d.ref.parent.parent&&d.ref.parent.parent.parent.id==='editor_portals').map(d=>({id:d.id,_portalUid:d.ref.parent.parent.id,_path:d.ref.path,...d.data()}));
     renderSyncSafe();
-  },e=>console.warn('editor portal profiles sync',e&&e.code||e));
+  },e=>_fbHandleSnapshotError(e,'editor portal profiles sync',err=>console.warn('editor portal profiles sync',err&&err.code||err)));
   if(_isOwner())_portalAuthorizationsUnsub=fbDb.collectionGroup('invoice_authorizations').onSnapshot(q=>{
     PORTAL_AUTHORIZATIONS=q.docs.filter(d=>d.ref.parent.parent&&d.ref.parent.parent.parent.id==='editor_portals').map(d=>({id:d.id,_portalUid:d.ref.parent.parent.id,_path:d.ref.path,...d.data()}));
     renderSyncSafe();
-  },e=>console.warn('invoice authorizations sync',e&&e.code||e));
+  },e=>_fbHandleSnapshotError(e,'invoice authorizations sync',err=>console.warn('invoice authorizations sync',err&&err.code||err)));
   if(_isOwner())_ownerJobFinanceUnsub=fbDb.collection('owner_job_finance').onSnapshot(q=>{
     OWNER_JOB_FINANCE=q.docs.map(d=>({id:d.id,...d.data()}));renderSyncSafe();
-  },e=>{OWNER_JOB_FINANCE=[];console.warn('owner job finance sync',e&&e.code||e);renderSyncSafe();});
+  },e=>_fbHandleSnapshotError(e,'owner job finance sync',err=>{OWNER_JOB_FINANCE=[];console.warn('owner job finance sync',err&&err.code||err);renderSyncSafe();}));
   if(_isOwner())_ownerLegacyFinanceUnsub=fbDb.collection('owner_legacy_finance').onSnapshot(q=>{
     OWNER_LEGACY_FINANCE=q.docs.map(d=>({id:d.id,...d.data()}));renderSyncSafe();
-  },e=>{OWNER_LEGACY_FINANCE=[];console.warn('owner legacy finance sync',e&&e.code||e);renderSyncSafe();});
+  },e=>_fbHandleSnapshotError(e,'owner legacy finance sync',err=>{OWNER_LEGACY_FINANCE=[];console.warn('owner legacy finance sync',err&&err.code||err);renderSyncSafe();}));
 }
 fbAuth.onAuthStateChanged(async user=>{
   _stopRoleSubscriptions();
@@ -17370,7 +17426,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260829-13';
+const APP_VERSION='20260829-14';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -17414,6 +17470,7 @@ if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js').then(reg=>{
     reg.update();
     navigator.serviceWorker.addEventListener('controllerchange',()=>{
+      if(_fbQuotaReadCircuitOpen)return;
       if(sessionStorage.getItem('sw_init')){
         sessionStorage.removeItem('sw_init');
         location.reload();
@@ -17444,6 +17501,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260829-13"></script>
+<script src="./manager-features.js?v=20260829-14"></script>
 </body>
 </html>

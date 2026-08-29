@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const PORTAL_APP_VERSION='20260829-12';
+  const PORTAL_APP_VERSION='20260829-14';
   const feature={
     board:[],boardSelectedId:'',boardSearch:'',catalog:[],manuals:[],schedules:[],release:null,
     messages:new Map(),messageUnsubs:new Map(),messageLoading:new Set(),openMessageJobIds:new Set(),groupDraftSaving:new Set(),unsubs:[],startedFor:'',serverVersion:'',jobsListMode:'active',jobsTypeFilter:'all',lastSuggestionCode:'',
@@ -11,6 +11,16 @@
   const original={
     navHtml,render,startPortal,jobForm,jobsHtml,jobCard,createJob,dashboardHtml,logout
   };
+  function portalReadError(error,scope,onNonQuota){
+    if(typeof window.portalSnapshotError==='function')return window.portalSnapshotError(error,scope,onNonQuota);
+    if(typeof onNonQuota==='function')onNonQuota(error);return false;
+  }
+  function portalFeatureWriteBlocked(){
+    if(typeof window.portalWriteBlocked==='function')return window.portalWriteBlocked();
+    if(window.EditflowFirestoreQuota?.isOpen?.()){toast('クラウド接続停止中。再読み込み後に操作してください');return true}
+    return false;
+  }
+  function guardPortalFeatureWrite(fn){return async function(...args){if(!DEMO&&portalFeatureWriteBlocked())return;return fn.apply(this,args)}}
 
   function accessKind(){return String(access?.editorKind||'direct')}
   function isExternal(){return accessKind()==='external'}
@@ -348,6 +358,7 @@
     return status?.reason||'スマホ通知の状態を確認しています。';
   }
   async function refreshEditorPushStatus(shouldRender=false){
+    if(window.EditflowFirestoreQuota?.isOpen?.()){if(shouldRender)toast('クラウド接続停止中。再読み込み後に操作してください');return}
     const api=pushClient(),uid=user?.uid||'';
     if(DEMO||ADMIN_PREVIEW||!api||!db||!uid||feature.pushStatusLoading)return;
     feature.pushStatusLoading=true;
@@ -419,7 +430,7 @@
   }
 
   function updateDmThreads(next,error){
-    if(error){feature.dmError=String(error?.message||error);feature.dmLoading=false;return scheduleSnapshotRender()}
+    if(error)return portalReadError(error,'DM一覧',err=>{feature.dmError=String(err?.message||err);feature.dmLoading=false;scheduleSnapshotRender()});
     const incoming=Array.isArray(next)?next:[];
     incoming.forEach(thread=>{const key=`${stamp(thread.lastMessageAt)}:${thread.lastSenderUid||''}:${thread.lastMessagePreview||''}`,previous=feature.dmSeenMessages.get(thread.id);if(feature.dmInitialSnapshot&&thread.unread&&previous&&previous!==key)showForegroundDmNotification(thread);feature.dmSeenMessages.set(thread.id,key)});
     feature.dmInitialSnapshot=true;feature.dmThreads=incoming;feature.dmLoading=false;feature.dmError='';scheduleSnapshotRender();
@@ -440,7 +451,7 @@
     feature.dmActivePeerUid=peerUid;feature.dmActiveThreadId=threadId||api.threadId(user.uid,peerUid);feature.dmMessages=[];view='dm';
     const existing=threadId||dmThreadForPeer(peerUid)?.id||'';
     if(DEMO){feature.dmMessages=[{id:'demo-dm-1',senderUid:'demo-owner',senderName:'中村',body:'案件以外の連絡はこのDMで確認できます。',createdAt:now()-3600000}];render();return setTimeout(scrollDirectMessages,0)}
-    if(existing){feature.dmMessageUnsub=api.watchMessages(existing,(messages,error)=>{if(error){feature.dmError=String(error?.message||error);return scheduleSnapshotRender()}feature.dmMessages=messages;api.markRead(existing).catch(()=>{});feature.dmThreads=feature.dmThreads.map(thread=>thread.id===existing?{...thread,unread:false}:thread);scheduleSnapshotRender();setTimeout(scrollDirectMessages,0)})}
+    if(existing){feature.dmMessageUnsub=api.watchMessages(existing,(messages,error)=>{if(error)return portalReadError(error,'DM本文',err=>{feature.dmError=String(err?.message||err);scheduleSnapshotRender()});feature.dmMessages=messages;api.markRead(existing).catch(()=>{});feature.dmThreads=feature.dmThreads.map(thread=>thread.id===existing?{...thread,unread:false}:thread);scheduleSnapshotRender();setTimeout(scrollDirectMessages,0)})}
     render();setTimeout(scrollDirectMessages,0);
   }
 
@@ -565,23 +576,24 @@
     if(feature.dmMessageUnsub){try{feature.dmMessageUnsub()}catch(_){}feature.dmMessageUnsub=null}
     feature.dmStartedFor='';feature.dmPeers=[];feature.dmThreads=[];feature.dmMessages=[];feature.dmActivePeerUid='';feature.dmActiveThreadId='';feature.dmInitialSnapshot=false;feature.dmSeenMessages.clear();
   }
+  if(window.EditflowFirestoreQuota?.registerStop)window.EditflowFirestoreQuota.registerStop(()=>{saveVisibleDrafts();stopFeatures()});
 
   function mergeBoard(items){feature.board=uniqById([...feature.board,...items]);scheduleSnapshotRender()}
   function mergeManuals(items){feature.manuals=uniqById([...feature.manuals,...items]);scheduleSnapshotRender()}
 
   function startFeatures(){
-    if(DEMO||!user||!access?.approved||feature.startedFor===portalUid())return;
+    if(DEMO||!user||!access?.approved||window.EditflowFirestoreQuota?.isOpen?.()||feature.startedFor===portalUid())return;
     stopFeatures();feature.startedFor=portalUid();
     const root=db.collection('editor_portals').doc(portalUid());
-    feature.unsubs.push(root.collection('client_catalog').onSnapshot(q=>{feature.catalog=q.docs.map(d=>({id:d.id,...d.data()}));scheduleSnapshotRender()},()=>toast('クライアント一覧を読み込めません')));
+    feature.unsubs.push(root.collection('client_catalog').onSnapshot(q=>{feature.catalog=q.docs.map(d=>({id:d.id,...d.data()}));scheduleSnapshotRender()},e=>portalReadError(e,'クライアント一覧',()=>toast('クライアント一覧を読み込めません'))));
     const boardQueries=isExternal()&&assignedDirectorUid()
       ?[db.collection('editor_job_board').where('directorUid','==',assignedDirectorUid())]
       :[db.collection('editor_job_board').where('audience','==','direct'),db.collection('editor_job_board').where('eligibleUids','array-contains',portalUid())];
-    boardQueries.forEach(q=>feature.unsubs.push(q.onSnapshot(s=>mergeBoard(s.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.status==='open')),e=>console.warn('board',e?.code||e))));
-    feature.unsubs.push(db.collection('editor_schedules').onSnapshot(q=>{feature.schedules=q.docs.map(d=>({id:d.id,...d.data()}));scheduleSnapshotRender()},e=>console.warn('schedules',e?.code||e)));
-    feature.unsubs.push(db.collection('editor_manuals').where('audience','==','all').onSnapshot(q=>mergeManuals(q.docs.map(d=>({id:d.id,...d.data()}))),e=>console.warn('manuals',e?.code||e)));
-    feature.unsubs.push(db.collection('editor_manuals').where('allowedUids','array-contains',portalUid()).onSnapshot(q=>mergeManuals(q.docs.map(d=>({id:d.id,...d.data()}))),e=>console.warn('manuals assigned',e?.code||e)));
-    feature.unsubs.push(db.collection('system').doc('releases_current').onSnapshot(d=>{feature.release=d.exists?d.data():null;scheduleSnapshotRender()},e=>console.warn('release',e?.code||e)));
+    boardQueries.forEach(q=>feature.unsubs.push(q.onSnapshot(s=>mergeBoard(s.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.status==='open')),e=>portalReadError(e,'案件募集',err=>console.warn('board',err?.code||err)))));
+    feature.unsubs.push(db.collection('editor_schedules').onSnapshot(q=>{feature.schedules=q.docs.map(d=>({id:d.id,...d.data()}));scheduleSnapshotRender()},e=>portalReadError(e,'編集可能スケジュール',err=>console.warn('schedules',err?.code||err))));
+    feature.unsubs.push(db.collection('editor_manuals').where('audience','==','all').onSnapshot(q=>mergeManuals(q.docs.map(d=>({id:d.id,...d.data()}))),e=>portalReadError(e,'マニュアル',err=>console.warn('manuals',err?.code||err))));
+    feature.unsubs.push(db.collection('editor_manuals').where('allowedUids','array-contains',portalUid()).onSnapshot(q=>mergeManuals(q.docs.map(d=>({id:d.id,...d.data()}))),e=>portalReadError(e,'個別マニュアル',err=>console.warn('manuals assigned',err?.code||err))));
+    feature.unsubs.push(db.collection('system').doc('releases_current').onSnapshot(d=>{feature.release=d.exists?d.data():null;scheduleSnapshotRender()},e=>portalReadError(e,'更新情報',err=>console.warn('release',err?.code||err))));
     startDmFeatures();refreshEditorPushStatus(true);
   }
 
@@ -598,10 +610,10 @@
       feature.messages.delete(jid);feature.messageLoading.delete(jid);return;
     }
     feature.openMessageJobIds.add(jid);
-    if(DEMO||!db||!user||feature.messageUnsubs.has(jid)||feature.messageLoading.has(jid))return;
+    if(DEMO||!db||!user||window.EditflowFirestoreQuota?.isOpen?.()||feature.messageUnsubs.has(jid)||feature.messageLoading.has(jid))return;
     const job=jobs.find(x=>x.id===jid);if(!job||job.previewLegacy)return;
     feature.messageLoading.add(jid);scheduleSnapshotRender();
-    const u=db.collection('editor_portals').doc(portalUid()).collection('editor_jobs').doc(jid).collection('messages').orderBy('createdAt','asc').limit(200).onSnapshot(q=>{feature.messages.set(jid,q.docs.map(d=>({id:d.id,...d.data()})));feature.messageLoading.delete(jid);scheduleSnapshotRender()},e=>{feature.messageLoading.delete(jid);console.warn('messages',e?.code||e);scheduleSnapshotRender()});
+    const u=db.collection('editor_portals').doc(portalUid()).collection('editor_jobs').doc(jid).collection('messages').orderBy('createdAt','asc').limit(200).onSnapshot(q=>{feature.messages.set(jid,q.docs.map(d=>({id:d.id,...d.data()})));feature.messageLoading.delete(jid);scheduleSnapshotRender()},e=>portalReadError(e,'案件内チャット',err=>{feature.messageLoading.delete(jid);console.warn('messages',err?.code||err);scheduleSnapshotRender()}));
     feature.messageUnsubs.set(jid,u);
   }
 
@@ -725,7 +737,21 @@
   jobCard=jobCardExtended;
   createJob=createDispatchJob;
   render=renderExtended;
-  startPortal=function(){original.startPortal();startFeatures()};
+  // These handlers are the only editor-feature mutation entrances.  A quota
+  // circuit must leave their visible drafts alone and must never queue a write.
+  completeEditorDelivery=guardPortalFeatureWrite(completeEditorDelivery);
+  saveGroupEditorDraftDate=guardPortalFeatureWrite(saveGroupEditorDraftDate);
+  createDispatchJob=guardPortalFeatureWrite(createDispatchJob);
+  claimBoardJob=guardPortalFeatureWrite(claimBoardJob);
+  sendJobMessage=guardPortalFeatureWrite(sendJobMessage);
+  saveAvailability=guardPortalFeatureWrite(saveAvailability);
+  markManualRead=guardPortalFeatureWrite(markManualRead);
+  submitSuggestion=guardPortalFeatureWrite(submitSuggestion);
+  sendDirectMessage=guardPortalFeatureWrite(sendDirectMessage);
+  markAllDirectMessagesRead=guardPortalFeatureWrite(markAllDirectMessagesRead);
+  enableEditorPushNotifications=guardPortalFeatureWrite(enableEditorPushNotifications);
+  disableEditorPushNotifications=guardPortalFeatureWrite(disableEditorPushNotifications);
+  startPortal=function(){if(window.EditflowFirestoreQuota?.isOpen?.())return;original.startPortal();startFeatures()};
   logout=async function(){stopFeatures();return original.logout()};
   window.updateAccountOptions=updateAccountOptions;
   window.editorAddDispatchSubcase=addDispatchSubcase;
