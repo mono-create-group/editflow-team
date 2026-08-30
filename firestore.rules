@@ -26,6 +26,10 @@ service cloud.firestore {
       return /databases/$(database)/documents/editor_portals/$(uid)/invoice_authorizations/$(authorizationId);
     }
 
+    function invoicePath(uid, invoiceId) {
+      return /databases/$(database)/documents/editor_portals/$(uid)/editor_invoices/$(invoiceId);
+    }
+
     function validInvoiceAuthorization(uid, invoiceId) {
       let path = invoiceAuthorizationPath(uid, request.resource.data.authorizationId);
       return exists(path)
@@ -50,12 +54,16 @@ service cloud.firestore {
     function validManualInvoice(uid) {
       return request.resource.data.authorizationId == 'manual'
         && request.resource.data.authorizationRevision == 0
-        && request.resource.data.version == 1
+        && request.resource.data.version is int
+        && request.resource.data.version >= 1
         && request.resource.data.editorUid == uid
         && request.resource.data.jobIds is list
         && request.resource.data.jobIds.size() == 1
         && request.resource.data.lines is list
         && request.resource.data.lines.size() == 1
+        && request.resource.data.lines[0].jobId == request.resource.data.jobIds[0]
+        && request.resource.data.lines[0].amount == request.resource.data.subtotal
+        && request.resource.data.lines[0].taxRate in [0, 10]
         && request.resource.data.invoiceAvailableOn is string
         && request.resource.data.invoiceAvailableOn.matches('^[0-9]{4}-[0-9]{2}-25$')
         && request.resource.data.paymentDueDate is string
@@ -64,7 +72,19 @@ service cloud.firestore {
         && request.resource.data.dueDate == request.resource.data.paymentDueDate
         && request.resource.data.subtotal > 0
         && request.resource.data.tax >= 0
-        && request.resource.data.total == request.resource.data.subtotal + request.resource.data.tax;
+        && request.resource.data.total == request.resource.data.subtotal + request.resource.data.tax
+        && request.resource.data.tax == int((request.resource.data.subtotal * request.resource.data.lines[0].taxRate + 50) / 100)
+        && request.resource.data.taxByRate is map
+        && request.resource.data.taxByRate.size() == 1
+        && ((request.resource.data.lines[0].taxRate == 0 && request.resource.data.taxByRate.get('0', -1) == request.resource.data.tax)
+          || (request.resource.data.lines[0].taxRate == 10 && request.resource.data.taxByRate.get('10', -1) == request.resource.data.tax))
+        && (request.resource.data.version == 1
+          || (request.resource.data.supersedesInvoiceId is string
+            && exists(invoicePath(uid, request.resource.data.supersedesInvoiceId))
+            && get(invoicePath(uid, request.resource.data.supersedesInvoiceId)).data.editorUid == uid
+            && get(invoicePath(uid, request.resource.data.supersedesInvoiceId)).data.authorizationId == 'manual'
+            && get(invoicePath(uid, request.resource.data.supersedesInvoiceId)).data.status == '差戻し'
+            && get(invoicePath(uid, request.resource.data.supersedesInvoiceId)).data.version + 1 == request.resource.data.version));
     }
 
     function validCompletedJobEvidence() {
@@ -1338,7 +1358,8 @@ service cloud.firestore {
           && validInvoiceStatus(request.resource.data.status)
           && request.resource.data.status in ['下書き','提出済み']
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'file','ownerShareStatus','status','submittedAt','updatedAt'
+            'file','ownerShareStatus','status','submittedAt','updatedAt',
+            'recipientName','issuer','jobIds','lines','subtotal','taxByRate','tax','total'
           ])
           && (request.resource.data.status == '下書き'
             || (request.resource.data.file.provider == 'google-drive'

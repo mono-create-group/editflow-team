@@ -33,5 +33,9 @@ test('the required progress save reports the classified failure and clears draft
   const commitAt = source.indexOf('await batch.commit()');
   const clearAt = source.indexOf('clearJobDraft(jid)', commitAt);
   assert.ok(commitAt >= 0 && clearAt > commitAt, 'draft is cleared only after a successful commit');
-  assert.match(source, /catch\(e\)\{console\.warn\(e\);toast\(portalSaveErrorMessage\(e\)\)\}/);
+  assert.match(source, /round:workflow\.round/);
+  assert.match(source, /if\(select\)select\.value=previousStatus/);
+  assert.match(source, /saveJobDraft\(jid\)/);
+  assert.match(source, /提出は記録されていません。入力内容は保持しました。/);
+  assert.match(source, /finally\{progressSavingIds\.delete\(jid\)\}/);
 });

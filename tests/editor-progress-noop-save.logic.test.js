@@ -46,7 +46,7 @@ function makeHarness({ job = baseJob, changes, commitError } = {}) {
     $: selector => controls[selector] || null, safeUrl: value => /^https?:\/\//.test(value), now: () => 123,
     editorDraftDateSetter: () => 'editor', editorCanSaveStatus: () => true, editorMilestoneError: () => '', scheduleError: () => '',
     EDITOR_MILESTONE_BY_STATUS: { '初稿提出済み': { key: 'initial_submitted', label: '初稿提出' }, '修正稿提出済み': { key: 'revision_submitted', label: '修正稿提出' } },
-    clearJobDraft: () => { calls.clear += 1; }, toast: message => { calls.toasts.push(message); }, console: { warn: () => {} },
+    clearJobDraft: () => { calls.clear += 1; }, saveJobDraft: () => {}, progressSavingIds: new Set(), toast: message => { calls.toasts.push(message); }, console: { warn: () => {} },
     portalSaveErrorMessage: () => '保存に失敗しました',
     firebase: { firestore: { FieldValue: { serverTimestamp: () => 'server-time' } } },
     db: { collection: () => ({ doc: () => ({ collection: () => ({ doc: () => ({ collection: () => ({ doc: () => ({}) }) }) }) }) }), batch: () => ({ update: () => { calls.update += 1; }, set: () => { calls.set += 1; }, commit: async () => { calls.commit += 1; if (commitError) throw new Error('offline'); } }) }
@@ -92,10 +92,19 @@ test('a normal initial submission records its milestone once, but a repeated cli
   assert.deepEqual(repeated.calls.toasts, ['変更はありません']);
 });
 
+test('initial submission event includes the workflow round required by Firestore rules', async () => {
+  const { context, calls } = makeHarness({ changes: { status: '初稿提出済み' } });
+  let jobData;
+  context.db.batch = () => ({ update: (_ref, data) => { jobData = data; calls.update += 1; }, set: () => { calls.set += 1; }, commit: async () => { calls.commit += 1; } });
+  await context.save('job-1');
+  assert.equal(jobData.progressEvents[0].round, 1);
+});
+
 test('failed saves preserve the local draft for retry', async () => {
-  const { context, calls } = makeHarness({ changes: { blocker: '素材待ち' }, commitError: true });
+  const { context, calls } = makeHarness({ changes: { status: '初稿提出済み' }, commitError: true });
   await context.save('job-1');
   assert.equal(calls.commit, 1);
   assert.equal(calls.clear, 0);
-  assert.deepEqual(calls.toasts, ['保存に失敗しました']);
+  assert.equal(context.$('#job-status-job-1').value, '進行中');
+  assert.deepEqual(calls.toasts, ['初稿・修正稿の提出は記録されていません。入力内容は保持しました。']);
 });

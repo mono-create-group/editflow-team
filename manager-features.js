@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  const state={editors:[],catalog:new Map(),catalogRepairing:new Set(),assignmentSyncing:new Set(),board:[],manuals:[],schedules:[],suggestions:[],invoices:[],authorizations:[],profiles:[],clientPricing:new Map(),clientPricingReady:false,portalJobsByEditor:new Map(),loaded:{editors:false,portalJobs:new Set()},unsubs:[],nested:[],started:'',portalSignature:null,renderFrame:null,lifecycleTimer:null};
+  const state={editors:[],catalog:new Map(),catalogRepairing:new Set(),assignmentSyncing:new Set(),invoiceActionPending:new Set(),board:[],manuals:[],schedules:[],suggestions:[],invoices:[],authorizations:[],profiles:[],clientPricing:new Map(),clientPricingReady:false,portalJobsByEditor:new Map(),loaded:{editors:false,portalJobs:new Set()},unsubs:[],nested:[],started:'',portalSignature:null,renderFrame:null,lifecycleTimer:null};
   const originalVideoOperations=rVideoOperations;
   const originalWorkers=rWorkers;
   // index.html の既存クライアント操作を安全に拡張する。案件・履歴はこの処理で触らない。
@@ -604,7 +604,30 @@
       toast(`外部編集者 ${rows.length}件の金額を安全領域へ移しました`);renderSafe();
     }catch(e){console.warn(e);toast('金額データの移行に失敗しました。アーカイブと案件の状態を再確認してください','err')}
   }
-  async function invoiceAction(portalUid,id,next){if(!_isOwner())return toast('請求書の承認・差戻しはオーナーのみ行えます','warn');const x=state.invoices.find(v=>v._portalUid===portalUid&&v.id===id);if(!x)return;let reason='';if(next==='差戻し'){reason=(prompt('差戻し理由を入力してください')||'').trim();if(!reason)return}else if(next==='承認済み'&&!confirm('Drive原本・明細・振込先を確認しましたか？'))return;try{const ref=fbDb.collection('editor_portals').doc(portalUid).collection('editor_invoices').doc(id),batch=fbDb.batch();batch.set(ref,{status:next,reviewReason:reason||null,updatedAt:Date.now(),updatedBy:_myEmail(),history:[...(x.history||[]).slice(-99),{at:Date.now(),by:_myEmail(),status:next,reason}]},{merge:true});batch.set(ref.collection('events').doc(),{at:firebase.firestore.FieldValue.serverTimestamp(),byUid:FB_USER.uid,status:next,reason,invoiceId:id});await batch.commit();toast(`請求書を「${next}」に更新しました`)}catch(e){console.warn(e);toast('請求書を更新できませんでした','err')}}
+  async function invoiceAction(portalUid,id,next){
+    if(!_isOwner())return toast('請求書の承認・差戻しはオーナーのみ行えます','warn');
+    const x=state.invoices.find(v=>v._portalUid===portalUid&&v.id===id);if(!x)return;
+    const actionKey=`${portalUid}:${id}`;if(state.invoiceActionPending.has(actionKey))return toast('請求書を更新中です。完了までお待ちください','warn');
+    state.invoiceActionPending.add(actionKey);
+    try{
+      let reason='';
+      if(next==='差戻し'){reason=(prompt('差戻し理由を入力してください')||'').trim();if(!reason)return}
+      else if(next==='承認済み'){
+        const sharedWith=new Set((x.file?.sharedWith||[]).map(value=>String(value||'').toLowerCase())),requiredOwners=(typeof ADMIN_EMAILS!=='undefined'?ADMIN_EMAILS:[]).map(value=>String(value||'').toLowerCase());
+        if(x.file?.provider!=='google-drive'||!x.file?.id||!x.file?.sha256||x.ownerShareStatus!=='shared'||!requiredOwners.length||!requiredOwners.every(email=>sharedWith.has(email)))return toast('Drive原本・全管理者への共有・改ざん確認値がそろうまで承認できません','warn');
+        if(!confirm('Drive原本・明細・振込先を確認しましたか？'))return;
+      }
+      const at=Date.now(),portal=fbDb.collection('editor_portals').doc(portalUid),ref=portal.collection('editor_invoices').doc(id),batch=fbDb.batch();
+      batch.set(ref,{status:next,reviewReason:reason||null,updatedAt:at,updatedBy:_myEmail(),history:[...(x.history||[]).slice(-99),{at,by:_myEmail(),status:next,reason}]},{merge:true});
+      if(next==='差戻し'&&x.authorizationId&&x.authorizationId!=='manual'){
+        const nextVersion=Number(x.version||1)+1,nextInvoiceId=`${x.authorizationId}-v${nextVersion}-${at}`;
+        batch.update(portal.collection('invoice_authorizations').doc(x.authorizationId),{invoiceVersion:nextVersion,invoiceDocumentId:nextInvoiceId,updatedAt:at,updatedBy:_myEmail()});
+      }
+      batch.set(ref.collection('events').doc(),{at:firebase.firestore.FieldValue.serverTimestamp(),byUid:FB_USER.uid,status:next,reason,invoiceId:id});
+      await batch.commit();toast(`請求書を「${next}」に更新しました`);
+    }catch(e){console.warn(e);toast('請求書を更新できませんでした','err')}
+    finally{state.invoiceActionPending.delete(actionKey)}
+  }
   async function sendMessage(portalUid,jid){const requested=prompt('種類（回答・修正指示・連絡など）','連絡');if(!requested)return;const allowed=['質問','回答','初稿提出','修正指示','修正稿提出','納品','連絡'],kind=allowed.includes(requested)?requested:'連絡';const body=(prompt('メッセージを入力してください')||'').trim();if(!body)return;const url=(prompt('関連URL（なければ空欄）','')||'').trim();try{await fbDb.collection('editor_portals').doc(portalUid).collection('editor_jobs').doc(jid).collection('messages').add({body,kind,url,byUid:FB_USER.uid,byName:APP_ACCESS?.name||_myEmail(),byRole:_isOwner()?'オーナー':'ディレクター',createdAt:firebase.firestore.FieldValue.serverTimestamp()});toast('案件チャットに送信しました')}catch(e){console.warn(e);toast('メッセージを送信できませんでした','err')}}
   async function replySuggestion(id,code){const message=(prompt('匿名返信を入力してください')||'').trim();if(!message)return;try{const batch=fbDb.batch();batch.set(fbDb.collection('editor_suggestion_replies').doc(code),{message,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});batch.set(fbDb.collection('editor_suggestions').doc(id),{status:'返信済み'},{merge:true});await batch.commit();toast('匿名返信を保存しました')}catch(e){console.warn(e);toast('返信を保存できませんでした','err')}}
   function openChatworkNameCheck(uid){

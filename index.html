@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260830-01"></script>
+<script src="./billing-terms.js?v=20260830-02"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -995,7 +995,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260830-01">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260830-02">
 </head>
 <body class="owner-yellow-ui">
 
@@ -6861,6 +6861,7 @@ async function _refreshInvoiceAuthorization(portalUid,month,overrideJob){
 function _videoDriveUrl(v){
   try{const u=new URL(v);return u.protocol==='https:'&&u.hostname==='drive.google.com'?u.href:'';}catch(_){return'';}
 }
+const PORTAL_INVOICE_ACTION_PENDING=new Set();
 function _portalInvoiceCheck(x){
   if(!x)return{ok:false,reason:'請求書が見つかりません'};
   if(_portalIsExternal(x._portalUid))return{ok:false,reason:'外部編集者の金額・請求はディレクター側で管理します'};
@@ -6871,8 +6872,8 @@ function _portalInvoiceCheck(x){
     for(const line of lines){const amount=Number(line.amount),rate=Number(line.taxRate||0);if(!(amount>0))return{ok:false,reason:'請求金額を確認してください'};if(![0,8,10].includes(rate))return{ok:false,reason:'税率を確認してください'};subtotal+=amount;taxBase[rate]=(taxBase[rate]||0)+amount;}
     const tax=Object.entries(taxBase).reduce((n,[rate,amount])=>n+Math.round(amount*Number(rate)/100),0);
     if(Number(x.subtotal)!==subtotal||Number(x.tax)!==tax||Number(x.total)!==subtotal+tax)return{ok:false,reason:'小計・消費税・合計を再確認してください'};
-    const shared=(x.file?.sharedWith||[]).map(v=>String(v).toLowerCase());
-    if(x.file?.provider!=='google-drive'||!x.file?.id||!x.file?.sha256||x.ownerShareStatus!=='shared'||!_videoDriveUrl(x.file?.webViewLink)||!shared.some(v=>ADMIN_EMAILS.includes(v)))return{ok:false,reason:'Drive原本または管理者共有が確認できません'};
+    const shared=(x.file?.sharedWith||[]).map(v=>String(v).toLowerCase()),requiredOwners=ADMIN_EMAILS.map(v=>String(v).toLowerCase());
+    if(x.file?.provider!=='google-drive'||!x.file?.id||!x.file?.sha256||x.ownerShareStatus!=='shared'||!_videoDriveUrl(x.file?.webViewLink)||!requiredOwners.length||!requiredOwners.every(v=>shared.includes(v)))return{ok:false,reason:'Drive原本または全管理者への共有が確認できません'};
     return{ok:true,reason:'編集者入力の請求書。明細・金額を確認してください'};
   }
   const authorization=(PORTAL_AUTHORIZATIONS||[]).find(v=>v._portalUid===x._portalUid&&v.id===x.authorizationId);
@@ -6920,8 +6921,8 @@ function _portalInvoiceCheck(x){
   }
   const tax=Object.entries(taxByRate).reduce((n,[rate,amount])=>n+Math.round(amount*Number(rate)/100),0);
   if(Number(x.subtotal)!==subtotal||Number(x.tax)!==tax||Number(x.total)!==subtotal+tax)return{ok:false,reason:'小計・消費税・合計を再確認してください'};
-  const shared=(x.file?.sharedWith||[]).map(v=>String(v).toLowerCase());
-  if(x.file?.provider!=='google-drive'||!x.file?.id||!x.file?.sha256||x.ownerShareStatus!=='shared'||!_videoDriveUrl(x.file?.webViewLink)||!shared.some(v=>ADMIN_EMAILS.includes(v)))return{ok:false,reason:'Drive原本または管理者共有が確認できません'};
+  const shared=(x.file?.sharedWith||[]).map(v=>String(v).toLowerCase()),requiredOwners=ADMIN_EMAILS.map(v=>String(v).toLowerCase());
+  if(x.file?.provider!=='google-drive'||!x.file?.id||!x.file?.sha256||x.ownerShareStatus!=='shared'||!_videoDriveUrl(x.file?.webViewLink)||!requiredOwners.length||!requiredOwners.every(v=>shared.includes(v)))return{ok:false,reason:'Drive原本または全管理者への共有が確認できません'};
   return{ok:true,reason:'承認済み案件・報酬額と一致'};
 }
 async function portalRegistrationReview(portalUid,verified){
@@ -6942,17 +6943,21 @@ async function portalInvoiceAction(portalUid,id,next){
   if(_portalIsExternal(portalUid))return toast('外部編集者の請求は担当ディレクターがまとめて行います','warn');
   const x=(PORTAL_INVOICES||[]).find(v=>v._portalUid===portalUid&&v.id===id);if(!x)return;
   const allowed=['差戻し','承認済み','支払処理中','支払済み','取消'];if(!allowed.includes(next))return;
-  const check=_portalInvoiceCheck(x);
-  if(next==='承認済み'&&!check.ok)return toast(check.reason,'err');
-  if(next==='承認済み'&&!confirm('Drive原本を開き、請求者名・口座・明細を確認しましたか？'))return;
-  const reason=next==='差戻し'?(prompt('差戻し理由を入力してください')||'').trim():'';if(next==='差戻し'&&!reason)return;
-  const at=Date.now(),root=fbDb.collection('editor_portals').doc(portalUid),ref=root.collection('editor_invoices').doc(id),event=ref.collection('events').doc();
-  try{const batch=fbDb.batch();batch.set(ref,{status:next,reviewReason:reason||null,updatedAt:at,updatedBy:_myEmail(),history:[...(x.history||[]).slice(-99),{at,by:_myEmail(),status:next,reason}]},{merge:true});batch.set(event,{at:firebase.firestore.FieldValue.serverTimestamp(),by:_myEmail(),status:next,reason,invoiceId:id});
+  const actionKey=`${portalUid}:${id}`;if(PORTAL_INVOICE_ACTION_PENDING.has(actionKey))return toast('請求書を更新中です。完了までお待ちください','warn');
+  PORTAL_INVOICE_ACTION_PENDING.add(actionKey);
+  try{
+    const check=_portalInvoiceCheck(x);
+    if(next==='承認済み'&&!check.ok)return toast(check.reason,'err');
+    if(next==='承認済み'&&!confirm('Drive原本を開き、請求者名・口座・明細を確認しましたか？'))return;
+    const reason=next==='差戻し'?(prompt('差戻し理由を入力してください')||'').trim():'';if(next==='差戻し'&&!reason)return;
+    const at=Date.now(),root=fbDb.collection('editor_portals').doc(portalUid),ref=root.collection('editor_invoices').doc(id),event=ref.collection('events').doc(),batch=fbDb.batch();batch.set(ref,{status:next,reviewReason:reason||null,updatedAt:at,updatedBy:_myEmail(),history:[...(x.history||[]).slice(-99),{at,by:_myEmail(),status:next,reason}]},{merge:true});batch.set(event,{at:firebase.firestore.FieldValue.serverTimestamp(),by:_myEmail(),status:next,reason,invoiceId:id});
     if(next==='差戻し'){
       const authorization=(PORTAL_AUTHORIZATIONS||[]).find(a=>a._portalUid===portalUid&&a.id===x.authorizationId&&a.active===true&&Number(a.revision)===Number(x.authorizationRevision));
       if(authorization){const invoiceVersion=Number(x.version||1)+1,invoiceDocumentId=`${authorization.id}-r${authorization.revision}-v${invoiceVersion}`,authRef=root.collection('invoice_authorizations').doc(authorization.id);batch.set(authRef,{invoiceVersion,invoiceDocumentId,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:_myEmail()},{merge:true});batch.set(authRef.collection('events').doc(),{at:firebase.firestore.FieldValue.serverTimestamp(),byUid:FB_USER.uid,type:'invoice_revision_authorized',revision:Number(authorization.revision),invoiceVersion,invoiceDocumentId,supersedesInvoiceId:id});}
     }
-    await batch.commit();toast(`請求書を「${next}」に更新しました`);}catch(e){console.warn('invoice action',e);toast('請求書の更新に失敗しました','err');}
+    await batch.commit();toast(`請求書を「${next}」に更新しました`);
+  }catch(e){console.warn('invoice action',e);toast('請求書の更新に失敗しました','err')}
+  finally{PORTAL_INVOICE_ACTION_PENDING.delete(actionKey)}
 }
 function _videoInvoiceHtml(){
 	  const list=[...(PORTAL_INVOICES||[])].filter(x=>!_portalIsExternal(x._portalUid)).sort((a,b)=>(b.submittedAt||b.updatedAt||0)-(a.submittedAt||a.updatedAt||0));
@@ -13301,9 +13306,12 @@ function _jobModalSubRecordClone(record={}){
   return{...record,attachments:_videoAttachments(record.attachments)};
 }
 function _jobModalSubCompactHtml(record,index,biz,financeLocked=false){
+  return`<div class="j-sub-shell" data-state-index="${index}">${_jobModalSubCompactBodyHtml(record,index,biz,financeLocked)}</div>`;
+}
+function _jobModalSubCompactBodyHtml(record,index,biz,financeLocked=false){
   const workerId=String(record?.workerId||''),workerName=workerId?_jobModalWorkerLabel(workerId):'未割当';
   const dates=[record?.editorDraftDate?`編集者初稿 ${record.editorDraftDate}`:'',record?.clientDraftDate?`クライアント初稿 ${record.clientDraftDate}`:'',record?.deliveryDate?`納期 ${record.deliveryDate}`:'',record?.completedDeliveryDate?`納品日 ${record.completedDeliveryDate}`:''].filter(Boolean);
-  return`<div class="j-sub-shell" data-state-index="${index}"><div class="job-sub-compact"><div class="job-sub-compact-main"><b class="job-sub-compact-title">${esc(record?.title||`サブ案件 ${index+1}`)}</b><div class="job-sub-compact-meta"><span>${esc(videoStatusLabel(record?.status||'未着手'))}</span><span>担当 ${esc(workerName)}</span>${dates.map(value=>`<span>${esc(value)}</span>`).join('')}</div></div><div class="job-sub-compact-actions"><button type="button" class="btn btn-g btn-xs" onclick="expandJobSubEditor(this)">編集</button>${financeLocked?'':`<button type="button" class="btn btn-g btn-xs" onclick="removeJobSubEditor(this)" aria-label="${esc(record?.title||'サブ案件')}を削除">✕</button>`}</div></div></div>`;
+  return`<div class="job-sub-compact"><div class="job-sub-compact-main"><b class="job-sub-compact-title">${esc(record?.title||`サブ案件 ${index+1}`)}</b><div class="job-sub-compact-meta"><span>${esc(videoStatusLabel(record?.status||'未着手'))}</span><span>担当 ${esc(workerName)}</span>${dates.map(value=>`<span>${esc(value)}</span>`).join('')}</div></div><div class="job-sub-compact-actions"><button type="button" class="btn btn-g btn-xs" onclick="expandJobSubEditor(this)">編集</button>${financeLocked?'':`<button type="button" class="btn btn-g btn-xs" onclick="removeJobSubEditor(this)" aria-label="${esc(record?.title||'サブ案件')}を削除">✕</button>`}</div></div>`;
 }
 function _readJobSubEditorState(shell){
   const row=shell?.querySelector('.j-sub-row');if(!row)return{record:null,error:''};
@@ -13337,7 +13345,9 @@ function collapseJobSubEditor(shell){
   const result=_readJobSubEditorState(shell);if(result.error){toast(result.error,'warn');return false;}
   const index=Number(shell.dataset.stateIndex),locked=document.getElementById('j-sub-cont')?.dataset.financeLocked==='1';
   JOB_MODAL_SUB_RECORDS[index]=_jobModalSubRecordClone(result.record);
-  shell.innerHTML=_jobModalSubCompactHtml(result.record,index,_curJobBiz(),locked);
+  // shell itself owns the state index.  Replacing only its body avoids nesting
+  // another .j-sub-shell, which would otherwise trip the genuine duplicate guard on save.
+  shell.innerHTML=_jobModalSubCompactBodyHtml(result.record,index,_curJobBiz(),locked);
   updSubPrices();return true;
 }
 function _collapseOtherJobSubEditors(exceptShell){
@@ -13858,10 +13868,15 @@ function saveJob(){
     }
   }
   else{savedJob={id:uid(),...data,createdAt:new Date().toISOString()};S.jobs.unshift(savedJob);}
-  save();closeModal();render();toast('案件を保存しました');
   const syncRecords=(savedJob?.subtasks||[]).length?savedJob.subtasks:[savedJob];
-  if(syncRecords.some(record=>record&&record.workerId&&record.workerId!==SELF_WID&&!['完了','キャンセル'].includes(String(record.status||savedJob?.status||'')))){
-    syncLegacyAssignedSubtasksToPortal(savedJob,{reassignments:assignmentReassignments}).catch(error=>console.warn('assigned legacy case sync failed',error));
+  const needsPortalSync=syncRecords.some(record=>record&&record.workerId&&record.workerId!==SELF_WID&&!['完了','キャンセル'].includes(String(record.status||savedJob?.status||'')));
+  save();closeModal();render();toast(needsPortalSync?'案件本体を保存しました。担当編集者の画面へ同期しています…':'案件を保存しました');
+  if(needsPortalSync){
+    syncLegacyAssignedSubtasksToPortal(savedJob,{reassignments:assignmentReassignments,silent:true}).then(result=>{
+      const problems=Array.isArray(result?.problems)?result.problems:[];
+      if(result?.error||problems.length)return toast(`案件本体は保存しましたが、担当編集者の画面へ${problems.length?`${problems.length}件を`:''}同期できませんでした`,'warn');
+      toast('案件と担当編集者の画面を保存しました');
+    }).catch(error=>{console.warn('assigned legacy case sync failed',error);toast('案件本体は保存しましたが、担当編集者の画面へ同期できませんでした','warn')});
   }
   _refreshDirectorSettlementTargets([...previousDirectorSettlementTargets,..._directorSettlementTargetsForJob(_withOwnerJobFinance(savedJob))]).catch(error=>{console.warn('director invoice authorization refresh failed',error);toast('案件は保存しましたが、担当ディレクターの請求対象を更新できませんでした','warn');});
   // ※ GcalへのアプリデータWriteは行わない（読み戻し重複防止）
@@ -17458,7 +17473,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260830-01';
+const APP_VERSION='20260830-02';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -17533,6 +17548,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260830-01"></script>
+<script src="./manager-features.js?v=20260830-02"></script>
 </body>
 </html>

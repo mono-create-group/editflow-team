@@ -66,6 +66,36 @@ test('only one child editor stays open and edits are cached before another child
   assert.match(html, /onclick="collapseJobSubEditor\(this\.closest\('\.j-sub-shell'\)\)">閉じる<\/button>/);
 });
 
+test('collapsing a child replaces its body without nesting a second state shell', () => {
+  const childSource = html.slice(html.indexOf('function _jobModalSubCompactHtml('), html.indexOf('function _collapseOtherJobSubEditors('));
+  assert.match(childSource, /function _jobModalSubCompactBodyHtml\(record,index,biz,financeLocked=false\)/);
+  assert.match(childSource, /return`<div class="j-sub-shell" data-state-index="\$\{index\}">\$\{_jobModalSubCompactBodyHtml\(record,index,biz,financeLocked\)\}<\/div>`/);
+  assert.match(childSource, /shell\.innerHTML=_jobModalSubCompactBodyHtml\(result\.record,index,_curJobBiz\(\),locked\)/);
+  assert.doesNotMatch(childSource, /shell\.innerHTML=_jobModalSubCompactHtml/);
+
+  const context = {
+    esc: value => String(value), videoStatusLabel: value => value, _jobModalWorkerLabel: () => '編集者A',
+  };
+  vm.createContext(context);
+  vm.runInContext(childSource.slice(0, childSource.indexOf('function _readJobSubEditorState(')), context);
+  const compact = context._jobModalSubCompactHtml({ title: '台本100' }, 3, 'edit');
+  const body = context._jobModalSubCompactBodyHtml({ title: '台本100' }, 3, 'edit');
+  assert.equal((compact.match(/class="j-sub-shell"/g) || []).length, 1);
+  assert.equal((body.match(/class="j-sub-shell"/g) || []).length, 0);
+  assert.match(compact, /data-state-index="3"/);
+});
+
+test('parent save distinguishes the durable parent record from the later editor-portal sync result', () => {
+  const saveStart = html.indexOf('function saveJob(');
+  const saveEnd = html.indexOf('\nfunction openHabitModal', saveStart);
+  const saveSource = html.slice(saveStart, saveEnd);
+  assert.match(saveSource, /const needsPortalSync=/);
+  assert.match(saveSource, /案件本体を保存しました。担当編集者の画面へ同期しています/);
+  assert.match(saveSource, /syncLegacyAssignedSubtasksToPortal\(savedJob,\{reassignments:assignmentReassignments,silent:true\}\)\.then/);
+  assert.match(saveSource, /案件と担当編集者の画面を保存しました/);
+  assert.match(saveSource, /案件本体は保存しましたが、担当編集者の画面へ/);
+});
+
 test('the large parent-case editor avoids full-screen backdrop blur work', () => {
   assert.match(html, /\.overlay\.job-modal-overlay\{background:rgba\(15,23,42,\.5\);backdrop-filter:none\}/);
   assert.match(modalSource, /<\/div>`,'job-modal-overlay'\);/);
