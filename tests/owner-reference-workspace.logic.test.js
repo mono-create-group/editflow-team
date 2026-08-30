@@ -21,11 +21,20 @@ test('opening either video case area always clears a remembered legacy tab',()=>
 });
 
 test('reference workspace preserves existing edit and financial destinations',()=>{
-  assert.match(html,/onclick="\$\{click\}">編集<\/button>/);
+  assert.match(html,/onclick="\$\{esc\(click\)\}">編集<\/button>/);
+  assert.doesNotMatch(html,/onclick="\$\{click\}"/);
+  assert.match(html,/class="ref-subcase-row" onclick="\$\{esc\(subClick\)\}"/);
+  assert.doesNotMatch(html,/class="ref-subcase-row" onclick="\$\{subClick\}"/);
   assert.match(html,/onclick="setVideoTab\('manage-profit'\)">利益ページを開く/);
   assert.match(html,/const managementTabs=_isScopedVideoDirectorAccess\(\)\?\[\]:BIZ_CFG\[biz\]\.tabs/);
   assert.match(html,/\$\{_isOwner\(\)\?`<section class="ref-finance-panel"/);
   assert.match(html,/const subClick=sub\._portalChildJobId\?/);
+});
+
+test('case action strings are HTML-escaped before becoming inline handlers',()=>{
+  assert.match(html,/click=j\._source==='portal'\?`openPortalJobModal\(\$\{JSON\.stringify\(j\._portalUid\)\},\$\{JSON\.stringify\(j\.id\)\}\)`/);
+  assert.match(html,/class="video-job-main" onclick="\$\{esc\(click\)\}"/);
+  assert.match(html,/video-material-card-action" onclick="\$\{esc\(openMaterials\(-1\)\)\}"/);
 });
 
 test('every legacy case page stays available inside the new white and yellow shell',()=>{

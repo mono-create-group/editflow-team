@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260830-02"></script>
+<script src="./billing-terms.js?v=20260830-03"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -995,7 +995,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260830-02">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260830-03">
 </head>
 <body class="owner-yellow-ui">
 
@@ -6387,7 +6387,7 @@ function _videoAttachmentEditorRow(item={}){
 }
 function _videoAttachmentEditorHtml(items,addAction,listId='',options={}){
   const title=String(options.title||'素材・資料'),description=String(options.description||'素材・台本・参考動画などのURLを追加できます');
-  return`<div class="video-attachment-editor"><div class="video-attachment-heading"><div><b>${esc(title)}</b><span>${esc(description)}</span></div><button type="button" class="btn btn-g btn-xs" onclick="${addAction}">＋ 追加</button></div><div${listId?` id="${esc(listId)}"`:''} class="video-attachment-list">${_videoAttachments(items).map(_videoAttachmentEditorRow).join('')}</div><div class="video-attachment-hint">URLは http:// または https:// で始まるものだけ保存できます。最大20件。</div></div>`;
+  return`<div class="video-attachment-editor"><div class="video-attachment-heading"><div><b>${esc(title)}</b><span>${esc(description)}</span></div><button type="button" class="btn btn-g btn-xs" onclick="${esc(addAction)}">＋ 追加</button></div><div${listId?` id="${esc(listId)}"`:''} class="video-attachment-list">${_videoAttachments(items).map(_videoAttachmentEditorRow).join('')}</div><div class="video-attachment-hint">URLは http:// または https:// で始まるものだけ保存できます。最大20件。</div></div>`;
 }
 function addVideoAttachmentRow(list){
   const target=typeof list==='string'?document.querySelector(list):list;if(!target)return;
@@ -6520,14 +6520,14 @@ function openPortalSubcaseDetail(portalUid,jobId,subId){
 window.openLegacySubcaseDetail=openLegacySubcaseDetail;
 window.openPortalSubcaseDetail=openPortalSubcaseDetail;
 function _videoCard(j){
-  const isParent=!!j._aggregateParent,overdue=_videoIsOverdue(j),alert=_videoDeadlineAlert(j),click=j._source==='portal'?`openPortalJobModal('${j._portalUid}','${j.id}')`:_isOwner()?`openJobModal('${j.id}')`:`openVideoLegacySafeModal('${j.id}')`;
-  const openMaterials=(subIndex)=>j._source==='portal'?`openPortalAttachmentViewer('${j._portalUid}','${j.id}',${subIndex})`:`openLegacyAttachmentViewer('${j.id}',${subIndex})`;
+  const isParent=!!j._aggregateParent,overdue=_videoIsOverdue(j),alert=_videoDeadlineAlert(j),click=j._source==='portal'?`openPortalJobModal(${JSON.stringify(j._portalUid)},${JSON.stringify(j.id)})`:_isOwner()?`openJobModal(${JSON.stringify(j.id)})`:`openVideoLegacySafeModal(${JSON.stringify(j.id)})`;
+  const openMaterials=(subIndex)=>j._source==='portal'?`openPortalAttachmentViewer(${JSON.stringify(j._portalUid)},${JSON.stringify(j.id)},${subIndex})`:`openLegacyAttachmentViewer(${JSON.stringify(j.id)},${subIndex})`;
   const subtasks=_videoSortJobs(j.subtasks||[]);
   const subtaskHtml=subtasks.length?`<details class="video-subcase-list" aria-label="${esc(j.title)}のサブ案件"><summary class="video-subcase-head"><span>↳ サブ案件</span><span>${subtasks.length}件</span></summary><div class="video-subcase-children">${subtasks.map(s=>{const subOverdue=_videoIsOverdue(s),subAlert=_videoDeadlineAlert(s),color=subAlert?.level==='danger'||subOverdue?'var(--red)':subAlert?.level==='warning'?'var(--amber)':BOARD_COL[s.status]||'var(--pl)',badge=SCOLBG[s.status]||'bk',materials=_videoAttachments(s.attachments),subId=String(s.id||''),openSubcase=s._portalChildJobId?`openPortalJobModal(${JSON.stringify(s._portalChildPortalUid)},${JSON.stringify(s._portalChildJobId)})`:j._source==='portal'?`openPortalSubcaseDetail(${JSON.stringify(j._portalUid)},${JSON.stringify(j.id)},${JSON.stringify(subId)})`:`openLegacySubcaseDetail(${JSON.stringify(j.id)},${JSON.stringify(subId)})`;return`<button type="button" class="video-subcase-row ${subAlert?`video-deadline-${subAlert.level}`:''}" style="--subcase-color:${color}" onclick="${esc(openSubcase)}" aria-label="${esc(s.title)}の詳細を開く"><div class="video-subcase-title">${esc(s.title)}</div><span class="badge ${badge} video-subcase-status">${esc(videoStatusLabel(s.status))}</span><div class="video-subcase-meta"><span>担当 ${esc(s.assignee)}</span>${_videoDeadlineAlertHtml(subAlert)}${_videoDraftMetaHtml('editor',s.editorDraftDate)}${_videoDraftMetaHtml('client',s.clientDraftDate)}<span style="color:${subOverdue?'var(--red)':'var(--t3)'}">納期（予定） ${esc(s.deadline||'未設定')}</span><span>納品日 ${esc(s.completedDeliveryDate||'未記録')}</span>${materials.length?`<span class="video-material-count">素材 ${materials.length}件</span>`:''}</div></button>`;}).join('')}</div></details>`:'';
   const materials=_videoAttachments(j.attachments);
   const parentSummary=`<div class="video-case-summary"><span>サブ案件 <b>${subtasks.length}件</b></span><span>進行中 <b>${subtasks.filter(s=>!['完了','キャンセル'].includes(String(s.status||''))).length}件</b></span><span>最短の納期（予定） <b>${esc(j.deadline||'未設定')}</b></span></div>`;
-  const main=isParent?`<div class="video-job-main video-job-parent-main"><div class="video-job-title-row"><b class="video-job-title">${esc(j.title)}</b><span class="badge bk">親案件・集計</span></div><div style="font-size:10.5px;color:var(--t3);margin-top:3px">${esc(j.clientDisplay||'クライアント未設定')} ・ ${esc(j.assignee)}</div>${_videoDeadlineAlertHtml(alert)}${parentSummary}</div>`:`<button type="button" class="video-job-main" onclick="${click}" aria-label="${esc(j.title)}を開く"><div class="video-job-title-row"><b class="video-job-title">${esc(j.title)}</b>${j._source==='portal'?'<span class="badge bk">直接依頼</span>':''}</div><div style="font-size:10.5px;color:var(--t3);margin-top:3px">${esc(j.clientDisplay||'クライアント未設定')} ・ ${esc(j.assignee)}</div>${_videoDeadlineAlertHtml(alert)}${_videoCaseSummary(j)}${_videoDraftDateSummary(j)}${j.blocker?`<div style="font-size:10.5px;color:var(--red);margin-top:4px">停止理由あり</div>`:''}</button>`;
-  return`<article class="card video-job-card ${alert?`video-deadline-${alert.level}`:''}" style="border-left:3px solid ${alert?.level==='danger'||overdue?'var(--red)':alert?.level==='warning'||j.urgent?'var(--amber)':'var(--pl)'}">${main}${materials.length?`<button type="button" class="video-material-count video-material-card-action" onclick="${openMaterials(-1)}">📎 素材・資料 ${materials.length}件</button>`:''}${subtaskHtml}</article>`;
+  const main=isParent?`<div class="video-job-main video-job-parent-main"><div class="video-job-title-row"><b class="video-job-title">${esc(j.title)}</b><span class="badge bk">親案件・集計</span></div><div style="font-size:10.5px;color:var(--t3);margin-top:3px">${esc(j.clientDisplay||'クライアント未設定')} ・ ${esc(j.assignee)}</div>${_videoDeadlineAlertHtml(alert)}${parentSummary}</div>`:`<button type="button" class="video-job-main" onclick="${esc(click)}" aria-label="${esc(j.title)}を開く"><div class="video-job-title-row"><b class="video-job-title">${esc(j.title)}</b>${j._source==='portal'?'<span class="badge bk">直接依頼</span>':''}</div><div style="font-size:10.5px;color:var(--t3);margin-top:3px">${esc(j.clientDisplay||'クライアント未設定')} ・ ${esc(j.assignee)}</div>${_videoDeadlineAlertHtml(alert)}${_videoCaseSummary(j)}${_videoDraftDateSummary(j)}${j.blocker?`<div style="font-size:10.5px;color:var(--red);margin-top:4px">停止理由あり</div>`:''}</button>`;
+  return`<article class="card video-job-card ${alert?`video-deadline-${alert.level}`:''}" style="border-left:3px solid ${alert?.level==='danger'||overdue?'var(--red)':alert?.level==='warning'||j.urgent?'var(--amber)':'var(--pl)'}">${main}${materials.length?`<button type="button" class="video-material-count video-material-card-action" onclick="${esc(openMaterials(-1))}">📎 素材・資料 ${materials.length}件</button>`:''}${subtaskHtml}</article>`;
 }
 function openVideoLegacySafeModal(id){
   const j=(S.jobs||[]).find(x=>x.id===id);if(!j)return;
@@ -7255,21 +7255,21 @@ function _videoReferenceWorkspace({biz,all,active,title,addJobAction,tabs,screen
         <div class="ref-breadcrumb"><button type="button" onclick="setVideoTab('board')">案件一覧</button><span>›</span><span>${esc(client)}</span></div>
         <section class="ref-case-head">
           <div class="ref-case-title"><button class="ref-star" type="button" aria-label="注目案件">☆</button><h2>${esc(focus.title||title)}</h2><span class="badge ${statusBadge}">${esc(status)}</span></div>
-          <div class="ref-case-actions"><button class="btn btn-g btn-sm" onclick="${click}">編集</button><button class="btn btn-p btn-sm" onclick="${click}">案件を開く</button></div>
+          <div class="ref-case-actions"><button class="btn btn-g btn-sm" onclick="${esc(click)}">編集</button><button class="btn btn-p btn-sm" onclick="${esc(click)}">案件を開く</button></div>
         </section>
-        <section class="ref-next-action"><div><small>次にすること</small><b>${esc(_videoProgressNextAction(focus))}</b></div><button class="btn btn-p btn-sm" onclick="${click}">進捗を更新</button></section>
+        <section class="ref-next-action"><div><small>次にすること</small><b>${esc(_videoProgressNextAction(focus))}</b></div><button class="btn btn-p btn-sm" onclick="${esc(click)}">進捗を更新</button></section>
         <section class="ref-case-summary">
           <dl><div><dt>担当編集者</dt><dd>${esc(assignee)}</dd></div><div><dt>編集者初稿</dt><dd>${esc(editorDraft)}</dd></div><div><dt>クライアント初稿</dt><dd>${esc(clientDraft)}</dd></div><div><dt>納期（予定）</dt><dd>${esc(scheduled)}</dd></div><div><dt>納品日</dt><dd>${esc(focus.completedDeliveryDate||'未記録')}</dd></div></dl>
           <div class="ref-subcase-count"><small>サブ案件</small><b>${subtasks.length}件</b></div>
         </section>
         <div class="ref-case-grid">
-          <section class="ref-panel"><div class="ref-panel-title"><b>サブ案件（${subtasks.length}件）</b><button class="btn btn-g btn-xs" onclick="${click}">すべて見る</button></div><div class="ref-subcase-table"><div class="ref-subcase-row ref-subcase-label"><span>案件名</span><span>ステータス</span><span>担当編集者</span><span>納期</span></div>${subtasks.slice(0,6).map(sub=>{const subClick=sub._portalChildJobId?`openPortalJobModal(${JSON.stringify(sub._portalChildPortalUid)},${JSON.stringify(sub._portalChildJobId)})`:focus._source==='portal'?`openPortalSubcaseDetail(${JSON.stringify(focus._portalUid)},${JSON.stringify(focus.id)},${JSON.stringify(String(sub.id||''))})`:`openLegacySubcaseDetail(${JSON.stringify(focus.id)},${JSON.stringify(String(sub.id||''))})`;return`<button type="button" class="ref-subcase-row" onclick="${subClick}"><span>${esc(sub.title||'サブ案件')}</span><span><i class="badge ${SCOLBG[sub.status]||'bk'}">${esc(videoStatusLabel(sub.status||'未着手'))}</i></span><span>${esc(sub.assignee||assignee)}</span><span>${esc(sub.deadline||sub.deliveryDate||'未設定')}</span></button>`}).join('')||'<div class="ref-no-subcase">サブ案件はありません。</div>'}</div></section>
-          <section class="ref-panel"><div class="ref-panel-title"><b>素材・資料</b><button class="btn btn-g btn-xs" onclick="${click}">すべて見る</button></div><div class="ref-material-list">${materials.map(m=>`<a href="${esc(m.url||m.href||'#')}" target="_blank" rel="noopener"><span>▧</span><b>${esc(m.label||m.name||m.title||'素材・資料')}</b></a>`).join('')||'<div class="ref-no-subcase">素材・資料はありません。</div>'}</div></section>
+          <section class="ref-panel"><div class="ref-panel-title"><b>サブ案件（${subtasks.length}件）</b><button class="btn btn-g btn-xs" onclick="${esc(click)}">すべて見る</button></div><div class="ref-subcase-table"><div class="ref-subcase-row ref-subcase-label"><span>案件名</span><span>ステータス</span><span>担当編集者</span><span>納期</span></div>${subtasks.slice(0,6).map(sub=>{const subClick=sub._portalChildJobId?`openPortalJobModal(${JSON.stringify(sub._portalChildPortalUid)},${JSON.stringify(sub._portalChildJobId)})`:focus._source==='portal'?`openPortalSubcaseDetail(${JSON.stringify(focus._portalUid)},${JSON.stringify(focus.id)},${JSON.stringify(String(sub.id||''))})`:`openLegacySubcaseDetail(${JSON.stringify(focus.id)},${JSON.stringify(String(sub.id||''))})`;return`<button type="button" class="ref-subcase-row" onclick="${esc(subClick)}"><span>${esc(sub.title||'サブ案件')}</span><span><i class="badge ${SCOLBG[sub.status]||'bk'}">${esc(videoStatusLabel(sub.status||'未着手'))}</i></span><span>${esc(sub.assignee||assignee)}</span><span>${esc(sub.deadline||sub.deliveryDate||'未設定')}</span></button>`}).join('')||'<div class="ref-no-subcase">サブ案件はありません。</div>'}</div></section>
+          <section class="ref-panel"><div class="ref-panel-title"><b>素材・資料</b><button class="btn btn-g btn-xs" onclick="${esc(click)}">すべて見る</button></div><div class="ref-material-list">${materials.map(m=>`<a href="${esc(m.url||m.href||'#')}" target="_blank" rel="noopener"><span>▧</span><b>${esc(m.label||m.name||m.title||'素材・資料')}</b></a>`).join('')||'<div class="ref-no-subcase">素材・資料はありません。</div>'}</div></section>
         </div>
         <section class="ref-panel ref-history"><div class="ref-panel-title"><b>提出・更新履歴</b></div><p>案件のステータス・進捗は、右側の案件内チャットに時系列で表示します。</p></section>
       </main>
       <aside class="ref-case-rail">
-        <section class="ref-chat-panel"><div class="ref-rail-heading"><b>案件内チャット</b><button class="btn btn-g btn-xs" onclick="${click}">詳細</button></div><div class="ref-chat-thread">${activity}</div><button class="ref-chat-open" type="button" onclick="${click}">案件の連絡・進捗を開く</button></section>
+        <section class="ref-chat-panel"><div class="ref-rail-heading"><b>案件内チャット</b><button class="btn btn-g btn-xs" onclick="${esc(click)}">詳細</button></div><div class="ref-chat-thread">${activity}</div><button class="ref-chat-open" type="button" onclick="${esc(click)}">案件の連絡・進捗を開く</button></section>
         ${_isOwner()?`<section class="ref-finance-panel"><div class="ref-rail-heading"><b>売上・支払・利益</b><span>オーナーのみ</span></div><dl><div><dt>売上</dt><dd>¥${revenue.toLocaleString()}</dd></div><div><dt>支払</dt><dd>¥${payout.toLocaleString()}</dd></div><div><dt>利益</dt><dd>¥${(revenue-payout).toLocaleString()}</dd></div></dl><button class="btn btn-g btn-sm" onclick="setVideoTab('manage-profit')">利益ページを開く</button></section>`:''}
         <div id="manager-overview-actions"></div>
       </aside>
@@ -17473,7 +17473,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260830-02';
+const APP_VERSION='20260830-03';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -17548,6 +17548,6 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260830-02"></script>
+<script src="./manager-features.js?v=20260830-03"></script>
 </body>
 </html>
