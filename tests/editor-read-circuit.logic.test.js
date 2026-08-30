@@ -56,7 +56,7 @@ test('all editor and feature snapshot errors route to the shared quota circuit',
   assert.match(features, /EditflowFirestoreQuota\?\.registerStop/);
   assert.match(features, /EditflowFirestoreQuota\?\.isOpen\?\.\(\)/);
   assert.match(features, /stopFeatures\(\)/);
-  assert.match(features, /PORTAL_APP_VERSION='20260830-03'/);
+  assert.match(features, /PORTAL_APP_VERSION='20260831-01'/);
 });
 
 test('editor quota recovery only exposes an explicit reload path and never claims cloud data was saved', () => {
@@ -82,7 +82,7 @@ test('quota-open editor writes are blocked before Firestore or Drive work can st
     'uploadInvoiceFile', 'submitInvoice', 'createRevision',
   ]) assert.match(editor, new RegExp(`${name}=portalGuardWrite\\(${name}\\)`));
   for (const name of [
-    'completeEditorDelivery', 'saveGroupEditorDraftDate', 'createDispatchJob', 'claimBoardJob',
+    'saveGroupEditorDraftDate', 'createDispatchJob', 'claimBoardJob',
     'sendJobMessage', 'saveAvailability', 'markManualRead', 'submitSuggestion',
     'sendDirectMessage', 'markAllDirectMessagesRead', 'enableEditorPushNotifications',
     'disableEditorPushNotifications',

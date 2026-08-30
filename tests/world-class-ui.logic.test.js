@@ -118,13 +118,13 @@ test('the management progress board becomes a vertical, labelled stage layout on
 test('workflow ownership is explicit for editors and management', () => {
   assert.match(features, /D確認待ちです。ディレクターが確認します。/);
   assert.match(features, /mono\.create FB中です。確認・修正指示をお待ちください。/);
-  assert.match(features, /先方確認中です。修正指示またはOKの連絡をお待ちください。/);
+  assert.match(features, /先方確認中です。修正指示または完了更新をお待ちください。/);
   assert.match(index, /class="video-progress-current">いま：/);
   assert.match(index, /class="video-progress-next">次：/);
-  assert.match(index, /編集者提出 → D確認 → 先方提出 → 修正指示 → 再D確認/);
+  assert.match(index, /編集者提出 → D確認 → 先方提出 → 先方確認 → 完了/);
   assert.match(index, /DのOKを記録/);
-  assert.match(index, /クライアントへの提出を記録/);
-  assert.match(index, /先方からOKが出たら、担当編集者が納品日と納品の証跡URLを記録して完了にします/);
+  assert.match(index, /クライアントへ提出/);
+  assert.match(index, /クライアントからOKをもらったら「クライアントOK・完了」を押します/);
 });
 
 test('management progress uses an explicit current-state label and readable non-colour cues', () => {

@@ -18,7 +18,7 @@ test('review-cycle schema is optional for legacy jobs and bounded for new jobs',
   }
 });
 
-test('review workflow keeps editor submissions, manager decisions, and editor actual delivery separate', () => {
+test('review workflow keeps editor submissions and manager decisions separate', () => {
   const editorBody = rules.match(/function validEditorReviewTransition\(\) \{([\s\S]*?)\n    \}/)?.[1] || '';
   const managerBody = rules.match(/function validManagerReviewTransition\(\) \{([\s\S]*?)\n    \}/)?.[1] || '';
   assert.match(editorBody, /'editing'/);
@@ -26,8 +26,11 @@ test('review workflow keeps editor submissions, manager decisions, and editor ac
   assert.match(managerBody, /'director_review'/);
   assert.match(managerBody, /'client_submission'/);
   assert.match(managerBody, /'client_review'/);
-  assert.doesNotMatch(managerBody, /client_approved_delivered/);
-  assert.match(rules, /function validEditorDeliveryCompletion\(\)/);
+  assert.match(managerBody, /client_approved_completed/);
+  assert.match(managerBody, /request\.resource\.data\.status == '完了'/);
+  assert.match(managerBody, /request\.resource\.data\.get\('completedDeliveryDate', ''\) != ''/);
+  const editorAllow = rules.match(/allow update: if editor\(uid\)[\s\S]*?;\n\s*allow update: if directorFor/)?.[0] || '';
+  assert.doesNotMatch(editorAllow, /validEditorDeliveryCompletion\(\)/);
   assert.match(managerBody, /reviewRound\(request\.resource\.data\) == reviewRound\(resource\.data\) \+ 1/);
 });
 
@@ -37,19 +40,29 @@ test('workflow changes append one matching, role-owned event without dropping pr
     'after.size() == before.size() + 1', 'after.hasAll(before)',
     'function lastReviewEventMatches(type, fromStage, toStage, round, status, role)',
     "event.get('byUid', '') == request.auth.uid", "'editor_submitted'",
-    "'director_approved'", "'client_submitted'", "'client_revision_requested'",
-    "'editor_delivery_completed'", "return owner() ? 'owner' : 'director'",
+    "'director_revision_requested'", "'director_approved'", "'client_submitted'",
+    "'client_revision_requested'", "'client_approved_completed'",
+    "return owner() ? 'owner' : 'director'",
   ]) assert.ok(rules.includes(marker), `missing ${marker}`);
   assert.match(rules, /&& reviewEventsUnchanged\(\)/);
   assert.match(rules, /&& validEditorSubmittedEvent\(/);
   assert.match(rules, /&& validManagerProgressEvent\(/);
 });
 
+test('editor draft submissions bind the stored evidence URL to the appended workflow event', () => {
+  const body = rules.match(/function validEditorSubmittedEvent\(fromStage, round, status\) \{([\s\S]*?)\n    \}/)?.[1] || '';
+  assert.match(body, /request\.resource\.data\.evidenceUrl is string/);
+  assert.ok(body.includes("request.resource.data.evidenceUrl.matches('^https?://.+')"));
+  assert.match(body, /event\.get\('evidenceUrl', ''\) is string/);
+  assert.ok(body.includes("event.get('evidenceUrl', '').matches('^https?://.+')"));
+  assert.match(body, /event\.get\('evidenceUrl', ''\) == request\.resource\.data\.evidenceUrl/);
+});
+
 test('workflow-aware editor saves cannot change director or client-owned statuses', () => {
   const body = rules.match(/function validEditorWorkflowStatus\(\) \{([\s\S]*?)\n    \}/)?.[1] || '';
   assert.match(body, /reviewStage\(resource\.data\) == 'editing'/);
   assert.match(body, /reviewStage\(request\.resource\.data\) == 'director_review'/);
-  assert.match(body, /request\.resource\.data\.status in \['初稿提出済み', '修正稿提出済み'\]/);
+  assert.match(body, /validEditorSubmissionStatus\([\s\S]*resource\.data\.status, request\.resource\.data\.status/);
   assert.match(body, /request\.resource\.data\.status == resource\.data\.status/);
   assert.match(rules, /&& validEditorWorkflowStatus\(\)/);
 });
@@ -63,9 +76,22 @@ test('manager same-stage updates keep both status and review event history intac
   assert.match(sameStage, /reviewEventsUnchanged\(\)/);
 });
 
-test('client revision events require a bounded non-empty correction reason', () => {
+test('legacy manager metadata saves cannot jump directly into workflow-owned states', () => {
+  const body = rules.match(/function validLegacyManagerNonWorkflowUpdate\(\) \{([\s\S]*?)\n    \}/)?.[1] || '';
+  assert.match(body, /!hasReviewWorkflow\(resource\.data\)/);
+  assert.match(body, /!hasReviewWorkflow\(request\.resource\.data\)/);
+  assert.match(body, /reviewEventsUnchanged\(\)/);
+  assert.match(body, /request\.resource\.data\.status == resource\.data\.status/);
+  assert.match(body, /!workflowControlledStatus\(request\.resource\.data\.status\)/);
+  const controlled = rules.match(/function workflowControlledStatus\(status\) \{([\s\S]*?)\n    \}/)?.[1] || '';
+  for (const status of ['編集者進行中', '初稿提出済み', '修正中', '修正稿提出済み', 'D確認OK', '先方確認中', '完了']) {
+    assert.match(controlled, new RegExp(`'${status}'`));
+  }
+});
+
+test('director and client revision events require a bounded non-empty correction reason', () => {
   const body = rules.match(/function validManagerProgressEvent\([^]*?\n    \}/)?.[0] || '';
-  assert.match(body, /type != 'client_revision_requested'/);
+  assert.match(body, /type in \['director_revision_requested', 'client_revision_requested'\]/);
   assert.match(body, /event\.get\('reason', ''\) is string/);
   assert.match(body, /event\.get\('reason', ''\)\.size\(\) > 0/);
   assert.match(body, /event\.get\('reason', ''\)\.size\(\) <= 2000/);

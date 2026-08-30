@@ -14,11 +14,12 @@ function sourceBetween(name, next) {
   return index.slice(start, end);
 }
 
-test('management distinguishes planned due dates and delivery dates without a manager completion action', () => {
+test('management distinguishes planned due dates and lets D finish only after client approval', () => {
   for (const label of ['編集者初稿', 'クライアント初稿', '納期（予定）', '納品日']) assert.match(index, new RegExp(label));
-  assert.match(index, /editor_delivery_completed:'編集者が納品を完了'/);
-  assert.doesNotMatch(index, /action==='clientApproved'/);
-  assert.match(index, /先方からOKが出たら、担当編集者が納品日と納品の証跡URLを記録して完了にします/);
+  assert.match(index, /client_approved_completed:'クライアントOK・完了'/);
+  assert.match(index, /action==='clientApproved'/);
+  assert.match(index, /status='完了';type='client_approved_completed'/);
+  assert.match(index, /completedDeliveryDate:j\.completedDeliveryDate\|\|today\(\)/);
   assert.match(index, /completedDeliveryDate:_portalField/);
   assert.match(index, /transactionDate:j\.completedDeliveryDate/);
   assert.doesNotMatch(index, /transactionDate:j\.completedDeliveryDate\|\|j\.deliveryDate/);

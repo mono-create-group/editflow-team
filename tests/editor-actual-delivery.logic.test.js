@@ -7,12 +7,11 @@ const features=fs.readFileSync(path.resolve(__dirname,'..','editor-features.js')
 const editor=fs.readFileSync(path.resolve(__dirname,'..','editor.html'),'utf8');
 const rules=fs.readFileSync(path.resolve(__dirname,'..','firestore.rules'),'utf8');
 
-test('editor records a delivery date separately from the planned due date',()=>{
+test('editor keeps recorded delivery dates visible but cannot complete a job',()=>{
   assert.match(features,/completedDeliveryDate/);
-  assert.match(features,/納品日 \*/);
-  assert.match(features,/納品の証跡URL \*/);
-  assert.match(features,/editor_delivery_completed/);
-  assert.match(features,/先方確認が完了するまで納品完了にはできません/);
+  assert.doesNotMatch(features,/function editorDeliveryCompletionHtml\(/);
+  assert.doesNotMatch(features,/function completeEditorDelivery\(/);
+  assert.doesNotMatch(features,/window\.completeEditorDelivery=/);
 });
 
 test('editor card shows both draft dates, planned due date, and the delivery date',()=>{
@@ -20,21 +19,13 @@ test('editor card shows both draft dates, planned due date, and the delivery dat
   assert.match(features,/editor-job-dates/);
 });
 
-test('work guide assigns the final delivery record to the editor and explains the payment condition',()=>{
-  assert.match(editor,/先方OK後の納品日と納品先URLは、担当編集者が必ず記録します/);
-  assert.match(editor,/納品日が未記録の案件には報酬が発生しません/);
-  assert.doesNotMatch(editor,/納品完了は、ディレクターまたは管理者が更新します/);
+test('work guide assigns final review and completion to the director or owner',()=>{
+  assert.match(editor,/修正中・D確認OK・先方確認中・完了はディレクターまたはオーナーが更新します/);
+  assert.doesNotMatch(editor,/担当編集者が実際の納品日と納品先URLを入力し、納品完了にします/);
   assert.match(editor,/子案件ごとに案件名・編集者支払額・指示を必ず入力します/);
 });
 
-test('rules only allow the editor delivery completion from client review with evidence and no blocker',()=>{
-  assert.match(rules,/function validEditorDeliveryCompletion\(\)/);
-  for(const marker of [
-    "reviewStage(resource.data) == 'client_review'",
-    "reviewStage(request.resource.data) == 'delivered'",
-    "request.resource.data.status == '完了'",
-    "'editor_delivery_completed', 'client_review', 'delivered'",
-    "request.resource.data.get('completedDeliveryDate', '') != ''",
-  ])assert.match(rules,new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
-  assert.doesNotMatch(rules,/client_approved_delivered', 'client_review', 'delivered'/);
+test('editor UI does not expose any completion mutation entry point',()=>{
+  assert.doesNotMatch(features,/editor_delivery_completed/);
+  assert.doesNotMatch(features,/納品を完了した/);
 });

@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260830-03"></script>
+<script src="./billing-terms.js?v=20260831-01"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -995,7 +995,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260830-03">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260831-01">
 </head>
 <body class="owner-yellow-ui">
 
@@ -1070,6 +1070,7 @@ const BUILTIN_VIEWS=[
   {id:'videoschedules',label:'編集可能スケジュール',icon:'🗓️'},
   {id:'videomanuals',label:'マニュアル保管庫',icon:'📚'},
   {id:'videoinvoices',label:'請求書',icon:'🧾'},
+  {id:'directmessages',label:'DM',icon:'💬'},
   {id:'videosuggestions',label:'匿名目安箱',icon:'📮'},
   {id:'hpprojects',label:'HP案件',icon:'🌐'},
   {id:'pipeline',label:'商談管理',icon:'🤝'},
@@ -1087,14 +1088,14 @@ const BUILTIN_VIEWS=[
 
 const DB_OLD='ef_team_v4';
 const PPM=1.5, SS=7*60, SE=24*60;
-const PSTATUS=['案件掲載中','未着手','進行中','編集者進行中','初稿提出済み','修正中','修正稿提出済み','D確認OK','完了','キャンセル','初稿完成','確認待ち','FB待ち'];
-const SCOL={'案件掲載中':'--cyan','未着手':'--t3','進行中':'--blue','編集者進行中':'--pink','初稿完成':'--purple','確認待ち':'--amber','FB待ち':'--pink','修正中':'--red','完了':'--green','キャンセル':'--t3'};
-const SCOLBG={'案件掲載中':'bc','未着手':'bk','進行中':'bb','編集者進行中':'bpk','初稿完成':'bp','確認待ち':'ba','FB待ち':'bk','修正中':'br','完了':'bg','キャンセル':'bk'};
+const PSTATUS=['案件掲載中','未着手','アサイン済み','進行中','編集者進行中','初稿提出済み','修正中','修正稿提出済み','D確認OK','先方確認中','完了','キャンセル','初稿完成','確認待ち','FB待ち'];
+const SCOL={'案件掲載中':'--cyan','未着手':'--t3','アサイン済み':'--blue','進行中':'--blue','編集者進行中':'--pink','初稿完成':'--purple','先方確認中':'--amber','確認待ち':'--amber','FB待ち':'--pink','修正中':'--red','完了':'--green','キャンセル':'--t3'};
+const SCOLBG={'案件掲載中':'bc','未着手':'bk','アサイン済み':'bb','進行中':'bb','編集者進行中':'bpk','初稿完成':'bp','先方確認中':'ba','確認待ち':'ba','FB待ち':'bk','修正中':'br','完了':'bg','キャンセル':'bk'};
 Object.assign(SCOL,{'初稿提出済み':'--purple','修正稿提出済み':'--purple','D確認OK':'--green'});
 Object.assign(SCOLBG,{'初稿提出済み':'bp','修正稿提出済み':'bp','D確認OK':'bg'});
 // ===事業(BIZ)定義 2026-07-26=== 案件管理を事業別に分割。既存データは書き換えず、読み取り時に分類する（jobBiz）。
 Object.assign(SCOLBG,{'募集中':'bc','編集者決定':'bb','受注済み':'bb','受注':'bb','商談中':'ba','ヒアリング':'bc','制作中':'bb','初稿提出':'bp','公開準備':'ba','公開済み':'bg','運用中':'bg','提案中':'ba','契約中':'bb','オンボーディング':'bc','継続中':'bg','更新待ち':'ba','解約':'bk','要件ヒアリング':'bc','見積提出':'ba','開発中':'bb','テスト中':'bp','デモ提出':'bp','納品済み':'bg','検収待ち':'ba','運用保守':'bg'});
-const BOARD_COL={'案件掲載中':'#06b6d4','未着手':'#6b7280','進行中':'#3b82f6','編集者進行中':'#ec4899','FB待ち':'#ec4899','確認待ち':'#f59e0b','修正中':'#ef4444','初稿完成':'#7c3aed','募集中':'#06b6d4','編集者決定':'#3b82f6','受注済み':'#3b82f6','受注':'#3b82f6','商談中':'#f59e0b','ヒアリング':'#06b6d4','制作中':'#3b82f6','初稿提出':'#7c3aed','公開準備':'#f59e0b','公開済み':'#16a34a','運用中':'#16a34a','提案中':'#f59e0b','契約中':'#3b82f6','オンボーディング':'#06b6d4','継続中':'#16a34a','更新待ち':'#f59e0b','解約':'#6b7280','要件ヒアリング':'#06b6d4','見積提出':'#f59e0b','開発中':'#3b82f6','テスト中':'#7c3aed','デモ提出':'#7c3aed','納品済み':'#16a34a','検収待ち':'#f59e0b','運用保守':'#16a34a'};
+const BOARD_COL={'案件掲載中':'#06b6d4','未着手':'#6b7280','アサイン済み':'#3b82f6','進行中':'#3b82f6','編集者進行中':'#ec4899','初稿提出済み':'#7c3aed','修正中':'#ef4444','修正稿提出済み':'#7c3aed','D確認OK':'#16a34a','先方確認中':'#f59e0b','完了':'#16a34a','FB待ち':'#ec4899','確認待ち':'#f59e0b','初稿完成':'#7c3aed','募集中':'#06b6d4','編集者決定':'#3b82f6','受注済み':'#3b82f6','受注':'#3b82f6','商談中':'#f59e0b','ヒアリング':'#06b6d4','制作中':'#3b82f6','初稿提出':'#7c3aed','公開準備':'#f59e0b','公開済み':'#16a34a','運用中':'#16a34a','提案中':'#f59e0b','契約中':'#3b82f6','オンボーディング':'#06b6d4','継続中':'#16a34a','更新待ち':'#f59e0b','解約':'#6b7280','要件ヒアリング':'#06b6d4','見積提出':'#f59e0b','開発中':'#3b82f6','テスト中':'#7c3aed','デモ提出':'#7c3aed','納品済み':'#16a34a','検収待ち':'#f59e0b','運用保守':'#16a34a'};
 const BIZ_DEFS=[
   {k:'edit',   label:'編集代行',         icon:'📹'},
   {k:'haken',  label:'編集者派遣',       icon:'🤝'},
@@ -1103,10 +1104,14 @@ const BIZ_DEFS=[
   {k:'tool',   label:'自動化ツール制作', icon:'⚙️'}
 ];
 const PTAB_LBL={board:'📋 ボード',deadline:'📅 今日明日期限',listing:'📢 掲載中',list:'📄 リスト',clients:'👥 クライアント一覧',profit:'💰 利益',payment:'💳 支払い',invoice:'🧾 請求書',completed:'✅ 完了済み',worker:'👤 担当者別',priority:'📊 優先度表'};
+// 動画案件で通常選択する、担当開始後の正式な進捗です。旧ステータスは
+// `bizStatOpts` が現在値としてだけ表示し、既存案件の読み取り互換性を保ちます。
+const VIDEO_WORKFLOW_STATUSES=['アサイン済み','進行中','編集者進行中','初稿提出済み','修正中','修正稿提出済み','D確認OK','先方確認中','完了'];
 const BIZ_CFG={
   edit:{
-    statuses:['案件掲載中','未着手','進行中','編集者進行中','初稿提出済み','修正中','修正稿提出済み','D確認OK','完了','キャンセル','初稿完成','確認待ち','FB待ち'],
-    board:['案件掲載中','未着手','進行中','編集者進行中','初稿提出済み','修正中','修正稿提出済み','D確認OK','初稿完成','確認待ち','FB待ち'],
+    // 掲載前の導線と中止は残す。担当開始後は VIDEO_WORKFLOW_STATUSES の9状態のみを通常選択肢にする。
+    statuses:['案件掲載中','未着手','アサイン済み','進行中','編集者進行中','初稿提出済み','修正中','修正稿提出済み','D確認OK','先方確認中','完了','キャンセル'],
+    board:['案件掲載中','未着手','アサイン済み','進行中','編集者進行中','初稿提出済み','修正中','修正稿提出済み','D確認OK','先方確認中','初稿完成','FB待ち'],
     scopes:['動画編集','サムネイル制作','動画編集＋サムネイル','ショート動画','VSL','スクール動画','その他'],
     lbl:{scope:'担当範囲',shared:'共有日',deliver:'納期（予定）',d1:'編集者 初稿',d2:'クライアント提出 初稿',unit:'単価（円）',wpay:'ワーカー支払額（円）',profit:'利益（自動計算）',monthly:'',member:'👤 編集者別',d1s:'✏️ 編集者初稿',d2s:'📋 クライアント提出',deliverS:'📅 納期（予定）'},
     show:{scope:1,d1:1,d2:1,thumb:1,wpay:1,subs:1,monthly:0},
@@ -1114,8 +1119,9 @@ const BIZ_CFG={
     prio:[['clientDraftDate','クライアント初稿'],['editorDraftDate','編集者初稿']]
   },
   haken:{
-    statuses:['案件掲載中','募集中','編集者決定','受注済み','進行中','初稿提出済み','修正中','修正稿提出済み','D確認OK','完了','キャンセル','初稿完成','確認待ち'],
-    board:['案件掲載中','募集中','編集者決定','受注済み','進行中','初稿提出済み','修正中','修正稿提出済み','D確認OK','初稿完成','確認待ち'],
+    // 募集・受注の導線は派遣案件だけで保持し、担当開始後は正式な9状態を使用する。
+    statuses:['案件掲載中','募集中','編集者決定','受注済み','アサイン済み','進行中','編集者進行中','初稿提出済み','修正中','修正稿提出済み','D確認OK','先方確認中','完了','キャンセル'],
+    board:['案件掲載中','募集中','編集者決定','アサイン済み','受注済み','進行中','編集者進行中','初稿提出済み','修正中','修正稿提出済み','D確認OK','先方確認中','初稿完成'],
     scopes:['長尺動画','ショート動画','サムネイル制作','その他'],
     lbl:{scope:'案件種別',shared:'受注日',deliver:'納期（予定）',d1:'編集者 初稿',d2:'クライアント提出 初稿',unit:'クライアント請求額（円）',wpay:'編集者支払額（円）',profit:'手数料（自動計算）',monthly:'',member:'👤 編集者別',d1s:'✏️ 編集者初稿',d2s:'📋 クライアント提出',deliverS:'📅 納期（予定）'},
     show:{scope:1,d1:1,d2:1,thumb:1,wpay:1,subs:1,monthly:0},
@@ -1204,6 +1210,11 @@ const VIDEO_STATUS_LABELS={'FB待ち':'mono.create FB中','確認待ち':'先方
 function videoStatusLabel(status){return VIDEO_STATUS_LABELS[String(status||'')]||String(status||'未着手');}
 function bizStatusLabel(k,status){return['edit','haken'].includes(k)?videoStatusLabel(status):String(status||'');}
 function bizStatOpts(k,cur){const list=bizCfgOf(k).statuses.slice();if(cur&&list.indexOf(cur)<0)list.unshift(cur);const sel=cur||list[0];return list.map(x=>`<option value="${esc(x)}"${x===sel?' selected':''}>${esc(bizStatusLabel(k,x))}</option>`).join('');}
+// A legacy subcase linked to an editor portal has one authoritative workflow
+// record. Its status must never be changed from the parent-case form, because
+// the legacy-to-portal sync intentionally does not overwrite portal statuses.
+function _legacyPortalStatusLocked(record){return !!(record&&String(record.portalUid||'').trim()&&String(record.portalJobId||'').trim());}
+function _legacyPortalStatusHint(record){return _legacyPortalStatusLocked(record)?'<div class="fhint">進捗はサブ案件詳細の進捗操作で更新します。</div>':'';}
 function bizScopeOpts(k,cur){const list=bizCfgOf(k).scopes.slice();if(cur&&list.indexOf(cur)<0)list.unshift(cur);return'<option value="">選択</option>'+list.map(x=>`<option${x===cur?' selected':''}>${esc(x)}</option>`).join('');}
 function setPBiz(k){PBIZ=k;const t=bizCfgOf(k).tabs;if(t.indexOf(PVMT)<0)PVMT=t[0];PRIO_IDX=0;render();}
 function allowedWorkspaces(){
@@ -2047,6 +2058,7 @@ function fbSetupPortalOpsSync(){
 }
 fbAuth.onAuthStateChanged(async user=>{
   _stopRoleSubscriptions();
+  ownerDmStop(true);
   FB_USER=user;
   _authSettled=true;
   APP_ACCESS=null;ACCESS_RESOLVED=!user;ACCESS_REQUESTS=[];ACCESS_RECORDS=[];PORTAL_JOBS=[];PORTAL_INVOICES=[];PORTAL_PROFILES=[];PORTAL_AUTHORIZATIONS=[];OWNER_JOB_FINANCE=[];OWNER_LEGACY_FINANCE=[];_resetOwnerPortalBridge();
@@ -3716,7 +3728,7 @@ function render(){
     // 役割ガード(2026-07-23): 営業スタッフは「営業」「情報」タブ以外を開けない。許可外Vは営業リストへ退避。
     if(!isViewAllowed(V)){V=(BUILTIN_VIEWS.find(x=>isViewAllowed(x.id))?.id)||'videoedit';sessionStorage.setItem('ef_team_view',V);}
     if(V==='kpi'){V='goals';} // KPI管理は目標・KPI統合ページにリダイレクト
-    const views={dashboard:rDash,tasks:rTasks,guide:rGuide,editorportal:rEditorPortal,projects:rProjects,videoedit:rVideoEditProjects,videohaken:rVideoHakenProjects,videoclients:rVideoClients,videoschedules:rVideoSchedules,videomanuals:rVideoManuals,videoinvoices:rVideoInvoices,videosuggestions:rVideoSuggestions,hpprojects:rHpProjects,pipeline:rPipeline,teamgoals:rTeamGoals,posts:rPosts,docs:rDocs,workers:rWorkers,habits:rHabits,goals:rGoals,journal:rJournal,revenue:rRevenue,memo:rMemo,settings:rSettings,customize:rCustomize,aichat:rAIChat,fitness:rFitness,kpi:rKpi,bizboard:rBizBoard,bizunits:rBizUnits,bizinfo:rBizInfo,minutes:rMinutes,salesleads:rSalesLeads,salesrank:rSalesRank,igaccounts:rIgAccounts,hpfee:rHpFee,salessites:rSalesSites,inquiries:rInquiries,templates:rTemplates,crm:rCrm,accounts:rAccounts};
+    const views={dashboard:rDash,tasks:rTasks,guide:rGuide,editorportal:rEditorPortal,projects:rProjects,videoedit:rVideoEditProjects,videohaken:rVideoHakenProjects,videoclients:rVideoClients,videoschedules:rVideoSchedules,videomanuals:rVideoManuals,videoinvoices:rVideoInvoices,directmessages:rOwnerDirectMessages,videosuggestions:rVideoSuggestions,hpprojects:rHpProjects,pipeline:rPipeline,teamgoals:rTeamGoals,posts:rPosts,docs:rDocs,workers:rWorkers,habits:rHabits,goals:rGoals,journal:rJournal,revenue:rRevenue,memo:rMemo,settings:rSettings,customize:rCustomize,aichat:rAIChat,fitness:rFitness,kpi:rKpi,bizboard:rBizBoard,bizunits:rBizUnits,bizinfo:rBizInfo,minutes:rMinutes,salesleads:rSalesLeads,salesrank:rSalesRank,igaccounts:rIgAccounts,hpfee:rHpFee,salessites:rSalesSites,inquiries:rInquiries,templates:rTemplates,crm:rCrm,accounts:rAccounts};
     let html;
     if(V.startsWith('doc_')){
       // Googleドキュメント風エディタ(teamPages.htmlを編集)。BUILTIN_VIEWSガードを迂回する。
@@ -6200,13 +6212,13 @@ function sortJobs(jobs){
 }
 const VIDEO_PHASES=[
   {id:'intake',label:'受付・募集',statuses:['案件掲載中','募集中','未着手']},
-  {id:'assigned',label:'アサイン済み',statuses:['編集者決定','受注済み']},
+  {id:'assigned',label:'アサイン済み',statuses:['編集者決定','アサイン済み','受注済み']},
   {id:'editing',label:'編集',statuses:['進行中','編集者進行中']},
-  {id:'review',label:'確認・修正',statuses:['初稿提出済み','修正稿提出済み','D確認OK','初稿完成','確認待ち','FB待ち','修正中']},
+  {id:'review',label:'確認・修正',statuses:['初稿提出済み','修正稿提出済み','D確認OK','先方確認中','初稿完成','確認待ち','FB待ち','修正中']},
   {id:'done',label:'完了',statuses:['完了','キャンセル']}
 ];
-const EDITOR_OWNED_VIDEO_STATUSES=new Set(['初稿提出済み','修正稿提出済み','D確認OK','完了']);
-const VIDEO_OVERDUE_EXCLUDED_STATUSES=new Set(['完了','キャンセル','初稿提出済み','初稿完成','修正中','修正稿提出済み','D確認OK','確認待ち','FB待ち','納品','納品済み']);
+const EDITOR_OWNED_VIDEO_STATUSES=new Set(['編集者進行中','初稿提出済み','修正稿提出済み']);
+const VIDEO_OVERDUE_EXCLUDED_STATUSES=new Set(['完了','キャンセル','初稿提出済み','初稿完成','修正中','修正稿提出済み','D確認OK','先方確認中','確認待ち','FB待ち','納品','納品済み']);
 function _editorDraftDateSetter(row,fallback='editor'){
   const value=String(row?.editorDraftDateSetter||'');
   return ['creator','editor','mixed'].includes(value)?value:fallback;
@@ -6420,12 +6432,12 @@ function _videoWorkflow(job){
   if(status==='修正中')return{round:2,stage:'editing'};
   if(status==='D確認OK')return{round:1,stage:'client_submission'};
   if(status==='FB待ち')return{round:1,stage:'director_review'};
-  if(status==='確認待ち')return{round:1,stage:'client_review'};
+  if(['先方確認中','確認待ち'].includes(status))return{round:1,stage:'client_review'};
   if(['初稿提出済み','修正稿提出済み'].includes(status))return{round:1,stage:'director_review'};
   return{round:1,stage:'editing'};
 }
 function _videoWorkflowLabel(workflow){return({editing:'編集作業中',director_review:'D確認待ち',client_submission:'先方へ提出中',client_review:'先方確認中',delivered:'納品完了'})[workflow?.stage]||'編集作業中';}
-function _videoCurrentProgressLabel(job){const status=String(job?.status||'');if(['修正中','FB待ち','確認待ち'].includes(status))return videoStatusLabel(status);return _videoWorkflowLabel(_videoWorkflow(job));}
+function _videoCurrentProgressLabel(job){const status=String(job?.status||'');if(['修正中','FB待ち','先方確認中','確認待ち'].includes(status))return videoStatusLabel(status);return _videoWorkflowLabel(_videoWorkflow(job));}
 function _videoNextOwner(job){const stage=_videoWorkflow(job).stage;return stage==='director_review'?'動画編集ディレクター':stage==='client_submission'||stage==='client_review'?'ディレクター／クライアント':stage==='delivered'?'完了':'担当編集者';}
 function _videoCaseSummary(job){return`<div class="video-case-summary"><span>現在の進捗 <b>${esc(_videoCurrentProgressLabel(job))}</b></span><span>次に対応する人 <b>${esc(_videoNextOwner(job))}</b></span><span>納期（予定） <b>${esc(job.deadline||'未設定')}</b></span>${job.completedDeliveryDate?`<span>納品日 <b>${esc(job.completedDeliveryDate)}</b></span>`:''}</div>`;}
 function _videoDraftMetaHtml(kind,date,note=''){
@@ -6433,22 +6445,25 @@ function _videoDraftMetaHtml(kind,date,note=''){
   return`<span class="video-draft-meta" aria-label="${esc(`${fullLabel} ${value}${note?` ${note}`:''}`)}"><span class="video-draft-mark" aria-hidden="true">${mark}</span><span>初稿 <b>${esc(value)}</b>${note?` <small>（${esc(note)}）</small>`:''}</span></span>`;
 }
 function _videoDraftDateSummary(job){return`<div class="video-card-dates"><span>編集者初稿 <b>${esc(job.editorDraftDate||'未設定')}</b>（${esc(_editorDraftDateSetterLabel(job))}が設定）</span><span>クライアント初稿 <b>${esc(job.clientDraftDate||'未設定')}</b></span><span>納期（予定） <b>${esc(job.deadline||'未設定')}</b></span><span>納品日 <b>${esc(job.completedDeliveryDate||'未記録')}</b></span></div>`;}
-function _videoWorkflowEventLabel(type){return({editor_submitted:'編集者が稿を提出',director_approved:'DのOKを記録',client_submitted:'クライアントへ提出',client_revision_requested:'クライアントから修正指示',editor_delivery_completed:'編集者が納品を完了',client_approved_delivered:'クライアントOK・納品（旧記録）'})[type]||'進捗を更新';}
-function _videoWorkflowHtml(job,portalUid){const w=_videoWorkflow(job),events=Array.isArray(job?.progressEvents)?job.progressEvents:[],actions=w.stage==='director_review'?[['directorApprove','DのOKを記録']]:w.stage==='client_submission'?[['clientSubmitted','クライアントへの提出を記録']]:w.stage==='client_review'?[['clientRevision','修正指示を記録']]:[],history=events.slice(-8).reverse(),deliveryNotice=w.stage==='client_review'&&!job.completedDeliveryDate?'<div class="notice" style="margin-top:8px;box-shadow:none"><b>先方からOKが出たら、担当編集者が納品日と納品の証跡URLを記録して完了にします。</b><div style="font-size:12px;color:var(--t2);margin-top:3px">納品日が未記録の案件には報酬が発生しません。</div></div>':'';return`<div class="card" style="margin:8px 0;background:var(--card2)"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b style="font-size:14px">進捗共有</b><span class="badge bk">${Number(w.round)}回目・現在：${esc(_videoCurrentProgressLabel(job))}</span></div><div style="font-size:14px;color:var(--t2);line-height:1.6;margin-top:6px">編集者提出 → D確認 → 先方提出 → 修正指示 → 再D確認を、回数付きで残します。</div>${actions.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${actions.map(([action,label])=>`<button class="btn btn-g btn-xs" onclick="advancePortalWorkflow('${esc(portalUid)}','${esc(job.id)}','${action}')">${label}</button>`).join('')}</div>`:''}${deliveryNotice}${history.length?`<details style="margin-top:8px"><summary style="font-size:14px;font-weight:700;cursor:pointer">進捗履歴を見る（${events.length}件）</summary><div style="display:grid;gap:5px;margin-top:7px">${history.map(event=>`<div style="font-size:14px;color:var(--t2);line-height:1.6"><b>第${Number(event.round)||1}回</b> ・ ${esc(_videoWorkflowEventLabel(event.type))}${event.reason?`<br><span style="color:var(--red)">修正内容：${esc(event.reason)}</span>`:''}</div>`).join('')}</div></details>`:''}</div>`;}
+function _videoWorkflowEventLabel(type){return({editor_submitted:'編集者が稿を提出',director_revision_requested:'Dから修正指示',director_approved:'DのOKを記録',client_submitted:'クライアントへ提出',client_revision_requested:'クライアントから修正指示',client_approved_completed:'クライアントOK・完了',editor_delivery_completed:'編集者が納品を完了（旧記録）',client_approved_delivered:'クライアントOK・納品（旧記録）'})[type]||'進捗を更新';}
+function _videoWorkflowHtml(job,portalUid){const w=_videoWorkflow(job),events=Array.isArray(job?.progressEvents)?job.progressEvents:[],actions=w.stage==='director_review'?[['directorRevision','修正指示を記録'],['directorApprove','D確認OKにする']]:w.stage==='client_submission'?[['clientSubmitted','先方へ提出する']]:w.stage==='client_review'?[['clientRevision','修正指示を記録'],['clientApproved','クライアントOK・完了']]:[],history=events.slice(-8).reverse(),deliveryNotice=w.stage==='client_review'&&!job.completedDeliveryDate?'<div class="notice" style="margin-top:8px;box-shadow:none"><b>クライアントからOKをもらったら「クライアントOK・完了」を押します。</b><div style="font-size:12px;color:var(--t2);margin-top:3px">完了日には操作日を記録します。</div></div>':'';return`<div class="card" style="margin:8px 0;background:var(--card2)"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b style="font-size:14px">進捗共有</b><span class="badge bk">${Number(w.round)}回目・現在：${esc(_videoCurrentProgressLabel(job))}</span></div><div style="font-size:14px;color:var(--t2);line-height:1.6;margin-top:6px">編集者提出 → D確認 → 先方提出 → 先方確認 → 完了を、修正回数付きで残します。</div>${actions.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${actions.map(([action,label])=>`<button class="btn btn-g btn-xs" onclick="advancePortalWorkflow('${esc(portalUid)}','${esc(job.id)}','${action}')">${label}</button>`).join('')}</div>`:''}${deliveryNotice}${history.length?`<details style="margin-top:8px"><summary style="font-size:14px;font-weight:700;cursor:pointer">進捗履歴を見る（${events.length}件）</summary><div style="display:grid;gap:5px;margin-top:7px">${history.map(event=>`<div style="font-size:14px;color:var(--t2);line-height:1.6"><b>第${Number(event.round)||1}回</b> ・ ${esc(_videoWorkflowEventLabel(event.type))}${event.reason?`<br><span style="color:var(--red)">修正内容：${esc(event.reason)}</span>`:''}</div>`).join('')}</div></details>`:''}</div>`;}
 async function advancePortalWorkflow(portalUid,id,action){
   if(!_videoCanEdit())return toast('権限がありません','err');
   const j=(PORTAL_JOBS||[]).find(x=>x._portalUid===portalUid&&x.id===id);if(!j)return;
+  if(action==='clientApproved'&&(!_videoSafeUrl(j.evidenceUrl||'')||String(j.blocker||'').trim()))return toast('完了前に提出リンクと停止理由を確認してください','warn');
   const current=_videoWorkflow(j),at=Date.now(),reason=document.getElementById('vp-correction')?.value.trim()||'';let workflow,status,type;
-  if(action==='directorApprove'&&current.stage==='director_review'){workflow={round:current.round,stage:'client_submission'};status='D確認OK';type='director_approved';}
-  else if(action==='clientSubmitted'&&current.stage==='client_submission'){workflow={round:current.round,stage:'client_review'};status='確認待ち';type='client_submitted';}
+  if(action==='directorRevision'&&current.stage==='director_review'){if(!reason)return toast('修正指示の内容を入力してください','warn');workflow={round:current.round+1,stage:'editing'};status='修正中';type='director_revision_requested';}
+  else if(action==='directorApprove'&&current.stage==='director_review'){workflow={round:current.round,stage:'client_submission'};status='D確認OK';type='director_approved';}
+  else if(action==='clientSubmitted'&&current.stage==='client_submission'){workflow={round:current.round,stage:'client_review'};status='先方確認中';type='client_submitted';}
   else if(action==='clientRevision'&&current.stage==='client_review'){if(!reason)return toast('修正指示の内容を入力してください','warn');workflow={round:current.round+1,stage:'editing'};status='修正中';type='client_revision_requested';}
+  else if(action==='clientApproved'&&current.stage==='client_review'){workflow={round:current.round,stage:'delivered'};status='完了';type='client_approved_completed';}
   else return toast('現在の工程ではこの操作はできません','warn');
   const eventData={at,byUid:FB_USER?.uid||'',byEmail:_myEmail(),byRole:_isOwner()?'owner':'director',type,action,fromStage:current.stage,toStage:workflow.stage,round:workflow.round,workflow,status,...(reason?{reason}:{})};
-  const data={workflow,progressEvents:[...(j.progressEvents||[]).slice(-99),eventData],status,updatedAt:at,updatedBy:_myEmail(),history:[...(j.history||[]).slice(-49),eventData],...(action==='clientRevision'?{correctionReason:reason}:{})};
+  const isRevision=['directorRevision','clientRevision'].includes(action),data={workflow,progressEvents:[...(j.progressEvents||[]).slice(-99),eventData],status,updatedAt:at,updatedBy:_myEmail(),history:[...(j.history||[]).slice(-49),eventData],...(isRevision?{correctionReason:reason}:{correctionReason:''}),...(action==='clientApproved'?{completedDeliveryDate:j.completedDeliveryDate||today()}: {})};
   try{const ref=fbDb.collection('editor_portals').doc(portalUid).collection('editor_jobs').doc(id),event=ref.collection('events').doc(),batch=fbDb.batch();batch.set(ref,data,{merge:true});batch.set(event,{at:firebase.firestore.FieldValue.serverTimestamp(),...eventData});await batch.commit();if(_applyPortalToLegacy({...j,...data},false))save();closeModal();toast('進捗を更新しました');}catch(e){console.warn('workflow update',e);toast('進捗の更新に失敗しました','err');}
 }
-function _editorMilestoneSummary(j){const saved=Array.isArray(j?.progressMilestones)?j.progressMilestones:[],events=Array.isArray(j?.progressEvents)?j.progressEvents:[],defs=[['initial_submitted','初稿提出',events.some(x=>x?.type==='editor_submitted'&&x?.status==='初稿提出済み')],['revision_submitted','修正稿提出',events.some(x=>x?.type==='editor_submitted'&&x?.status==='修正稿提出済み')],['actual_delivery','納品',!!j?.completedDeliveryDate||events.some(x=>x?.type==='editor_delivery_completed')]];return`<div class="card" style="margin:8px 0;background:var(--card2)"><div style="font-size:11px;font-weight:800">編集者の提出・納品記録</div><div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px">${defs.map(([key,label,hasEvent])=>{const x=saved.find(v=>v?.key===key),done=!!x||hasEvent;return`<span class="badge ${done?'bg':'ba'}">${done?'✓':'未'} ${label}</span>`}).join('')}</div><div style="font-size:10px;color:var(--t3);margin-top:6px">初稿・修正稿と、先方OK後の納品日は担当編集者が記録します。納品日が未記録の案件には報酬が発生しません。ディレクターまたはオーナーはD確認・クライアント提出・修正指示を記録します。</div></div>`;}
-const VIDEO_PROGRESS_STEPS=[['editor_work','編集者の作業'],['director_review','D確認'],['client_submission','クライアントへ提出'],['client_review','クライアント確認'],['delivered','納品']];
+function _editorMilestoneSummary(j){const saved=Array.isArray(j?.progressMilestones)?j.progressMilestones:[],events=Array.isArray(j?.progressEvents)?j.progressEvents:[],defs=[['initial_submitted','初稿提出',events.some(x=>x?.type==='editor_submitted'&&x?.status==='初稿提出済み')],['revision_submitted','修正稿提出',events.some(x=>x?.type==='editor_submitted'&&x?.status==='修正稿提出済み')],['actual_delivery','完了',!!j?.completedDeliveryDate||events.some(x=>['client_approved_completed','editor_delivery_completed'].includes(x?.type))]];return`<div class="card" style="margin:8px 0;background:var(--card2)"><div style="font-size:11px;font-weight:800">案件の提出・完了記録</div><div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px">${defs.map(([key,label,hasEvent])=>{const x=saved.find(v=>v?.key===key),done=!!x||hasEvent;return`<span class="badge ${done?'bg':'ba'}">${done?'✓':'未'} ${label}</span>`}).join('')}</div><div style="font-size:10px;color:var(--t3);margin-top:6px">担当編集者は編集開始・初稿提出・修正稿提出を記録します。ディレクターまたはオーナーは修正指示・D確認OK・先方確認中・クライアントOK後の完了を記録します。</div></div>`;}
+const VIDEO_PROGRESS_STEPS=[['editor_work','編集者の作業'],['director_review','D確認'],['client_submission','クライアントへ提出'],['client_review','先方確認'],['delivered','完了']];
 function _videoProgressStepState(job,key){
   const status=String(job?.status||''),workflow=_videoWorkflow(job),stage=workflow.stage,round=Math.max(1,Number(workflow.round)||1),order=['editing','director_review','client_submission','client_review','delivered'],current=order.indexOf(stage),target=order.indexOf(key==='editor_work'?'editing':key),isRevision=round>1||['修正中','修正稿提出済み'].includes(status)||(Array.isArray(job?.progressEvents)&&job.progressEvents.some(x=>x?.type==='editor_submitted'&&x?.status==='修正稿提出済み'));
   if(status==='キャンセル')return{state:'cancelled',label:'中止'};
@@ -6457,10 +6472,10 @@ function _videoProgressStepState(job,key){
     return{state:'done',label:isRevision?'修正稿を提出済み':'初稿を提出済み'};
   }
   if(target<current)return{state:'done',label:key==='director_review'?'D確認OK':key==='client_submission'?'提出済み':key==='client_review'?'先方OK':'実納品完了'};
-  if(target===current)return key==='delivered'?{state:'done',label:'納品完了'}:{state:'active',label:key==='director_review'?'確認待ち':key==='client_submission'?'先方へ提出する':'返事待ち'};
+  if(target===current)return key==='delivered'?{state:'done',label:'完了'}:{state:'active',label:key==='director_review'?'確認待ち':key==='client_submission'?'先方へ提出する':'先方確認中'};
   return{state:'waiting',label:key==='director_review'?(isRevision?'修正稿提出後':'初稿提出後'):key==='client_submission'?'D確認後':key==='client_review'?'クライアント提出後':'先方OK後'};
 }
-function _videoProgressNextAction(job){const workflow=_videoWorkflow(job),round=Math.max(1,Number(workflow.round)||1);return workflow.stage==='editing'?(round>1?'編集者が修正稿を提出する':'編集者が初稿を提出する'):workflow.stage==='director_review'?'ディレクターが内容を確認する':workflow.stage==='client_submission'?'ディレクターがクライアントへ提出する':workflow.stage==='client_review'?'クライアントの返事待ち（OKなら担当編集者が納品日を記録／修正なら編集者へ戻す）':'対応完了';}
+function _videoProgressNextAction(job){const workflow=_videoWorkflow(job),round=Math.max(1,Number(workflow.round)||1);return workflow.stage==='editing'?(round>1?'編集者が修正稿を提出する':'編集者が初稿を提出する'):workflow.stage==='director_review'?'ディレクターが内容を確認する':workflow.stage==='client_submission'?'ディレクターがクライアントへ提出する':workflow.stage==='client_review'?'クライアントの返事待ち（OKならDが完了／修正なら編集者へ戻す）':'対応完了';}
 function _videoProgressRows(items){
   return items.flatMap(parent=>{
     const base={_parent:parent,clientDisplay:parent.clientDisplay,assignee:parent.assignee};
@@ -6469,7 +6484,7 @@ function _videoProgressRows(items){
       :[{...base,...parent,_parent:parent}];
   });
 }
-function _videoProgressStatusSummary(rows){const counts=new Map();(rows||[]).forEach(row=>{const label=_videoCurrentProgressLabel(row);counts.set(label,(counts.get(label)||0)+1)});const order=['修正中','mono.create FB中','先方確認中','D確認待ち','先方へ提出中','編集作業中','納品完了'];return[...counts.entries()].sort((a,b)=>{const ai=order.indexOf(a[0]),bi=order.indexOf(b[0]);return(ai<0?999:ai)-(bi<0?999:bi)||b[1]-a[1]}).slice(0,3).map(([label,count])=>`${label} ${count}件`).join(' / ');}
+function _videoProgressStatusSummary(rows){const counts=new Map();(rows||[]).forEach(row=>{const label=_videoCurrentProgressLabel(row);counts.set(label,(counts.get(label)||0)+1)});const order=['修正中','D確認待ち','先方へ提出中','先方確認中','編集作業中','mono.create FB中','納品完了'];return[...counts.entries()].sort((a,b)=>{const ai=order.indexOf(a[0]),bi=order.indexOf(b[0]);return(ai<0?999:ai)-(bi<0?999:bi)||b[1]-a[1]}).slice(0,3).map(([label,count])=>`${label} ${count}件`).join(' / ');}
 function _videoProgressBoard(items){
   const rows=_videoProgressRows(items),completed=rows.filter(x=>['完了','キャンセル'].includes(x.status)),active=rows.filter(x=>!['完了','キャンセル'].includes(x.status)),isCompleted=VIDEO_PROGRESS_SCOPE==='completed';
   const tabs=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px" role="tablist" aria-label="編集進行ボードの表示範囲"><button class="btn btn-sm ${isCompleted?'btn-g':'btn-p'}" onclick="setVideoProgressScope('active')" role="tab" aria-selected="${!isCompleted}">進行中 ${active.length}件</button><button class="btn btn-sm ${isCompleted?'btn-p':'btn-g'}" onclick="setVideoProgressScope('completed')" role="tab" aria-selected="${isCompleted}">完了 ${completed.length}件</button></div>`;
@@ -6569,7 +6584,7 @@ function openPortalJobModal(portalUid,id){
 <div class="frow"><div class="fg"><div class="fl">編集者 初稿</div><input id="vp-editor-draft" type="date" value="${esc(j.editorDraftDate||'')}" ${canEdit&&draftSetter==='creator'?'':'disabled'}><div style="font-size:10px;color:var(--t3);margin-top:3px">${draftSetter==='creator'?'ここで案件追加者が設定します。':'担当編集者の画面で設定します。'}</div></div><div class="fg"><div class="fl">クライアント提出 初稿</div><input id="vp-client-draft" type="date" value="${esc(j.clientDraftDate||'')}" ${canEdit?'':'disabled'}></div></div>
 <div class="frow"><div class="fg"><div class="fl">サムネイル納品日</div><input id="vp-thumbnail" type="date" value="${esc(j.thumbnailDate||'')}" ${canEdit?'':'disabled'}></div><div class="fg"></div></div>
 	<div class="frow"><div class="fg"><div class="fl">納期（予定・任意）</div><input id="vp-deadline" type="date" value="${esc(deliveryDate)}" ${canEdit?'':'disabled'}></div><div class="fg"><div class="fl">納品日</div><input type="date" value="${esc(completedDeliveryDate)}" disabled aria-label="担当編集者が記録する納品日"><div style="font-size:10px;color:var(--t3);margin-top:3px">先方OK後に、担当編集者が記録します。未記録の案件には報酬が発生しません。</div></div></div>
-<div class="fg"><div class="fl">ステータス</div><select id="vp-status" ${canEdit?'':'disabled'}>${bizStatOpts(portalBiz,j.status)}</select></div>
+<div class="fg"><div class="fl">ステータス</div><input id="vp-status" value="${esc(bizStatusLabel(portalBiz,j.status))}" data-status="${esc(j.status)}" readonly aria-readonly="true"><div class="fhint">進捗は下の「進捗共有」の操作から更新します。</div></div>
 	<div class="fg"><div class="fl">指示・確認メモ</div><textarea id="vp-instructions" ${canEdit?'':'disabled'}>${esc(j.instructions||'')}</textarea></div>
 	${canEdit?_videoAttachmentEditorHtml(j.attachments||[],"addVideoAttachmentRow(document.getElementById('vp-attachment-list'))",'vp-attachment-list'):`<div class="video-attachment-editor"><div class="video-attachment-heading"><div><b>素材・資料</b><span>閲覧のみ</span></div></div>${_videoAttachmentLinksHtml(_videoCaseMaterials(j.attachments,j))||'<div class="video-attachment-hint">添付された素材・資料はありません。</div>'}</div>`}
 	<div class="fg"><div class="fl">差戻し理由</div><textarea id="vp-correction" ${canEdit?'':'disabled'}>${esc(j.correctionReason||'')}</textarea></div>
@@ -6581,8 +6596,8 @@ function openPortalJobModal(portalUid,id){
 async function savePortalJobAdmin(portalUid,id){
   if(!_videoCanEdit())return toast('権限がありません','err');
   const j=(PORTAL_JOBS||[]).find(x=>x._portalUid===portalUid&&x.id===id);if(!j)return;const external=_portalIsExternal(portalUid),financeRecord=_ownerFinanceForPortalJob(j);
-  const requestedStatus=document.getElementById('vp-status').value;
-  if(requestedStatus!==j.status&&EDITOR_OWNED_VIDEO_STATUSES.has(requestedStatus))return toast('この進捗は担当編集者本人が編集者ポータルから更新してください','warn');
+  const statusField=document.getElementById('vp-status'),requestedStatus=String(statusField?.dataset.status||j.status);
+  if(String(statusField?.value||'')!==bizStatusLabel(_portalVideoBiz(j),j.status)||requestedStatus!==j.status)return toast('進捗は「進捗共有」の操作から更新してください','warn');
   const at=Date.now(),deliveryDate=document.getElementById('vp-deadline').value,editorDraftDateSetter=document.getElementById('vp-editor-draft-setter')?.value||'editor',schedule={sharedDate:document.getElementById('vp-shared').value,editorDraftDate:document.getElementById('vp-editor-draft').value,clientDraftDate:document.getElementById('vp-client-draft').value,thumbnailDate:document.getElementById('vp-thumbnail').value,deliveryDate};
   if(editorDraftDateSetter==='creator'&&!schedule.editorDraftDate)return toast('案件追加者が設定する場合は、編集者初稿日を入力してください','warn');
   const scheduleError=_jobScheduleError(schedule);if(scheduleError)return toast(scheduleError,'warn');
@@ -6622,10 +6637,11 @@ function _legacyPortalJobId(parentId,subId){
 function _legacyPortalStatus(status){
   const value=String(status||'');
   if(['完了','キャンセル'].includes(value))return'';
-  if(['案件掲載中','募集中','編集者決定','受注済み','進行中','初稿提出済み','修正稿提出済み','D確認OK','初稿完成','確認待ち','修正中'].includes(value))return value;
+  if(value==='確認待ち')return'先方確認中';
+  if(['編集者決定','受注済み','未着手'].includes(value))return'アサイン済み';
+  if(['案件掲載中','募集中','アサイン済み','進行中','編集者進行中','初稿提出済み','修正稿提出済み','D確認OK','先方確認中','初稿完成','修正中'].includes(value))return value;
   if(value==='FB待ち')return'初稿提出済み';
-  if(['未着手','編集者進行中'].includes(value))return'進行中';
-  return'受注済み';
+  return'アサイン済み';
 }
 function _legacyPortalAccessForWorker(workerId){
   const wid=String(workerId||'');if(!wid||wid===SELF_WID)return null;
@@ -6971,7 +6987,7 @@ function _guideRoleLabel(){
   return labels.join(' / ')||'承認済みメンバー';
 }
 const GUIDE_PAGE_GROUPS=[
-  {label:'動画編集事業',ids:['editorportal','videoedit','videohaken','videoclients','workers','videoschedules','videomanuals','videoinvoices','videosuggestions']},
+  {label:'動画編集事業',ids:['editorportal','videoedit','videohaken','videoclients','workers','videoschedules','videomanuals','videoinvoices','directmessages','videosuggestions']},
   {label:'ホームページ事業',ids:['hpprojects','hpfee']},
   {label:'営業・顧客',ids:['salesleads','pipeline','inquiries','crm']},
   {label:'経営',ids:['bizboard']},
@@ -6980,13 +6996,14 @@ const GUIDE_PAGE_GROUPS=[
 ];
 const GUIDE_PAGE_DEFS={
   editorportal:{purpose:'編集者が、自分の案件を受け、初稿・修正稿の提出、予定の登録、請求書の作成をする画面です。',steps:['左メニューの「編集者本人ポータル」を開きます。','「編集者本人ポータルを開く」を押して、本人用画面を開きます。','「案件を探す」で募集案件を受け、「担当案件」で初稿または修正稿を提出します。','予定、マニュアル、匿名目安箱、請求書、登録情報もこの画面から開けます。'],access:'オーナー、動画編集ディレクター。動画編集者はログイン後に本人用画面を開けます。'},
-  videoedit:{purpose:'mono.createがクライアントから受けた編集代行案件を、募集から納品まで管理する画面です。',steps:['「＋ 編集代行案件」で親案件と子案件を登録し、必要に応じて編集者の募集を開始します。','編集者が「この案件を受ける」を押したら、担当者・編集者初稿・クライアント初稿・納期（予定）を確認します。','親案件の「サブ案件」を開き、各動画の担当者・初稿日・期限・状況を確認します。','編集者は初稿・修正稿を提出します。ディレクターまたはオーナーがD確認・先方提出・修正指示を更新します。先方OK後は担当編集者が納品日と証跡URLを記録します。納品日が未記録の案件には報酬が発生しません。'],access:'オーナー、動画編集ディレクター、営業など、アクセスを許可された社内メンバー。'},
-  videohaken:{purpose:'編集者が派遣先から直接受けた案件を登録し、進み具合を管理する画面です。',steps:['編集者は編集者本人ポータルの「担当案件」から、「9月分」などの親案件と各動画の子案件を登録します。','オーナー・ディレクターは、各子案件の担当者・編集者初稿・クライアント初稿・納期（予定）・進み具合を確認します。','親案件の「サブ案件」を開き、各動画の担当者・初稿日・期限・状況を確認します。','編集者は初稿・修正稿を提出します。ディレクターまたはオーナーがD確認・先方提出・修正指示を更新します。先方OK後は担当編集者が納品日と証跡URLを記録します。納品日が未記録の案件には報酬が発生しません。'],access:'オーナー、動画編集ディレクター、営業など、アクセスを許可された社内メンバー。'},
+  videoedit:{purpose:'mono.createがクライアントから受けた編集代行案件を、募集から完了まで管理する画面です。',steps:['「＋ 編集代行案件」で親案件と子案件を登録し、必要に応じて編集者の募集を開始します。','編集者が「この案件を受ける」を押したら、担当者・編集者初稿・クライアント初稿・納期（予定）を確認します。','親案件の「サブ案件」を開き、各動画の担当者・初稿日・期限・状況を確認します。','編集者は編集開始・初稿提出・修正稿提出を記録します。ディレクターまたはオーナーは修正指示・D確認OK・先方確認中を更新し、クライアントOK後に完了へ進めます。完了日が未記録の案件には報酬が発生しません。'],access:'オーナー、動画編集ディレクター、営業など、アクセスを許可された社内メンバー。'},
+  videohaken:{purpose:'編集者が派遣先から直接受けた案件を登録し、進み具合を管理する画面です。',steps:['編集者は編集者本人ポータルの「担当案件」から、「9月分」などの親案件と各動画の子案件を登録します。','オーナー・ディレクターは、各子案件の担当者・編集者初稿・クライアント初稿・納期（予定）・進み具合を確認します。','親案件の「サブ案件」を開き、各動画の担当者・初稿日・期限・状況を確認します。','編集者は編集開始・初稿提出・修正稿提出を記録します。ディレクターまたはオーナーは修正指示・D確認OK・先方確認中を更新し、クライアントOK後に完了へ進めます。完了日が未記録の案件には報酬が発生しません。'],access:'オーナー、動画編集ディレクター、営業など、アクセスを許可された社内メンバー。'},
   videoclients:{purpose:'既存クライアントと、そのクライアントから依頼されるアカウントを分けて管理します。',steps:['既存クライアントを選び、必要なアカウント名を追加します。','案件を担当する編集者へ、必要なクライアント・アカウントだけ共有します。','名称や契約情報が変わったときだけ制作台帳を更新します。'],access:'オーナー、動画編集ディレクター'},
   workers:{purpose:'編集者の採用状況、スキル、担当案件、契約区分を確認するページです。',steps:['編集者名を開き、採用状況・スキル・最低依頼料を確認します。','ログインを許可する編集者には、担当ディレクターと契約区分を設定します。','担当中案件を確認し、割り当てや進捗に漏れがないか確認します。'],access:'オーナー、動画編集ディレクター'},
   videoschedules:{purpose:'編集者が登録した今週の1週間を、カレンダーで確認するページです。',steps:['月曜日に届く通知から開き、今週の編集可能日を入力します。','同じ予定は一括登録し、毎週同じ場合はルーティン保存を使います。','案件を割り当てる前に、曜日・時間・受託可能本数を確認します。'],access:'オーナー、動画編集ディレクター。入力は編集者本人'},
   videomanuals:{purpose:'共通手順やクライアント別の編集ルールを、対象編集者へ共有します。',steps:['共通・クライアント別・アカウント別から対象を選びます。','タイトル、説明、マニュアルURL、共有相手を登録します。','内容を更新したらリンクを開いて確認し、対象者へ更新を知らせます。'],access:'オーナー、動画編集ディレクター'},
   videoinvoices:{purpose:'クライアントへ出す請求書と、編集者から届く請求書を分けて確認します。',steps:['完了案件と金額を確認し、クライアント向け請求書を作成します。','編集者の請求書は原本・請求者名・明細・登録番号を確認します。','確認後に承認、支払処理中、支払済みの順で更新します。'],access:'オーナー。外部編集者分は担当ディレクターも確認可能'},
+  directmessages:{purpose:'編集者・動画編集ディレクターとの社内DMを、案件や請求の金額を表示せずに確認・送信する画面です。',steps:['左メニューの「DM」を開きます。','左側で編集者またはディレクターを選び、過去のやり取りを確認します。','本文を入力して送信し、未読の連絡は一覧と左メニューの件数表示で確認します。'],access:'オーナーのみ'},
   videosuggestions:{purpose:'編集者から届いた匿名の意見を、投稿者を特定せずに確認します。',steps:['未確認の投稿を開き、内容だけを確認します。','対応が必要な内容は社内で処理し、個人の特定を試みません。','必要な場合は返信コードを使い、匿名のまま回答します。'],access:'オーナーのみ'},
   hpprojects:{purpose:'ホームページ制作案件の受注から公開・検収・納品までを管理します。',steps:['クライアントと制作範囲、担当者、各期限を登録します。','制作状況に合わせて工程と確認待ち項目を更新します。','公開URL・検収・納品証跡を確認して完了へ移します。'],access:'オーナー、Webデザイナー、営業'},
   hpfee:{purpose:'公開後のホームページ月額維持費と入金状況を月ごとに管理します。',steps:['クライアント、開始月、月額、支払条件を登録します。','対象月の請求・入金状況を確認します。','入金後は支払済みに更新し、未入金だけを連絡対象にします。'],access:'オーナー、Webデザイナー'},
@@ -7012,6 +7029,7 @@ const GUIDE_PAGE_CHECKS={
   videoschedules:'今週の月曜日から日曜日までに、編集可能日・時間・本数が表示される。',
   videomanuals:'登録件数が増え、対象者が最新版のマニュアルを開いて読了できる。',
   videoinvoices:'プレビューの明細・金額・請求先が正しく、対応後の状態が「提出済み」「承認済み」「支払済み」のいずれかで表示される。',
+  directmessages:'承認済みの編集者・ディレクターだけが選択でき、未読件数・履歴・送信欄が表示される。',
   videosuggestions:'投稿者の氏名・メールなしで内容が届き、必要な場合は匿名のまま返信済みになる。',
   hpprojects:'最新工程・各期限・公開URL・検収証跡が揃い、納品後に完了と表示される。',
   hpfee:'対象月の請求額と入金状況が表示され、入金後は支払済みになる。',
@@ -7037,6 +7055,7 @@ const GUIDE_PAGE_TIPS={
   videoschedules:'入力対象は今週の1週間だけです。同じ予定は一括登録かルーティン登録を使います。',
   videomanuals:'パスワード本体は保存せず、管理サービスのリンクだけを共有します。',
   videoinvoices:'クライアント向け請求は単価が入ったサブタスクだけを合計し、親案件の金額は足しません。',
+  directmessages:'案件・クライアント・請求の金額はDMへ表示しません。送信はクラウド接続中だけ行われ、停止中は再読み込みまで保存しません。',
   videosuggestions:'匿名性を守るため、文面から投稿者を特定しようとしません。',
   hpprojects:'確認待ちの項目を完了扱いにせず、公開・検収・納品の証跡を残します。',
   hpfee:'入金を確認する前に「支払済み」にしません。',
@@ -7060,6 +7079,135 @@ function _guidePageCard(id){
 }
 function _guidePageGroups(){
   return GUIDE_PAGE_GROUPS.map(g=>{const ids=g.ids.filter(id=>isViewAllowed(id)&&GUIDE_PAGE_DEFS[id]);if(!ids.length)return'';return`<section class="guide-page-group"><div class="guide-page-group-title">${esc(g.label)}</div><div class="guide-page-grid">${ids.map(_guidePageCard).join('')}</div></section>`;}).join('');
+}
+// === オーナー用社内DM ===
+// direct-messages.js が参加者と読み書きの権限を持つ唯一のデータ層です。
+// この画面では案件・請求・金額を結合しないため、DM画面から金額が見えることはありません。
+const OWNER_DM_STATE={peers:[],threads:[],messages:[],activePeerUid:'',activeThreadId:'',startedFor:'',threadUnsub:null,messageUnsub:null,loading:false,sending:false,error:'',draft:''};
+let _ownerDmRenderQueued=false;
+function ownerDmIsDemo(){try{return _rolePreviewActive()||new URLSearchParams(location.search).has('demo');}catch(_){return _rolePreviewActive();}}
+function ownerDmApi(){return window.EditflowDM||null;}
+function ownerDmMs(value){return value&&typeof value.toMillis==='function'?value.toMillis():Number(value||0);}
+function ownerDmUnreadCount(){return OWNER_DM_STATE.threads.filter(thread=>thread&&thread.unread).length;}
+function ownerDmReadBlocked(){return !!(_fbQuotaReadCircuitOpen||window.EditflowFirestoreQuota?.isOpen?.());}
+function ownerDmRenderSoon(){
+  if(_ownerDmRenderQueued)return;
+  _ownerDmRenderQueued=true;
+  const update=()=>{_ownerDmRenderQueued=false;if(V==='directmessages')render();else renderNav();};
+  if(typeof requestAnimationFrame==='function')requestAnimationFrame(update);else setTimeout(update,0);
+}
+function ownerDmStop(reset=false){
+  try{OWNER_DM_STATE.threadUnsub?.()}catch(_){}
+  try{OWNER_DM_STATE.messageUnsub?.()}catch(_){}
+  OWNER_DM_STATE.threadUnsub=null;OWNER_DM_STATE.messageUnsub=null;OWNER_DM_STATE.startedFor='';
+  if(reset){OWNER_DM_STATE.peers=[];OWNER_DM_STATE.threads=[];OWNER_DM_STATE.messages=[];OWNER_DM_STATE.activePeerUid='';OWNER_DM_STATE.activeThreadId='';OWNER_DM_STATE.loading=false;OWNER_DM_STATE.sending=false;OWNER_DM_STATE.error='';OWNER_DM_STATE.draft='';}
+}
+function ownerDmPeer(peerUid){return OWNER_DM_STATE.peers.find(peer=>String(peer.uid)===String(peerUid))||null;}
+function ownerDmThread(peerUid){return OWNER_DM_STATE.threads.find(thread=>String(thread.counterpartUid)===String(peerUid))||null;}
+function ownerDmActivePeer(){return ownerDmPeer(OWNER_DM_STATE.activePeerUid)||OWNER_DM_STATE.threads.find(thread=>String(thread.counterpartUid)===String(OWNER_DM_STATE.activePeerUid))||null;}
+function ownerDmWriteBlocked(){
+  if(_fbQuotaReadCircuitOpen||window.EditflowFirestoreQuota?.isOpen?.()){toast('クラウド接続停止中です。再読み込み後に送信してください','warn');return true;}
+  if(ownerDmIsDemo()){toast('デモ・確認モードではDMを送信できません','warn');return true;}
+  return false;
+}
+function ownerDmStart(){
+  const api=ownerDmApi();
+  if(!api||V!=='directmessages'||!_isOwner()||!FB_USER||ownerDmIsDemo()||ownerDmReadBlocked())return;
+  if(OWNER_DM_STATE.startedFor===FB_USER.uid&&OWNER_DM_STATE.threadUnsub)return;
+  ownerDmStop(true);
+  OWNER_DM_STATE.startedFor=FB_USER.uid;OWNER_DM_STATE.loading=true;
+  Promise.resolve(api.loadPeers()).then(peers=>{
+    if(OWNER_DM_STATE.startedFor!==FB_USER?.uid)return;
+    OWNER_DM_STATE.peers=Array.isArray(peers)?peers:[];OWNER_DM_STATE.loading=false;OWNER_DM_STATE.error='';ownerDmRenderSoon();
+  }).catch(error=>{
+    if(OWNER_DM_STATE.startedFor!==FB_USER?.uid)return;
+    OWNER_DM_STATE.loading=false;OWNER_DM_STATE.error='編集者一覧を読み込めませんでした';
+    if(!window.EditflowFirestoreQuota?.handle?.(error,'owner direct-message peers'))console.warn('owner dm peers',error);
+    ownerDmRenderSoon();
+  });
+  OWNER_DM_STATE.threadUnsub=api.watch((threads,error)=>{
+    if(OWNER_DM_STATE.startedFor!==FB_USER?.uid)return;
+    if(error){OWNER_DM_STATE.error='DM履歴を読み込めませんでした';console.warn('owner dm threads',error);ownerDmRenderSoon();return;}
+    OWNER_DM_STATE.threads=Array.isArray(threads)?threads:[];OWNER_DM_STATE.error='';
+    const active=ownerDmThread(OWNER_DM_STATE.activePeerUid);
+    if(active&&String(active.id)!==String(OWNER_DM_STATE.activeThreadId))ownerDmWatchMessages(active.id);
+    if(active)ownerDmMarkRead(active);
+    ownerDmRenderSoon();
+  });
+}
+function ownerDmWatchMessages(threadId){
+  const api=ownerDmApi(),id=String(threadId||'');if(!api||V!=='directmessages'||!id||ownerDmIsDemo()||ownerDmReadBlocked())return;
+  if(String(OWNER_DM_STATE.activeThreadId)===id&&OWNER_DM_STATE.messageUnsub)return;
+  try{OWNER_DM_STATE.messageUnsub?.()}catch(_){}
+  OWNER_DM_STATE.activeThreadId=id;OWNER_DM_STATE.messages=[];
+  OWNER_DM_STATE.messageUnsub=api.watchMessages(id,(messages,error)=>{
+    if(String(OWNER_DM_STATE.activeThreadId)!==id)return;
+    if(error){OWNER_DM_STATE.error='メッセージ履歴を読み込めませんでした';console.warn('owner dm messages',error);ownerDmRenderSoon();return;}
+    OWNER_DM_STATE.messages=Array.isArray(messages)?messages:[];OWNER_DM_STATE.error='';
+    const active=ownerDmThread(OWNER_DM_STATE.activePeerUid);if(active)ownerDmMarkRead(active);
+    ownerDmRenderSoon();
+  });
+}
+function ownerDmMarkRead(thread){
+  const api=ownerDmApi();if(!api||!thread?.id||ownerDmWriteBlocked()||thread.lastSenderUid===FB_USER?.uid)return;
+  api.markRead(thread.id,thread).catch(error=>{if(!window.EditflowFirestoreQuota?.handle?.(error,'owner direct-message read receipt'))console.warn('owner dm read receipt',error)});
+}
+function ownerDmOpenPeer(peerUid){
+  if(V!=='directmessages'||!_isOwner()||ownerDmIsDemo()||ownerDmReadBlocked())return;
+  const peer=ownerDmPeer(peerUid);if(!peer)return toast('この編集者はDMを利用できません','warn');
+  OWNER_DM_STATE.activePeerUid=peer.uid;OWNER_DM_STATE.error='';
+  const thread=ownerDmThread(peer.uid);
+  if(thread){ownerDmWatchMessages(thread.id);ownerDmMarkRead(thread);}else{try{OWNER_DM_STATE.messageUnsub?.()}catch(_){}OWNER_DM_STATE.messageUnsub=null;OWNER_DM_STATE.activeThreadId='';OWNER_DM_STATE.messages=[];}
+  ownerDmRenderSoon();
+}
+function ownerDmOpenPeerFromEvent(event){
+  const peerUid=event?.currentTarget?.dataset?.ownerDmPeer;
+  if(peerUid)ownerDmOpenPeer(peerUid);
+}
+function ownerDmSetDraft(value){OWNER_DM_STATE.draft=String(value||'').slice(0,2000);}
+async function ownerDmSend(){
+  const api=ownerDmApi(),peer=ownerDmActivePeer(),body=String(OWNER_DM_STATE.draft||'').trim();
+  if(ownerDmWriteBlocked())return;
+  if(!api||!peer)return toast('送信先の編集者を選択してください','warn');
+  if(!body)return toast('本文を入力してください','warn');
+  if(body.length>2000)return toast('DMは2,000文字以内で入力してください','warn');
+  OWNER_DM_STATE.sending=true;ownerDmRenderSoon();
+  try{
+    const result=await api.send(peer.uid,body);
+    OWNER_DM_STATE.draft='';OWNER_DM_STATE.error='';
+    if(result?.threadId)ownerDmWatchMessages(result.threadId);
+    if(result?.id)OWNER_DM_STATE.messages=[...OWNER_DM_STATE.messages,{id:result.id,senderUid:FB_USER?.uid||'',senderName:OWNER_NAME,body,createdAt:Date.now()}];
+    toast('DMを送信しました');
+  }catch(error){
+    OWNER_DM_STATE.error='DMを送信できませんでした';
+    if(window.EditflowFirestoreQuota?.handle?.(error,'owner direct-message send'))return;
+    console.warn('owner dm send',error);toast('DMを送信できませんでした。通信状態を確認して再度お試しください','err');
+  }finally{OWNER_DM_STATE.sending=false;ownerDmRenderSoon();}
+}
+function ownerDmTime(value){const ms=ownerDmMs(value);if(!ms)return'送信直後';try{return new Intl.DateTimeFormat('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(ms));}catch(_){return'';}}
+function ownerDmEnsureStyles(){
+  if(document.getElementById('owner-dm-style'))return;
+  const style=document.createElement('style');style.id='owner-dm-style';style.textContent=`
+    .owner-dm-nav-badge{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;margin-left:auto;padding:0 5px;border-radius:99px;background:#dc2626;color:#fff;font-size:9px;font-weight:900;line-height:1}
+    .owner-dm-shell{display:grid;grid-template-columns:minmax(260px,330px) minmax(0,1fr);min-height:640px;overflow:hidden;border:1px solid var(--border);border-radius:14px;background:#fff;box-shadow:var(--shadow)}
+    .owner-dm-inbox{min-width:0;border-right:1px solid var(--border);background:#fff}.owner-dm-head{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:70px;padding:13px 15px;border-bottom:1px solid var(--border)}.owner-dm-head h1,.owner-dm-head h2{margin:0;font-size:18px}.owner-dm-head span{display:block;margin-top:3px;color:var(--t2);font-size:12px}.owner-dm-list{display:grid;max-height:566px;overflow-y:auto}.owner-dm-label{padding:14px 14px 6px;color:var(--t2);font-size:12px;font-weight:850}.owner-dm-person{position:relative;display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:9px;width:100%;min-height:68px;padding:9px 12px;border:0;border-bottom:1px solid #f1f5f9;background:#fff;color:var(--text);text-align:left}.owner-dm-person:hover,.owner-dm-person:focus-visible,.owner-dm-person.active{background:#fff8db}.owner-dm-avatar{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:11px;background:linear-gradient(145deg,#d97706,#b45309);color:#fff;font-weight:900}.owner-dm-person-copy{min-width:0}.owner-dm-person-copy b,.owner-dm-person-copy span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.owner-dm-person-copy b{font-size:14px}.owner-dm-person-copy span{margin-top:2px;color:var(--t2);font-size:12px}.owner-dm-person-meta{display:grid;justify-items:end;gap:5px;color:var(--t3);font-size:10px}.owner-dm-unread-dot{width:9px;height:9px;border-radius:50%;background:#dc2626}.owner-dm-chat{display:flex;min-width:0;min-height:640px;flex-direction:column;background:#fff}.owner-dm-chat-empty{display:grid;flex:1;place-items:center;padding:28px;color:var(--t2);text-align:center;line-height:1.7}.owner-dm-messages{display:flex;flex:1;min-height:0;max-height:480px;flex-direction:column;gap:4px;overflow-y:auto;padding:14px}.owner-dm-message{display:grid;grid-template-columns:38px minmax(0,1fr);gap:9px;padding:8px;border-radius:9px}.owner-dm-message.mine{background:#fffbeb}.owner-dm-message .owner-dm-avatar{width:38px;height:38px;border-radius:9px;font-size:12px}.owner-dm-message-head{display:flex;align-items:baseline;gap:7px}.owner-dm-message-head b{font-size:14px}.owner-dm-message-head time{color:var(--t3);font-size:10px}.owner-dm-message-body{margin-top:2px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.65}.owner-dm-compose{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:auto;padding:12px 14px;border-top:1px solid var(--border);background:#fff}.owner-dm-compose textarea{width:100%;min-height:54px;max-height:160px;resize:vertical;border:1px solid #cbd5e1;border-radius:10px;padding:10px 12px}.owner-dm-compose .btn{min-width:92px}.owner-dm-note{margin:0 14px 12px;padding:9px 10px;border-radius:8px;background:#f8fafc;color:#475569;font-size:12px;line-height:1.6}.owner-dm-error{margin:10px 14px 0;padding:9px 10px;border-radius:8px;background:#fff1f2;color:#9f1239;font-size:12px}
+    @media(max-width:760px){.owner-dm-shell{display:block;min-height:calc(100dvh - 145px)}.owner-dm-inbox{border-right:0}.owner-dm-chat{min-height:calc(100dvh - 145px)}.owner-dm-messages{max-height:none;min-height:45dvh}.owner-dm-compose{position:sticky;bottom:0;grid-template-columns:minmax(0,1fr) auto}.owner-dm-compose .btn{min-width:72px;padding-inline:10px}}
+  `;document.head.appendChild(style);
+}
+function rOwnerDirectMessages(){
+  ownerDmEnsureStyles();
+  if(!_isOwner())return _financialAccessDenied('DM');
+  if(ownerDmIsDemo()){const returnButton=_rolePreviewActive()?'<button class="btn btn-p" style="margin-top:14px" onclick="rolePreviewStop()">オーナー画面へ戻る</button>':'';return`<div class="guide-hero"><div class="guide-kicker">DIRECT MESSAGE</div><div class="guide-title">DM（確認モード）</div><div class="guide-lead">デモ・役職別確認中は実データのDMを読み書きしません。${_rolePreviewActive()?'オーナー画面に戻ってから開いてください。':'通常のオーナー画面でDMを開いてください。'}</div>${returnButton}</div>`;}
+  const api=ownerDmApi();
+  if(!api)return`<div class="empty"><div class="empty-title">DMを準備しています</div><div style="color:var(--t2);font-size:12px;margin-top:5px">読み込み後にもう一度開いてください。</div></div>`;
+  ownerDmStart();
+  const peers=[...OWNER_DM_STATE.peers].sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ja'));
+  const rows=peers.map(peer=>({peer,thread:ownerDmThread(peer.uid)})).sort((a,b)=>ownerDmMs(b.thread?.lastMessageAt||b.thread?.updatedAt)-ownerDmMs(a.thread?.lastMessageAt||a.thread?.updatedAt)||String(a.peer.name||'').localeCompare(String(b.peer.name||''),'ja'));
+  const active=ownerDmActivePeer(),activeThread=active?ownerDmThread(active.uid):null,unread=ownerDmUnreadCount();
+  const people=rows.length?rows.map(({peer,thread})=>`<button type="button" class="owner-dm-person ${String(OWNER_DM_STATE.activePeerUid)===String(peer.uid)?'active':''}" data-owner-dm-peer="${esc(String(peer.uid))}" onclick="ownerDmOpenPeerFromEvent(event)"><span class="owner-dm-avatar">${esc(String(peer.name||'編').slice(0,1))}</span><span class="owner-dm-person-copy"><b>${esc(peer.name||'編集者')}</b><span>${esc(thread?.lastMessagePreview||'新しいDMを開始')}</span></span><span class="owner-dm-person-meta">${thread?.unread?'<i class="owner-dm-unread-dot" aria-label="未読"></i>':''}<small>${thread?.lastMessageAt?esc(ownerDmTime(thread.lastMessageAt)):''}</small></span></button>`).join(''):`<div class="owner-dm-label">承認済みの編集者がまだいません。</div>`;
+  const messages=OWNER_DM_STATE.messages.length?OWNER_DM_STATE.messages.map(message=>{const mine=String(message.senderUid||'')===String(FB_USER?.uid||'');return`<article class="owner-dm-message ${mine?'mine':''}"><span class="owner-dm-avatar">${esc(String(mine?(APP_ACCESS?.name||OWNER_NAME):(active?.name||message.senderName||'編')).slice(0,1))}</span><div><div class="owner-dm-message-head"><b>${esc(mine?(APP_ACCESS?.name||OWNER_NAME):(message.senderName||active?.name||'編集者'))}</b><time>${esc(ownerDmTime(message.createdAt))}</time></div><div class="owner-dm-message-body">${esc(message.body||'')}</div></div></article>`;}).join(''):`<div class="owner-dm-chat-empty">まだメッセージはありません。<br>最初のDMを送るとここに履歴が表示されます。</div>`;
+  const chat=active?`<section class="owner-dm-chat" aria-label="${esc(active.name||'編集者')}とのDM"><header class="owner-dm-head"><div><h2>${esc(active.name||'編集者')}</h2><span>${active.roles?.includes?.('動画編集ディレクター')?'動画編集ディレクター':'動画編集者'}との社内DM</span></div></header>${OWNER_DM_STATE.error?`<div class="owner-dm-error">${esc(OWNER_DM_STATE.error)}</div>`:''}<div class="owner-dm-messages">${messages}</div><div class="owner-dm-note">案件・クライアント・請求の金額はこのDMには表示しません。未読は開いた時点で既読になります。</div><div class="owner-dm-compose"><textarea id="owner-dm-compose" maxlength="2000" placeholder="${esc(active.name||'編集者')}さんへメッセージを入力" oninput="ownerDmSetDraft(this.value)">${esc(OWNER_DM_STATE.draft)}</textarea><button type="button" class="btn btn-p" onclick="ownerDmSend()" ${OWNER_DM_STATE.sending?'disabled':''}>${OWNER_DM_STATE.sending?'送信中…':'送信'}</button></div></section>`:`<section class="owner-dm-chat"><div class="owner-dm-chat-empty"><div><b style="display:block;font-size:17px;color:var(--text);margin-bottom:5px">編集者を選択してください</b>左側から相手を選ぶと、履歴の確認とDM送信ができます。</div></div></section>`;
+  return`<div class="guide-hero" style="margin-bottom:14px"><div class="guide-kicker">DIRECT MESSAGE</div><div class="guide-title">DM</div><div class="guide-lead">編集者・ディレクターとの社内連絡です。未読 ${unread}件。案件の進捗は案件画面で管理し、DMには連絡内容だけを残します。</div></div><section class="owner-dm-shell"><aside class="owner-dm-inbox"><header class="owner-dm-head"><div><h2>編集者を選択</h2><span>${OWNER_DM_STATE.loading?'読み込み中…':`${rows.length}名`}</span></div></header>${OWNER_DM_STATE.error?`<div class="owner-dm-error">${esc(OWNER_DM_STATE.error)}</div>`:''}<div class="owner-dm-list"><div class="owner-dm-label">${unread?`未読DM ${unread}件`:'編集者・ディレクター'}</div>${people}</div></aside>${chat}</section>`;
 }
 function rEditorPortal(){
   const previewActive=_rolePreviewActive(),previewUid=previewActive?rolePreviewUid():'';
@@ -7096,7 +7244,7 @@ function rGuide(){
     <div class="guide-start-card"><span class="guide-start-mark">2</span><b>「*」が付いた項目を入力する</b><span>保存できないときは、未入力の必須項目とURL・日付の順序を確認します。</span></div>
     <div class="guide-start-card"><span class="guide-start-mark">3</span><b>保存完了は画面で確認する</b><span>完了メッセージと一覧の変更を確認します。画面を開いただけでは保存完了ではありません。</span></div>
   </div>
-  ${canVideo?`<div class="guide-section-title">動画案件の状態の見方</div><div class="guide-status-grid"><div class="guide-status editing"><b>編集者進行中</b><span>編集者が作業している状態。納期（予定）が明日の案件は赤、2日後の案件は黄で表示します。</span></div><div class="guide-status review"><b>確認待ち</b><span>初稿や修正稿の確認中。期限超過には入りません。</span></div><div class="guide-status review"><b>修正中</b><span>返却内容に対応している状態。期限超過には入りません。</span></div><div class="guide-status done"><b>完了</b><span>先方OK後に担当編集者が納品日と証跡URLを記録した状態。納品日が未記録の案件には報酬が発生しません。</span></div></div>`:''}
+  ${canVideo?`<div class="guide-section-title">動画案件の状態の見方</div><div class="guide-status-grid"><div class="guide-status editing"><b>編集者進行中</b><span>編集者が作業を開始した状態。納期（予定）が明日の案件は赤、2日後の案件は黄で表示します。</span></div><div class="guide-status review"><b>初稿・修正稿提出済み</b><span>編集者がリンク付きで稿を提出し、D確認を待っている状態です。</span></div><div class="guide-status review"><b>修正中</b><span>Dまたはクライアントからの修正指示に対応している状態。期限超過には入りません。</span></div><div class="guide-status review"><b>先方確認中</b><span>Dがクライアントへ提出し、確認結果を待っている状態です。</span></div><div class="guide-status done"><b>完了</b><span>クライアントOK後にDまたはオーナーが完了へ進めた状態です。完了日が未記録の案件には報酬が発生しません。</span></div></div>`:''}
   <div class="guide-section-title">動画編集案件の基本の流れ</div>
   <div class="guide-flow">
     <div class="guide-step"><div class="guide-step-no">STEP 1</div><b>案件を受ける</b><span>クライアントとアカウント、納期を確認します。</span></div>
@@ -13382,6 +13530,7 @@ function openJobModal(id,preStatus,preClientId){
   EID=id||null;
   const rawJob=id?S.jobs.find(j=>j.id===id):null,j=rawJob?_withOwnerJobFinance(rawJob):null;
   const ownerFinanceLocked=!!(j?._ownerFinance||rawJob?.ownerFinanceId);
+  const linkedPortalParent=_legacyPortalStatusLocked(rawJob);
   const jbiz=j?jobBiz(j):(BIZ_CFG[PBIZ]?PBIZ:'edit');
   const clients=S.clients.filter(c=>!c.deleted);
   const initialClientId=j?.clientId||preClientId||'';
@@ -13435,7 +13584,7 @@ function openJobModal(id,preStatus,preClientId){
 <input type="hidden" id="j-trial-val" value="${j?.isTrial?'1':'0'}">
 <div class="frow">
   <div class="fg"><div class="fl">ステータス</div>
-    <select id="j-stat">${bizStatOpts(jbiz,j?.status||preStatus||'')}</select>
+    <select id="j-stat" ${linkedPortalParent?'disabled':''}>${bizStatOpts(jbiz,j?.status||preStatus||'')}</select>${linkedPortalParent?'<div class="fhint">進捗はサブ案件詳細の進捗操作で更新します。</div>':''}
   </div>
   <div class="fg" id="jf-scope"><div class="fl" id="jl-scope">${bizCfgOf(jbiz).lbl.scope}</div>
     <select id="j-scope">${bizScopeOpts(jbiz,j?.scope||'')}</select>
@@ -13657,18 +13806,21 @@ function mkSubRow(s,ph,bk,originalIndex=-1,financeLocked=false){
   const _bk=bk||_curJobBiz();
   const _bc=bizCfgOf(_bk);
   const st=s.status||_bc.statuses[0];
+  const portalStatusLocked=_legacyPortalStatusLocked(s);
+  const portalProgressAction=portalStatusLocked?`openPortalJobModal(${JSON.stringify(String(s.portalUid))},${JSON.stringify(String(s.portalJobId))})`:'';
   const draftSetter=Object.keys(s||{}).length?_editorDraftDateSetter(s):'creator';
   const isNew=!Object.keys(s||{}).length,internal=s.workerId===SELF_WID,masterPrice=isNew?_ownerMasterClientUnitPrice(document.getElementById('j-cl')?.value||''):null,subPrice=s.unitPrice||(masterPrice===null?'':masterPrice);
   return`<div class="j-sub-row" data-sub-id="${esc(s.id||'')}" data-original-index="${Number.isInteger(originalIndex)?originalIndex:-1}" style="background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);padding:10px;margin-bottom:8px">
   <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
     <div class="chk${s.done?' done':''}" onclick="this.classList.toggle('done');updSubPrices()" style="flex-shrink:0"></div>
     <input class="j-sub-inp" value="${esc(s.title||'')}" placeholder="${ph||'サブタスク'}" style="flex:1" oninput="updSubPrices()">
+    ${portalStatusLocked?`<button type="button" class="btn btn-g btn-xs" onclick="${esc(portalProgressAction)}">進捗を開く</button>`:''}
     <button type="button" class="btn btn-g btn-xs" onclick="collapseJobSubEditor(this.closest('.j-sub-shell'))">閉じる</button>
     ${financeLocked?'':`<button type="button" class="btn btn-g btn-xs" onclick="removeJobSubEditor(this)">✕</button>`}
   </div>
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:5px">
     <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">ステータス</div>
-      <select class="j-sub-status" style="font-size:12px;padding:4px 6px">${bizStatOpts(_bk,st)}</select>
+      <select class="j-sub-status" style="font-size:12px;padding:4px 6px" ${portalStatusLocked?'disabled':''}>${bizStatOpts(_bk,st)}</select>${_legacyPortalStatusHint(s)}
     </div>
     <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">担当者</div>
       <select class="j-sub-worker" data-selected-worker-id="${esc(s.workerId||'')}" data-hydrated="0" style="font-size:12px;padding:4px 6px" onpointerdown="hydrateJobSubWorkerSelect(this)" onfocus="hydrateJobSubWorkerSelect(this)" onchange="updSubPaymentRecipients()">
@@ -13774,6 +13926,7 @@ function saveJob(){
   if(current?.ownerFinanceId&&!currentFinance){toast('金額台帳を確認できないため保存を中止しました。読み込み完了後にもう一度お試しください','warn');return;}
   const previousDirectorSettlementTargets=_directorSettlementTargetsForJob(_withOwnerJobFinance(current));
   const requestedStatus=document.getElementById('j-stat').value;
+  if(_legacyPortalStatusLocked(current)&&requestedStatus!==current.status){toast('進捗はサブ案件詳細の進捗操作で更新してください','warn');return;}
   if(current?.portalJobId&&requestedStatus!==current.status&&EDITOR_OWNED_VIDEO_STATUSES.has(requestedStatus)){toast('この進捗は担当編集者本人が編集者ポータルから更新してください','warn');return;}
   const oldSubs=current?.subtasks||[];
   const selWorkerIds=_jobModalWorkerIds();
@@ -13792,7 +13945,7 @@ function saveJob(){
   const parentEditorDraftDateSetter=document.getElementById('j-editor-draft-setter')?.value||_editorDraftDateSetter(current),parentEditorDraftDate=document.getElementById('j-editor-draft')?.value||null;
   const hasSubtasks=_isOwner()?subShells.length:oldSubs.length;
   if(!hasSubtasks&&!parentInternalOnly&&bizCfgOf(document.getElementById('j-biz')?.value||jobBiz(current)).show.d1&&parentEditorDraftDateSetter==='creator'&&!parentEditorDraftDate){toast('案件追加者が設定する場合は、編集者初稿日を入力してください','warn');return;}
-  let subLinkError='';const assignmentReassignments=[];
+  let subLinkError='',subStatusError='';const assignmentReassignments=[];
   const parsedSubtasks=subShells.map(shell=>{
     const el=shell.querySelector('.j-sub-row'),stateIndex=Number(shell.dataset.stateIndex),stateRecord=JOB_MODAL_SUB_RECORDS[stateIndex]||{};
     if(!el)return _jobModalSubRecordClone(stateRecord);
@@ -13801,7 +13954,8 @@ function saveJob(){
     const pay=parseInt(el.querySelector('.j-sub-pay')?.value)||0;
     const savedId=String(el.dataset.subId||''),savedIndex=Number(el.dataset.originalIndex);
     const previous=(savedId?oldSubs.find(sub=>String(sub?.id||'')===savedId):Number.isInteger(savedIndex)&&savedIndex>=0?oldSubs[savedIndex]:stateRecord)||stateRecord;
-    const workerId=el.querySelector('.j-sub-worker')?.value||null,subId=previous.id||uid(),assignmentBinding=_legacyAssignmentBinding(previous,workerId,current?.id||'',subId),billingSnapshot=_paymentRecipientSnapshot(workerId,previous);
+    const workerId=el.querySelector('.j-sub-worker')?.value||null,subId=previous.id||uid(),assignmentBinding=_legacyAssignmentBinding(previous,workerId,current?.id||'',subId),billingSnapshot=_paymentRecipientSnapshot(workerId,previous),requestedSubStatus=el.querySelector('.j-sub-status')?.value||'未着手';
+    if(_legacyPortalStatusLocked(previous)&&requestedSubStatus!==previous.status)subStatusError=`「${inp?.value.trim()||'サブ案件'}」の進捗はサブ案件詳細の進捗操作で更新してください`;
     if(previous.portalUid&&previous.portalJobId&&String(previous.portalUid)!==String(assignmentBinding.portalUid||''))assignmentReassignments.push({subId:String(subId),oldPortalUid:String(previous.portalUid),oldPortalJobId:String(previous.portalJobId)});
     const requestRaw=String(el.querySelector('.j-sub-request')?.value||'').trim(),sourceRaw=String(el.querySelector('.j-sub-source')?.value||'').trim(),requestUrl=requestRaw?_videoSafeUrl(requestRaw):'',sourceUrl=sourceRaw?_videoSafeUrl(sourceRaw):'';
     if(requestRaw&&!requestUrl)subLinkError=`「${inp?.value.trim()||'サブ案件'}」の台本・依頼URLを確認してください`;
@@ -13810,7 +13964,7 @@ function saveJob(){
       ...previous,id:subId,
       title:inp?.value.trim()||'',done:chk?.classList.contains('done')||false,
       unitPrice:price,workerPay:pay,
-      status:el.querySelector('.j-sub-status')?.value||'未着手',
+      status:requestedSubStatus,
       workerId,...assignmentBinding,...billingSnapshot,
       sharedDate:el.querySelector('.j-sub-shared')?.value||null,
       editorDraftDateSetter:el.querySelector('.j-sub-editor-setter')?.value||_editorDraftDateSetter(previous),
@@ -13828,6 +13982,7 @@ function saveJob(){
     };
   }).filter(s=>s.title);
   if(subLinkError){toast(subLinkError,'warn');return;}
+  if(subStatusError){toast(subStatusError,'warn');return;}
   for(const sub of parsedSubtasks){
     const label=String(sub.title||'サブ案件');
     if(sub.workerId!==SELF_WID&&_editorDraftDateSetter(sub)==='creator'&&!sub.editorDraftDate){toast(`「${label}」の編集者初稿日を入力してください`,'warn');return;}
@@ -14359,6 +14514,7 @@ function ownerNavIcon(id){
     videoschedules:'<rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M8 3v4M16 3v4M3 10h18"></path>',
     videomanuals:'<path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M8 17h11M8 8h7M8 12h6"></path>',
     videoinvoices:'<path d="M6 3h9l4 4v14H6z"></path><path d="M15 3v5h5M9 13h6M9 17h6"></path>',
+    directmessages:'<path d="M4 5h16v12H9l-5 4z"></path><path d="M8 9h8M8 13h5"></path>',
     videosuggestions:'<path d="M4 5h16v12H8l-4 4z"></path><path d="M8 9h8M8 13h5"></path>',
     hpprojects:'<circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"></path>',
     hpfee:'<rect x="3" y="6" width="18" height="13" rx="2"></rect><path d="M3 10h18M7 15h3"></path>',
@@ -14380,7 +14536,7 @@ function ownerNavIcon(id){
 // ナビのカテゴリー分け(2026-07-10 会長指示)。開閉状態は端末localStorage記憶。設定/カスタマイズは従来どおり下部固定。
 const NAV_CATS=[
   {id:'start',label:'はじめに',views:['guide']},
-  {id:'video',label:'動画編集事業',views:['editorportal','videoedit','videohaken','videoclients','workers','videoschedules','videomanuals','videoinvoices','videosuggestions']},
+  {id:'video',label:'動画編集事業',views:['editorportal','videoedit','videohaken','videoclients','workers','videoschedules','videomanuals','videoinvoices','directmessages','videosuggestions']},
   {id:'hp',label:'ホームページ事業',views:['hpprojects','hpfee']},
   {id:'sales',label:'営業・顧客',views:['salesleads','pipeline','inquiries','crm']},
   {id:'mgmt',label:'経営',views:['bizboard']},
@@ -14537,6 +14693,7 @@ function _salesAllowedViews(){const vs=[];NAV_CATS.forEach(c=>{if(ROLE_SALES_CAT
 function isViewAllowed(v){
   if(myRole()==='editor')return v==='editorportal'; // UI fail-closed; shared Firestore doc is not row-level security.
   if(_isOwner())return true;
+  if(v==='directmessages')return false; // 連絡先一覧はオーナーのみ。Firestore rules も同じ境界で保護する。
   // 動画編集ディレクター兼任者も、旧台帳を使う他部署画面には戻さない。
   if(_isScopedVideoDirectorAccess())return(ROLE_VIEW_ACCESS['動画編集ディレクター']||[]).includes(v);
   const rs=myRoles();
@@ -14856,6 +15013,9 @@ function toggleNavCat(cid){
 // viewId→カテゴリー(未分類は「その他」)
 function _navCatOf(id){return NAV_CATS.find(cat=>cat.views.includes(id))||null;}
 function renderNav(){
+  // DMの未読数はDM画面を一度開いて読み込んだ分だけ表示します。
+  // 一覧画面ごとにFirestoreの会話監視を始めないため、通常操作の読み取りを増やしません。
+  if(_isOwner()&&typeof ownerDmEnsureStyles==='function')ownerDmEnsureStyles();
   const cfg=getNavCfg();
   const el=document.getElementById('nav-items');if(!el)return;
   const visible=cfg.filter(c=>!c.hidden&&isViewAllowed(c.id)&&!VIDEO_EMBEDDED_VIEW_IDS.has(c.id));
@@ -14863,6 +15023,8 @@ function renderNav(){
   const navItemHTML=(c,draggable=false)=>{
     const{label}=navMeta(c.id),icon=ownerNavIcon(c.id);
     const idx=cfg.indexOf(c);
+    const unread=c.id==='directmessages'?ownerDmUnreadCount():0;
+    const badge=unread?`<span class="owner-dm-nav-badge" aria-label="未読DM ${unread}件">${unread>99?'99+':unread}</span>`:'';
     if(draggable){
       return`<div class="nav-item${V===c.id?' active':''}" data-view="${c.id}"
         draggable="true"
@@ -14871,9 +15033,9 @@ function renderNav(){
         ondragover="sideNavDragOver(event)"
         ondragleave="sideNavDragLeave(event)"
         ondrop="sideNavDrop(event,${idx})">
-        <span class="nav-icon">${icon}</span><span class="nav-label">${label}</span><span class="nav-drag-handle" title="ドラッグで並び替え">⠿</span></div>`;
+        <span class="nav-icon">${icon}</span><span class="nav-label">${label}</span>${badge}<span class="nav-drag-handle" title="ドラッグで並び替え">⠿</span></div>`;
     }
-    return`<div class="nav-item${V===c.id?' active':''}" data-view="${c.id}"><span class="nav-icon">${icon}</span><span class="nav-label">${label}</span></div>`;
+    return`<div class="nav-item${V===c.id?' active':''}" data-view="${c.id}"><span class="nav-icon">${icon}</span><span class="nav-label">${label}</span>${badge}</div>`;
   };
   const _role=myRole();
   const grouped=(draggable)=>{
@@ -14917,7 +15079,10 @@ function renderNav(){
     el.classList.toggle('active',el.dataset.view===V);
   });
 }
-function setV(view){V=view;CP_EDIT_MODE=false;render();}
+function setV(view){
+  if(V==='directmessages'&&view!=='directmessages'&&typeof ownerDmStop==='function')ownerDmStop(false);
+  V=view;CP_EDIT_MODE=false;render();
+}
 function toggleDrawer(){
   const drawer=document.getElementById('mob-drawer');
   const hamburger=document.getElementById('mob-hamburger');
@@ -17473,7 +17638,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260830-03';
+const APP_VERSION='20260831-01';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -17548,6 +17713,10 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./manager-features.js?v=20260830-03"></script>
+<script src="./direct-messages.js?v=20260831-01"></script>
+<script>
+  try{if(V==='directmessages')render();else renderNav();}catch(error){console.warn('owner dm init',error);}
+</script>
+<script src="./manager-features.js?v=20260831-01"></script>
 </body>
 </html>

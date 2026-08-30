@@ -537,8 +537,8 @@ service cloud.firestore {
 
     function validJobStatus(status) {
       return status in [
-        '案件掲載中','募集中','編集者決定','受注済み','進行中',
-        '初稿提出済み','修正稿提出済み','D確認OK',
+        '案件掲載中','募集中','編集者決定','アサイン済み','受注済み','進行中','編集者進行中',
+        '初稿提出済み','修正稿提出済み','D確認OK','先方確認中',
         '初稿完成','確認待ち','修正中','完了','キャンセル'
       ];
     }
@@ -604,10 +604,58 @@ service cloud.firestore {
     }
 
     function validEditorSubmittedEvent(fromStage, round, status) {
-      return appendsOneReviewEvent()
+      let events = reviewEvents(request.resource.data);
+      let event = events[events.size() - 1];
+      return request.resource.data.evidenceUrl is string
+        && request.resource.data.evidenceUrl.matches('^https?://.+')
+        && event is map
+        && event.get('evidenceUrl', '') is string
+        && event.get('evidenceUrl', '').matches('^https?://.+')
+        && event.get('evidenceUrl', '') == request.resource.data.evidenceUrl
+        && appendsOneReviewEvent()
         && lastReviewEventMatches(
           'editor_submitted', fromStage, 'director_review', round, status, '担当編集者'
         );
+    }
+
+    function validEditorSubmissionStatus(previousStatus, nextStatus) {
+      return (nextStatus == '初稿提出済み'
+          && previousStatus == '編集者進行中')
+        || (nextStatus == '修正稿提出済み' && previousStatus == '修正中');
+    }
+
+    // Jobs saved before the explicit 「編集者進行中」 state may still be on
+    // the old initial-draft marker. This compatibility path is only used when
+    // the stored job has no workflow yet; new workflow records use the strict
+    // transition above.
+    function validLegacyEditorSubmissionStatus(previousStatus, nextStatus) {
+      return validEditorSubmissionStatus(previousStatus, nextStatus)
+        || (nextStatus == '初稿提出済み'
+          && previousStatus in ['進行中', '初稿完成']);
+    }
+
+    function validEditorStartTransition(previousStatus, nextStatus) {
+      return nextStatus == '編集者進行中'
+        && previousStatus in ['未着手', '受注済み', '進行中', 'アサイン済み'];
+    }
+
+    // These states are changed only by a role-owned workflow action.  Old
+    // portal records may keep receiving ordinary metadata updates without a
+    // workflow, but a manager must not turn one into a submitted/review/final
+    // case merely by changing its raw status field.
+    function workflowControlledStatus(status) {
+      return status in [
+        '編集者進行中', '初稿提出済み', '修正中', '修正稿提出済み',
+        'D確認OK', '先方確認中', '完了'
+      ];
+    }
+
+    function validLegacyManagerNonWorkflowUpdate() {
+      return !hasReviewWorkflow(resource.data)
+        && !hasReviewWorkflow(request.resource.data)
+        && reviewEventsUnchanged()
+        && (request.resource.data.status == resource.data.status
+          || !workflowControlledStatus(request.resource.data.status));
     }
 
     function managerEventRole() {
@@ -624,7 +672,7 @@ service cloud.firestore {
         && lastReviewEventMatches(
           type, fromStage, toStage, round, status, managerEventRole()
         )
-        && (type != 'client_revision_requested'
+        && (!(type in ['director_revision_requested', 'client_revision_requested'])
           || (event.get('reason', '') is string
             && event.get('reason', '').size() > 0
             && event.get('reason', '').size() <= 2000));
@@ -666,6 +714,9 @@ service cloud.firestore {
               && reviewEventsUnchanged())
             || (!hasReviewWorkflow(resource.data)
               && reviewStage(request.resource.data) == 'director_review'
+              && validLegacyEditorSubmissionStatus(
+                resource.data.status, request.resource.data.status
+              )
               && validEditorSubmittedEvent(
                 'editing', reviewRound(request.resource.data), request.resource.data.status
               ))
@@ -677,6 +728,9 @@ service cloud.firestore {
               && reviewStage(resource.data) == 'editing'
               && reviewStage(request.resource.data) == 'director_review'
               && reviewRound(request.resource.data) == reviewRound(resource.data)
+              && validEditorSubmissionStatus(
+                resource.data.status, request.resource.data.status
+              )
               && validEditorSubmittedEvent(
                 'editing', reviewRound(request.resource.data), request.resource.data.status
               ))
@@ -684,47 +738,55 @@ service cloud.firestore {
         );
     }
 
-    // Only the assigned editor can record the real delivery after the client
-    // has approved it.  This is deliberately distinct from the deadline and
-    // requires both delivery evidence and an append-only workflow event.
-    function validEditorDeliveryCompletion() {
-      return hasReviewWorkflow(resource.data)
-        && hasReviewWorkflow(request.resource.data)
-        && reviewStage(resource.data) == 'client_review'
-        && reviewStage(request.resource.data) == 'delivered'
-        && reviewRound(request.resource.data) == reviewRound(resource.data)
-        && resource.data.status == '確認待ち'
-        && request.resource.data.status == '完了'
-        && request.resource.data.get('completedDeliveryDate', '') is string
-        && request.resource.data.get('completedDeliveryDate', '') != ''
-        && validCompletedJobEvidence()
-        && appendsOneReviewEvent()
-        && lastReviewEventMatches(
-          'editor_delivery_completed', 'client_review', 'delivered',
-          reviewRound(resource.data), '完了', '担当編集者'
-        );
-    }
-
     // Once a workflow exists, only the editor's own submission may change a
     // review status. A saved D/client/final status is manager-owned even when
     // the editor is merely saving dates or a progress memo.
     function validEditorWorkflowStatus() {
-      return !hasReviewWorkflow(request.resource.data)
-        || !hasReviewWorkflow(resource.data)
-        || (
+      return (!hasReviewWorkflow(resource.data)
+          && !hasReviewWorkflow(request.resource.data)
+          && (request.resource.data.status == resource.data.status
+            || validEditorStartTransition(
+              resource.data.status, request.resource.data.status
+            )))
+        || (!hasReviewWorkflow(resource.data)
+          && hasReviewWorkflow(request.resource.data)
+          && reviewStage(request.resource.data) == 'editing'
+          && (request.resource.data.status == resource.data.status
+            || validEditorStartTransition(
+              resource.data.status, request.resource.data.status
+            )))
+        || (!hasReviewWorkflow(resource.data)
+          && hasReviewWorkflow(request.resource.data)
+          && reviewStage(request.resource.data) == 'director_review'
+          && validLegacyEditorSubmissionStatus(
+            resource.data.status, request.resource.data.status
+          ))
+        || (hasReviewWorkflow(resource.data)
+          && hasReviewWorkflow(request.resource.data)
+          &&
           reviewStage(resource.data) == 'editing'
           && reviewStage(request.resource.data) == 'editing'
-          && request.resource.data.status in ['未着手', '受注済み', '進行中', '編集者進行中', '初稿完成', '修正中']
-          && resource.data.status in ['未着手', '受注済み', '進行中', '編集者進行中', '初稿完成', '修正中']
+          && reviewRound(request.resource.data) == reviewRound(resource.data)
+          && (request.resource.data.status == resource.data.status
+            || validEditorStartTransition(
+              resource.data.status, request.resource.data.status
+            ))
         )
-        || (
+        || (hasReviewWorkflow(resource.data)
+          && hasReviewWorkflow(request.resource.data)
+          &&
           reviewStage(resource.data) == 'editing'
           && reviewStage(request.resource.data) == 'director_review'
-          && request.resource.data.status in ['初稿提出済み', '修正稿提出済み']
+          && reviewRound(request.resource.data) == reviewRound(resource.data)
+          && validEditorSubmissionStatus(
+            resource.data.status, request.resource.data.status
+          )
         )
-        || validEditorDeliveryCompletion()
-        || (
+        || (hasReviewWorkflow(resource.data)
+          && hasReviewWorkflow(request.resource.data)
+          &&
           reviewStage(request.resource.data) == reviewStage(resource.data)
+          && reviewRound(request.resource.data) == reviewRound(resource.data)
           && request.resource.data.status == resource.data.status
         );
     }
@@ -732,7 +794,7 @@ service cloud.firestore {
     // Director/owner actions: approve a submitted draft, record actual client
     // submission, receive a client correction, or finish after client approval.
     function validManagerReviewTransition() {
-      return (!hasReviewWorkflow(request.resource.data) && reviewEventsUnchanged())
+      return validLegacyManagerNonWorkflowUpdate()
         || (hasReviewWorkflow(request.resource.data)
           &&
           validReviewWorkflow(request.resource.data)
@@ -747,6 +809,14 @@ service cloud.firestore {
                 'director_approved', 'director_review', 'client_submission',
                 reviewRound(request.resource.data), 'D確認OK'
               ))
+            || (!hasReviewWorkflow(resource.data)
+              && resource.data.status in ['初稿提出済み', '修正稿提出済み']
+              && reviewStage(request.resource.data) == 'editing'
+              && reviewRound(request.resource.data) == 2
+              && validManagerProgressEvent(
+                'director_revision_requested', 'director_review', 'editing',
+                reviewRound(request.resource.data), '修正中'
+              ))
             || (hasReviewWorkflow(resource.data)
               && reviewStage(request.resource.data) == reviewStage(resource.data)
               && reviewRound(request.resource.data) == reviewRound(resource.data)
@@ -760,12 +830,20 @@ service cloud.firestore {
                 'director_approved', 'director_review', 'client_submission',
                 reviewRound(request.resource.data), 'D確認OK'
               ))
+            || (hasReviewWorkflow(resource.data)
+              && reviewStage(resource.data) == 'director_review'
+              && reviewStage(request.resource.data) == 'editing'
+              && reviewRound(request.resource.data) == reviewRound(resource.data) + 1
+              && validManagerProgressEvent(
+                'director_revision_requested', 'director_review', 'editing',
+                reviewRound(request.resource.data), '修正中'
+              ))
             || (reviewStage(resource.data) == 'client_submission'
               && reviewStage(request.resource.data) == 'client_review'
               && reviewRound(request.resource.data) == reviewRound(resource.data)
               && validManagerProgressEvent(
                 'client_submitted', 'client_submission', 'client_review',
-                reviewRound(request.resource.data), '確認待ち'
+                reviewRound(request.resource.data), '先方確認中'
               ))
             || (reviewStage(resource.data) == 'client_review'
               && reviewStage(request.resource.data) == 'editing'
@@ -773,6 +851,17 @@ service cloud.firestore {
               && validManagerProgressEvent(
                 'client_revision_requested', 'client_review', 'editing',
                 reviewRound(request.resource.data), '修正中'
+              ))
+            || (reviewStage(resource.data) == 'client_review'
+              && reviewStage(request.resource.data) == 'delivered'
+              && reviewRound(request.resource.data) == reviewRound(resource.data)
+              && request.resource.data.status == '完了'
+              && request.resource.data.get('completedDeliveryDate', '') is string
+              && request.resource.data.get('completedDeliveryDate', '') != ''
+              && validCompletedJobEvidence()
+              && validManagerProgressEvent(
+                'client_approved_completed', 'client_review', 'delivered',
+                reviewRound(request.resource.data), '完了'
               ))
           )
         );
@@ -1092,6 +1181,7 @@ service cloud.firestore {
           && request.resource.data.clientDisplay.size() > 0
           && request.resource.data.instructions is string
           && request.resource.data.instructions.size() <= 3000
+          && request.resource.data.status == 'アサイン済み'
           && validJobStatus(request.resource.data.status)
           && validJobSchedule()
           && validEditorPayAmountForCreate()
@@ -1180,21 +1270,21 @@ service cloud.firestore {
           && request.resource.data.get('progressMilestones', []) is list
           && request.resource.data.get('history', []) is list
           && editorDraftDateChangeAllowed()
-          && (validEditorReviewTransition() || validEditorDeliveryCompletion())
+          && validEditorReviewTransition()
           && validEditorWorkflowStatus()
           && preservesFinalJob()
           && validJobSchedule();
         allow update: if directorFor(uid)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'title','clientDisplay','deadline','sharedDate','editorDraftDate','editorDraftDateSetter',
-            'clientDraftDate','thumbnailDate','deliveryDate','instructions','urgent','status',
+            'clientDraftDate','thumbnailDate','deliveryDate','completedDeliveryDate','instructions','urgent','status',
             'correctionReason','updatedAt','updatedBy','history',
             'workflow','progressEvents','attachments','requestUrl','sourceUrl',
             'manualIds','parentManualIds','caution','parentCaution'
           ])
           && validJobStatus(request.resource.data.status)
           && (request.resource.data.status == resource.data.status
-            || !(request.resource.data.status in ['初稿提出済み','修正稿提出済み','D確認OK','完了'])
+            || !(request.resource.data.status in ['初稿提出済み','修正稿提出済み','D確認OK','先方確認中','完了'])
             || validManagerReviewTransition())
           && validJobSchedule()
           && validEditorDraftDateAssignment(request.resource.data)
@@ -1210,7 +1300,7 @@ service cloud.firestore {
         allow update: if owner()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'title','clientDisplay','deadline','sharedDate','editorDraftDate','editorDraftDateSetter',
-            'clientDraftDate','thumbnailDate','deliveryDate','instructions','urgent','status',
+            'clientDraftDate','thumbnailDate','deliveryDate','completedDeliveryDate','instructions','urgent','status',
             'correctionReason','updatedAt','updatedBy','history','ownPay',
             'payableApproved','payableApprovedAt','payableMonth',
             'linkedLegacyJobId','integratedAt','integratedBy',
@@ -1219,7 +1309,7 @@ service cloud.firestore {
           ])
           && validJobStatus(request.resource.data.status)
           && (request.resource.data.status == resource.data.status
-            || !(request.resource.data.status in ['初稿提出済み','修正稿提出済み','D確認OK','完了'])
+            || !(request.resource.data.status in ['初稿提出済み','修正稿提出済み','D確認OK','先方確認中','完了'])
             || validManagerReviewTransition())
           && validJobSchedule()
           && validEditorDraftDateAssignment(request.resource.data)

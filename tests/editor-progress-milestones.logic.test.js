@@ -15,9 +15,9 @@ test('editors can only submit initial and revision work with evidence', () => {
   const context = {};
   vm.createContext(context);
   vm.runInContext(`${fn}\nthis.check=editorMilestoneError;`, context);
-  assert.equal(context.check('進行中', '初稿提出済み', ''), '初稿・修正稿を提出するときは、提出した内容のURLを入力してください');
-  assert.equal(context.check('進行中', '初稿提出済み', 'https://example.com/draft'), '');
-  assert.match(context.check('進行中', 'D確認OK', 'https://example.com/draft'), /ディレクターまたは管理者/);
+  assert.equal(context.check('編集者進行中', '初稿提出済み', ''), '初稿・修正稿を提出するときは、提出した内容のURLを入力してください');
+  assert.equal(context.check('編集者進行中', '初稿提出済み', 'https://example.com/draft'), '');
+  assert.match(context.check('編集者進行中', 'D確認OK', 'https://example.com/draft'), /ディレクターまたは管理者/);
   assert.match(context.check('初稿提出済み', 'D確認OK', 'https://example.com/draft'), /ディレクターまたは管理者/);
   assert.equal(context.check('修正中', '修正稿提出済み', 'https://example.com/revision'), '');
   assert.match(context.check('D確認OK', '完了', 'https://example.com/delivery'), /ディレクターまたは管理者/);
@@ -37,7 +37,7 @@ test('only initial and revision milestones are editor-owned', () => {
   assert.match(editor, /修正稿の提出を記録しました/);
 });
 
-test('Firestore accepts editor milestones and prevents manager proxy completion', () => {
+test('Firestore accepts editor milestones and protects manager-owned review states', () => {
   for (const status of ['初稿提出済み', '修正稿提出済み', 'D確認OK']) {
     assert.match(rules, new RegExp(`'${status}'`));
   }
@@ -46,5 +46,5 @@ test('Firestore accepts editor milestones and prevents manager proxy completion'
   }
   assert.match(rules, /request\.resource\.data\.get\('lastProgressChangedByUid', uid\) == uid/);
   assert.match(rules, /request\.resource\.data\.get\('lastProgressChangedByRole', '担当編集者'\) == '担当編集者'/);
-  assert.equal((rules.match(/!\(request\.resource\.data\.status in \['初稿提出済み','修正稿提出済み','D確認OK','完了'\]\)/g) || []).length, 2);
+  assert.equal((rules.match(/!\(request\.resource\.data\.status in \['初稿提出済み','修正稿提出済み','D確認OK','先方確認中','完了'\]\)/g) || []).length, 2);
 });

@@ -172,7 +172,7 @@ def static_contract_checks() -> None:
     else:
         ok("editor actual-data preview and Chatwork-aligned name controls")
 
-    overdue_exclusions = ["完了", "キャンセル", "初稿提出済み", "初稿完成", "修正中", "修正稿提出済み", "D確認OK", "確認待ち", "FB待ち", "納品", "納品済み"]
+    overdue_exclusions = ["完了", "キャンセル", "初稿提出済み", "初稿完成", "修正中", "修正稿提出済み", "D確認OK", "先方確認中", "確認待ち", "FB待ち", "納品", "納品済み"]
     require_values("manager overdue exclusions",
                    quoted_set_values(index, "VIDEO_OVERDUE_EXCLUDED_STATUSES"),
                    overdue_exclusions)

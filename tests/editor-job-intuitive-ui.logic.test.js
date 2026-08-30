@@ -25,9 +25,9 @@ test('job type filters and near-deadline ordering use dedicated helpers', () => 
 });
 
 test('cards show the repeatable editor, director, client, and delivery timeline with details collapsed', () => {
-  for (const label of ['編集作業', 'D確認', 'クライアント提出', 'クライアント確認', '納品']) assert.match(features, new RegExp(label));
+  for (const label of ['編集者進行中', '初稿・修正稿提出済み', 'D確認OK', '先方確認中', '完了']) assert.match(features, new RegExp(label));
   assert.match(features, /編集進行の5段階/);
-  assert.match(features, /`第\$\{workflow\.round\}回 修正作業`/);
+  assert.match(features, /`第\$\{workflow\.round\}回 修正中`/);
   assert.match(features, /<details class="job-detail"[^>]*><summary>案件の詳細・連絡を開く<\/summary>/);
   assert.match(features, /\$\{messageBlock\(j\)\}<\/details>/);
   assert.match(features, /saveJobDraft\('\$\{jid\}'\)/);
@@ -35,9 +35,10 @@ test('cards show the repeatable editor, director, client, and delivery timeline 
   assert.match(features, /quickJobStatus\(jid,status\)/);
   assert.match(features, /D確認待ちです。ディレクターが確認します。/);
   assert.match(features, /function submitEditorJobAction\(jid,status\)/);
+  assert.match(features, /アサイン済み:\['編集者進行中','編集を開始します','編集を開始する'\]/);
   assert.match(features, /編集者進行中:\['初稿提出済み','初稿を提出します','初稿を提出した'\]/);
-  assert.match(features, /提出・納品URLを入力してください/);
-  assert.match(features, /先方確認中です。修正指示またはOKの連絡をお待ちください。/);
+  assert.match(features, /提出した内容のURLを入力してください/);
+  assert.match(features, /先方確認中です。修正指示または完了更新をお待ちください。/);
   assert.match(features, /mono\.create FB中です。確認・修正指示をお待ちください。/);
 });
 
@@ -66,7 +67,7 @@ test('overdue helper excludes review and delivered statuses while retaining acti
   const exemptSource = features.match(/function editorDeadlineExemptStatus\([^\n]+/)?.[0];
   const fnSource = features.match(/function editorWorkIsOverdue\([^]*?\n  \}/)?.[0];
   assert.ok(exemptSource && fnSource);
-  const excluded = new Set(['完了','キャンセル','初稿提出済み','初稿完成','修正中','修正稿提出済み','D確認OK','確認待ち','FB待ち','納品','納品済み']);
+  const excluded = new Set(['完了','キャンセル','初稿提出済み','初稿完成','修正中','修正稿提出済み','D確認OK','先方確認中','確認待ち','FB待ち','納品','納品済み']);
   const context = { localDate: () => '2026-08-28', isJobDeadlineExemptStatus: status => excluded.has(status) };
   vm.createContext(context);
   vm.runInContext(`${exemptSource}\n${fnSource}\nthis.check=editorWorkIsOverdue;`, context);
@@ -177,7 +178,7 @@ test('dashboard priority work and notifications retain parent case context', () 
   assert.match(features, /function editorWorkflowLabel\(stage,status=''/);
   assert.match(features, /director_review:'D確認待ち'/);
   assert.match(features, /status==='FB待ち'\)return'mono\.create FB中'/);
-  assert.match(features, /status==='確認待ち'\)return'先方確認中'/);
+  assert.match(features, /if\(\['先方確認中','確認待ち'\]\.includes\(status\)\)return'先方確認中'/);
   assert.match(features, /確認・修正 \$\{review\}件/);
 });
 
@@ -194,7 +195,7 @@ test('editor workflow hides manager-owned actions and keeps waiting states read-
   assert.match(features, /if\(editorWorkflow\(job\)\.stage!=='editing'\)return null/);
   assert.match(features, /director_review:'D確認待ちです。ディレクターが確認します。'/);
   assert.match(features, /client_submission:'ディレクターが先方へ提出中です。'/);
-  assert.match(features, /client_review:'先方確認中です。修正指示またはOKの連絡をお待ちください。'/);
+  assert.match(features, /client_review:'先方確認中です。修正指示または完了更新をお待ちください。'/);
   assert.match(html, /function editorCanSaveStatus\(job,status\)/);
   assert.match(html, /if\(!editorCanSaveStatus\(j,status\)\)return rejectStatusChange/);
   assert.match(html, /\['初稿提出済み','修正稿提出済み'\]\.includes\(status\)\?EDITOR_MILESTONE_BY_STATUS/);
@@ -210,6 +211,7 @@ test('demo-style repeat flow infers editor wait states from legacy statuses', ()
   assert.match(context.wait({ status: '初稿提出済み' }), /D確認待ち/);
   assert.match(context.wait({ status: 'D確認OK' }), /ディレクターが先方へ提出中/);
   assert.match(context.wait({ status: 'FB待ち' }), /mono\.create FB中/);
+  assert.match(context.wait({ status: '先方確認中' }), /先方確認中/);
   assert.match(context.wait({ status: '確認待ち' }), /先方確認中/);
   assert.equal(context.wait({ status: '修正中' }), '');
 });
