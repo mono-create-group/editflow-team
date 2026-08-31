@@ -19,7 +19,8 @@ test('management distinguishes planned due dates and lets D finish only after cl
   assert.match(index, /client_approved_completed:'クライアントOK・完了'/);
   assert.match(index, /action==='clientApproved'/);
   assert.match(index, /status='完了';type='client_approved_completed'/);
-  assert.match(index, /completedDeliveryDate:j\.completedDeliveryDate\|\|today\(\)/);
+  assert.match(index, /completedDeliveryDate:completionDate/);
+  assert.match(index, /完了日を今日以前の日付で入力してください/);
   assert.match(index, /completedDeliveryDate:_portalField/);
   assert.match(index, /transactionDate:j\.completedDeliveryDate/);
   assert.doesNotMatch(index, /transactionDate:j\.completedDeliveryDate\|\|j\.deliveryDate/);

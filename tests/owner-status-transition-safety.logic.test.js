@@ -19,11 +19,14 @@ test('video owner options keep pre-assignment flow and expose the nine official 
   assert.match(index, /function bizStatOpts\(k,cur\)\{const list=bizCfgOf\(k\)\.statuses\.slice\(\);if\(cur&&list\.indexOf\(cur\)<0\)list\.unshift\(cur\)/);
 });
 
-test('legacy records linked to a portal cannot silently change progress from the parent editor', () => {
+test('linked subcases change progress from the visible status field without bypassing the portal workflow', () => {
   assert.match(index, /function _legacyPortalStatusLocked\(record\)\{return !!\(record&&String\(record\.portalUid\|\|''\)\.trim\(\)&&String\(record\.portalJobId\|\|''\)\.trim\(\)\);\}/);
   assert.match(index, /id="j-stat" \$\{linkedPortalParent\?'disabled':''\}/);
-  assert.match(index, /class="j-sub-status"[^>]*\$\{portalStatusLocked\?'disabled':''\}/);
-  assert.match(index, /進捗はサブ案件詳細の進捗操作で更新します。/);
+  assert.match(index, /class="j-sub-status"[^>]*onchange="jobSubStatusChanged\(this\)"/);
+  assert.match(index, /portalStatusLocked&&!portalJob\?'disabled':''/);
+  assert.match(index, /function _portalSubcaseStatusOptions\(job\)/);
+  assert.match(index, /ステータス欄から進捗を変更できます/);
+  assert.match(index, /現在の工程で選べる進捗だけを表示します。/);
   assert.match(index, /if\(_legacyPortalStatusLocked\(current\)&&requestedStatus!==current\.status\)\{toast\('進捗はサブ案件詳細の進捗操作で更新してください','warn'\);return;\}/);
   assert.match(index, /if\(_legacyPortalStatusLocked\(previous\)&&requestedSubStatus!==previous\.status\)subStatusError=/);
   assert.match(index, /if\(subStatusError\)\{toast\(subStatusError,'warn'\);return;\}/);
@@ -44,7 +47,7 @@ test('portal job administration displays status only and rejects tampered raw st
   assert.match(modal, /進捗は下の「進捗共有」の操作から更新します。/);
   assert.match(save, /const statusField=document\.getElementById\('vp-status'\),requestedStatus=String\(statusField\?\.dataset\.status\|\|j\.status\);/);
   assert.match(save, /if\(String\(statusField\?\.value\|\|''\)!==bizStatusLabel\(_portalVideoBiz\(j\),j\.status\)\|\|requestedStatus!==j\.status\)return toast\('進捗は「進捗共有」の操作から更新してください','warn'\);/);
-  assert.match(index, /function advancePortalWorkflow\(portalUid,id,action,providedReason\)/);
+  assert.match(index, /function advancePortalWorkflow\(portalUid,id,action,providedReason,providedCompletionDate\)/);
 });
 
 test('linked parent subcases expose only current valid workflow actions inline', () => {
@@ -58,11 +61,12 @@ test('linked parent subcases expose only current valid workflow actions inline',
   assert.match(index, /stage==='client_submission'\)return\[\['clientSubmitted','先方確認中にする'\]\]/);
   assert.match(index, /stage==='client_review'\)return _editorOwnsPortalCompletion\(job\)\?\[\['clientRevision','修正指示（修正中）'\]\]:\[\['clientRevision','修正指示（修正中）'\],\['clientApproved','先方OK（完了）'\]\]/);
   assert.match(index, /function advanceLegacyPortalSubcaseWorkflow\(portalUid,jobId,controlKey\)\{/);
+  assert.match(index, /selectedOptions\?\.\[0\]\?\.dataset\?\.action/);
   assert.match(index, /const allowed=_portalWorkflowActionsForJob\(job\)\.map\(\(\[value\]\)=>value\);/);
   assert.match(index, /if\(!allowed\.includes\(action\)\)return toast\('現在の工程ではこの操作はできません。案件を開き直してください','warn'\);/);
-  assert.match(index, /修正指示の内容（修正指示を選んだ場合は必須）/);
-  assert.match(index, /await advancePortalWorkflow\(portalUid,jobId,action,reason\);/);
-  assert.match(index, /async function advancePortalWorkflow\(portalUid,id,action,providedReason\)/);
+  assert.match(index, /修正指示の内容/);
+  assert.match(index, /await advancePortalWorkflow\(portalUid,jobId,action,reason,completionDate\);/);
+  assert.match(index, /async function advancePortalWorkflow\(portalUid,id,action,providedReason,providedCompletionDate\)/);
   assert.match(index, /providedReason===undefined\?\(document\.getElementById\('vp-correction'\)\?\.value\.trim\(\)\|\|''\):String\(providedReason\)\.trim\(\)/);
   assert.match(index, /const PORTAL_WORKFLOW_ACTION_PENDING=new Set\(\);/);
   assert.match(index, /if\(PORTAL_WORKFLOW_ACTION_PENDING\.has\(pendingKey\)\)return toast\('進捗を保存しています。完了までお待ちください','warn'\);/);
@@ -77,10 +81,27 @@ test('linked parent subcases expose only current valid workflow actions inline',
 
 test('inline portal workflow actions quote escaped JSON before placement in an HTML attribute', () => {
   assert.match(index, /const portalConfirmAction=portalStatusLocked\?`advanceLegacyPortalSubcaseWorkflow\(\$\{JSON\.stringify\(String\(s\.portalUid\)\)\},\$\{JSON\.stringify\(String\(s\.portalJobId\)\)\},\$\{JSON\.stringify\(portalControlKey\)\}\)`:'';/);
-  assert.match(index, /onclick="\$\{esc\(portalConfirmAction\)\}">進捗を確定<\/button>/);
+  assert.match(index, /onclick="\$\{esc\(portalConfirmAction\)\}" disabled>進捗を保存<\/button>/);
   const esc = value => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const action = `advanceLegacyPortalSubcaseWorkflow(${JSON.stringify('uid"quoted')},${JSON.stringify('job"quoted')},${JSON.stringify('safe-key')})`;
-  const rendered = `<button onclick="${esc(action)}">進捗を確定</button>`;
+  const rendered = `<button onclick="${esc(action)}">進捗を保存</button>`;
   assert.match(rendered, /onclick="advanceLegacyPortalSubcaseWorkflow\(&quot;uid\\&quot;quoted&quot;,&quot;job\\&quot;quoted&quot;,&quot;safe-key&quot;\)"/);
   assert.doesNotMatch(rendered, /onclick="advanceLegacyPortalSubcaseWorkflow\("/);
+});
+
+test('completion records the selected non-future date in both the job and audit event', () => {
+  assert.match(index, /function _validPortalCompletionDate\(value\)/);
+  assert.match(index, /id="vp-completion-date" type="date"/);
+  assert.match(index, /完了日を今日以前の日付で入力してください/);
+  assert.match(index, /action==='clientApproved'\?\{completedDeliveryDate:completionDate\}:\{\}/);
+  assert.match(index, /event\.completedDeliveryDate/);
+  assert.match(index, /id="\$\{esc\(portalControlKey\)\}-completed-date"/);
+  assert.match(index, /「完了」にするとき、実際に完了した日を記録します。/);
+});
+
+test('ordinary legacy subcases require and retain a completion date when newly completed', () => {
+  assert.match(index, /requestedSubStatus==='完了'&&previous\.status!=='完了'&&!requestedCompletionDate/);
+  assert.match(index, /を完了にする場合は、完了日を入力してください/);
+  assert.match(index, /completedDeliveryDate:requestedCompletionDate/);
+  assert.match(index, /if\(date&&select\?\.value==='完了'&&!date\.value\)date\.value=today\(\)/);
 });

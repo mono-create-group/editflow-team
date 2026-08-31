@@ -147,7 +147,8 @@ test('internal work makes editor draft optional and lets the owner record actual
   assert.match(html, /const parentInternalOnly=selWorkerIds\.length>0&&selWorkerIds\.every\(id=>id===SELF_WID\)/);
   assert.match(html, /if\(!hasSubtasks&&!parentInternalOnly&&bizCfgOf/);
   assert.match(html, /if\(sub\.workerId!==SELF_WID&&_editorDraftDateSetter\(sub\)==='creator'&&!sub\.editorDraftDate\)/);
-  assert.match(html, /completedDeliveryDate:workerId===SELF_WID\?\(el\.querySelector\('\.j-sub-completed-delivery'\)\?\.value\|\|null\):\(previous\.completedDeliveryDate\|\|null\)/);
+  assert.match(html, /completionEditable=!_legacyPortalStatusLocked\(previous\)&&\(workerId===SELF_WID\|\|currentBiz==='edit'\)/);
+  assert.match(html, /completedDeliveryDate:requestedCompletionDate/);
   assert.match(html, /completedDeliveryDate:!hasSubtasks&&parentInternalOnly\?/);
 });
 
