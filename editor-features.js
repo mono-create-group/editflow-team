@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-const PORTAL_APP_VERSION='20260831-08';
+const PORTAL_APP_VERSION='20260831-09';
   const feature={
     board:[],boardSelectedId:'',boardSearch:'',catalog:[],manuals:[],schedules:[],release:null,
     messages:new Map(),messageUnsubs:new Map(),messageLoading:new Set(),openMessageJobIds:new Set(),groupDraftSaving:new Set(),unsubs:[],startedFor:'',serverVersion:'',jobsListMode:'active',jobsTypeFilter:'all',lastSuggestionCode:'',
@@ -78,7 +78,7 @@ const PORTAL_APP_VERSION='20260831-08';
     });
     const topNotice=document.querySelector('.editor-top-icon[aria-label="通知"]');
     if(topNotice){
-      const count=editorUnreadBadgeCount(),badge=topNotice.querySelector('.editor-top-notification-count');
+      const count=editorVisibleNotificationCount(),badge=topNotice.querySelector('.editor-top-notification-count');
       if(count>0){
         const text=count>99?'99+':String(count);
         if(badge)badge.textContent=text;
@@ -99,14 +99,16 @@ const PORTAL_APP_VERSION='20260831-08';
     registry.set('editor-case',editorCaseUnreadItems());
     return registry.snapshot();
   }
-  function editorUnreadBadgeCount(){
-    // One registry deduplicates the same Firestore notification received via
-    // DM, case chat, or a bulletin listener. Drawing a badge never writes.
-    const snapshot=syncEditorUnreadSources();
-    return snapshot?snapshot.count:Math.max(0,Math.min(999,dmUnreadCount()+unreadNotificationItems().length));
+  function editorVisibleNotificationCount(){
+    // The Dock/PWA badge means the same thing as the visible 「通知」 page.
+    // DM has its own badge in the DM menu, so it is intentionally excluded
+    // here rather than being added to a different total.
+    syncEditorUnreadSources();
+    const count=editorUnreadApi()?.sourceSnapshot?.('editor-case').count;
+    return Number.isFinite(Number(count))?Math.max(0,Math.min(999,Number(count))):Math.max(0,Math.min(999,unreadNotificationItems().length));
   }
   function syncEditorAppBadge(){
-    const count=editorUnreadBadgeCount();
+    const count=editorVisibleNotificationCount();
     try{window.EditorPush?.syncBadge?.(count)}catch(_){}
     return count;
   }
@@ -216,7 +218,7 @@ const PORTAL_APP_VERSION='20260831-08';
     const work=[['dashboard','ホーム'],['jobs','担当案件'],['board','案件を探す']],communication=[['dm','DM'],['notifications','通知']],tools=[['schedule','スケジュール'],['manuals','マニュアル'],['feedback','過去フィードバック'],['ranking','編集者ランキング'],['invoices',isExternal()?'支払い案内':'請求書'],['settings','登録情報']];
     const mobile=[['dashboard','ホーム'],['jobs','案件'],['dm','DM'],['notifications','通知']];
     const open=feature.board.filter(x=>x.status==='open').length;
-    const noticeCount=unreadNotificationItems().length;
+    const noticeCount=editorVisibleNotificationCount();
     const navIcon=(key)=>({
       dashboard:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"></path><path d="M9 21v-7h6v7"></path></svg>',
       board:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"></circle><path d="m20 20-4.2-4.2"></path></svg>',

@@ -29,6 +29,15 @@ test('four canonical unread notifications display as four even when categories r
   assert.equal(api.snapshot().count, 4);
 });
 
+test('visible submissions stay four when two separate DM records exist', () => {
+  const { api } = registry();
+  api.set('owner-submissions', [1, 2, 3, 4].map(id => ({ notificationId: `submission:${id}`, unread: true })));
+  api.set('owner-dm', [1, 2].map(id => ({ notificationId: `dm:${id}`, unread: true })));
+  assert.equal(api.snapshot().count, 6);
+  assert.equal(api.sourceSnapshot('owner-submissions').count, 4);
+  assert.equal(api.sourceSnapshot('owner-dm').count, 2);
+});
+
 test('re-subscribing a source replaces its old records and zero clears the app state', () => {
   const { api } = registry();
   api.set('dm', [{ notificationId: 'dm:thread-a:100', unread: true }, { notificationId: 'dm:thread-b:200', unread: true }]);
@@ -57,11 +66,14 @@ test('owner app and service worker load the shared registry and never increment 
   assert.doesNotMatch(sw, /previous\+1|setAppBadge\?\.\(badgeCount\)/);
 });
 
-test('owner Dock badge is rebuilt from the same pending submissions shown in navigation', () => {
+test('owner Dock badge is rebuilt from the same pending submissions shown in navigation, not DM unread', () => {
   assert.match(owner, /function ownerSubmissionUnreadItems\(source=_videoSubmissionReviewItems\(\)\)/);
   assert.match(owner, /notificationId:`submission:\$\{portalUid\}:\$\{jobId\}:/);
   assert.match(owner, /api\.set\('owner-submissions',_isOwner\(\)&&!ownerDmIsDemo\(\)\?ownerSubmissionUnreadItems\(\):\[\]\)/);
-  assert.match(owner, /function ownerSyncAppBadge\(\)\{const snapshot=ownerSyncUnreadSources\(\),count=snapshot\?snapshot\.count:ownerUnreadCount\(\)/);
+  assert.match(owner, /function ownerVisibleNotificationCount\(\)\{[\s\S]*?sourceSnapshot\?\.\('owner-submissions'\)\.count/);
+  assert.match(owner, /ownerSubmissionUnreadItems\(\)\.length/);
+  assert.match(owner, /function ownerSyncAppBadge\(\)\{const count=ownerVisibleNotificationCount\(\);/);
+  assert.doesNotMatch(owner, /function ownerSyncAppBadge\(\)\{[^}]*ownerUnreadCount\(/);
   assert.match(owner, /_ownerPortalBridgeReady\.jobs=true;_notifyOwnerPortalBridge\(\);\s*ownerSyncAppBadge\(\);/);
   const source = owner.match(/function ownerSubmissionUnreadItems\(source=_videoSubmissionReviewItems\(\)\)\{[\s\S]*?\n\}/)?.[0];
   assert.ok(source);
@@ -81,6 +93,22 @@ test('owner Dock badge is rebuilt from the same pending submissions shown in nav
   ]);
 });
 
+test('owner visible notification count falls back to the four rendered submissions without the registry', () => {
+  const source = owner.match(/function ownerVisibleNotificationCount\(\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(source);
+  const context = vm.createContext({
+    ownerSyncUnreadSources: () => null,
+    ownerUnreadApi: () => null,
+    _isOwner: () => true,
+    ownerDmIsDemo: () => false,
+    ownerSubmissionUnreadItems: () => [{}, {}, {}, {}],
+    Number,
+    Math,
+  });
+  vm.runInContext(`${source};this.result=ownerVisibleNotificationCount();`, context);
+  assert.equal(context.result, 4);
+});
+
 test('authentication changes clear stale unread registry and device badge before rebuilding', () => {
   assert.match(owner, /fbAuth\.onAuthStateChanged\(async user=>\{[\s\S]*?EditflowUnread\?\.reset\?\.\(\);window\.EditorPush\?\.syncBadge\?\.\(0\)/);
   assert.match(editor, /function handlePortalAuthState\(nextUser\)\{[\s\S]*?EditflowUnread\?\.reset\?\.\(\);window\.EditorPush\?\.syncBadge\?\.\(0\)/);
@@ -93,7 +121,10 @@ test('editor badge uses source snapshots and clears all editor sources on stop',
   assert.match(features, /registry\.set\('editor-case',editorCaseUnreadItems\(\)\)/);
   assert.match(features, /registry\?\.clear\?\.\('editor-dm'\)/);
   assert.match(features, /registry\?\.clear\?\.\('editor-case'\)/);
-  assert.doesNotMatch(features, /return Math\.max\(0,Math\.min\(999,dmUnreadCount\(\)\+unreadNotificationItems\(\)\.length\)\);/);
+  assert.match(features, /function editorVisibleNotificationCount\(\)\{[\s\S]*?sourceSnapshot\?\.\('editor-case'\)\.count/);
+  assert.match(features, /function syncEditorAppBadge\(\)\{\s*const count=editorVisibleNotificationCount\(\);/);
+  const visibleCount = (features.match(/function editorVisibleNotificationCount\(\)\{[\s\S]*?\n  \}\n  function syncEditorAppBadge/) || [''])[0];
+  assert.doesNotMatch(visibleCount, /dmUnreadCount\(/);
 });
 
 test('DM unread entries have stable token identities and collapse duplicate snapshots', () => {
