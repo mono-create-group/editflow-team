@@ -57,6 +57,35 @@ test('owner app and service worker load the shared registry and never increment 
   assert.doesNotMatch(sw, /previous\+1|setAppBadge\?\.\(badgeCount\)/);
 });
 
+test('owner Dock badge is rebuilt from the same pending submissions shown in navigation', () => {
+  assert.match(owner, /function ownerSubmissionUnreadItems\(source=_videoSubmissionReviewItems\(\)\)/);
+  assert.match(owner, /notificationId:`submission:\$\{portalUid\}:\$\{jobId\}:/);
+  assert.match(owner, /api\.set\('owner-submissions',_isOwner\(\)&&!ownerDmIsDemo\(\)\?ownerSubmissionUnreadItems\(\):\[\]\)/);
+  assert.match(owner, /function ownerSyncAppBadge\(\)\{const snapshot=ownerSyncUnreadSources\(\),count=snapshot\?snapshot\.count:ownerUnreadCount\(\)/);
+  assert.match(owner, /_ownerPortalBridgeReady\.jobs=true;_notifyOwnerPortalBridge\(\);\s*ownerSyncAppBadge\(\);/);
+  const source = owner.match(/function ownerSubmissionUnreadItems\(source=_videoSubmissionReviewItems\(\)\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(source);
+  const collect = vm.runInNewContext(`(${source})`);
+  const rows = collect([
+    { portalUid: 'editor-a', id: 'job-1', round: 1, kind: '初稿' },
+    { portalUid: 'editor-b', id: 'job-2', round: 2, kind: '修正稿' },
+    { portalUid: 'editor-c', id: 'job-3', round: 1, kind: '初稿' },
+    { portalUid: 'editor-d', id: 'job-4', round: 3, kind: '修正稿' }
+  ]);
+  assert.equal(rows.length, 4);
+  assert.deepEqual(Array.from(rows, row => row.notificationId), [
+    'submission:editor-a:job-1:1:初稿',
+    'submission:editor-b:job-2:2:修正稿',
+    'submission:editor-c:job-3:1:初稿',
+    'submission:editor-d:job-4:3:修正稿'
+  ]);
+});
+
+test('authentication changes clear stale unread registry and device badge before rebuilding', () => {
+  assert.match(owner, /fbAuth\.onAuthStateChanged\(async user=>\{[\s\S]*?EditflowUnread\?\.reset\?\.\(\);window\.EditorPush\?\.syncBadge\?\.\(0\)/);
+  assert.match(editor, /function handlePortalAuthState\(nextUser\)\{[\s\S]*?EditflowUnread\?\.reset\?\.\(\);window\.EditorPush\?\.syncBadge\?\.\(0\)/);
+});
+
 test('editor badge uses source snapshots and clears all editor sources on stop', () => {
   const features = fs.readFileSync(path.join(root, 'editor-features.js'), 'utf8');
   assert.match(features, /function syncEditorUnreadSources\(\)/);
