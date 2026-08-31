@@ -566,9 +566,28 @@ service cloud.firestore {
         && request.resource.data.updatedAt is timestamp;
     }
 
+    function validOwnerDeliveryGoalBreakdown() {
+      return request.resource.data.keys().hasAll([
+          'internalTargetCount','internalTargetAmount',
+          'agencyTargetCount','agencyTargetAmount',
+          'dispatchTargetCount','dispatchTargetAmount'
+        ])
+        && request.resource.data.internalTargetCount is int && request.resource.data.internalTargetCount >= 0 && request.resource.data.internalTargetCount <= 1000000
+        && request.resource.data.internalTargetAmount is int && request.resource.data.internalTargetAmount >= 0 && request.resource.data.internalTargetAmount <= 1000000000
+        && request.resource.data.agencyTargetCount is int && request.resource.data.agencyTargetCount >= 0 && request.resource.data.agencyTargetCount <= 1000000
+        && request.resource.data.agencyTargetAmount is int && request.resource.data.agencyTargetAmount >= 0 && request.resource.data.agencyTargetAmount <= 1000000000
+        && request.resource.data.dispatchTargetCount is int && request.resource.data.dispatchTargetCount >= 0 && request.resource.data.dispatchTargetCount <= 1000000
+        && request.resource.data.dispatchTargetAmount is int && request.resource.data.dispatchTargetAmount >= 0 && request.resource.data.dispatchTargetAmount <= 1000000000
+        && request.resource.data.targetCount == request.resource.data.internalTargetCount + request.resource.data.agencyTargetCount + request.resource.data.dispatchTargetCount
+        && request.resource.data.targetAmount == request.resource.data.internalTargetAmount + request.resource.data.agencyTargetAmount + request.resource.data.dispatchTargetAmount;
+    }
+
     function validOwnerDeliveryGoal() {
       return request.resource.data.keys().hasOnly([
           'recordType','month','targetCount','targetAmount','active','revision',
+          'internalTargetCount','internalTargetAmount',
+          'agencyTargetCount','agencyTargetAmount',
+          'dispatchTargetCount','dispatchTargetAmount',
           'createdAt','createdBy','updatedAt','updatedBy'
         ])
         && request.resource.data.recordType == 'owner_delivery_goal'
@@ -576,6 +595,11 @@ service cloud.firestore {
         && request.resource.data.month.matches('^[0-9]{4}-[0-9]{2}$')
         && request.resource.data.targetCount is int && request.resource.data.targetCount >= 0 && request.resource.data.targetCount <= 1000000
         && request.resource.data.targetAmount is int && request.resource.data.targetAmount >= 0 && request.resource.data.targetAmount <= 1000000000
+        && (!request.resource.data.keys().hasAny([
+              'internalTargetCount','internalTargetAmount',
+              'agencyTargetCount','agencyTargetAmount',
+              'dispatchTargetCount','dispatchTargetAmount'
+            ]) || validOwnerDeliveryGoalBreakdown())
         && request.resource.data.active is bool
         && request.resource.data.revision is int && request.resource.data.revision >= 1
         && request.resource.data.createdAt is timestamp && request.resource.data.createdBy is string && request.resource.data.createdBy.size() > 0 && request.resource.data.createdBy.size() <= 320
@@ -589,7 +613,9 @@ service cloud.firestore {
         && request.resource.data.createdBy == resource.data.createdBy
         && request.resource.data.revision == resource.data.revision + 1
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'targetCount','targetAmount','active','revision','updatedAt','updatedBy'
+          'targetCount','targetAmount','internalTargetCount','internalTargetAmount',
+          'agencyTargetCount','agencyTargetAmount','dispatchTargetCount','dispatchTargetAmount',
+          'active','revision','updatedAt','updatedBy'
         ]);
     }
 

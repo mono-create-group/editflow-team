@@ -7,6 +7,30 @@ delete global.EditflowOwnerPerformance;
 require(path.join(__dirname, '..', 'owner-video-performance.js'));
 const { logic } = global.EditflowOwnerPerformance;
 
+test('three editing targets produce one derived monthly total', () => {
+  const totals = logic.goalTotals({
+    internalTargetCount: 10, internalTargetAmount: 50000,
+    agencyTargetCount: 20, agencyTargetAmount: 20000,
+    dispatchTargetCount: 5, dispatchTargetAmount: 30000,
+    targetCount: 999, targetAmount: 999999,
+  });
+  assert.equal(totals.targetCount, 35);
+  assert.equal(totals.targetAmount, 100000);
+  assert.deepEqual(
+    [totals.rows.internal.count, totals.rows.agency.count, totals.rows.dispatch.count],
+    [10, 20, 5],
+  );
+});
+
+test('legacy single target remains editable as editing-agency target', () => {
+  const totals = logic.goalTotals({ targetCount: 12, targetAmount: 48000 });
+  assert.equal(totals.migratedFromLegacy, true);
+  assert.equal(totals.rows.agency.count, 12);
+  assert.equal(totals.rows.agency.amount, 48000);
+  assert.equal(totals.targetCount, 12);
+  assert.equal(totals.targetAmount, 48000);
+});
+
 test('normalizes actual delivered units without parent or portal-linked duplicates', () => {
   const units = logic.normalizeWorkUnits(
     [{ id: 'p1', _portalUid: 'u1', linkedLegacyJobId: 'legacy-child', status: '完了', completedDeliveryDate: '2026-08-31', businessType: 'edit_agency' }],
@@ -41,6 +65,20 @@ test('monthly pace produces remaining daily and weekly targets', () => {
   assert.equal(pace.remainingDays, 11);
   assert.ok(pace.daily.count > 1.8 && pace.daily.count < 1.9);
   assert.ok(pace.weekly.amount > pace.daily.amount);
+});
+
+test('monthly pace uses the derived total from all three editing targets', () => {
+  const pace = logic.monthlyPace({
+    month: '2026-09',
+    internalTargetCount: 10, internalTargetAmount: 50000,
+    agencyTargetCount: 20, agencyTargetAmount: 20000,
+    dispatchTargetCount: 5, dispatchTargetAmount: 30000,
+    targetCount: 999, targetAmount: 999999,
+  }, { count: 5, amount: 10000 }, '2026-09-01');
+  assert.equal(pace.targetCount, 35);
+  assert.equal(pace.targetAmount, 100000);
+  assert.equal(pace.remainingCount, 30);
+  assert.equal(pace.remainingAmount, 90000);
 });
 
 test('dashboard separates today from the monthly automatic delivery totals', () => {

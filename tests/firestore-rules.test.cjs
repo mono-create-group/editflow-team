@@ -107,6 +107,27 @@ function ownerLegacyFinance(overrides = {}) {
   };
 }
 
+function ownerDeliveryGoal(overrides = {}) {
+  return {
+    recordType: 'owner_delivery_goal', month: '2026-09',
+    internalTargetCount: 10, internalTargetAmount: 50000,
+    agencyTargetCount: 20, agencyTargetAmount: 20000,
+    dispatchTargetCount: 5, dispatchTargetAmount: 30000,
+    targetCount: 35, targetAmount: 100000, active: true, revision: 1,
+    createdAt: serverTimestamp(), createdBy: 'owner',
+    updatedAt: serverTimestamp(), updatedBy: 'owner',
+    ...overrides,
+  };
+}
+
+function legacyOwnerDeliveryGoal(overrides = {}) {
+  const goal = ownerDeliveryGoal(overrides);
+  delete goal.internalTargetCount; delete goal.internalTargetAmount;
+  delete goal.agencyTargetCount; delete goal.agencyTargetAmount;
+  delete goal.dispatchTargetCount; delete goal.dispatchTargetAmount;
+  return goal;
+}
+
 function weeklySchedule(overrides = {}) {
   const dates = ['2026-08-24','2026-08-25','2026-08-26','2026-08-27','2026-08-28','2026-08-29','2026-08-30'];
   const days = dates.map((date, index) => ({
@@ -215,6 +236,20 @@ async function expectAllowed(label, promise) {
     await expectDenied('external editor cannot read client pricing master', getDoc(doc(external1, 'owner_client_pricing', 'projects_c1')));
     await expectDenied('video director cannot read client pricing master', getDoc(doc(dir1, 'owner_client_pricing', 'projects_c1')));
     await expectDenied('editor cannot write client pricing master', setDoc(doc(direct1, 'owner_client_pricing', 'projects-c2'), { ...ownerPricing, sourceClientId: 'c2' }));
+
+    await expectAllowed('owner creates a three-part monthly delivery goal', setDoc(doc(owner, 'owner_delivery_goals', '2026-09'), ownerDeliveryGoal()));
+    await expectAllowed('old app goal remains valid during the no-downtime rollout', setDoc(doc(owner, 'owner_delivery_goals', '2026-08'), legacyOwnerDeliveryGoal({ month: '2026-08' })));
+    await expectAllowed('owner reads the private monthly delivery goal', getDoc(doc(owner, 'owner_delivery_goals', '2026-09')));
+    await expectDenied('editor cannot read the private monthly delivery goal', getDoc(doc(direct1, 'owner_delivery_goals', '2026-09')));
+    await expectDenied('monthly goal rejects a total that differs from its three parts', setDoc(doc(owner, 'owner_delivery_goals', '2026-10'), ownerDeliveryGoal({ month: '2026-10', targetCount: 36 })));
+    await expectDenied('monthly goal rejects a partial three-part payload', setDoc(doc(owner, 'owner_delivery_goals', '2026-11'), { ...legacyOwnerDeliveryGoal({ month: '2026-11' }), internalTargetCount: 10 }));
+    await expectAllowed('owner updates all three targets with a matching derived total', updateDoc(doc(owner, 'owner_delivery_goals', '2026-09'), {
+      internalTargetCount: 12, internalTargetAmount: 60000,
+      agencyTargetCount: 18, agencyTargetAmount: 18000,
+      dispatchTargetCount: 6, dispatchTargetAmount: 36000,
+      targetCount: 36, targetAmount: 114000, revision: 2,
+      updatedAt: serverTimestamp(), updatedBy: 'owner',
+    }));
 
     await expectAllowed('owner creates an immutable case finance record with external-editor to director routing', setDoc(doc(owner, 'owner_job_finance', 'legacy-external1-done1'), ownerJobFinance()));
     await expectAllowed('owner reads the private case finance record', getDoc(doc(owner, 'owner_job_finance', 'legacy-external1-done1')));

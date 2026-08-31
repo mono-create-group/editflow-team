@@ -9,6 +9,11 @@
   'use strict';
 
   const OWNER_EMAILS = new Set(['nakamurakouta512@gmail.com', 'mono.create.group@gmail.com']);
+  const GOAL_CATEGORIES = Object.freeze([
+    { key: 'internal', label: '社内編集', hint: 'mono.create内で自分が編集', countField: 'internalTargetCount', amountField: 'internalTargetAmount' },
+    { key: 'agency', label: '編集代行', hint: '編集者へ外注', countField: 'agencyTargetCount', amountField: 'agencyTargetAmount' },
+    { key: 'dispatch', label: '編集者派遣', hint: '派遣先から直接受注', countField: 'dispatchTargetCount', amountField: 'dispatchTargetAmount' },
+  ]);
   const state = {
     started: '', goal: null, dailyCheck: null, qualityReviews: [], publishedRanking: null,
     ready: { goal: false, daily: false, quality: false }, error: '', stops: [], onChange: null,
@@ -26,6 +31,34 @@
   };
   const addDays = (date, count) => { const d = new Date(`${dateOnly(date)}T12:00:00`); d.setDate(d.getDate() + count); return ymd(d); };
   const safeKey = value => text(value).replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 160) || 'unknown';
+  const hasOwn = (value, key) => Object.prototype.hasOwnProperty.call(value || {}, key);
+
+  function goalBreakdown(goal = {}) {
+    const hasBreakdown = GOAL_CATEGORIES.some(category => hasOwn(goal, category.countField) || hasOwn(goal, category.amountField));
+    const rows = {};
+    GOAL_CATEGORIES.forEach(category => {
+      rows[category.key] = {
+        key: category.key,
+        label: category.label,
+        count: Math.max(0, number(goal?.[category.countField]) || 0),
+        amount: Math.max(0, number(goal?.[category.amountField]) || 0),
+      };
+    });
+    const legacyCount = Math.max(0, number(goal?.targetCount ?? goal?.deliveryTarget) || 0);
+    const legacyAmount = Math.max(0, number(goal?.targetAmount ?? goal?.amountTarget) || 0);
+    // The former screen had one video-business total. Keep that value editable
+    // instead of dropping it when the owner first opens the three-way form.
+    const migratedFromLegacy = !hasBreakdown && (legacyCount > 0 || legacyAmount > 0);
+    if (migratedFromLegacy) rows.agency = { ...rows.agency, count: legacyCount, amount: legacyAmount };
+    return { rows, hasBreakdown, migratedFromLegacy };
+  }
+
+  function goalTotals(goal = {}) {
+    const breakdown = goalBreakdown(goal);
+    const targetCount = GOAL_CATEGORIES.reduce((total, category) => total + breakdown.rows[category.key].count, 0);
+    const targetAmount = GOAL_CATEGORIES.reduce((total, category) => total + breakdown.rows[category.key].amount, 0);
+    return { ...breakdown, targetCount, targetAmount };
+  }
 
   function globals() {
     let db, user, jobs, portalJobs, selfWid, firebaseApi;
@@ -161,8 +194,7 @@
     const month = monthOf(goal.month || todayValue) || monthOf(todayValue);
     const [year, monthNumber] = month.split('-').map(Number);
     const end = `${month}-${String(new Date(year, monthNumber, 0).getDate()).padStart(2, '0')}`;
-    const targetCount = Math.max(0, number(goal.targetCount ?? goal.deliveryTarget) || 0);
-    const targetAmount = Math.max(0, number(goal.targetAmount ?? goal.amountTarget) || 0);
+    const { targetCount, targetAmount } = goalTotals(goal);
     const actualCount = Math.max(0, number(summary.count) || 0);
     const actualAmount = Math.max(0, number(summary.amount) || 0);
     const remainingDays = Math.max(1, daysBetweenInclusive(todayValue, end));
@@ -244,10 +276,21 @@
   async function saveGoal(input = {}) {
     const db = assertOwnerDb(), month = monthOf(input.month || ymd(new Date()));
     if (!month) throw new Error('invalid-month');
-    const targetCount = number(input.targetCount), targetAmount = number(input.targetAmount);
-    if (targetCount === null || !Number.isInteger(targetCount) || targetCount < 0 || targetAmount === null || !Number.isInteger(targetAmount) || targetAmount < 0) throw new Error('invalid-goal');
+    const hasBreakdownInput = GOAL_CATEGORIES.some(category => hasOwn(input, category.countField) || hasOwn(input, category.amountField));
+    const legacyCount = number(input.targetCount), legacyAmount = number(input.targetAmount);
+    const values = {};
+    GOAL_CATEGORIES.forEach(category => {
+      const count = hasBreakdownInput ? number(input[category.countField] ?? 0) : (category.key === 'agency' ? legacyCount : 0);
+      const amount = hasBreakdownInput ? number(input[category.amountField] ?? 0) : (category.key === 'agency' ? legacyAmount : 0);
+      if (count === null || !Number.isInteger(count) || count < 0 || count > 1000000 || amount === null || !Number.isInteger(amount) || amount < 0 || amount > 1000000000) throw new Error('invalid-goal');
+      values[category.countField] = count;
+      values[category.amountField] = amount;
+    });
+    const targetCount = GOAL_CATEGORIES.reduce((total, category) => total + values[category.countField], 0);
+    const targetAmount = GOAL_CATEGORIES.reduce((total, category) => total + values[category.amountField], 0);
+    if (targetCount > 1000000 || targetAmount > 1000000000) throw new Error('invalid-goal');
     const existing = state.goal?.month === month ? state.goal : null, email = text(globals().user?.email), payload = {
-      recordType: 'owner_delivery_goal', month, targetCount, targetAmount,
+      recordType: 'owner_delivery_goal', month, ...values, targetCount, targetAmount,
       active: input.active !== false, revision: Number(existing?.revision || 0) + 1,
       updatedAt: serverTime(), updatedBy: email,
     };
@@ -335,27 +378,53 @@
       if (target && typeof target === 'object') target.innerHTML = html; return html;
     }
     const data = currentDashboard(options), month = data.pace.month, weekStart = mondayOf(options.today || ymd(new Date()));
-    const groups = [['社内編集', data.monthSummary.internal], ['編集代行', data.monthSummary.agency], ['編集者派遣', data.monthSummary.dispatch], ['合計', data.monthSummary.all]];
-    const cards = groups.map(([label, row]) => `<article><b>${escapeHtml(label)}</b><div>${row.count}本 / ${row.amount.toLocaleString('ja-JP')}円</div><small>金額未登録 ${row.missingAmountCount}件</small></article>`).join('');
+    const targets = goalTotals(state.goal || {});
+    const groups = [
+      ['社内編集', data.monthSummary.internal, targets.rows.internal],
+      ['編集代行', data.monthSummary.agency, targets.rows.agency],
+      ['編集者派遣', data.monthSummary.dispatch, targets.rows.dispatch],
+      ['合計', data.monthSummary.all, { count: targets.targetCount, amount: targets.targetAmount }],
+    ];
+    const cards = groups.map(([label, row, targetGoal]) => `<article><b>${escapeHtml(label)}</b><div>${row.count}本 / ${row.amount.toLocaleString('ja-JP')}円</div><small>目標 ${targetGoal.count}本 / ${targetGoal.amount.toLocaleString('ja-JP')}円<br>金額未登録 ${row.missingAmountCount}件</small></article>`).join('');
+    const goalInputs = GOAL_CATEGORIES.map(category => {
+      const targetGoal = targets.rows[category.key];
+      return `<article class="owner-goal-category"><h4>${escapeHtml(category.label)}</h4><p>${escapeHtml(category.hint)}</p><div class="form-grid"><label>目標本数（本）<input id="owner-goal-${category.key}-count" type="number" min="0" step="1" inputmode="numeric" value="${targetGoal.count}" oninput="ownerPerformanceUpdateGoalTotal()"></label><label>目標報酬額（円）<input id="owner-goal-${category.key}-amount" type="number" min="0" step="1" inputmode="numeric" value="${targetGoal.amount}" oninput="ownerPerformanceUpdateGoalTotal()"></label></div></article>`;
+    }).join('');
     const ranking = data.ranking.map(row => `<li><b>${row.rank}位 ${escapeHtml(row.editorName)}</b> — ${row.delivered}本 / ${row.score === null ? '集計対象なし' : row.score.toFixed(1) + '点'} / 納期遵守 ${row.onTimeRate === null ? '対象なし' : Math.round(row.onTimeRate * 100) + '%'} / 品質評価 ${Math.round(row.qualityEvaluationRate * 100)}%</li>`).join('') || '<li>今週の納品はありません</li>';
     const weekUnits = data.units.filter(unit => unit.completed && unit.completedDeliveryDate >= weekStart && unit.completedDeliveryDate <= addDays(weekStart, 6));
     const quality = weekUnits.map(unit => { const review = state.qualityReviews.find(row => row.unitKey === unit.key && row.active !== false), id = safeKey(unit.key), action = `ownerPerformanceSaveQuality(${JSON.stringify(unit.key)},${JSON.stringify(unit.editorUid || unit.workerId || unit.editorName || '')})`; return `<article class="card"><b>${escapeHtml(unit.title || unit.jobTitle || unit.key)}</b><div class="muted">${escapeHtml(unit.editorName || '担当者未設定')} ・ ${unit.completedDeliveryDate}</div><div class="form-grid"><label>品質<select id="owner-quality-${id}">${[1,2,3,4,5].map(score => `<option value="${score}" ${Number(review?.score || 0) === score ? 'selected' : ''}>${score}</option>`).join('')}</select></label><label>コメント（任意）<input id="owner-quality-note-${id}" maxlength="2000" value="${escapeHtml(review?.note || '')}"></label></div><button class="btn btn-g btn-sm" onclick="${escapeHtml(action)}">品質評価を保存</button></article>`; }).join('') || '<div class="card">今週の納品はありません。</div>';
-    const html = `<section class="owner-video-performance"><div class="ph"><div><div class="ph-title">納品・目標</div><div class="muted">完了案件とオーナー専用の確定単価から自動集計</div></div></div><div class="card"><h3>${month} の目標</h3><div class="form-grid"><label>目標納品本数<input id="owner-goal-count" type="number" min="0" step="1" value="${Number(state.goal?.targetCount || 0)}"></label><label>目標金額<input id="owner-goal-amount" type="number" min="0" step="1" value="${Number(state.goal?.targetAmount || 0)}"></label></div><div class="actions"><button class="btn btn-p" onclick="ownerPerformanceSaveGoal()">月目標を保存</button>${state.goal?.active ? '<button class="btn btn-g" onclick="ownerPerformanceDeactivateGoal()">目標を無効化</button>' : ''}</div></div><div class="owner-performance-cards">${cards}</div><div class="card"><b>残り ${data.pace.remainingCount}本・${data.pace.remainingAmount.toLocaleString('ja-JP')}円</b><p>1日平均：${data.pace.daily.count.toFixed(2)}本・${Math.ceil(data.pace.daily.amount).toLocaleString('ja-JP')}円</p><p>1週間平均：${data.pace.weekly.count.toFixed(2)}本・${Math.ceil(data.pace.weekly.amount).toLocaleString('ja-JP')}円</p></div><h3>今週の品質評価</h3><div class="feature-grid two">${quality}</div><div class="card"><div class="section-title"><h3>編集者ランキング</h3><span>${weekStart} から7日間</span></div><ol>${ranking}</ol><button class="btn btn-p btn-sm" onclick="ownerPerformancePublishRanking()">このランキングを編集者へ公開</button></div>${renderGate(null, { ...options, date: options.today || ymd(new Date()), skipStart: true })}</section>`;
+    const html = `<section class="owner-video-performance"><div class="ph"><div><div class="ph-title">納品・目標</div><div class="muted">完了案件とオーナー専用の確定単価から自動集計</div></div></div><div class="card owner-goal-editor"><h3>${month} の目標</h3><p class="muted">3つの編集形態ごとに、目標本数と目標報酬額を設定します。</p><div class="owner-goal-category-grid">${goalInputs}</div><aside class="owner-goal-total" aria-live="polite"><span>合計目標</span><b><strong id="owner-goal-total-count">${targets.targetCount}</strong>本</b><b><strong id="owner-goal-total-amount">${targets.targetAmount.toLocaleString('ja-JP')}</strong>円</b><small>3区分の入力から自動計算</small></aside>${targets.migratedFromLegacy ? '<p class="notice">旧形式の月目標は「編集代行」へ引き継いで表示しています。3区分を確認して保存してください。</p>' : ''}<div class="actions"><button class="btn btn-p" onclick="ownerPerformanceSaveGoal()">3区分の月目標を保存</button>${state.goal?.active ? '<button class="btn btn-g" onclick="ownerPerformanceDeactivateGoal()">目標を無効化</button>' : ''}</div></div><div class="owner-performance-cards">${cards}</div><div class="card"><b>残り ${data.pace.remainingCount}本・${data.pace.remainingAmount.toLocaleString('ja-JP')}円</b><p>1日平均：${data.pace.daily.count.toFixed(2)}本・${Math.ceil(data.pace.daily.amount).toLocaleString('ja-JP')}円</p><p>1週間平均：${data.pace.weekly.count.toFixed(2)}本・${Math.ceil(data.pace.weekly.amount).toLocaleString('ja-JP')}円</p></div><h3>今週の品質評価</h3><div class="feature-grid two">${quality}</div><div class="card"><div class="section-title"><h3>編集者ランキング</h3><span>${weekStart} から7日間</span></div><ol>${ranking}</ol><button class="btn btn-p btn-sm" onclick="ownerPerformancePublishRanking()">このランキングを編集者へ公開</button></div>${renderGate(null, { ...options, date: options.today || ymd(new Date()), skipStart: true })}</section>`;
     if (target && typeof target === 'object') target.innerHTML = html;
     return html;
   }
 
   async function withPending(key, action) { if (state.writePending.has(key)) return; state.writePending.add(key); try { await action(); } finally { state.writePending.delete(key); } }
   function notify(message, kind) { try { if (typeof global.toast === 'function') global.toast(message, kind); } catch (_) {} }
-  async function saveGoalFromPage(active = true) { return withPending('goal', async () => { try { await saveGoal({ month: monthOf(state.lastOptions.today || ymd(new Date())), targetCount: Number(global.document?.getElementById('owner-goal-count')?.value), targetAmount: Number(global.document?.getElementById('owner-goal-amount')?.value), active }); notify(active ? '月目標を保存しました' : '月目標を無効化しました'); } catch (error) { console.warn(error); notify('月目標を保存できませんでした', 'err'); } }); }
+  function goalInputFromPage() {
+    const input = {};
+    GOAL_CATEGORIES.forEach(category => {
+      input[category.countField] = Number(global.document?.getElementById(`owner-goal-${category.key}-count`)?.value || 0);
+      input[category.amountField] = Number(global.document?.getElementById(`owner-goal-${category.key}-amount`)?.value || 0);
+    });
+    return input;
+  }
+  function updateGoalTotalFromPage() {
+    const totals = goalTotals(goalInputFromPage());
+    const count = global.document?.getElementById('owner-goal-total-count'), amount = global.document?.getElementById('owner-goal-total-amount');
+    if (count) count.textContent = String(totals.targetCount);
+    if (amount) amount.textContent = totals.targetAmount.toLocaleString('ja-JP');
+    return totals;
+  }
+  async function saveGoalFromPage(active = true) { return withPending('goal', async () => { try { await saveGoal({ month: monthOf(state.lastOptions.today || ymd(new Date())), ...goalInputFromPage(), active }); notify(active ? '3区分の月目標を保存しました' : '月目標を無効化しました'); } catch (error) { console.warn(error); notify('月目標を保存できませんでした', 'err'); } }); }
   async function confirmFromPage() { return withPending('daily', async () => { try { if (!global.document?.getElementById('owner-performance-confirm')?.checked) throw new Error('explicit-owner-confirmation-required'); const data = currentDashboard(state.lastOptions), summary = { sourcesReady: state.lastOptions.sourcesReady === true, month: data.pace.month, targetCount: data.pace.targetCount, targetAmount: data.pace.targetAmount, actualCount: data.pace.actualCount, actualAmount: data.pace.actualAmount, todayCount: data.todaySummary.all.count, todayAmount: data.todaySummary.all.amount, missingAmountCount: data.monthSummary.all.missingAmountCount, remainingCount: data.pace.remainingCount, remainingAmount: data.pace.remainingAmount, sourceHash: sourceHash(data.monthSummary.rows) }; await confirmDailyCheck({ confirmed: true, date: state.lastOptions.today || ymd(new Date()), summary }); notify('本日の納品本数・金額を確認しました'); state.lastOptions.onChange?.(); } catch (error) { console.warn(error); notify(error?.message === 'delivery-summary-incomplete' ? '金額未設定の納品があるため確認できません' : '本日の確認を保存できませんでした', 'err'); } }); }
   async function saveQualityFromPage(unitKey, editorUid) { return withPending(`quality:${unitKey}`, async () => { const id = safeKey(unitKey); try { await saveQualityReview({ unitKey, editorUid, weekStart: mondayOf(state.lastOptions.today || ymd(new Date())), score: Number(global.document?.getElementById(`owner-quality-${id}`)?.value), note: global.document?.getElementById(`owner-quality-note-${id}`)?.value || '' }); notify('品質評価を保存しました'); } catch (error) { console.warn(error); notify('品質評価を保存できませんでした', 'err'); } }); }
   async function publishFromPage() { return withPending('ranking', async () => { try { const data = currentDashboard(state.lastOptions); await publishWeeklyRanking({ weekStart: mondayOf(state.lastOptions.today || ymd(new Date())), rows: data.ranking }); notify('編集者ランキングを公開しました'); } catch (error) { console.warn(error); notify('編集者ランキングを公開できませんでした', 'err'); } }); }
 
   global.ownerPerformanceSaveGoal = () => saveGoalFromPage(true);
   global.ownerPerformanceDeactivateGoal = () => saveGoalFromPage(false);
+  global.ownerPerformanceUpdateGoalTotal = updateGoalTotalFromPage;
   global.ownerPerformanceConfirmToday = confirmFromPage;
   global.ownerPerformanceSaveQuality = saveQualityFromPage;
   global.ownerPerformancePublishRanking = publishFromPage;
-  global.EditflowOwnerPerformance = { logic: { normalizeWorkUnits, completedWorkUnits, joinOwnerFinance, summarizeDelivery, monthlyPace, weeklyEditorRanking, dashboard, mondayOf, sourceHash }, lazyStart, stop, saveGoal, confirmDailyCheck, saveQualityReview, publishWeeklyRanking, gatePassed, allReady, renderGate, renderPage };
+  global.EditflowOwnerPerformance = { logic: { goalBreakdown, goalTotals, normalizeWorkUnits, completedWorkUnits, joinOwnerFinance, summarizeDelivery, monthlyPace, weeklyEditorRanking, dashboard, mondayOf, sourceHash }, lazyStart, stop, saveGoal, confirmDailyCheck, saveQualityReview, publishWeeklyRanking, gatePassed, allReady, renderGate, renderPage };
 })(typeof window !== 'undefined' ? window : globalThis);
