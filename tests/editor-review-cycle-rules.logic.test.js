@@ -19,7 +19,7 @@ test('review-cycle schema is optional for legacy jobs and bounded for new jobs',
 });
 
 test('review workflow keeps editor submissions and manager decisions separate', () => {
-  const editorBody = rules.match(/function validEditorReviewTransition\(\) \{([\s\S]*?)\n    \}/)?.[1] || '';
+  const editorBody = rules.match(/function validEditorReviewTransition\(uid, jobId\) \{([\s\S]*?)\n    \}/)?.[1] || '';
   const managerBody = rules.match(/function validManagerReviewTransition\(\) \{([\s\S]*?)\n    \}/)?.[1] || '';
   assert.match(editorBody, /'editing'/);
   assert.match(editorBody, /'director_review'/);
@@ -59,12 +59,12 @@ test('editor draft submissions bind the stored evidence URL to the appended work
 });
 
 test('workflow-aware editor saves cannot change director or client-owned statuses', () => {
-  const body = rules.match(/function validEditorWorkflowStatus\(\) \{([\s\S]*?)\n    \}/)?.[1] || '';
+  const body = rules.match(/function validEditorWorkflowStatus\(uid, jobId\) \{([\s\S]*?)\n    \}/)?.[1] || '';
   assert.match(body, /reviewStage\(resource\.data\) == 'editing'/);
   assert.match(body, /reviewStage\(request\.resource\.data\) == 'director_review'/);
   assert.match(body, /validEditorSubmissionStatus\([\s\S]*resource\.data\.status, request\.resource\.data\.status/);
   assert.match(body, /request\.resource\.data\.status == resource\.data\.status/);
-  assert.match(rules, /&& validEditorWorkflowStatus\(\)/);
+  assert.match(rules, /&& validEditorWorkflowStatus\(uid, jobId\)/);
 });
 
 test('manager same-stage updates keep both status and review event history intact', () => {
@@ -103,6 +103,14 @@ test('legacy portal review statuses can migrate only through the matching manage
   ]) assert.ok(body.includes(marker), `missing ${marker}`);
   assert.ok((body.match(/reviewRound\(request\.resource\.data\) == 2/g) || []).length >= 2);
   assert.ok((body.match(/reviewRound\(request\.resource\.data\) == 1/g) || []).length >= 2);
+});
+
+test('legacy FB待ち records can enter the review workflow only through a D decision event', () => {
+  const body = rules.match(/function validManagerReviewTransition\(\) \{([\s\S]*?)\n    \}/)?.[1] || '';
+  assert.ok(body.includes("resource.data.status in ['初稿提出済み', '修正稿提出済み', 'FB待ち']"));
+  assert.ok((body.match(/'director_approved', 'director_review', 'client_submission'/g) || []).length >= 2);
+  assert.ok((body.match(/'director_revision_requested', 'director_review', 'editing'/g) || []).length >= 2);
+  assert.match(body, /validManagerProgressEvent\(/);
 });
 
 test('director and client revision events require a bounded non-empty correction reason', () => {

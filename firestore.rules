@@ -389,12 +389,70 @@ service cloud.firestore {
         && request.resource.data.updatedBy.size() <= 320;
     }
 
+    // Effective-dated, owner-only rates are the source for new dispatch
+    // finance rows.  Scope and start date are immutable so an audit trail is
+    // never silently rewritten; corrections advance the revision instead.
+    function validOwnerClientRateDocument() {
+      return request.resource.data.keys().hasOnly([
+          'recordType','clientSource','sourceClientId','clientName','accountId','accountName',
+          'effectiveFrom','clientUnitPrice','editorPayAmount','active','revision',
+          'createdAt','createdBy','updatedAt','updatedBy'
+        ])
+        && request.resource.data.recordType == 'owner_client_rate'
+        && request.resource.data.clientSource in ['projects','crm']
+        && request.resource.data.sourceClientId is string
+        && request.resource.data.sourceClientId.size() > 0
+        && request.resource.data.sourceClientId.size() <= 160
+        && request.resource.data.clientName is string
+        && request.resource.data.clientName.size() > 0
+        && request.resource.data.clientName.size() <= 100
+        && request.resource.data.accountId is string
+        && request.resource.data.accountId.size() <= 160
+        && request.resource.data.accountName is string
+        && request.resource.data.accountName.size() <= 100
+        && request.resource.data.effectiveFrom is string
+        && request.resource.data.effectiveFrom.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.clientUnitPrice is int
+        && request.resource.data.clientUnitPrice > 0
+        && request.resource.data.clientUnitPrice <= 100000000
+        && request.resource.data.editorPayAmount is int
+        && request.resource.data.editorPayAmount >= 0
+        && request.resource.data.editorPayAmount <= 100000000
+        && request.resource.data.active is bool
+        && request.resource.data.revision is int
+        && request.resource.data.revision >= 1
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.createdBy is string
+        && request.resource.data.createdBy.size() > 0
+        && request.resource.data.createdBy.size() <= 320
+        && request.resource.data.updatedAt is timestamp
+        && request.resource.data.updatedBy is string
+        && request.resource.data.updatedBy.size() > 0
+        && request.resource.data.updatedBy.size() <= 320;
+    }
+
+    function validOwnerClientRateUpdate() {
+      return validOwnerClientRateDocument()
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.clientSource == resource.data.clientSource
+        && request.resource.data.sourceClientId == resource.data.sourceClientId
+        && request.resource.data.clientName == resource.data.clientName
+        && request.resource.data.accountId == resource.data.accountId
+        && request.resource.data.accountName == resource.data.accountName
+        && request.resource.data.effectiveFrom == resource.data.effectiveFrom
+        && request.resource.data.revision == resource.data.revision + 1
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'clientUnitPrice','editorPayAmount','active','revision','updatedAt','updatedBy'
+        ]);
+    }
+
     function validOwnerJobFinanceDocument() {
       let masterPrice = request.resource.data.get('masterClientUnitPrice', null);
       return request.resource.data.keys().hasOnly([
           'recordType','portalUid','portalJobId','legacyJobId','parentCaseId',
           'sourceClientId','accountId','clientUnitPrice','masterClientUnitPrice',
-          'pricingSource','pricingRevision','pricingUpdatedAt','overrideReason',
+          'pricingSource','pricingRevision','pricingUpdatedAt','pricingRateId','pricingEffectiveFrom','overrideReason',
           'editorPayReference','approvedPayAmount','payRoute','payeeUid',
           'payeeWorkerId','assigneeUid','assigneeWorkerId','approvedBy',
           'approvedAt','updatedAt'
@@ -421,15 +479,23 @@ service cloud.firestore {
         && request.resource.data.clientUnitPrice <= 100000000
         && (masterPrice == null
           || (masterPrice is int && masterPrice >= 0 && masterPrice <= 100000000))
-        && request.resource.data.pricingSource in ['master','account_master','case_override']
+        && request.resource.data.pricingSource in ['master','account_master','client_schedule','account_schedule','case_override']
         && request.resource.data.pricingRevision is int
         && request.resource.data.pricingRevision >= 0
         && (request.resource.data.get('pricingUpdatedAt', null) == null
           || request.resource.data.pricingUpdatedAt is timestamp)
+        && request.resource.data.get('pricingRateId', '') is string
+        && request.resource.data.get('pricingRateId', '').size() <= 220
+        && request.resource.data.get('pricingEffectiveFrom', '') is string
+        && (request.resource.data.get('pricingEffectiveFrom', '') == ''
+          || request.resource.data.get('pricingEffectiveFrom', '').matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$'))
         && request.resource.data.overrideReason is string
         && request.resource.data.overrideReason.size() <= 500
         && (request.resource.data.pricingSource != 'case_override'
           || request.resource.data.overrideReason.size() > 0)
+        && (!(request.resource.data.pricingSource in ['client_schedule','account_schedule'])
+          || (request.resource.data.get('pricingRateId', '').size() > 0
+            && request.resource.data.get('pricingEffectiveFrom', '').size() > 0))
         && request.resource.data.editorPayReference is int
         && request.resource.data.editorPayReference > 0
         && request.resource.data.editorPayReference <= 100000000
@@ -469,6 +535,111 @@ service cloud.firestore {
         && request.resource.data.approvedBy.size() <= 320
         && request.resource.data.approvedAt is timestamp
         && request.resource.data.updatedAt is timestamp;
+    }
+
+    function validOwnerDeliveryGoal() {
+      return request.resource.data.keys().hasOnly([
+          'recordType','month','targetCount','targetAmount','active','revision',
+          'createdAt','createdBy','updatedAt','updatedBy'
+        ])
+        && request.resource.data.recordType == 'owner_delivery_goal'
+        && request.resource.data.month is string
+        && request.resource.data.month.matches('^[0-9]{4}-[0-9]{2}$')
+        && request.resource.data.targetCount is int && request.resource.data.targetCount >= 0 && request.resource.data.targetCount <= 1000000
+        && request.resource.data.targetAmount is int && request.resource.data.targetAmount >= 0 && request.resource.data.targetAmount <= 1000000000
+        && request.resource.data.active is bool
+        && request.resource.data.revision is int && request.resource.data.revision >= 1
+        && request.resource.data.createdAt is timestamp && request.resource.data.createdBy is string && request.resource.data.createdBy.size() > 0 && request.resource.data.createdBy.size() <= 320
+        && request.resource.data.updatedAt is timestamp && request.resource.data.updatedBy is string && request.resource.data.updatedBy.size() > 0 && request.resource.data.updatedBy.size() <= 320;
+    }
+
+    function validOwnerDeliveryGoalUpdate() {
+      return validOwnerDeliveryGoal()
+        && request.resource.data.month == resource.data.month
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.revision == resource.data.revision + 1
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'targetCount','targetAmount','active','revision','updatedAt','updatedBy'
+        ]);
+    }
+
+    function validOwnerDailyDeliveryCheck() {
+      let summary = request.resource.data.summary;
+      return request.resource.data.keys().hasOnly([
+          'recordType','date','confirmed','confirmedAt','confirmedBy','summary'
+        ])
+        && request.resource.data.recordType == 'owner_daily_delivery_check'
+        && request.resource.data.date is string && request.resource.data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.confirmed == true
+        && request.resource.data.confirmedAt is timestamp
+        && request.resource.data.confirmedBy is string && request.resource.data.confirmedBy.size() > 0 && request.resource.data.confirmedBy.size() <= 320
+        && summary is map
+        && summary.keys().hasOnly([
+          'month','targetCount','targetAmount','actualCount','actualAmount','todayCount','todayAmount',
+          'missingAmountCount','remainingCount','remainingAmount','sourceHash'
+        ])
+        && summary.keys().hasAll([
+          'month','targetCount','targetAmount','actualCount','actualAmount','todayCount','todayAmount',
+          'missingAmountCount','remainingCount','remainingAmount','sourceHash'
+        ])
+        && summary.month is string && summary.month.matches('^[0-9]{4}-[0-9]{2}$')
+        && summary.targetCount is int && summary.targetCount >= 0 && summary.targetCount <= 1000000
+        && summary.targetAmount is int && summary.targetAmount >= 0 && summary.targetAmount <= 1000000000
+        && summary.actualCount is int && summary.actualCount >= 0 && summary.actualCount <= 1000000
+        && summary.actualAmount is int && summary.actualAmount >= 0 && summary.actualAmount <= 1000000000
+        && summary.todayCount is int && summary.todayCount >= 0 && summary.todayCount <= 1000000
+        && summary.todayAmount is int && summary.todayAmount >= 0 && summary.todayAmount <= 1000000000
+        && summary.missingAmountCount is int && summary.missingAmountCount == 0
+        && summary.remainingCount is int && summary.remainingCount >= 0 && summary.remainingCount <= 1000000
+        && summary.remainingAmount is int && summary.remainingAmount >= 0 && summary.remainingAmount <= 1000000000
+        && summary.sourceHash is string && summary.sourceHash.size() > 0 && summary.sourceHash.size() <= 120;
+    }
+
+    function validOwnerQualityReview() {
+      return request.resource.data.keys().hasOnly([
+          'recordType','weekStart','editorUid','unitKey','score','note','active','revision',
+          'createdAt','createdBy','updatedAt','updatedBy'
+        ])
+        && request.resource.data.recordType == 'owner_editor_quality_review'
+        && request.resource.data.weekStart is string && request.resource.data.weekStart.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.editorUid is string && request.resource.data.editorUid.size() > 0 && request.resource.data.editorUid.size() <= 160
+        && request.resource.data.unitKey is string && request.resource.data.unitKey.size() > 0 && request.resource.data.unitKey.size() <= 300
+        && request.resource.data.score is int && request.resource.data.score >= 1 && request.resource.data.score <= 5
+        && request.resource.data.note is string && request.resource.data.note.size() <= 2000
+        && request.resource.data.active is bool
+        && request.resource.data.revision is int && request.resource.data.revision >= 1
+        && request.resource.data.createdAt is timestamp && request.resource.data.createdBy is string && request.resource.data.createdBy.size() > 0 && request.resource.data.createdBy.size() <= 320
+        && request.resource.data.updatedAt is timestamp && request.resource.data.updatedBy is string && request.resource.data.updatedBy.size() > 0 && request.resource.data.updatedBy.size() <= 320;
+    }
+
+    function validOwnerQualityReviewUpdate() {
+      return validOwnerQualityReview()
+        && request.resource.data.weekStart == resource.data.weekStart
+        && request.resource.data.editorUid == resource.data.editorUid
+        && request.resource.data.unitKey == resource.data.unitKey
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.revision == resource.data.revision + 1
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'score','note','active','revision','updatedAt','updatedBy'
+        ]);
+    }
+
+    function validEditorWeeklyRanking() {
+      // Each sanitized row is produced by the owner module and contains only
+      // editorUid/editorName/rank/delivered/onTimeRate/averageQuality/
+      // qualityEvaluationRate/qualityEvaluationCount/score. Rules cannot
+      // iterate a list of maps, so keep the envelope bounded here.
+      return request.resource.data.keys().hasOnly([
+          'recordType','weekStart','rows','revision','updatedAt','updatedBy'
+        ])
+        && request.resource.data.recordType == 'editor_weekly_ranking'
+        && request.resource.data.weekStart is string && request.resource.data.weekStart.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.rows is list && request.resource.data.rows.size() <= 200
+        && request.resource.data.revision is int && request.resource.data.revision >= 1
+        && request.resource.data.updatedAt is timestamp
+        && request.resource.data.updatedBy is string && request.resource.data.updatedBy.size() > 0 && request.resource.data.updatedBy.size() <= 320;
     }
 
     // A one-time, owner-only copy of financial values that still exist in the
@@ -627,6 +798,52 @@ service cloud.firestore {
         );
     }
 
+    // Only an assigned editor's dispatch/direct-client job can be finalised
+    // after the client-review stage. This is deliberately separate from the
+    // director/owner completion path for edit-agency jobs.
+    // A final editor delivery must atomically append the matching immutable
+    // event document.  The fixed ID prevents a second event from being used
+    // to satisfy a later/replayed parent update.
+    function validEditorDeliveryCompletion(uid, jobId) {
+      let event = reviewEvents(request.resource.data)[reviewEvents(request.resource.data).size() - 1];
+      let deliveryEventPath = /databases/$(database)/documents/editor_portals/$(uid)/editor_jobs/$(jobId)/events/delivery-completion;
+      let wasClientReview = (!hasReviewWorkflow(resource.data)
+          && resource.data.status in ['先方確認中', '確認待ち'])
+        || (hasReviewWorkflow(resource.data)
+          && reviewStage(resource.data) == 'client_review');
+      return (request.resource.data.get('businessType', '') == 'dispatch'
+          || request.resource.data.get('source', '') == 'direct_client')
+        && wasClientReview
+        && hasReviewWorkflow(request.resource.data)
+        && reviewStage(request.resource.data) == 'delivered'
+        && reviewRound(request.resource.data) == (hasReviewWorkflow(resource.data) ? reviewRound(resource.data) : 1)
+        && request.resource.data.status == '完了'
+        && request.resource.data.get('completedDeliveryDate', '') is string
+        && request.resource.data.completedDeliveryDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && validCompletedJobEvidence()
+        && appendsOneReviewEvent()
+        && lastReviewEventMatches('editor_delivery_completed', 'client_review', 'delivered', reviewRound(request.resource.data), '完了', '担当編集者')
+        && event.get('completedDeliveryDate', '') == request.resource.data.completedDeliveryDate
+        && event.get('evidenceUrl', '') == request.resource.data.evidenceUrl
+        && existsAfter(deliveryEventPath)
+        && getAfter(deliveryEventPath).data.keys().hasOnly([
+          'at','type','byUid','byEmail','byRole','status','fromStage','toStage','round',
+          'completedDeliveryDate','evidenceUrl'
+        ])
+        && getAfter(deliveryEventPath).data.type == 'editor_delivery_completed'
+        && getAfter(deliveryEventPath).data.at is timestamp
+        && getAfter(deliveryEventPath).data.byUid == request.auth.uid
+        && getAfter(deliveryEventPath).data.byEmail is string
+        && getAfter(deliveryEventPath).data.byEmail.size() <= 320
+        && getAfter(deliveryEventPath).data.byRole == '担当編集者'
+        && getAfter(deliveryEventPath).data.fromStage == 'client_review'
+        && getAfter(deliveryEventPath).data.toStage == 'delivered'
+        && getAfter(deliveryEventPath).data.round == reviewRound(request.resource.data)
+        && getAfter(deliveryEventPath).data.status == '完了'
+        && getAfter(deliveryEventPath).data.completedDeliveryDate == request.resource.data.completedDeliveryDate
+        && getAfter(deliveryEventPath).data.evidenceUrl == request.resource.data.evidenceUrl;
+    }
+
     function validEditorSubmissionStatus(previousStatus, nextStatus) {
       return (nextStatus == '初稿提出済み'
           && previousStatus == '編集者進行中')
@@ -690,6 +907,14 @@ service cloud.firestore {
             && event.get('reason', '').size() <= 2000));
     }
 
+    // Completion of a dispatch/direct-client job belongs to its assigned
+    // editor and is protected by the paired delivery-completion event.  The
+    // manager completion path remains for edit-agency jobs only.
+    function managerMayCompleteJob() {
+      return resource.data.get('businessType', '') != 'dispatch'
+        && resource.data.get('source', '') != 'direct_client';
+    }
+
     function hasReviewWorkflow(data) {
       return 'workflow' in data && data.workflow is map;
     }
@@ -714,13 +939,14 @@ service cloud.firestore {
 
     // Editor-owned action: submit the current draft for director review.
     // Old documents without workflow stay on the legacy path below.
-    function validEditorReviewTransition() {
+    function validEditorReviewTransition(uid, jobId) {
       return (!hasReviewWorkflow(request.resource.data) && reviewEventsUnchanged())
         || (hasReviewWorkflow(request.resource.data)
           &&
           validReviewWorkflow(request.resource.data)
           && validProgressEvents(request.resource.data)
-          && (
+          && (validEditorDeliveryCompletion(uid, jobId)
+            ||
             (!hasReviewWorkflow(resource.data)
               && reviewStage(request.resource.data) == 'editing'
               && reviewEventsUnchanged())
@@ -753,8 +979,9 @@ service cloud.firestore {
     // Once a workflow exists, only the editor's own submission may change a
     // review status. A saved D/client/final status is manager-owned even when
     // the editor is merely saving dates or a progress memo.
-    function validEditorWorkflowStatus() {
-      return (!hasReviewWorkflow(resource.data)
+    function validEditorWorkflowStatus(uid, jobId) {
+      return validEditorDeliveryCompletion(uid, jobId)
+        || (!hasReviewWorkflow(resource.data)
           && !hasReviewWorkflow(request.resource.data)
           && (request.resource.data.status == resource.data.status
             || validEditorStartTransition(
@@ -815,14 +1042,16 @@ service cloud.firestore {
             // First workflow action on a saved legacy job. Its old status is
             // the only reliable source for the current review stage.
             (!hasReviewWorkflow(resource.data)
-              && resource.data.status in ['初稿提出済み', '修正稿提出済み']
+              // FB待ちは、旧画面でD確認待ちとして保存された状態です。
+              // UIと同じく、最初のD判断でだけworkflow付きの正式状態へ移行します。
+              && resource.data.status in ['初稿提出済み', '修正稿提出済み', 'FB待ち']
               && reviewStage(request.resource.data) == 'client_submission'
               && validManagerProgressEvent(
                 'director_approved', 'director_review', 'client_submission',
                 reviewRound(request.resource.data), 'D確認OK'
               ))
             || (!hasReviewWorkflow(resource.data)
-              && resource.data.status in ['初稿提出済み', '修正稿提出済み']
+              && resource.data.status in ['初稿提出済み', '修正稿提出済み', 'FB待ち']
               && reviewStage(request.resource.data) == 'editing'
               && reviewRound(request.resource.data) == 2
               && validManagerProgressEvent(
@@ -850,6 +1079,7 @@ service cloud.firestore {
               ))
             || (!hasReviewWorkflow(resource.data)
               && resource.data.status in ['先方確認中', '確認待ち']
+              && managerMayCompleteJob()
               && reviewStage(request.resource.data) == 'delivered'
               && reviewRound(request.resource.data) == 1
               && request.resource.data.status == '完了'
@@ -896,6 +1126,7 @@ service cloud.firestore {
                 reviewRound(request.resource.data), '修正中'
               ))
             || (reviewStage(resource.data) == 'client_review'
+              && managerMayCompleteJob()
               && reviewStage(request.resource.data) == 'delivered'
               && reviewRound(request.resource.data) == reviewRound(resource.data)
               && request.resource.data.status == '完了'
@@ -1162,12 +1393,51 @@ service cloud.firestore {
       allow delete: if owner();
     }
 
+    match /owner_client_rates/{rateId} {
+      allow read: if owner();
+      allow create: if owner() && validOwnerClientRateDocument();
+      allow update: if owner() && validOwnerClientRateUpdate();
+      allow delete: if false;
+    }
+
     // Confirmed per-case revenue and payment routing.  It is never copied to
     // the company-wide legacy record or an editor-readable portal document.
     match /owner_job_finance/{financeId} {
       allow read: if owner();
       allow create: if owner() && validOwnerJobFinanceDocument();
       allow update, delete: if false;
+    }
+
+    // Owner-only monthly targets and immutable daily acknowledgement records.
+    // Editors never write a number merely to unlock their own portal.
+    match /owner_delivery_goals/{month} {
+      allow read: if owner();
+      allow create: if owner() && validOwnerDeliveryGoal() && request.resource.data.month == month;
+      allow update: if owner() && validOwnerDeliveryGoalUpdate() && request.resource.data.month == month;
+      allow delete: if false;
+    }
+
+    match /owner_daily_delivery_checks/{date} {
+      allow read: if owner();
+      allow create: if owner() && validOwnerDailyDeliveryCheck() && request.resource.data.date == date;
+      allow update, delete: if false;
+    }
+
+    match /owner_editor_quality_reviews/{reviewId} {
+      allow read: if owner();
+      allow create: if owner() && validOwnerQualityReview();
+      allow update: if owner() && validOwnerQualityReviewUpdate();
+      allow delete: if false;
+    }
+
+    match /editor_weekly_rankings/{weekStart} {
+      allow read: if owner() || (approvedMember()
+        && (hasRole(request.auth.uid, '動画編集者') || hasRole(request.auth.uid, '動画編集ディレクター')));
+      allow create: if owner() && validEditorWeeklyRanking() && request.resource.data.weekStart == weekStart;
+      allow update: if owner() && validEditorWeeklyRanking()
+        && request.resource.data.weekStart == resource.data.weekStart
+        && request.resource.data.revision == resource.data.revision + 1;
+      allow delete: if false;
     }
 
     // Migration-only immutable copies of legacy financial rows. These remain
@@ -1182,6 +1452,30 @@ service cloud.firestore {
       allow read: if portalManager(uid) || editor(uid);
       allow create, update: if owner();
       allow delete: if false;
+
+      // A correction learning record belongs to the portal editor.  Only the
+      // owner or that editor's assigned director can review it, and the
+      // original text/job scope remain immutable after submission.
+      match /feedback/{feedbackId} {
+        allow read: if portalManager(uid) || self(uid);
+        allow create: if validFeedbackCreate(uid);
+        allow update: if validFeedbackReview(uid)
+          && request.resource.data.recordType == resource.data.recordType
+          && request.resource.data.portalUid == resource.data.portalUid
+          && request.resource.data.jobId == resource.data.jobId
+          && request.resource.data.parentCaseId == resource.data.parentCaseId
+          && request.resource.data.editorUid == resource.data.editorUid
+          && request.resource.data.editorName == resource.data.editorName
+          && request.resource.data.jobTitle == resource.data.jobTitle
+          && request.resource.data.clientId == resource.data.clientId
+          && request.resource.data.accountId == resource.data.accountId
+          && request.resource.data.clientName == resource.data.clientName
+          && request.resource.data.accountName == resource.data.accountName
+          && request.resource.data.correctionReason == resource.data.correctionReason
+          && request.resource.data.learning == resource.data.learning
+          && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if false;
+      }
 
       match /editor_jobs/{jobId} {
         allow read: if owner()
@@ -1313,8 +1607,8 @@ service cloud.firestore {
           && request.resource.data.get('progressMilestones', []) is list
           && request.resource.data.get('history', []) is list
           && editorDraftDateChangeAllowed()
-          && validEditorReviewTransition()
-          && validEditorWorkflowStatus()
+          && validEditorReviewTransition(uid, jobId)
+          && validEditorWorkflowStatus(uid, jobId)
           && preservesFinalJob()
           && validJobSchedule();
         allow update: if directorFor(uid)
@@ -1389,15 +1683,32 @@ service cloud.firestore {
             || (editor(uid) && request.resource.data.byUid == uid
               && (request.resource.data.get('type', '') != 'editor_delivery_completed'
                 || (request.resource.data.keys().hasOnly([
-                      'at','type','byUid','byEmail','byRole','status',
-                      'completedDeliveryDate','deliveryDate','evidenceUrl'
+                      'at','type','byUid','byEmail','byRole','status','fromStage','toStage','round',
+                      'completedDeliveryDate','evidenceUrl'
                     ])
+                    && eventId == 'delivery-completion'
+                    && request.resource.data.at is timestamp
+                    && request.resource.data.byUid is string
+                    && request.resource.data.byEmail is string
+                    && request.resource.data.byEmail.size() <= 320
                     && request.resource.data.byRole == '担当編集者'
                     && request.resource.data.status == '完了'
+                    && request.resource.data.fromStage == 'client_review'
+                    && request.resource.data.toStage == 'delivered'
+                    && request.resource.data.round is int
+                    && request.resource.data.round >= 1
                     && request.resource.data.completedDeliveryDate is string
                     && request.resource.data.completedDeliveryDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
                     && request.resource.data.evidenceUrl is string
-                    && request.resource.data.evidenceUrl.matches('^https?://.+')))));
+                    && request.resource.data.evidenceUrl.matches('^https?://.+')
+                    && (getAfter(/databases/$(database)/documents/editor_portals/$(uid)/editor_jobs/$(jobId)).data.get('businessType', '') == 'dispatch'
+                      || getAfter(/databases/$(database)/documents/editor_portals/$(uid)/editor_jobs/$(jobId)).data.get('source', '') == 'direct_client')
+                    && getAfter(/databases/$(database)/documents/editor_portals/$(uid)/editor_jobs/$(jobId)).data.status == '完了'
+                    && getAfter(/databases/$(database)/documents/editor_portals/$(uid)/editor_jobs/$(jobId)).data.workflow.stage == 'delivered'
+                    && getAfter(/databases/$(database)/documents/editor_portals/$(uid)/editor_jobs/$(jobId)).data.workflow.round == request.resource.data.round
+                    && getAfter(/databases/$(database)/documents/editor_portals/$(uid)/editor_jobs/$(jobId)).data.get('completedDeliveryDate', '') == request.resource.data.completedDeliveryDate
+                    && getAfter(/databases/$(database)/documents/editor_portals/$(uid)/editor_jobs/$(jobId)).data.get('evidenceUrl', '') == request.resource.data.evidenceUrl
+                    && getAfter(/databases/$(database)/documents/editor_portals/$(uid)/editor_jobs/$(jobId)).data.get('blocker', '') == ''))));
           allow update, delete: if false;
         }
 
@@ -1698,23 +2009,129 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    function validFeedbackDocument(uid) {
+      return request.resource.data.keys().hasOnly([
+          'recordType','portalUid','jobId','parentCaseId','editorUid','editorName','jobTitle',
+          'clientId','accountId','clientName','accountName','correctionReason','learning','status',
+          'reviewNote','reviewedByUid','reviewedByName','manualId','createdAt','updatedAt'
+        ])
+        && request.resource.data.recordType == 'editor_feedback'
+        && request.resource.data.portalUid == uid
+        && request.resource.data.editorUid == uid
+        && request.resource.data.jobId is string && request.resource.data.jobId.size() > 0 && request.resource.data.jobId.size() <= 220
+        && request.resource.data.parentCaseId is string && request.resource.data.parentCaseId.size() <= 160
+        && request.resource.data.editorName is string && request.resource.data.editorName.size() <= 120
+        && request.resource.data.jobTitle is string && request.resource.data.jobTitle.size() > 0 && request.resource.data.jobTitle.size() <= 160
+        && request.resource.data.clientId is string && request.resource.data.clientId.size() <= 160
+        && request.resource.data.accountId is string && request.resource.data.accountId.size() <= 160
+        && request.resource.data.clientName is string && request.resource.data.clientName.size() <= 120
+        && request.resource.data.accountName is string && request.resource.data.accountName.size() <= 120
+        && request.resource.data.correctionReason is string && request.resource.data.correctionReason.size() <= 1800
+        && request.resource.data.learning is string && request.resource.data.learning.size() > 0 && request.resource.data.learning.size() <= 1800
+        && request.resource.data.status in ['submitted','approved','rejected']
+        && request.resource.data.reviewNote is string && request.resource.data.reviewNote.size() <= 800
+        && request.resource.data.reviewedByUid is string && request.resource.data.reviewedByUid.size() <= 160
+        && request.resource.data.reviewedByName is string && request.resource.data.reviewedByName.size() <= 120
+        && request.resource.data.manualId is string && request.resource.data.manualId.size() <= 220
+        && request.resource.data.createdAt is timestamp && request.resource.data.updatedAt is timestamp;
+    }
+
+    function validFeedbackCreate(uid) {
+      let jobPath = /databases/$(database)/documents/editor_portals/$(uid)/editor_jobs/$(request.resource.data.jobId);
+      return validFeedbackDocument(uid)
+        && self(uid)
+        && exists(jobPath)
+        && get(jobPath).data.editorUid == uid
+        && request.resource.data.status == 'submitted'
+        && request.resource.data.reviewNote == ''
+        && request.resource.data.reviewedByUid == ''
+        && request.resource.data.reviewedByName == ''
+        && request.resource.data.manualId == '';
+    }
+
+    function validFeedbackReview(uid) {
+      return validFeedbackDocument(uid)
+        && portalManager(uid)
+        && resource.data.status == 'submitted'
+        && request.resource.data.status in ['approved','rejected']
+        && request.resource.data.reviewedByUid == request.auth.uid
+        && request.resource.data.reviewedByName.size() > 0
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status','reviewNote','reviewedByUid','reviewedByName','manualId','updatedAt'
+        ])
+        && ((request.resource.data.status == 'approved' && request.resource.data.manualId.size() > 0)
+          || (request.resource.data.status == 'rejected' && request.resource.data.manualId == ''));
+    }
+
+    function validEditorManualBase() {
+      return request.resource.data.keys().hasOnly([
+          'recordType','kind','title','scope','scopeLabel','clientId','accountId','version','body',
+          'url','required','audience','allowedUids','directorUid','origin','active',
+          'createdAt','createdBy','updatedAt','updatedBy'
+        ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 160
+        && request.resource.data.scope is string && request.resource.data.scope in ['global','client','account']
+        && request.resource.data.scopeLabel is string && request.resource.data.scopeLabel.size() <= 100
+        && request.resource.data.clientId is string && request.resource.data.clientId.size() <= 160
+        && request.resource.data.accountId is string && request.resource.data.accountId.size() <= 160
+        && request.resource.data.version is string && request.resource.data.version.size() <= 40
+        && request.resource.data.body is string && request.resource.data.body.size() <= 10000
+        && request.resource.data.url is string && (request.resource.data.url == '' || request.resource.data.url.matches('^https?://.+'))
+        && request.resource.data.required is bool
+        && request.resource.data.audience is string && request.resource.data.audience in ['all','assigned']
+        && request.resource.data.allowedUids is list && request.resource.data.allowedUids.size() <= 100
+        && request.resource.data.directorUid is string && request.resource.data.directorUid.size() <= 160
+        && request.resource.data.updatedAt is timestamp
+        && request.resource.data.updatedBy is string && request.resource.data.updatedBy.size() > 0 && request.resource.data.updatedBy.size() <= 320;
+    }
+
+    function validFeedbackManualCreate(manualId) {
+      let origin = request.resource.data.origin;
+      let feedbackPath = /databases/$(database)/documents/editor_portals/$(origin.portalUid)/feedback/$(origin.feedbackId);
+      return validEditorManualBase()
+        && request.resource.data.recordType == 'editor_manual'
+        && request.resource.data.kind == 'feedback'
+        && request.resource.data.active == true
+        && request.resource.data.audience == 'assigned'
+        && request.resource.data.allowedUids.size() == 1
+        && origin is map
+        && origin.keys().hasOnly(['type','portalUid','feedbackId','jobId'])
+        && origin.type == 'editor_feedback'
+        && origin.portalUid is string && origin.portalUid.size() > 0
+        && origin.feedbackId is string && origin.feedbackId.size() > 0
+        && origin.jobId is string && origin.jobId.size() > 0
+        && manualId == 'feedback_' + origin.portalUid + '_' + origin.feedbackId
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.createdBy is string && request.resource.data.createdBy.size() > 0 && request.resource.data.createdBy.size() <= 320
+        && existsAfter(feedbackPath)
+        && getAfter(feedbackPath).data.status == 'approved'
+        && getAfter(feedbackPath).data.manualId == manualId
+        && getAfter(feedbackPath).data.portalUid == origin.portalUid
+        && getAfter(feedbackPath).data.jobId == origin.jobId
+        && request.resource.data.allowedUids == [getAfter(feedbackPath).data.editorUid]
+        && (owner() || (videoManager()
+          && getAfter(feedbackPath).data.reviewedByUid == request.auth.uid
+          && directorFor(origin.portalUid)));
+    }
+
+    function validOrdinaryManualWrite() {
+      return validEditorManualBase()
+        && request.resource.data.get('kind', '') != 'feedback'
+        && !('origin' in request.resource.data)
+        && (owner() || request.resource.data.directorUid == request.auth.uid);
+    }
+
     match /editor_manuals/{manualId} {
       allow read: if owner() || coreStaff() || (approvedMember()
         && (resource.data.get('audience', '') == 'all'
           || (resource.data.get('allowedUids', []) is list
             && request.auth.uid in resource.data.get('allowedUids', []))));
-      allow create, update: if videoManager()
-        && request.resource.data.keys().hasOnly([
-          'title','scope','scopeLabel','clientId','accountId','version','body',
-          'url','required','audience','allowedUids','directorUid','updatedAt','updatedBy'
-        ])
-        && request.resource.data.title is string
-        && request.resource.data.title.size() > 0
-        && request.resource.data.title.size() <= 160
-        && request.resource.data.body is string
-        && request.resource.data.body.size() <= 10000
-        && request.resource.data.allowedUids is list
-        && (owner() || request.resource.data.directorUid == request.auth.uid);
+      allow create: if videoManager()
+        && (validOrdinaryManualWrite() || validFeedbackManualCreate(manualId));
+      allow update: if videoManager()
+        && validOrdinaryManualWrite();
       allow delete: if false;
     }
 

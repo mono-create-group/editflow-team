@@ -310,7 +310,7 @@ def static_contract_checks() -> None:
     if all(event_type in editor or event_type in index for event_type in CONTRACT["editor_review_event_types"]):
         ok("review-cycle event types are surfaced by the portal or manager UI")
     review_rule_markers = [
-        "function validEditorReviewTransition()", "function validManagerReviewTransition()",
+        "function validEditorReviewTransition(", "function validManagerReviewTransition()",
         "function preservesFinalJob()", "reviewRound(request.resource.data) == reviewRound(resource.data) + 1",
     ]
     absent = [marker for marker in review_rule_markers if marker not in rules]

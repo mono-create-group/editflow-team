@@ -19,7 +19,7 @@ test('manager case form selects only safe manual metadata and supplies common fa
   assert.match(manager,/mb-parent-caution/);
   assert.match(manager,/mb-subcase-manuals/);
   assert.match(manager,/mb-subcase-caution/);
-  assert.match(manager,/manualIds=subcase\.manualIds\.length\?subcase\.manualIds:parentManualIds/);
+  assert.match(manager,/manualIds=combinedManualIds\(parentManualIds,subcase\.manualIds\)/);
   assert.match(manager,/caution=subcase\.caution\|\|parentCaution/);
 });
 

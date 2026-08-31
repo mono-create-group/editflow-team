@@ -23,7 +23,7 @@ test('message subscriptions begin only for a case the editor opens or a notifica
   assert.match(features, /function ensureJobMessages\(jid,opened=true\)/);
   assert.match(features, /if\(!opened\)\{/);
   assert.match(features, /const unsub=feature\.messageUnsubs\.get\(jid\);if\(unsub\)\{try\{unsub\(\)\}/);
-  assert.match(features, /feature\.messages\.delete\(jid\);feature\.messageLoading\.delete\(jid\);return/);
+  assert.match(features, /feature\.messages\.delete\(jid\);feature\.messageLoading\.delete\(jid\);syncEditorAppBadge\(\);return/);
   assert.match(features, /if\(DEMO\|\|!db\|\|!user\|\|window\.EditflowFirestoreQuota\?\.isOpen\?\.\(\)\|\|feature\.messageUnsubs\.has\(jid\)/);
   assert.match(features, /ontoggle="ensureJobMessages\('\$\{jid\}',this\.open\)"/);
   assert.match(features, /function openEditorJob\(jobId\)[\s\S]{0,280}ensureJobMessages\(jobId\)/);

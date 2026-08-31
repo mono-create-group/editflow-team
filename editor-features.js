@@ -1,12 +1,13 @@
 (function(){
   'use strict';
 
-const PORTAL_APP_VERSION='20260831-05';
+const PORTAL_APP_VERSION='20260831-06';
   const feature={
     board:[],boardSelectedId:'',boardSearch:'',catalog:[],manuals:[],schedules:[],release:null,
     messages:new Map(),messageUnsubs:new Map(),messageLoading:new Set(),openMessageJobIds:new Set(),groupDraftSaving:new Set(),unsubs:[],startedFor:'',serverVersion:'',jobsListMode:'active',jobsTypeFilter:'all',lastSuggestionCode:'',
     dmPeers:[],dmThreads:[],dmMessages:[],dmActivePeerUid:'',dmActiveThreadId:'',dmThreadUnsub:null,dmMessageUnsub:null,dmLoading:false,dmError:'',dmStartedFor:'',dmInitialSnapshot:false,dmSeenMessages:new Map(),dmReadPending:new Map(),
-    pushStatus:null,pushStatusFor:'',pushStatusLoading:false
+    pushStatus:null,pushStatusFor:'',pushStatusLoading:false,
+    weeklyRanking:null,weeklyRankingWeek:'',weeklyRankingUnsub:null,weeklyRankingLoading:false,weeklyRankingError:''
   };
   const original={
     navHtml,render,startPortal,jobForm,jobsHtml,jobCard,createJob,dashboardHtml,logout
@@ -32,6 +33,16 @@ const PORTAL_APP_VERSION='20260831-05';
   function stamp(v){return v&&typeof v.toMillis==='function'?v.toMillis():Number(v||0)}
   function byUpdated(a,b){return(stamp(b.updatedAt)||stamp(b.createdAt))-(stamp(a.updatedAt)||stamp(a.createdAt))}
   function accountItems(clientId){return(feature.catalog.find(x=>x.id===clientId)?.accounts||[]).filter(x=>x&&x.id&&x.name&&x.active!==false)}
+  const combinedCaseManualIds=(...groups)=>[...new Set(groups.flat().map(value=>String(value||'').trim()).filter(Boolean))].slice(0,20);
+  function scopedManualIdsForDispatch(client,accountId=''){
+    const clientId=String(client?.sourceClientId||client?.id||''),account=String(accountId||'');
+    return(feature.manuals||[]).filter(manual=>{
+      const scope=String(manual?.scope||'global');
+      if(scope==='client')return String(manual?.clientId||'')===clientId;
+      if(scope==='account')return !!account&&String(manual?.clientId||'')===clientId&&String(manual?.accountId||'')===account;
+      return false;
+    }).map(manual=>String(manual.id||'')).filter(Boolean);
+  }
   function validText(v,max){return typeof v==='string'&&v.trim().length>0&&v.trim().length<=max}
   function positiveYen(value){const text=String(value??'').trim();if(!/^\d+$/.test(text))return null;const amount=Number(text);return Number.isSafeInteger(amount)&&amount>0&&amount<=100000000?amount:null}
   function editorResourceLinks(job){
@@ -78,10 +89,21 @@ const PORTAL_APP_VERSION='20260831-05';
   function notificationReadKey(){return`editor_notification_read_${user?.uid||'guest'}`}
   function notificationReadIds(){try{return new Set(JSON.parse(localStorage.getItem(notificationReadKey())||'[]'))}catch(_){return new Set()}}
   function saveNotificationReadIds(ids){try{localStorage.setItem(notificationReadKey(),JSON.stringify([...ids].slice(-1000)))}catch(_){}}
+  function editorUnreadApi(){return window.EditflowUnread||null}
+  function editorSetUnreadSource(source,items){editorUnreadApi()?.set?.(source,items)}
+  function editorCaseUnreadItems(){return unreadNotificationItems().map(item=>({...item,notificationId:String(item.notificationId||item.id||'')})).filter(item=>item.notificationId)}
+  function syncEditorUnreadSources(){
+    const registry=editorUnreadApi();if(!registry)return null;
+    const api=dmApi();
+    registry.set('editor-dm',api?.unreadItems?.(feature.dmThreads)||[]);
+    registry.set('editor-case',editorCaseUnreadItems());
+    return registry.snapshot();
+  }
   function editorUnreadBadgeCount(){
-    // DM read receipts are Firestore-authoritative. Other cards are local UI
-    // reminders, so this never creates a write merely to draw a badge.
-    return Math.max(0,Math.min(999,dmUnreadCount()+unreadNotificationItems().length));
+    // One registry deduplicates the same Firestore notification received via
+    // DM, case chat, or a bulletin listener. Drawing a badge never writes.
+    const snapshot=syncEditorUnreadSources();
+    return snapshot?snapshot.count:Math.max(0,Math.min(999,dmUnreadCount()+unreadNotificationItems().length));
   }
   function syncEditorAppBadge(){
     const count=editorUnreadBadgeCount();
@@ -171,19 +193,27 @@ const PORTAL_APP_VERSION='20260831-05';
       @media(max-width:760px){.group-draft-panel{align-items:stretch;flex-direction:column}.group-draft-panel .btn{width:100%;min-height:44px}}
       @media(max-width:760px){.editor-resource-list{grid-template-columns:1fr}}
       @media(pointer:coarse){.editor-job-card .btn.small,.notification-item,.editor-nav-more summary{min-height:44px}}
-    `;style.textContent+=`.editor-job-dates{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:10px 0}.editor-job-dates div{padding:8px 10px;border:1px solid #e2e8f0;border-radius:9px;background:#f8fafc;color:#475569;font-size:12px}.editor-job-dates span{display:block;font-size:10px;font-weight:800;color:#64748b}.editor-job-dates b{display:block;margin-top:2px;font-size:13px;color:#1e293b}.editor-job-dates .actual{border-color:#86efac;background:#ecfdf5}.push-setup-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1080px;margin:0 auto 14px;padding:12px 14px;border:2px solid #a78bfa;border-radius:12px;background:#faf5ff;color:#312e81}.push-setup-banner b{display:block;font-size:14px}.push-setup-banner span{display:block;margin-top:3px;color:#5b21b6;font-size:12px;line-height:1.5}.push-setup-card{max-width:760px;margin:0 auto}.push-setup-card h2{margin:0 0 7px}.push-setup-card ol{margin:14px 0;padding-left:22px;line-height:2}.push-setup-card li::marker{font-weight:850;color:#6d28d9}.push-status{margin:12px 0;padding:11px 12px;border-radius:9px;background:#f8fafc;color:#475569;line-height:1.55}.push-status.ready{background:#ecfdf5;color:#047857}.push-actions{display:flex;gap:8px;flex-wrap:wrap}@media(max-width:760px){.push-setup-banner{align-items:flex-start;flex-direction:column}.push-setup-banner .btn{width:100%}}`;document.head.appendChild(style);
+    `;style.textContent+=`.editor-job-dates{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:10px 0}.editor-job-dates div{padding:8px 10px;border:1px solid #e2e8f0;border-radius:9px;background:#f8fafc;color:#475569;font-size:12px}.editor-job-dates span{display:block;font-size:10px;font-weight:800;color:#64748b}.editor-job-dates b{display:block;margin-top:2px;font-size:13px;color:#1e293b}.editor-job-dates .actual{border-color:#86efac;background:#ecfdf5}.editor-weekly-ranking{max-width:900px;margin:0 auto}.editor-weekly-ranking-head,.editor-weekly-ranking-row{display:grid;grid-template-columns:72px minmax(0,1fr) minmax(180px,.7fr);gap:12px;align-items:center}.editor-weekly-ranking-head{padding:0 10px 8px;color:#64748b;font-size:12px;font-weight:800}.editor-weekly-ranking-row{padding:13px 10px;border-top:1px solid #e2e8f0}.editor-weekly-ranking-row.is-me{margin:0 -2px;padding:13px 12px;border:2px solid #a78bfa;border-radius:10px;background:#faf5ff}.editor-ranking-rank{font-size:16px;color:#5b21b6}.editor-ranking-score{text-align:right}.editor-ranking-score b{display:block;font-size:18px;color:#1e293b}.editor-ranking-score small{display:block;margin-top:3px;color:#64748b;font-size:11px;line-height:1.45}.push-setup-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1080px;margin:0 auto 14px;padding:12px 14px;border:2px solid #a78bfa;border-radius:12px;background:#faf5ff;color:#312e81}.push-setup-banner b{display:block;font-size:14px}.push-setup-banner span{display:block;margin-top:3px;color:#5b21b6;font-size:12px;line-height:1.5}.push-setup-card{max-width:760px;margin:0 auto}.push-setup-card h2{margin:0 0 7px}.push-setup-card ol{margin:14px 0;padding-left:22px;line-height:2}.push-setup-card li::marker{font-weight:850;color:#6d28d9}.push-status{margin:12px 0;padding:11px 12px;border-radius:9px;background:#f8fafc;color:#475569;line-height:1.55}.push-status.ready{background:#ecfdf5;color:#047857}.push-actions{display:flex;gap:8px;flex-wrap:wrap}@media(max-width:760px){.editor-weekly-ranking-head{display:none}.editor-weekly-ranking-row{grid-template-columns:52px minmax(0,1fr);gap:9px}.editor-ranking-score{grid-column:2;text-align:left}.push-setup-banner{align-items:flex-start;flex-direction:column}.push-setup-banner .btn{width:100%}}`;document.head.appendChild(style);
   }
 
   function updateAccountOptions(){
     const client=$('#new-client-id'),account=$('#new-account-id');if(!client||!account)return;
     const selected=account.dataset.selected||account.value||'';
     account.innerHTML='<option value="">アカウントなし（クライアント共通）</option>'+accountItems(client.value).map(x=>`<option value="${esc(x.id)}" ${x.id===selected?'selected':''}>${esc(x.name)}</option>`).join('');
-    account.dataset.selected='';saveCaseDraft();
+    account.dataset.selected='';applyDispatchScopedManuals();saveCaseDraft();
+  }
+
+  function applyDispatchScopedManuals(){
+    const client=feature.catalog.find(item=>item.id===($('#new-client-id')?.value||'')),accountId=$('#new-account-id')?.value||'',auto=scopedManualIdsForDispatch(client,accountId);
+    if(!auto.length)return;
+    [$('#new-parent-manuals'),...document.querySelectorAll('.new-subcase-manuals')].filter(Boolean).forEach(select=>{
+      const selected=combinedCaseManualIds(selectedCaseManualIds(select),auto);[...select.options].forEach(option=>{if(selected.includes(String(option.value)))option.selected=true});
+    });
   }
 
   function navHtmlExtended(){
-    const items=[['dashboard','ホーム'],['jobs','担当案件'],['board','案件を探す'],['dm','DM'],['notifications','通知'],['schedule','スケジュール'],['manuals','マニュアル'],['invoices',isExternal()?'支払い案内':'請求書'],['settings','登録情報'],['mobile-setup','端末通知'],['guide','使い方ガイド'],['suggestion','匿名目安箱']];
-    const work=[['dashboard','ホーム'],['jobs','担当案件'],['board','案件を探す']],communication=[['dm','DM'],['notifications','通知']],tools=[['schedule','スケジュール'],['manuals','マニュアル'],['invoices',isExternal()?'支払い案内':'請求書'],['settings','登録情報']];
+    const items=[['dashboard','ホーム'],['jobs','担当案件'],['board','案件を探す'],['dm','DM'],['notifications','通知'],['schedule','スケジュール'],['manuals','マニュアル'],['feedback','過去フィードバック'],['ranking','編集者ランキング'],['invoices',isExternal()?'支払い案内':'請求書'],['settings','登録情報'],['mobile-setup','端末通知'],['guide','使い方ガイド'],['suggestion','匿名目安箱']];
+    const work=[['dashboard','ホーム'],['jobs','担当案件'],['board','案件を探す']],communication=[['dm','DM'],['notifications','通知']],tools=[['schedule','スケジュール'],['manuals','マニュアル'],['feedback','過去フィードバック'],['ranking','編集者ランキング'],['invoices',isExternal()?'支払い案内':'請求書'],['settings','登録情報']];
     const mobile=[['dashboard','ホーム'],['jobs','案件'],['dm','DM'],['notifications','通知']];
     const open=feature.board.filter(x=>x.status==='open').length;
     const noticeCount=unreadNotificationItems().length;
@@ -198,7 +228,9 @@ const PORTAL_APP_VERSION='20260831-05';
       invoices:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"></path><path d="M15 3v5h5M9 13h6M9 17h6"></path></svg>',
       settings:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.3 2.3-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.2h-3.2v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1L6 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H4.7v-3.2h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9L6 7.8 8.3 5.5l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5v-.2h3.2v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 2.3 2.3-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.2V14h-.2a1.7 1.7 0 0 0-1.4 1z"></path></svg>',
       guide:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9a2.5 2.5 0 1 1 3.8 2.1c-.8.5-1.3.9-1.3 1.9M12 17h.01"></path></svg>',
-      suggestion:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v11H9l-4 4z"></path><path d="M8 9h8M8 12h5"></path></svg>'
+      suggestion:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v11H9l-4 4z"></path><path d="M8 9h8M8 12h5"></path></svg>',
+      feedback:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5z"></path><path d="m8 12 2.5 2.5L16 9M8 17h8"></path></svg>'
+      ,ranking:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8v5a4 4 0 0 1-8 0zM8 5H4v2a4 4 0 0 0 4 4M16 5h4v2a4 4 0 0 1-4 4M12 12v5M8 21h8"></path></svg>'
       ,"mobile-setup":'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2"></rect><path d="M10 18h4M12 6v7M9 10l3 3 3-3"></path></svg>'
     }[key]||'');
     const dmCount=dmUnreadCount();
@@ -221,6 +253,28 @@ const PORTAL_APP_VERSION='20260831-05';
     const availability=feature.schedules.find(x=>x.id===portalUid());
     const intro=`<details class="section"><summary class="muted" style="cursor:pointer">初めて使う方へ</summary><div class="feature-grid two" style="margin-top:8px"><div class="card notice"><b>${isExternal()?'外部編集者':'mono.create 直接契約編集者'}</b><div class="muted">${isExternal()?'担当ディレクターから依頼された案件と、その案件の連絡だけを表示します。単価・請求額・利益は表示しません。':'クライアントへの請求額・利益・他の編集者の報酬は表示しません。'}</div><button class="btn small" type="button" onclick="setView('guide')">使い方ガイドを開く</button></div><div class="card"><div class="muted">応募できる編集代行案件</div><b style="font-size:24px">${open}</b><div class="muted">${availability?.available?`編集できる期間 ${esc(availability.fromDate||'')} 〜 ${esc(availability.toDate||'')}`:'スケジュールは未登録です'}</div></div></div></details>`;
     return base+intro;
+  }
+
+  function currentJstMonday(){
+    const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).reduce((out,part)=>(out[part.type]=part.value,out),{}),date=new Date(Date.UTC(Number(parts.year),Number(parts.month)-1,Number(parts.day))),offset=(date.getUTCDay()+6)%7;date.setUTCDate(date.getUTCDate()-offset);return date.toISOString().slice(0,10);
+  }
+  function rankingNumber(value,min,max){const number=Number(value);return Number.isFinite(number)?Math.min(max,Math.max(min,number)):null}
+  function sanitizedWeeklyRankingRows(data){return(Array.isArray(data?.rows)?data.rows:[]).slice(0,200).map(row=>({editorUid:String(row?.editorUid||'').slice(0,160),editorName:String(row?.editorName||'編集者').slice(0,100),rank:Math.round(rankingNumber(row?.rank,1,9999)||9999),delivered:Math.round(rankingNumber(row?.delivered,0,999999)||0),onTimeRate:rankingNumber(row?.onTimeRate,0,1),averageQuality:rankingNumber(row?.averageQuality,1,5),qualityEvaluationRate:rankingNumber(row?.qualityEvaluationRate,0,1),qualityEvaluationCount:row?.qualityEvaluationCount==null?null:Math.round(rankingNumber(row.qualityEvaluationCount,0,999999)||0),score:rankingNumber(row?.score,0,100)})).filter(row=>row.editorUid).sort((a,b)=>a.rank-b.rank||b.score-a.score||a.editorName.localeCompare(b.editorName,'ja'));}
+  function weeklyRankingRate(value){return value===null?'—':`${Math.round(value*100)}%`}
+  function stopWeeklyRankingSubscription(){if(feature.weeklyRankingUnsub){try{feature.weeklyRankingUnsub()}catch(_){}feature.weeklyRankingUnsub=null}feature.weeklyRankingLoading=false;feature.weeklyRankingWeek='';}
+  function syncWeeklyRankingSubscription(){
+    const enabled=view==='ranking'&&!DEMO&&!!db&&!!user&&!!access?.approved&&!window.EditflowFirestoreQuota?.isOpen?.();
+    if(!enabled){stopWeeklyRankingSubscription();return}
+    const week=currentJstMonday();if(feature.weeklyRankingUnsub&&feature.weeklyRankingWeek===week)return;
+    stopWeeklyRankingSubscription();feature.weeklyRankingWeek=week;feature.weeklyRankingLoading=true;feature.weeklyRankingError='';
+    feature.weeklyRankingUnsub=db.collection('editor_weekly_rankings').doc(week).onSnapshot(snapshot=>{if(feature.weeklyRankingWeek!==week)return;feature.weeklyRankingLoading=false;feature.weeklyRanking=snapshot.exists?{weekStart:week,rows:sanitizedWeeklyRankingRows(snapshot.data())}:null;scheduleSnapshotRender()},error=>{if(feature.weeklyRankingWeek!==week)return;feature.weeklyRankingLoading=false;feature.weeklyRankingError='ランキングを読み込めませんでした。';portalReadError(error,'編集者ランキング',()=>scheduleSnapshotRender())});
+  }
+  function weeklyRankingHtml(){
+    const week=currentJstMonday(),ranking=feature.weeklyRanking,rows=ranking?.weekStart===week?ranking.rows:[];
+    if(feature.weeklyRankingLoading)return`${pageHead('編集者ランキング','今週（月曜日開始）の公開集計です。')}<div class="card empty">ランキングを読み込んでいます…</div>`;
+    if(feature.weeklyRankingError)return`${pageHead('編集者ランキング','今週（月曜日開始）の公開集計です。')}<div class="card notice danger">${esc(feature.weeklyRankingError)}</div>`;
+    if(!ranking)return`${pageHead('編集者ランキング','今週（月曜日開始）の公開集計です。')}<div class="card empty">今週のランキングはまだ公開されていません。</div>`;
+    return`${pageHead('編集者ランキング',`${esc(week)} 開始 ・ 金額や個別の品質コメントは表示しません。`)}<section class="card editor-weekly-ranking" aria-label="今週の編集者ランキング"><div class="editor-weekly-ranking-head"><span>順位</span><span>編集者</span><span>実績</span></div>${rows.map(row=>`<article class="editor-weekly-ranking-row ${row.editorUid===portalUid()?'is-me':''}" ${row.editorUid===portalUid()?'aria-label="あなたの順位"':''}><b class="editor-ranking-rank">${row.rank}位</b><div><b>${esc(row.editorName)}${row.editorUid===portalUid()?' <span class="pill green">あなた</span>':''}</b><div class="muted">納品 ${row.delivered}本 ・ 納期遵守 ${weeklyRankingRate(row.onTimeRate)} ・ 品質平均 ${row.averageQuality===null?'—':row.averageQuality.toFixed(1)}</div></div><div class="editor-ranking-score"><b>${row.score===null?'—':row.score.toFixed(0)}点</b><small>評価母数 ${row.qualityEvaluationCount===null?'未集計':`${row.qualityEvaluationCount}件`} ・ 品質評価率 ${weeklyRankingRate(row.qualityEvaluationRate)}（参考）</small></div></article>`).join('')||'<div class="empty">公開中の集計はありません。</div>'}</section>`;
   }
 
   function jobFormExtended(){
@@ -246,7 +300,8 @@ const PORTAL_APP_VERSION='20260831-05';
   }
   function editorWorkflowLabel(stage,status=''){status=String(status||'');if(['アサイン済み','進行中','編集者進行中','初稿提出済み','修正中','修正稿提出済み','D確認OK','先方確認中','完了'].includes(status))return status;if(status==='FB待ち')return'mono.create FB中';if(['先方確認中','確認待ち'].includes(status))return'先方確認中';return({editing:'編集者進行中',director_review:'D確認待ち',client_submission:'D確認OK',client_review:'先方確認中',delivered:'完了'})[stage]||'編集者進行中'}
   function editorNextOwner(job){const stage=editorWorkflow(job).stage;return({editing:'あなた',director_review:'ディレクター',client_submission:'ディレクター',client_review:'クライアント',delivered:'対応不要'})[stage]||'あなた'}
-  function editorWaitMessage(job){const status=String(job?.status||'');if(status==='FB待ち')return'mono.create FB中です。確認・修正指示をお待ちください。';if(['先方確認中','確認待ち'].includes(status))return'先方確認中です。修正指示または完了更新をお待ちください。';return({director_review:'D確認待ちです。ディレクターが確認します。',client_submission:'ディレクターが先方へ提出中です。',client_review:'先方確認中です。修正指示または完了更新をお待ちください。',delivered:'完了です。編集者側の操作はありません。'})[editorWorkflow(job).stage]||''}
+  function editorCanCompleteDelivery(job){const stage=editorWorkflow(job).stage,status=String(job?.status||''),dispatch=job?.businessType==='dispatch'||job?.source==='direct_client';return dispatch&&stage==='client_review'&&['先方確認中','確認待ち'].includes(status)}
+  function editorWaitMessage(job){const status=String(job?.status||''),dispatch=job?.businessType==='dispatch'||job?.source==='direct_client';if(dispatch&&editorWorkflow(job).stage==='client_review'&&['先方確認中','確認待ち'].includes(status))return'';if(status==='FB待ち')return'mono.create FB中です。確認・修正指示をお待ちください。';if(['先方確認中','確認待ち'].includes(status))return'先方確認中です。修正指示または完了更新をお待ちください。';return({director_review:'D確認待ちです。ディレクターが確認します。',client_submission:'ディレクターが先方へ提出中です。',client_review:'先方確認中です。修正指示または完了更新をお待ちください。',delivered:'完了です。編集者側の操作はありません。'})[editorWorkflow(job).stage]||''}
   function editorAllowedStatuses(job){
     if(editorWorkflow(job).stage!=='editing')return[String(job?.status||'')].filter(Boolean);
     // 「進行中」はmono.create社内の進行管理。旧データは編集者進行中へ移行できるが、新規保存値にはしない。
@@ -427,7 +482,7 @@ const PORTAL_APP_VERSION='20260831-05';
   }
 
   function dmApi(){return window.EditflowDM||null}
-  function dmUnreadCount(){return feature.dmThreads.filter(thread=>thread.unread).length}
+  function dmUnreadCount(){return editorUnreadApi()?.sourceSnapshot?.('editor-dm').count??feature.dmThreads.filter(thread=>thread.unread).length}
   function dmPeer(uid){return feature.dmPeers.find(peer=>peer.uid===uid)||null}
   function dmThreadPeer(thread){return dmPeer(thread?.counterpartUid)||{uid:thread?.counterpartUid||'',name:thread?.counterpartName||'メンバー',roles:[]}}
   function dmInitial(name){return String(name||'?').trim().slice(0,2)}
@@ -507,13 +562,28 @@ const PORTAL_APP_VERSION='20260831-05';
     const button=event?.submitter;if(button)button.disabled=true;
     try{if(DEMO){feature.dmMessages.push({id:id(),senderUid:user.uid,senderName:editorDisplayName(),body,createdAt:now()});$('#dm-compose-body').value='';render();setTimeout(scrollDirectMessages,0);return toast('DMを送信しました')};const result=await api.send(peerUid,body);const input=$('#dm-compose-body');if(input)input.value='';await openDirectMessage(peerUid,result.threadId);toast('DMを送信しました');const push=pushClient();if(push&&result?.threadId&&user?.getIdToken){user.getIdToken().then(idToken=>push.dispatchDirectThread({threadId:result.threadId,idToken})).catch(error=>console.warn('dm push dispatch',error))}}catch(error){console.warn(error);toast('DMを送信できませんでした')}finally{if(button?.isConnected)button.disabled=false}
   }
-  async function markAllDirectMessagesRead(){const api=dmApi(),threads=feature.dmThreads.filter(x=>x.unread&&x.lastSenderUid!==user?.uid);if(!api||!threads.length)return;try{await api.markAllRead(threads);feature.dmThreads=feature.dmThreads.map(x=>({...x,unread:false}));render();toast('すべてのDMを既読にしました')}catch(error){console.warn(error);toast('DMを既読にできませんでした')}}
+  async function markAllDirectMessagesRead(){const api=dmApi(),threads=feature.dmThreads.filter(x=>x.unread&&x.lastSenderUid!==user?.uid);if(!api||!threads.length)return;try{await api.markAllRead(threads);feature.dmThreads=feature.dmThreads.map(x=>({...x,unread:false}));syncEditorAppBadge();render();toast('すべてのDMを既読にしました')}catch(error){console.warn(error);toast('DMを既読にできませんでした')}}
   function retryDirectMessages(){feature.dmStartedFor='';startDmFeatures(true);render()}
 
+  function feedbackEntryHtml(job){
+    const revision=String(job?.status||'')==='修正中'||String(job?.correctionReason||'').trim();if(!revision)return'';
+    return`<section class="card" style="margin-top:10px;border-color:#ddd6fe;background:#faf5ff"><div class="section-title"><h3>過去フィードバックに記録</h3><span>修正時の学びを残す</span></div><p class="muted">案件内チャットには保存しません。専用ページに記録し、確認後にあなた向けマニュアルへ反映されます。</p>${job.correctionReason?`<div class="job-urgent-note"><b>Dからの修正指示</b><br>${esc(job.correctionReason)}</div>`:''}<div class="actions"><button class="btn primary small" type="button" onclick="openEditorFeedback('${esc(job.id)}')">フィードバックを記録する</button></div></section>`;
+  }
   function messageBlock(job){
     const list=(feature.messages.get(job.id)||[]).slice().sort((a,b)=>stamp(a.createdAt)-stamp(b.createdAt));
     const loaded=feature.messageUnsubs.has(job.id)||DEMO,loading=feature.messageLoading.has(job.id),thread=loading?'<div class="muted">案件内チャットを読み込んでいます…</div>':loaded?(list.map(x=>`<div class="message ${x.byUid===portalUid()?'mine':''}"><div class="message-head"><span>${esc(x.byName||'メンバー')} ・ ${esc(x.kind||'メッセージ')}</span><span>${x.createdAt&&typeof x.createdAt.toDate==='function'?x.createdAt.toDate().toLocaleString('ja-JP'):''}</span></div><div class="message-body">${esc(x.body||'')}</div>${safeUrl(x.url||'')?`<a class="safe-link" href="${esc(safeUrl(x.url))}" target="_blank" rel="noopener">添付URLを開く</a>`:''}</div>`).join('')||'<div class="muted">まだ連絡はありません</div>'):'<div class="muted">この詳細を開くと、案件内チャットを読み込みます。</div>';
-    return`<div class="message-thread" data-message-job-id="${esc(job.id)}"><div class="section-title"><h2>案件内チャット</h2><span>この案件の連絡を残します</span></div>${thread}<div class="form-grid" style="margin-top:8px"><div class="field"><label for="msg-kind-${job.id}">種類</label><select id="msg-kind-${job.id}"><option>質問</option><option>回答</option><option>初稿提出</option><option>修正指示</option><option>修正稿提出</option><option>納品</option><option>連絡</option></select></div><div class="field"><label for="msg-url-${job.id}">関連URL</label><input id="msg-url-${job.id}" type="url" placeholder="https://"></div><div class="field full"><label for="msg-body-${job.id}">メッセージ</label><textarea id="msg-body-${job.id}" maxlength="2000" placeholder="相手に伝えたいことを入力"></textarea></div></div><div class="actions"><button class="btn primary small" onclick="sendJobMessage('${job.id}')">メッセージを送信</button></div></div>`;
+    return`<div class="message-thread" data-message-job-id="${esc(job.id)}"><div class="section-title"><h2>案件内チャット</h2><span>この案件の連絡を残します</span></div>${thread}<div class="form-grid" style="margin-top:8px"><div class="field"><label for="msg-kind-${job.id}">種類</label><select id="msg-kind-${job.id}"><option>質問</option><option>回答</option><option>初稿提出</option><option>修正指示</option><option>修正稿提出</option><option>納品</option><option>連絡</option></select></div><div class="field"><label for="msg-url-${job.id}">関連URL</label><input id="msg-url-${job.id}" type="url" placeholder="https://"></div><div class="field full"><label for="msg-body-${job.id}">メッセージ</label><textarea id="msg-body-${job.id}" maxlength="2000" placeholder="相手に伝えたいことを入力"></textarea></div></div><div class="actions"><button class="btn primary small" onclick="sendJobMessage('${job.id}')">メッセージを送信</button></div>${feedbackEntryHtml(job)}</div>`;
+  }
+  function feedbackApi(){return window.EditflowFeedback||window.FeedbackWorkflow||null}
+  function configureFeedback(){return feedbackApi()?.configure?.({db,user,access,getJobs:()=>jobs})||null}
+  function openEditorFeedback(jid){
+    const job=jobs.find(item=>item.id===jid);if(!job)return toast('案件を開き直してから記録してください');
+    const opened=configureFeedback()?.openFromJob?.(job);if(!opened)return toast('修正指示を受けた案件で記録できます');
+    view='feedback';render();
+  }
+  function syncFeedbackPage(){
+    const api=configureFeedback();if(!api)return;
+    if(view==='feedback')api.start?.('editor');else api.stop?.();
   }
 
 
@@ -526,8 +596,10 @@ const PORTAL_APP_VERSION='20260831-05';
     const draftLocked=!editorSetsDraftDate(j),draftDateControl=`<div class="field"><label for="job-editor-draft-${jid}">編集者 初稿</label><input id="job-editor-draft-${jid}" type="date" value="${esc(j.editorDraftDate||'')}" ${draftLocked?'disabled':''}>${draftLocked?'<div class="muted">案件追加者が設定します。</div>':''}</div>`;
     const editorPay=editorJobType(j)==='dispatch'&&positiveYen(j.editorPayAmount)!==null?`<div class="deadline-summary"><b>編集者支払額</b> ¥${positiveYen(j.editorPayAmount).toLocaleString('ja-JP')}</div>`:'',deliveryControl=j.source==='direct_client'?`<input id="job-delivery-${jid}" type="hidden" value="${esc(deliveryDate)}">`:`<div class="field"><label for="job-delivery-${jid}">納期（予定）</label><input id="job-delivery-${jid}" type="date" value="${esc(deliveryDate)}"></div>`;
     const fields=`<div class="form-grid" oninput="saveJobDraft('${jid}')" onchange="saveJobDraft('${jid}')">${statusControl}<div class="field"><label for="job-shared-${jid}">受注日</label><input id="job-shared-${jid}" type="date" value="${esc(j.sharedDate||'')}"></div>${draftDateControl}<div class="field"><label for="job-client-draft-${jid}">クライアント 初稿</label><input id="job-client-draft-${jid}" type="date" value="${esc(j.clientDraftDate||'')}"></div><div class="field"><label for="job-thumbnail-${jid}">サムネイル納品日</label><input id="job-thumbnail-${jid}" type="date" value="${esc(j.thumbnailDate||'')}"></div>${deliveryControl}<div class="field"><label for="job-workdate-${jid}">作業日</label><input id="job-workdate-${jid}" type="date" value="${esc(j.workDate||'')}"></div><div class="field"><label for="job-start-${jid}">開始時刻</label><input id="job-start-${jid}" type="time" value="${esc(j.startTime||'')}"></div><div class="field"><label for="job-end-${jid}">終了時刻</label><input id="job-end-${jid}" type="time" value="${esc(j.endTime||'')}"></div><div class="field full"><label for="job-progress-${jid}">進み具合のメモ</label><textarea id="job-progress-${jid}" maxlength="2000">${esc(j.progress||'')}</textarea></div><div class="field"><label for="job-evidence-${jid}">提出した内容のURL</label><input id="job-evidence-${jid}" type="url" value="${esc(j.evidenceUrl||'')}" placeholder="https://"></div><div class="field"><label for="job-blocker-${jid}">作業を止めている理由</label><input id="job-blocker-${jid}" maxlength="300" value="${esc(j.blocker||'')}"></div></div>`;
-    return`<article id="editor-job-${jid}" data-job-id="${jid}" class="card job-card editor-job-card ${overdue?'notice danger':''}"><div class="job-top"><div><span class="pill">${editorJobTypeLabel(j)}</span><div class="job-title" style="margin-top:6px">${esc(j.title||'案件名未設定')}</div><div class="job-meta">${esc(j.clientDisplay||'クライアント未設定')} / ${esc(j.accountDisplay||'アカウント未設定')}</div></div>${statusPill(j.status)}</div><div class="editor-job-status-line" aria-label="現在の工程"><span>現在の進捗</span><b>${esc(editorWorkflowLabel(editorWorkflow(j).stage,j.status))}</b></div><div class="editor-next-owner">次の担当：<b>${esc(editorNextOwner(j))}</b></div>${j.correctionReason?`<div class="job-urgent-note danger"><b>差戻し内容</b><br>${esc(j.correctionReason)}</div>`:''}${j.blocker?`<div class="job-urgent-note danger"><b>停止・確認が必要です</b><br>${esc(j.blocker)}</div>`:''}<div class="deadline-summary ${overdue?'overdue':''}">${esc(deadline)}${overdue?'（作業中の案件）':''}</div>${editorPay}<div class="editor-timeline" aria-label="編集進行の5段階">${timeline.map(x=>`<div class="editor-timeline-step ${x.state}"><b>${x.state==='done'?'完了':x.state==='current'?'いまここ':x.state==='optional'?'必要時':'未到達'}</b><span>${esc(x.label)}</span></div>`).join('')}</div>${waiting?`<div class="job-waiting"><b>現在の状況：</b>${esc(waiting)}</div>`:editorActionHtml(j,action,e)}<details class="job-detail" ${feature.openMessageJobIds.has(j.id)?'open':''} ontoggle="ensureJobMessages('${jid}',this.open)"><summary>案件の詳細・連絡を開く</summary>${caseCautionHtml(j)}${caseManualCardsHtml(j)}${j.instructions?`<div class="job-body">${esc(j.instructions)}</div>`:''}${links}${fields}<div class="actions"><button class="btn primary job-primary" type="button" onclick="saveJobProgress('${jid}')">変更を保存</button></div>${messageBlock(j)}</details></article>`;
+    return`<article id="editor-job-${jid}" data-job-id="${jid}" class="card job-card editor-job-card ${overdue?'notice danger':''}"><div class="job-top"><div><span class="pill">${editorJobTypeLabel(j)}</span><div class="job-title" style="margin-top:6px">${esc(j.title||'案件名未設定')}</div><div class="job-meta">${esc(j.clientDisplay||'クライアント未設定')} / ${esc(j.accountDisplay||'アカウント未設定')}</div></div>${statusPill(j.status)}</div><div class="editor-job-status-line" aria-label="現在の工程"><span>現在の進捗</span><b>${esc(editorWorkflowLabel(editorWorkflow(j).stage,j.status))}</b></div><div class="editor-next-owner">次の担当：<b>${esc(editorNextOwner(j))}</b></div>${j.correctionReason?`<div class="job-urgent-note danger"><b>差戻し内容</b><br>${esc(j.correctionReason)}</div>`:''}${j.blocker?`<div class="job-urgent-note danger"><b>停止・確認が必要です</b><br>${esc(j.blocker)}</div>`:''}<div class="deadline-summary ${overdue?'overdue':''}">${esc(deadline)}${overdue?'（作業中の案件）':''}</div>${editorPay}<div class="editor-timeline" aria-label="編集進行の5段階">${timeline.map(x=>`<div class="editor-timeline-step ${x.state}"><b>${x.state==='done'?'完了':x.state==='current'?'いまここ':x.state==='optional'?'必要時':'未到達'}</b><span>${esc(x.label)}</span></div>`).join('')}</div>${waiting?`<div class="job-waiting"><b>現在の状況：</b>${esc(waiting)}</div>`:editorCanCompleteDelivery(j)?editorDeliveryCompletionHtml(j,e):editorActionHtml(j,action,e)}<details class="job-detail" ${feature.openMessageJobIds.has(j.id)?'open':''} ontoggle="ensureJobMessages('${jid}',this.open)"><summary>案件の詳細・連絡を開く</summary>${caseCautionHtml(j)}${caseManualCardsHtml(j)}${j.instructions?`<div class="job-body">${esc(j.instructions)}</div>`:''}${links}${fields}<div class="actions"><button class="btn primary job-primary" type="button" onclick="saveJobProgress('${jid}')">変更を保存</button></div>${messageBlock(j)}</details></article>`;
   }
+
+  function editorDeliveryCompletionHtml(job,evidence){const jid=esc(job.id);return`<div class="job-submit-panel editor-delivery-completion"><b>先方確認後の完了記録</b><div class="muted">実際の納品日と納品先URLを記録して、この案件を完了にします。</div><div class="form-grid"><div class="field"><label for="delivery-completed-date-${jid}">実際の納品日 *</label><input id="delivery-completed-date-${jid}" type="date" value="${esc(job.completedDeliveryDate||localDate())}"></div><div class="field"><label for="delivery-completed-evidence-${jid}">納品先URL *</label><input id="delivery-completed-evidence-${jid}" type="url" value="${esc(evidence||'')}" placeholder="https://"></div></div><button id="delivery-complete-${jid}" class="btn primary job-primary" type="button" onclick="completeEditorDelivery('${jid}')">納品を完了にする</button></div>`}
 
   function editorProgressOptionLabel(job,status){
     const current=String(job?.status||'');
@@ -599,6 +671,7 @@ const PORTAL_APP_VERSION='20260831-05';
 
   function renderExtended(){
     original.render();
+    syncFeedbackPage();
     injectStyles();
     document.body.classList.toggle('editor-slack-layout',!!(user&&access?.approved));
     const who=document.querySelector('#account b');if(who&&!document.querySelector('#account .role-chip'))who.insertAdjacentHTML('afterend',`<span class="role-chip">${isExternal()?'外部編集者':'直接契約編集者'}</span>`);
@@ -615,15 +688,19 @@ const PORTAL_APP_VERSION='20260831-05';
   }
 
   function stopFeatures(){
+    stopWeeklyRankingSubscription();feature.weeklyRanking=null;feature.weeklyRankingError='';
     feature.unsubs.forEach(x=>{try{x()}catch(_){}});feature.unsubs=[];
     feature.messageUnsubs.forEach(x=>{try{x()}catch(_){}});feature.messageUnsubs.clear();feature.messages.clear();feature.messageLoading.clear();feature.openMessageJobIds.clear();feature.startedFor='';
     if(feature.dmThreadUnsub){try{feature.dmThreadUnsub()}catch(_){}feature.dmThreadUnsub=null}
     if(feature.dmMessageUnsub){try{feature.dmMessageUnsub()}catch(_){}feature.dmMessageUnsub=null}
     feature.dmStartedFor='';feature.dmPeers=[];feature.dmThreads=[];feature.dmMessages=[];feature.dmActivePeerUid='';feature.dmActiveThreadId='';feature.dmInitialSnapshot=false;feature.dmSeenMessages.clear();
+    const registry=editorUnreadApi();registry?.clear?.('editor-dm');registry?.clear?.('editor-case');registry?.clear?.('editor-bulletin');
+    feedbackApi()?.stop?.();
+    try{window.EditorPush?.syncBadge?.(0)}catch(_){}
   }
   if(window.EditflowFirestoreQuota?.registerStop)window.EditflowFirestoreQuota.registerStop(()=>{saveVisibleDrafts();stopFeatures()});
 
-  function mergeBoard(items){feature.board=uniqById([...feature.board,...items]);scheduleSnapshotRender()}
+  function mergeBoard(items){feature.board=uniqById([...feature.board,...items]);syncEditorAppBadge();scheduleSnapshotRender()}
   function mergeManuals(items){feature.manuals=uniqById([...feature.manuals,...items]);scheduleSnapshotRender()}
 
   function startFeatures(){
@@ -645,26 +722,26 @@ const PORTAL_APP_VERSION='20260831-05';
   function syncMessageSubscriptions(){
     if(DEMO||!db||!user)return;
     const ids=new Set(jobs.map(x=>x.id));
-    feature.messageUnsubs.forEach((unsub,jid)=>{if(!ids.has(jid)){try{unsub()}catch(_){}feature.messageUnsubs.delete(jid);feature.messages.delete(jid);feature.messageLoading.delete(jid);feature.openMessageJobIds.delete(jid)}});
+    feature.messageUnsubs.forEach((unsub,jid)=>{if(!ids.has(jid)){try{unsub()}catch(_){}feature.messageUnsubs.delete(jid);feature.messages.delete(jid);feature.messageLoading.delete(jid);feature.openMessageJobIds.delete(jid)}});syncEditorAppBadge();
   }
 
   function ensureJobMessages(jid,opened=true){
     if(!opened){
       feature.openMessageJobIds.delete(jid);
       const unsub=feature.messageUnsubs.get(jid);if(unsub){try{unsub()}catch(_){}feature.messageUnsubs.delete(jid)}
-      feature.messages.delete(jid);feature.messageLoading.delete(jid);return;
+      feature.messages.delete(jid);feature.messageLoading.delete(jid);syncEditorAppBadge();return;
     }
     feature.openMessageJobIds.add(jid);
     if(DEMO||!db||!user||window.EditflowFirestoreQuota?.isOpen?.()||feature.messageUnsubs.has(jid)||feature.messageLoading.has(jid))return;
     const job=jobs.find(x=>x.id===jid);if(!job||job.previewLegacy)return;
     feature.messageLoading.add(jid);scheduleSnapshotRender();
-    const u=db.collection('editor_portals').doc(portalUid()).collection('editor_jobs').doc(jid).collection('messages').orderBy('createdAt','asc').limit(200).onSnapshot(q=>{feature.messages.set(jid,q.docs.map(d=>({id:d.id,...d.data()})));feature.messageLoading.delete(jid);scheduleSnapshotRender()},e=>portalReadError(e,'案件内チャット',err=>{feature.messageLoading.delete(jid);console.warn('messages',err?.code||err);scheduleSnapshotRender()}));
+    const u=db.collection('editor_portals').doc(portalUid()).collection('editor_jobs').doc(jid).collection('messages').orderBy('createdAt','asc').limit(200).onSnapshot(q=>{feature.messages.set(jid,q.docs.map(d=>({id:d.id,...d.data()})));feature.messageLoading.delete(jid);syncEditorAppBadge();scheduleSnapshotRender()},e=>portalReadError(e,'案件内チャット',err=>{feature.messageLoading.delete(jid);console.warn('messages',err?.code||err);syncEditorAppBadge();scheduleSnapshotRender()}));
     feature.messageUnsubs.set(jid,u);
   }
 
   async function createDispatchJob(){
     if(feature.dispatchSubmitting)return;
-    const clientId=$('#new-client-id')?.value||'',accountId=$('#new-account-id')?.value||'',client=feature.catalog.find(x=>x.id===clientId),accountItem=accountItems(clientId).find(x=>x.id===accountId)||null,requestedParentName=$('#new-case')?.value.trim()||'',parentRequestUrl=$('#new-parent-request')?.value.trim()||'',parentSourceUrl=$('#new-parent-source')?.value.trim()||'',parentManualIds=selectedCaseManualIds($('#new-parent-manuals')),parentCaution=$('#new-parent-caution')?.value.trim()||'';
+    const clientId=$('#new-client-id')?.value||'',accountId=$('#new-account-id')?.value||'',client=feature.catalog.find(x=>x.id===clientId),accountItem=accountItems(clientId).find(x=>x.id===accountId)||null,requestedParentName=$('#new-case')?.value.trim()||'',parentRequestUrl=$('#new-parent-request')?.value.trim()||'',parentSourceUrl=$('#new-parent-source')?.value.trim()||'',parentManualIds=combinedCaseManualIds(selectedCaseManualIds($('#new-parent-manuals')),scopedManualIdsForDispatch(client,accountId)),parentCaution=$('#new-parent-caution')?.value.trim()||'';
     if(!client)return toast('クライアントを選択してください');
     if(accountId&&!accountItem)return toast('選択したアカウントを確認してください');
     if((parentRequestUrl&&!safeUrl(parentRequestUrl))||(parentSourceUrl&&!safeUrl(parentSourceUrl)))return toast('親案件共通リンクは https:// または http:// で入力してください');
@@ -675,7 +752,7 @@ const PORTAL_APP_VERSION='20260831-05';
     try{
       const root=db.collection('editor_portals').doc(user.uid).collection('editor_jobs'),batch=db.batch(),created=[];
       subcases.items.forEach((subcase,subtaskIndex)=>{
-        const requestUrl=subcase.requestUrl||parentRequestUrl,sourceUrl=subcase.sourceUrl||parentSourceUrl,manualIds=subcase.manualIds.length?subcase.manualIds:parentManualIds,caution=subcase.caution||parentCaution;
+        const requestUrl=subcase.requestUrl||parentRequestUrl,sourceUrl=subcase.sourceUrl||parentSourceUrl,manualIds=combinedCaseManualIds(parentManualIds,subcase.manualIds),caution=subcase.caution||parentCaution;
         const data={recordType:'editor_portal_job',businessType:'dispatch',title:subcase.title,caseName:parentCaseName,parentCaseId,parentCaseName,subtaskIndex,clientId,sourceClientId:client.sourceClientId||client.id,clientDisplay:client.name,accountId:accountItem?.id||'',accountDisplay:accountItem?.name||'',deadline:subcase.schedule.deliveryDate,...subcase.schedule,editorDraftDateSetter:subcase.editorDraftDateSetter,editorPayAmount:subcase.editorPayAmount,requestUrl,sourceUrl,instructions:subcase.instructions,manualIds,parentManualIds,caution,parentCaution,urgent,status:'アサイン済み',workflow:{round:1,stage:'editing'},progressEvents:[],progress:'',evidenceUrl:'',blocker:'',workDate:'',startTime:'',endTime:'',submittedByUid:user.uid,editorUid:user.uid,editorEmail:user.email||'',editorName:editorDisplayName(),directorUid:assignedDirectorUid(),source:'direct_client',createdAt:at,updatedAt:at,history:[{at,type:'created',by:user.uid,status:'アサイン済み'}]},ref=root.doc(subcase.id);
         batch.set(ref,data);batch.set(ref.collection('events').doc(),{at:firebase.firestore.FieldValue.serverTimestamp(),type:'created',byUid:user.uid,status:data.status,deliveryDate:data.deliveryDate,businessType:'dispatch',parentCaseId});created.push({id:subcase.id,...data});
       });
@@ -803,6 +880,7 @@ const PORTAL_APP_VERSION='20260831-05';
   window.editorDispatchDraftSetterChanged=dispatchDraftSetterChanged;
   window.claimBoardJob=claimBoardJob;
   window.sendJobMessage=sendJobMessage;
+  window.openEditorFeedback=openEditorFeedback;
   window.toggleAllAvailabilityDays=toggleAllAvailabilityDays;
   window.applyAvailabilityBulk=applyAvailabilityBulk;
   window.saveAvailability=saveAvailability;
@@ -834,13 +912,24 @@ const PORTAL_APP_VERSION='20260831-05';
 
   const originalRenderBody=render;
   render=function(){
+    syncWeeklyRankingSubscription();
     if(user&&access?.approved){
       let body;
-      if(view==='notifications')body=notificationsHtml();else if(view==='dm')body=dmHtml();else if(view==='board')body=boardHtml();else if(view==='schedule')body=scheduleHtml();else if(view==='manuals')body=manualsHtml();else if(view==='suggestion')body=suggestionHtml();else if(view==='mobile-setup')body=mobileSetupHtml();
-      if(body){accountHtml();$('#app').innerHTML=adminPreviewBanner()+navHtml()+body;hydrateEditorVisualMarks();injectStyles();mountUpdateBanner();mountPushSetupBanner();syncEditorAppBadge();applyAdminPreviewReadOnly();return}
+      if(view==='notifications')body=notificationsHtml();else if(view==='dm')body=dmHtml();else if(view==='board')body=boardHtml();else if(view==='schedule')body=scheduleHtml();else if(view==='manuals')body=manualsHtml();else if(view==='feedback')body=configureFeedback()?.renderEditorPage?.()||'<div class="page"><div class="card empty">過去フィードバックを読み込めません。</div></div>';else if(view==='ranking')body=weeklyRankingHtml();else if(view==='suggestion')body=suggestionHtml();else if(view==='mobile-setup')body=mobileSetupHtml();
+      if(body){accountHtml();$('#app').innerHTML=adminPreviewBanner()+navHtml()+body;syncFeedbackPage();hydrateEditorVisualMarks();injectStyles();mountUpdateBanner();mountPushSetupBanner();syncEditorAppBadge();applyAdminPreviewReadOnly();return}
     }
     originalRenderBody();
   };
+
+  window.addEventListener('editflow-unread-source',event=>{
+    const detail=event?.detail||{},source=String(detail.source||'').trim();
+    const target=source==='bulletin'?'editor-bulletin':source;
+    if(!['editor-bulletin','editor-case'].includes(target)||!Array.isArray(detail.items))return;
+    editorSetUnreadSource(target,detail.items);syncEditorAppBadge();
+  });
+  // A push is intentionally only a re-sync hint.  Its browser count is never
+  // added to the authoritative Firestore-derived snapshot.
+  window.addEventListener('editflow-push-received',()=>{if(!DEMO&&!ADMIN_PREVIEW)syncEditorAppBadge()});
 
   injectStyles();
   if(DEMO)seedDemoFeatures();else{

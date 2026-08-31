@@ -177,6 +177,25 @@
     return `${trim(thread.lastSenderUid)}:${millis(thread.lastMessageAt)}:${trim(thread.lastMessagePreview)}`;
   }
 
+  // This is a Firestore-derived identity, not a browser-notification count.
+  // It stays the same across repeated snapshots and can be deduplicated with
+  // the same record rendered by another notification category.
+  function unreadNotificationId(thread) {
+    const id = trim(thread?.id);
+    const token = readToken(thread);
+    return id && token ? `dm:${id}:${token}` : '';
+  }
+
+  function unreadItems(threads) {
+    const unique = new Map();
+    (Array.isArray(threads) ? threads : []).forEach(thread => {
+      if (!thread?.unread) return;
+      const notificationId = unreadNotificationId(thread);
+      if (notificationId) unique.set(notificationId, { notificationId, unread: true, kind: 'dm', threadId: trim(thread.id) });
+    });
+    return [...unique.values()];
+  }
+
   async function ensureThread(peerUid) {
     assertCloudWriteAvailable();
     const { me, peer } = peerFor(peerUid);
@@ -404,6 +423,7 @@
   global.EditflowDM = Object.freeze({
     version: '1.0.0', threadId, peers, canMessage: uid => { try { peerFor(uid); return true; } catch (_) { return false; } },
     loadPeers, ensureThread, send, messages, list, markRead, markAllRead, watch, watchMessages, stopAllWatches,
+    unreadNotificationId, unreadItems,
     limits: Object.freeze({ maxMessageLength: MAX_MESSAGE_LENGTH, maxMessages: MAX_MESSAGES }),
     cloudWritePausedMessage: CLOUD_WRITE_PAUSED_MESSAGE
   });

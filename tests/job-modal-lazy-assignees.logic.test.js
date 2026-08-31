@@ -31,6 +31,7 @@ test('a 500-person fixture creates only the first 60 optional picker controls', 
   const context = {
     S: { workers: Array.from({ length: 500 }, (_, i) => ({ id: `w${i}`, name: `編集者 ${i}` })) },
     SELF_WID: '__self',
+    _curJobBiz: () => 'edit',
     esc: value => String(value),
     document: { getElementById: id => elements[id] || null, querySelector: () => null },
   };

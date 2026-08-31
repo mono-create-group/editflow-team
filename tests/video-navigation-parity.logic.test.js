@@ -8,7 +8,7 @@ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const css=fs.readFileSync(path.join(root,'app-ui.css'),'utf8');
 
 test('オーナーと旧台帳スタッフは全管理タブを再利用し、ディレクターは開かない',()=>{
-  assert.match(html,/const managementTabs=_isScopedVideoDirectorAccess\(\)\?\[\]:BIZ_CFG\[biz\]\.tabs\.filter\(_canOpenProjectTab\)\.map\(k=>\[`manage-\$\{k\}`/);
+  assert.match(html,/const managementTabs=_isScopedVideoDirectorAccess\(\)\?\[\]:BIZ_CFG\[biz\]\.tabs\.filter\(k=>k!=='board'&&_canOpenProjectTab\(k\)\)\.map\(k=>\[`manage-\$\{k\}`/);
   assert.match(html,/\{board:rProjBoard,deadline:rProjDeadline,listing:rProjListing,list:\(\)=>rProjList\(clients\),clients:rProjClients,profit:rProjProfit,payment:rProjPayment,invoice:rProjInvoice,completed:rProjCompleted,worker:rProjWorker,priority:rProjPriority\}\[managementKey\]/);
   assert.match(html,/VIDEO_TAB==='legacy'\)\{VIDEO_TAB='manage-board'/);
 });

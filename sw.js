@@ -1,6 +1,6 @@
 // mono.create 社内連絡アプリ SW
-const CACHE='mcshanai-20260831-05';
-const URLS=['./','./index.html','./editor.html','./billing-terms.js','./editor-features.js','./editor-push.js','./direct-messages.js','./manager-features.js','./app-ui.css','./owner-yellow-ui.css','./editor-yellow-ui.css','./editflow-logo.svg','./manifest.json','./editor-manifest.json','./icon-192.png','./icon-512.png','./icon-512-maskable.png','./apple-touch-icon.png','./ai-bridge-client.js'];
+const CACHE='mcshanai-20260831-06';
+const URLS=['./','./index.html','./editor.html','./billing-terms.js','./editor-features.js','./editor-push.js','./bulletin.js','./direct-messages.js','./feedback-workflow.js','./manager-features.js','./owner-video-performance.js','./app-ui.css','./owner-yellow-ui.css','./editor-yellow-ui.css','./editflow-logo.svg','./manifest.json','./editor-manifest.json','./icon-192.png','./icon-512.png','./icon-512-maskable.png','./apple-touch-icon.png','./ai-bridge-client.js'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(URLS)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('mcshanai-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',e=>{
@@ -17,14 +17,14 @@ self.addEventListener('push',event=>{
   const body=String(data?.body||'新しい連絡があります。アプリを開いて確認してください。').slice(0,140);
   const target=typeof data?.url==='string'&&data.url.startsWith('./')?data.url:'./editor.html?notification=1';
   const tag=String(data?.tag||'editor-notification').slice(0,120);
+  const notificationId=typeof data?.notificationId==='string'?data.notificationId.slice(0,512):'';
   event.waitUntil((async()=>{
-    const existing=await self.registration.getNotifications({tag});
-    const previous=existing.reduce((max,item)=>Math.max(max,Number(item?.data?.badgeCount)||0),0);
-    const badgeCount=Math.min(999,previous+1);
-    await self.registration.showNotification(title,{body,icon:'./icon-192.png',badge:'./icon-192.png',tag,renotify:false,data:{url:target,badgeCount}});
-    try{await self.navigator?.setAppBadge?.(badgeCount)}catch(_){}
+    // A web push is a delivery hint, not an unread-record mutation.  Do not
+    // increment a per-device number here: duplicate deliveries, stale tabs,
+    // and collapsed browser notifications otherwise overcount the app icon.
+    await self.registration.showNotification(title,{body,icon:'./icon-192.png',badge:'./icon-192.png',tag,renotify:false,data:{url:target,notificationId}});
     const openClients=await clients.matchAll({type:'window',includeUncontrolled:true});
-    openClients.forEach(client=>client.postMessage({type:'editflow-push-received',badgeCount}));
+    openClients.forEach(client=>client.postMessage({type:'editflow-push-received',notificationId}));
   })());
 });
 self.addEventListener('notificationclick',event=>{

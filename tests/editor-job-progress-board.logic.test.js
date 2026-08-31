@@ -45,7 +45,7 @@ test('progress board explains the current step without rewriting saved data', ()
   const start = index.indexOf('function _videoProgressStepState');
   const end = index.indexOf('\nfunction _videoProgressRows', start);
   assert.ok(start >= 0 && end > start, 'progress state helper must exist');
-  const context = {_videoWorkflow(job){const status=String(job?.status||'');if(job?.workflow?.stage)return job.workflow;if(status==='完了')return{round:1,stage:'delivered'};if(status==='修正中')return{round:2,stage:'editing'};if(status==='D確認OK')return{round:1,stage:'client_submission'};if(status==='FB待ち'||['初稿提出済み','修正稿提出済み'].includes(status))return{round:status==='修正稿提出済み'?2:1,stage:'director_review'};if(['先方確認中','確認待ち'].includes(status))return{round:1,stage:'client_review'};return{round:1,stage:'editing'};}};
+  const context = {_videoWorkflow(job){const status=String(job?.status||'');if(job?.workflow?.stage)return job.workflow;if(status==='完了')return{round:1,stage:'delivered'};if(status==='修正中')return{round:2,stage:'editing'};if(status==='D確認OK')return{round:1,stage:'client_submission'};if(status==='FB待ち'||['初稿提出済み','修正稿提出済み'].includes(status))return{round:status==='修正稿提出済み'?2:1,stage:'director_review'};if(['先方確認中','確認待ち'].includes(status))return{round:1,stage:'client_review'};return{round:1,stage:'editing'};},_editorOwnsPortalCompletion(job){return job?.businessType==='dispatch'||job?.source==='direct_client';}};
   vm.createContext(context);
   vm.runInContext(`${index.slice(start, end)};this.state=_videoProgressStepState;this.next=_videoProgressNextAction;`, context);
   assert.deepEqual({...context.state({status:'進行中'}, 'editor_work')}, {state:'active',label:'初稿を編集中'});
@@ -55,6 +55,7 @@ test('progress board explains the current step without rewriting saved data', ()
   assert.deepEqual({...context.state({status:'D確認OK'}, 'client_submission')}, {state:'active',label:'先方へ提出する'});
   assert.deepEqual({...context.state({status:'完了'}, 'delivered')}, {state:'done',label:'完了'});
   assert.equal(context.next({status:'先方確認中'}), 'クライアントの返事待ち（OKならDが完了／修正なら編集者へ戻す）');
+  assert.equal(context.next({status:'先方確認中',businessType:'dispatch'}), 'クライアントの返事待ち（OKなら担当編集者が実納品日・納品URLを記録して完了／修正ならDが編集者へ戻す）');
   assert.deepEqual({...context.state({status:'先方確認中',progressEvents:[{type:'editor_submitted',status:'修正稿提出済み'}]}, 'editor_work')}, {state:'done',label:'修正稿を提出済み'});
   assert.deepEqual({...context.state({status:'進行中'}, 'director_review')}, {state:'waiting',label:'初稿提出後'});
   assert.deepEqual({...context.state({status:'修正中'}, 'director_review')}, {state:'waiting',label:'修正稿提出後'});
@@ -74,5 +75,6 @@ test('management copy names the next person and separates editor and director ac
   assert.match(index, /次に対応する人 <b>/);
   assert.match(index, /紫色が現在地です/);
   assert.match(index, /class="video-progress-next">次：/);
-  assert.match(index, /ディレクターまたはオーナーは修正指示・D確認OK・先方確認中・クライアントOK後の完了を記録します/);
+  assert.match(index, /ディレクターまたはオーナーは修正指示・D確認OK・先方確認中を更新し、クライアントOK後に完了へ進めます/);
+  assert.match(index, /編集者は編集開始・初稿提出・修正稿提出を記録し、先方OK後は実納品日と納品URLを付けて完了へ進めます/);
 });

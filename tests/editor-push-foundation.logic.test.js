@@ -34,11 +34,11 @@ test('editor device subscription is private and self-owned in Firestore', () => 
   assert.match(rules, /allow read: if pushDeviceOwner\(uid\)/);
 });
 
-test('service worker receives privacy-safe push, badges the app, and opens the registered app route', () => {
+test('service worker receives privacy-safe push, triggers authoritative re-sync, and opens the registered app route', () => {
   assert.match(sw, /self\.addEventListener\('push'/);
   assert.match(sw, /Specific DM\/case content is/);
-  assert.match(sw, /self\.navigator\?\.setAppBadge\?\.\(badgeCount\)/);
-  assert.match(sw, /client\.postMessage\(\{type:'editflow-push-received',badgeCount\}\)/);
+  assert.doesNotMatch(sw, /previous\+1|setAppBadge\?\.\(badgeCount\)/);
+  assert.match(sw, /client\.postMessage\(\{type:'editflow-push-received',notificationId\}\)/);
   assert.match(sw, /self\.addEventListener\('notificationclick'/);
   assert.match(sw, /new URL\(client\.url\)\.pathname===absolute\.pathname/);
   assert.match(sw, /clients\.openWindow\(absolute\.href\)/);
@@ -61,16 +61,17 @@ test('unread counts use a local app badge without adding Firestore writes', () =
   assert.match(client, /async function syncBadge\(count\)/);
   assert.match(client, /navigator\?\.setAppBadge/);
   assert.match(client, /navigator\?\.clearAppBadge/);
-  assert.match(client, /async function pendingBadgeCount\(\)/);
-  assert.match(client, /reg\.getNotifications\(\)/);
+  assert.match(client, /async function pendingBadgeCount\(\)[\s\S]*return 0;/);
+  assert.doesNotMatch(client, /reg\.getNotifications\(\)/);
   assert.match(editorFeatures, /function editorUnreadBadgeCount\(\)/);
   assert.match(editorFeatures, /window\.EditorPush\?\.syncBadge\?\.\(count\)/);
   assert.match(editorFeatures, /feature\.dmThreads=incoming;feature\.dmLoading=false;feature\.dmError='';syncEditorAppBadge\(\)/);
   assert.match(owner, /function ownerSyncAppBadge\(\)/);
-  assert.match(owner, /pendingCount:0/);
+  assert.match(owner, /function ownerUnreadCount\(\)/);
+  assert.match(owner, /ownerSetUnreadSource\('owner-dm'/);
   assert.match(owner, /window\.addEventListener\('editflow-push-received'/);
-  assert.match(owner, /await api\.pendingBadgeCount\?\.\(\)/);
-  assert.match(owner, /OWNER_DM_STATE\.threads=Array\.isArray\(threads\)\?threads:\[\];OWNER_DM_STATE\.error='';OWNER_PUSH_STATE\.pendingCount=0;ownerSyncAppBadge\(\)/);
+  assert.doesNotMatch(owner, /pendingCount/);
+  assert.doesNotMatch(owner, /pendingBadgeCount/);
 });
 
 test('notification taps open the matching DM page before the unread snapshot is loaded', () => {

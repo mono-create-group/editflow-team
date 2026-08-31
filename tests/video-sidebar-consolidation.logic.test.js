@@ -21,7 +21,7 @@ test('編集者派遣は編集代行画面の種類切替から開ける',()=>{
 });
 
 test('編集者の主アイコンは編集者管理を開き、旧編集者別集計はその他へ残す',()=>{
-  assert.match(html,/const coreKeys=tabs\.some\(\(\[key\]\)=>key==='manager-editors'\)\s*\?\['manage-board','manage-profit','manage-payment','manage-completed','manager-editors','manager-clients'\]/);
+  assert.match(html,/const coreKeys=tabs\.some\(\(\[key\]\)=>key==='manager-editors'\)\s*\?\['board','manage-profit','manage-payment','manage-completed','manager-editors','manager-clients'\]/);
   assert.match(html,/'manager-editors':'編集者'/);
   assert.match(html,/'manager-clients':'顧客'/);
   assert.match(html,/'manage-worker':'編集者別'/);

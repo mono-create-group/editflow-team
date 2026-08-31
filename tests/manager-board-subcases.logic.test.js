@@ -23,7 +23,7 @@ test('manager publish form supports an editable list of child cases',()=>{
   assert.match(manager,/この子案件だけの台本・依頼URL（任意）/);
   assert.match(manager,/この子案件だけの素材URL（任意）/);
   assert.match(manager,/mb-subcase-attachments-/);
-  assert.match(manager,/納品日は担当編集者が記録します/);
+  assert.match(manager,/編集代行の完了はDまたはオーナーが記録します/);
   for(const field of ['mb-subcase-unit','mb-subcase-pay','mb-subcase-invoice','mb-subcase-due','mb-subcase-payment','mb-subcase-payout'])assert.doesNotMatch(manager,new RegExp(field));
   assert.match(manager,/クライアント単価はクライアント一覧のオーナー専用マスターで管理します/);
   assert.match(manager,/id="mb-client-pricing-status"/);

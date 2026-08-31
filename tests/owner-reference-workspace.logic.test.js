@@ -41,7 +41,7 @@ test('every legacy case page stays available inside the new white and yellow she
   assert.match(html,/function _videoReferenceTabs\(tabs\)/);
   assert.match(html,/class="ref-global-tabs" aria-label="案件管理ページ"/);
   assert.match(html,/ref-workspace ref-renderer-workspace/);
-  assert.match(html,/BIZ_CFG\[biz\]\.tabs\.filter\(_canOpenProjectTab\)\.map\(k=>\[`manage-\$\{k\}`/);
+  assert.match(html,/BIZ_CFG\[biz\]\.tabs\.filter\(k=>k!=='board'&&_canOpenProjectTab\(k\)\)\.map\(k=>\[`manage-\$\{k\}`/);
   for(const route of ['board','profit','payment','completed','worker'])assert.match(html,new RegExp(`${route}:rProj`,''),route);
   assert.match(css,/\.ref-global-tabs\{[^}]*display:flex;[^}]*overflow:visible/);
   assert.match(css,/\.ref-renderer-main\{min-width:0;/);

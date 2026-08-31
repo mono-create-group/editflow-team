@@ -48,15 +48,17 @@ test('all editor and feature snapshot errors route to the shared quota circuit',
   const editorRoutes = (editor.match(/portalSnapshotError\(e,/g) || []).length;
   assert.equal(editorRoutes, editorListeners);
   const featureListeners = (features.match(/\.onSnapshot\(/g) || []).length;
-  const featureRoutes = (features.match(/portalReadError\(e,/g) || []).length;
-  assert.equal(featureRoutes, featureListeners);
+  assert.equal(featureListeners, 8);
+  for (const scope of ['編集者ランキング','クライアント一覧','案件募集','編集可能スケジュール','マニュアル','個別マニュアル','更新情報','案件内チャット']) {
+    assert.match(features,new RegExp(`portalReadError\\((?:e|error),'${scope}'`),`${scope} listener must use the shared quota circuit`);
+  }
   assert.match(editor, /window\.EditflowFirestoreQuota=\{handle:portalEnterQuotaCircuit,registerStop:portalRegisterQuotaStop,isOpen:\(\)=>portalQuotaCircuitOpen,writeAllowed:\(\)=>!portalQuotaCircuitOpen\}/);
   assert.match(editor, /if\(portalQuotaCircuitOpen\)\{try\{fn\(\)\}/);
   assert.match(functionSource(editor, 'startPortal'), /if\(portalQuotaCircuitOpen\)return/);
   assert.match(features, /EditflowFirestoreQuota\?\.registerStop/);
   assert.match(features, /EditflowFirestoreQuota\?\.isOpen\?\.\(\)/);
   assert.match(features, /stopFeatures\(\)/);
-  assert.match(features, /PORTAL_APP_VERSION='20260831-05'/);
+  assert.match(features, /PORTAL_APP_VERSION='20260831-06'/);
 });
 
 test('editor quota recovery only exposes an explicit reload path and never claims cloud data was saved', () => {

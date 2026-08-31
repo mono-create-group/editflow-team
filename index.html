@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260831-05"></script>
+<script src="./billing-terms.js?v=20260831-06"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -993,11 +993,12 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 /* ─── DAILY COMPANY GOAL GATE ─── */
 .company-gate{max-width:600px;margin:8vh auto;background:var(--card);border:1.5px solid var(--border);border-radius:18px;padding:24px;box-shadow:var(--shadow-lg)}.company-gate h1{font-size:23px;margin:0 0 8px}.company-gate-kicker{font-size:11px;font-weight:800;letter-spacing:.08em;color:var(--purple);margin-bottom:5px}.company-gate-goal{padding:15px;background:var(--pdim);border-left:4px solid var(--purple);border-radius:10px;font-size:13px;line-height:1.65;margin:16px 0}.company-gate-form{display:grid;gap:12px}.company-gate-form label{font-size:12px;font-weight:700;color:var(--t2)}.company-gate-form input[type=number]{width:100%;min-height:48px;margin-top:5px;font-size:19px;font-variant-numeric:tabular-nums}.company-gate-check{display:flex;align-items:center;gap:9px;min-height:44px}.company-gate-check input{width:22px;height:22px}.company-gate .btn{min-height:48px}@media(max-width:700px){.company-gate{margin:12px;padding:18px}.company-gate h1{font-size:20px}}
+.owner-delivery-gate{max-width:760px;margin:5vh auto;background:var(--card);border:1.5px solid var(--border);border-radius:18px;padding:24px;box-shadow:var(--shadow-lg)}.owner-delivery-gate h1{font-size:23px;margin:0 0 10px}.owner-performance-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}.owner-performance-cards article{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:14px}.owner-performance-cards article>div{font-size:20px;font-weight:900;margin-top:6px}.owner-performance-cards small{color:var(--t2)}.owner-video-performance .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.owner-video-performance label{display:grid;gap:5px;font-size:12px;font-weight:800}.owner-video-performance ol{padding-left:24px;line-height:1.8}@media(max-width:760px){.owner-delivery-gate{margin:12px;padding:17px}.owner-performance-cards{grid-template-columns:1fr 1fr}.owner-video-performance .form-grid{grid-template-columns:1fr}}
 .role-preview-banner{position:sticky;top:0;z-index:55;display:flex;align-items:center;gap:10px;margin:0 0 14px;padding:11px 13px;border:2px solid #7c3aed;border-radius:11px;background:#f5f3ff;box-shadow:0 7px 20px rgba(91,33,182,.14)}.role-preview-banner>div{flex:1;min-width:0}.role-preview-banner b{display:block;color:#4c1d95;font-size:13px}.role-preview-banner span{display:block;color:#6d28d9;font-size:10.5px;line-height:1.55}.role-preview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.role-preview-card{border:1px solid var(--border);border-left:4px solid var(--purple);border-radius:10px;padding:11px;background:var(--card2)}.role-preview-card b{font-size:13px}.role-preview-card p{margin:4px 0 9px;color:var(--t2);font-size:10.5px;line-height:1.6}.role-preview-members{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}@media(max-width:700px){.role-preview-grid{grid-template-columns:1fr}.role-preview-banner{align-items:flex-start;flex-wrap:wrap}}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260831-05">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260831-06">
 </head>
 <body class="owner-yellow-ui">
 
@@ -1057,6 +1058,8 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="./ai-bridge-client.js"></script>
+<script src="./owner-video-performance.js?v=20260831-06"></script>
+<script src="./feedback-workflow.js?v=20260831-06"></script>
 <script>/* lz-string 1.5.0 (MIT) — CDN非依存でオフライン/圧縮チーム同期を保証するためインライン化 */
 var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",e={};function t(r,o){if(!e[r]){e[r]={};for(var n=0;n<r.length;n++)e[r][r.charAt(n)]=n}return e[r][o]}var i={compressToBase64:function(r){if(null==r)return"";var n=i._compress(r,6,function(r){return o.charAt(r)});switch(n.length%4){default:case 0:return n;case 1:return n+"===";case 2:return n+"==";case 3:return n+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(n){return t(o,r.charAt(n))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(r){return null==r?"":""==r?null:i._decompress(r.length,16384,function(o){return r.charCodeAt(o)-32})},compressToUint8Array:function(r){for(var o=i.compress(r),n=new Uint8Array(2*o.length),e=0,t=o.length;e<t;e++){var s=o.charCodeAt(e);n[2*e]=s>>>8,n[2*e+1]=s%256}return n},decompressFromUint8Array:function(o){if(null==o)return i.decompress(o);for(var n=new Array(o.length/2),e=0,t=n.length;e<t;e++)n[e]=256*o[2*e]+o[2*e+1];var s=[];return n.forEach(function(o){s.push(r(o))}),i.decompress(s.join(""))},compressToEncodedURIComponent:function(r){return null==r?"":i._compress(r,6,function(r){return n.charAt(r)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),i._decompress(r.length,32,function(o){return t(n,r.charAt(o))}))},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(r,o,n){if(null==r)return"";var e,t,i,s={},u={},a="",p="",c="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<r.length;i+=1)if(a=r.charAt(i),Object.prototype.hasOwnProperty.call(s,a)||(s[a]=f++,u[a]=!0),p=c+a,Object.prototype.hasOwnProperty.call(s,p))c=p;else{if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++),s[p]=f++,c=String(a)}if(""!==c){if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++)}for(t=2,e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;for(;;){if(m<<=1,v==o-1){d.push(n(m));break}v++}return d.join("")},decompress:function(r){return null==r?"":""==r?null:i._decompress(r.length,32768,function(o){return r.charCodeAt(o)})},_decompress:function(o,n,e){var t,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:e(0),position:n,index:1};for(t=0;t<3;t+=1)l[t]=t;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return i}();"function"==typeof define&&define.amd?define(function(){return LZString}):"undefined"!=typeof module&&null!=module?module.exports=LZString:"undefined"!=typeof angular&&null!=angular&&angular.module("LZString",[]).factory("LZString",function(){return LZString});
 </script>
@@ -1072,6 +1075,8 @@ const BUILTIN_VIEWS=[
   {id:'videoclients',label:'クライアント・アカウント管理',icon:'🏷️'},
   {id:'videoschedules',label:'編集可能スケジュール',icon:'🗓️'},
   {id:'videomanuals',label:'マニュアル保管庫',icon:'📚'},
+  {id:'videofeedback',label:'過去フィードバック',icon:'🗒️'},
+  {id:'videoperformance',label:'納品・目標・ランキング',icon:'📊'},
   {id:'videoinvoices',label:'請求書',icon:'🧾'},
   {id:'directmessages',label:'DM',icon:'💬'},
   {id:'videosuggestions',label:'匿名目安箱',icon:'📮'},
@@ -2053,18 +2058,18 @@ function fbSetupPortalOpsSync(){
     renderSyncSafe();
   },e=>_fbHandleSnapshotError(e,'invoice authorizations sync',err=>{_ownerPortalBridgeReady.authorizations=false;_notifyOwnerPortalBridge();console.warn('invoice authorizations sync',err&&err.code||err)}));
   if(_isOwner())_ownerJobFinanceUnsub=fbDb.collection('owner_job_finance').onSnapshot(q=>{
-    OWNER_JOB_FINANCE=q.docs.map(d=>({id:d.id,...d.data()}));renderSyncSafe();
-  },e=>_fbHandleSnapshotError(e,'owner job finance sync',err=>{OWNER_JOB_FINANCE=[];console.warn('owner job finance sync',err&&err.code||err);renderSyncSafe();}));
+    OWNER_JOB_FINANCE=q.docs.map(d=>({id:d.id,...d.data()}));OWNER_JOB_FINANCE_READY=true;renderSyncSafe();
+  },e=>_fbHandleSnapshotError(e,'owner job finance sync',err=>{OWNER_JOB_FINANCE=[];OWNER_JOB_FINANCE_READY=false;console.warn('owner job finance sync',err&&err.code||err);renderSyncSafe();}));
   if(_isOwner())_ownerLegacyFinanceUnsub=fbDb.collection('owner_legacy_finance').onSnapshot(q=>{
-    OWNER_LEGACY_FINANCE=q.docs.map(d=>({id:d.id,...d.data()}));renderSyncSafe();
-  },e=>_fbHandleSnapshotError(e,'owner legacy finance sync',err=>{OWNER_LEGACY_FINANCE=[];console.warn('owner legacy finance sync',err&&err.code||err);renderSyncSafe();}));
+    OWNER_LEGACY_FINANCE=q.docs.map(d=>({id:d.id,...d.data()}));OWNER_LEGACY_FINANCE_READY=true;renderSyncSafe();
+  },e=>_fbHandleSnapshotError(e,'owner legacy finance sync',err=>{OWNER_LEGACY_FINANCE=[];OWNER_LEGACY_FINANCE_READY=false;console.warn('owner legacy finance sync',err&&err.code||err);renderSyncSafe();}));
 }
 fbAuth.onAuthStateChanged(async user=>{
   _stopRoleSubscriptions();
   ownerDmStop(true);
   FB_USER=user;
   _authSettled=true;
-  APP_ACCESS=null;ACCESS_RESOLVED=!user;ACCESS_REQUESTS=[];ACCESS_RECORDS=[];PORTAL_JOBS=[];PORTAL_INVOICES=[];PORTAL_PROFILES=[];PORTAL_AUTHORIZATIONS=[];OWNER_JOB_FINANCE=[];OWNER_LEGACY_FINANCE=[];_resetOwnerPortalBridge();
+  APP_ACCESS=null;ACCESS_RESOLVED=!user;ACCESS_REQUESTS=[];ACCESS_RECORDS=[];PORTAL_JOBS=[];PORTAL_INVOICES=[];PORTAL_PROFILES=[];PORTAL_AUTHORIZATIONS=[];OWNER_JOB_FINANCE=[];OWNER_LEGACY_FINANCE=[];OWNER_JOB_FINANCE_READY=false;OWNER_LEGACY_FINANCE_READY=false;window.EditflowOwnerPerformance?.stop?.();window.EditflowFeedback?.stop?.();_resetOwnerPortalBridge();
   if(user){
     await resolveAppAccess();
     if(_appAccessAllowed()){
@@ -3661,6 +3666,16 @@ function companyTaskPerformance(){const tasks=(S.tasks||[]).filter(t=>!t.deleted
 function companyGatePassed(){const r=companyGateRecord();return!!(r&&r.goalConfirmed&&r.taskPerformanceRecorded);}
 function submitCompanyGate(){const confirmed=!!document.getElementById('company-goal-confirm')?.checked;if(!confirmed)return toast('社内目標を確認してチェックしてください','warn');const td=today(),p=companyTaskPerformance(),old=companyGateRecord()||{},record={...old,date:td,goalConfirmed:true,taskPerformanceRecorded:true,taskPerformanceRate:p.rate,taskPerformanceRecordedAt:new Date().toISOString(),confirmedAt:Date.now()};if(!S.dailyOpenReviews)S.dailyOpenReviews={};S.dailyOpenReviews[td]=record;try{localStorage.setItem('mono_daily_open_gate_'+td,JSON.stringify(record));}catch(_){}save();render();toast('本日のタスク達成率を記録しました');}
 function rCompanyGate(){const r=companyGateRecord(),p=companyTaskPerformance(),target=Number(S.settings?.target||0),rev=thisMonthRev();return`<section class="company-gate" role="dialog" aria-labelledby="company-gate-title"><div class="company-gate-kicker">MONO.CREATE DAILY GOAL</div><h1 id="company-gate-title">社内目標とタスク達成率を確認</h1><div style="font-size:12px;color:var(--t2);line-height:1.6">社内目標の確認と、既存タスクから自動計算した達成率の記録が完了するまで社内アプリは開きません。</div><div class="company-gate-goal"><b>本日の社内目標</b><br>利益につながる最重要業務を優先し、今月の目標達成へ前進する。${target?`<br>今月の収益目標 ¥${target.toLocaleString()} / 現在 ¥${rev.toLocaleString()}`:''}</div><div class="company-gate-goal"><b>今日のタスク達成率 ${p.rate}%</b><br>完了 ${p.done}件 / 対象 ${p.total}件</div><div class="company-gate-form"><label class="company-gate-check"><input id="company-goal-confirm" type="checkbox" ${r?.goalConfirmed?'checked':''}>社内目標を確認しました</label><button class="btn btn-p" onclick="submitCompanyGate()">タスク達成率を記録して社内アプリを開く</button>${_isActualOwner()?'<button class="btn btn-g" onclick="openRolePreviewChooser()">役職別の実データ画面を確認</button>':''}</div></section>`;}
+function _ownerPerformanceSourcesReady(){return _teamCloudLoaded&&_ownerPortalBridgeReady.jobs&&OWNER_JOB_FINANCE_READY&&OWNER_LEGACY_FINANCE_READY;}
+function _ownerPerformanceOptions(){
+  const date=today();
+  return{portalJobs:PORTAL_JOBS,jobs:S.jobs||[],finance:[...(OWNER_JOB_FINANCE||[]),...(OWNER_LEGACY_FINANCE||[])],selfWid:SELF_WID,today:date,date,month:date.slice(0,7),sourcesReady:_ownerPerformanceSourcesReady(),onChange:renderSyncSafe};
+}
+function _ownerPerformanceGate(){
+  const api=window.EditflowOwnerPerformance;
+  if(!api)return'<section class="company-gate"><h1>納品実績を読み込めません</h1><p>ページを再読み込みしてください。</p></section>';
+  return api.renderGate(null,_ownerPerformanceOptions());
+}
 function _captureViewBoardScroll(){
   const board=document.querySelector('#view .board-wrap');
   return board?Number(board.scrollLeft)||0:0;
@@ -3703,8 +3718,11 @@ function render(){
     }
     const side=document.getElementById('sidebar');if(side)side.style.display='';
     const main=document.getElementById('main');if(main)main.style.maxWidth='';
-    if(FB_USER&&_coreAccessAllowed()&&!_rolePreviewActive()&&!companyGatePassed()){
-      document.getElementById('view').innerHTML=rCompanyGate();
+    // 納品・金額・目標の朝確認はオーナー本人だけに適用する。編集者や
+    // ディレクターを止めず、金額未設定を解消する2画面はロック中も開ける。
+    const _ownerPerformanceBypass=['videoperformance','videoclients'].includes(V);
+    if(FB_USER&&_isActualOwner()&&!_rolePreviewActive()&&!_ownerPerformanceBypass&&!window.EditflowOwnerPerformance?.gatePassed?.(today())){
+      document.getElementById('view').innerHTML=_ownerPerformanceGate();
       if(side)side.style.display='none';
       return;
     }
@@ -3738,7 +3756,7 @@ function render(){
     // 役割ガード(2026-07-23): 営業スタッフは「営業」「情報」タブ以外を開けない。許可外Vは営業リストへ退避。
     if(!isViewAllowed(V)){V=(BUILTIN_VIEWS.find(x=>isViewAllowed(x.id))?.id)||'videoedit';sessionStorage.setItem('ef_team_view',V);}
     if(V==='kpi'){V='goals';} // KPI管理は目標・KPI統合ページにリダイレクト
-    const views={dashboard:rDash,tasks:rTasks,guide:rGuide,editorportal:rEditorPortal,projects:rProjects,videoedit:rVideoEditProjects,videosubmissions:rVideoSubmissions,videohaken:rVideoHakenProjects,videoclients:rVideoClients,videoschedules:rVideoSchedules,videomanuals:rVideoManuals,videoinvoices:rVideoInvoices,directmessages:rOwnerDirectMessages,videosuggestions:rVideoSuggestions,hpprojects:rHpProjects,pipeline:rPipeline,teamgoals:rTeamGoals,posts:rPosts,docs:rDocs,workers:rWorkers,habits:rHabits,goals:rGoals,journal:rJournal,revenue:rRevenue,memo:rMemo,settings:rSettings,customize:rCustomize,aichat:rAIChat,fitness:rFitness,kpi:rKpi,bizboard:rBizBoard,bizunits:rBizUnits,bizinfo:rBizInfo,minutes:rMinutes,salesleads:rSalesLeads,salesrank:rSalesRank,igaccounts:rIgAccounts,hpfee:rHpFee,salessites:rSalesSites,inquiries:rInquiries,templates:rTemplates,crm:rCrm,accounts:rAccounts};
+    const views={dashboard:rDash,tasks:rTasks,guide:rGuide,editorportal:rEditorPortal,projects:rProjects,videoedit:rVideoEditProjects,videosubmissions:rVideoSubmissions,videohaken:rVideoHakenProjects,videoclients:rVideoClients,videoschedules:rVideoSchedules,videomanuals:rVideoManuals,videofeedback:rVideoFeedback,videoperformance:rVideoPerformance,videoinvoices:rVideoInvoices,directmessages:rOwnerDirectMessages,videosuggestions:rVideoSuggestions,hpprojects:rHpProjects,pipeline:rPipeline,teamgoals:rTeamGoals,posts:rPosts,docs:rDocs,workers:rWorkers,habits:rHabits,goals:rGoals,journal:rJournal,revenue:rRevenue,memo:rMemo,settings:rSettings,customize:rCustomize,aichat:rAIChat,fitness:rFitness,kpi:rKpi,bizboard:rBizBoard,bizunits:rBizUnits,bizinfo:rBizInfo,minutes:rMinutes,salesleads:rSalesLeads,salesrank:rSalesRank,igaccounts:rIgAccounts,hpfee:rHpFee,salessites:rSalesSites,inquiries:rInquiries,templates:rTemplates,crm:rCrm,accounts:rAccounts};
     let html;
     if(V.startsWith('doc_')){
       // Googleドキュメント風エディタ(teamPages.htmlを編集)。BUILTIN_VIEWSガードを迂回する。
@@ -6448,7 +6466,8 @@ function _videoWorkflow(job){
 }
 function _videoWorkflowLabel(workflow){return({editing:'編集作業中',director_review:'D確認待ち',client_submission:'先方へ提出中',client_review:'先方確認中',delivered:'納品完了'})[workflow?.stage]||'編集作業中';}
 function _videoCurrentProgressLabel(job){const status=String(job?.status||'');if(['修正中','FB待ち','先方確認中','確認待ち'].includes(status))return videoStatusLabel(status);return _videoWorkflowLabel(_videoWorkflow(job));}
-function _videoNextOwner(job){const stage=_videoWorkflow(job).stage;return stage==='director_review'?'動画編集ディレクター':stage==='client_submission'||stage==='client_review'?'ディレクター／クライアント':stage==='delivered'?'完了':'担当編集者';}
+function _editorOwnsPortalCompletion(job){return job?.businessType==='dispatch'||job?.source==='direct_client';}
+function _videoNextOwner(job){const stage=_videoWorkflow(job).stage;return stage==='director_review'?'動画編集ディレクター':stage==='client_review'&&_editorOwnsPortalCompletion(job)?'担当編集者':stage==='client_submission'||stage==='client_review'?'ディレクター／クライアント':stage==='delivered'?'完了':'担当編集者';}
 function _videoCaseSummary(job){return`<div class="video-case-summary"><span>現在の進捗 <b>${esc(_videoCurrentProgressLabel(job))}</b></span><span>次に対応する人 <b>${esc(_videoNextOwner(job))}</b></span><span>納期（予定） <b>${esc(job.deadline||'未設定')}</b></span>${job.completedDeliveryDate?`<span>納品日 <b>${esc(job.completedDeliveryDate)}</b></span>`:''}</div>`;}
 function _videoDraftMetaHtml(kind,date,note=''){
   const editor=kind==='editor',fullLabel=editor?'編集者初稿':'クライアント初稿',mark=editor?'編':'ク',value=date||'未設定';
@@ -6456,11 +6475,19 @@ function _videoDraftMetaHtml(kind,date,note=''){
 }
 function _videoDraftDateSummary(job){return`<div class="video-card-dates"><span>編集者初稿 <b>${esc(job.editorDraftDate||'未設定')}</b>（${esc(_editorDraftDateSetterLabel(job))}が設定）</span><span>クライアント初稿 <b>${esc(job.clientDraftDate||'未設定')}</b></span><span>納期（予定） <b>${esc(job.deadline||'未設定')}</b></span><span>納品日 <b>${esc(job.completedDeliveryDate||'未記録')}</b></span></div>`;}
 function _videoWorkflowEventLabel(type){return({editor_submitted:'編集者が稿を提出',director_revision_requested:'Dから修正指示',director_approved:'DのOKを記録',client_submitted:'クライアントへ提出',client_revision_requested:'クライアントから修正指示',client_approved_completed:'クライアントOK・完了',editor_delivery_completed:'編集者が納品を完了（旧記録）',client_approved_delivered:'クライアントOK・納品（旧記録）'})[type]||'進捗を更新';}
-function _videoWorkflowHtml(job,portalUid){const w=_videoWorkflow(job),events=Array.isArray(job?.progressEvents)?job.progressEvents:[],actions=w.stage==='director_review'?[['directorRevision','修正指示を記録'],['directorApprove','D確認OKにする']]:w.stage==='client_submission'?[['clientSubmitted','先方へ提出する']]:w.stage==='client_review'?[['clientRevision','修正指示を記録'],['clientApproved','クライアントOK・完了']]:[],history=events.slice(-8).reverse(),deliveryNotice=w.stage==='client_review'&&!job.completedDeliveryDate?'<div class="notice" style="margin-top:8px;box-shadow:none"><b>クライアントからOKをもらったら「クライアントOK・完了」を押します。</b><div style="font-size:12px;color:var(--t2);margin-top:3px">完了日には操作日を記録します。</div></div>':'';return`<div class="card" style="margin:8px 0;background:var(--card2)"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b style="font-size:14px">進捗共有</b><span class="badge bk">${Number(w.round)}回目・現在：${esc(_videoCurrentProgressLabel(job))}</span></div><div style="font-size:14px;color:var(--t2);line-height:1.6;margin-top:6px">編集者提出 → D確認 → 先方提出 → 先方確認 → 完了を、修正回数付きで残します。</div>${actions.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${actions.map(([action,label])=>`<button class="btn btn-g btn-xs" onclick="advancePortalWorkflow('${esc(portalUid)}','${esc(job.id)}','${action}')">${label}</button>`).join('')}</div>`:''}${deliveryNotice}${history.length?`<details style="margin-top:8px"><summary style="font-size:14px;font-weight:700;cursor:pointer">進捗履歴を見る（${events.length}件）</summary><div style="display:grid;gap:5px;margin-top:7px">${history.map(event=>`<div style="font-size:14px;color:var(--t2);line-height:1.6"><b>第${Number(event.round)||1}回</b> ・ ${esc(_videoWorkflowEventLabel(event.type))}${event.reason?`<br><span style="color:var(--red)">修正内容：${esc(event.reason)}</span>`:''}</div>`).join('')}</div></details>`:''}</div>`;}
+function _videoWorkflowHtml(job,portalUid){const w=_videoWorkflow(job),events=Array.isArray(job?.progressEvents)?job.progressEvents:[],editorCompletion=_editorOwnsPortalCompletion(job),actions=w.stage==='director_review'?[['directorRevision','修正指示を記録'],['directorApprove','D確認OKにする']]:w.stage==='client_submission'?[['clientSubmitted','先方へ提出する']]:w.stage==='client_review'?(editorCompletion?[['clientRevision','修正指示を記録']]:[['clientRevision','修正指示を記録'],['clientApproved','クライアントOK・完了']]):[],history=events.slice(-8).reverse(),deliveryNotice=w.stage==='client_review'&&!job.completedDeliveryDate?(editorCompletion?'<div class="notice" style="margin-top:8px;box-shadow:none"><b>先方OK後の完了は、担当編集者が本人画面で記録します。</b><div style="font-size:12px;color:var(--t2);margin-top:3px">実納品日と納品URLが保存されるまで完了にはなりません。</div></div>':'<div class="notice" style="margin-top:8px;box-shadow:none"><b>クライアントからOKをもらったら「クライアントOK・完了」を押します。</b><div style="font-size:12px;color:var(--t2);margin-top:3px">完了日には操作日を記録します。</div></div>'):'';return`<div class="card" style="margin:8px 0;background:var(--card2)"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b style="font-size:14px">進捗共有</b><span class="badge bk">${Number(w.round)}回目・現在：${esc(_videoCurrentProgressLabel(job))}</span></div><div style="font-size:14px;color:var(--t2);line-height:1.6;margin-top:6px">編集者提出 → D確認 → 先方提出 → 先方確認 → 完了を、修正回数付きで残します。</div>${actions.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${actions.map(([action,label])=>`<button class="btn btn-g btn-xs" onclick="advancePortalWorkflow('${esc(portalUid)}','${esc(job.id)}','${action}')">${label}</button>`).join('')}</div>`:''}${deliveryNotice}${history.length?`<details style="margin-top:8px"><summary style="font-size:14px;font-weight:700;cursor:pointer">進捗履歴を見る（${events.length}件）</summary><div style="display:grid;gap:5px;margin-top:7px">${history.map(event=>`<div style="font-size:14px;color:var(--t2);line-height:1.6"><b>第${Number(event.round)||1}回</b> ・ ${esc(_videoWorkflowEventLabel(event.type))}${event.reason?`<br><span style="color:var(--red)">修正内容：${esc(event.reason)}</span>`:''}</div>`).join('')}</div></details>`:''}</div>`;}
 const PORTAL_WORKFLOW_ACTION_PENDING=new Set();
+function _portalWorkflowSaveErrorMessage(error){
+  const code=String(error?.code||'').toLowerCase();
+  if(code.includes('permission-denied'))return '権限確認で進捗を保存できませんでした。進捗は未変更です。';
+  if(code.includes('resource-exhausted')||code.includes('quota'))return '保存回数の上限に達したため、進捗を保存できませんでした。進捗は未変更です。';
+  if(code.includes('unavailable')||code.includes('deadline-exceeded')||code.includes('network'))return '通信を確認できなかったため、進捗を保存できませんでした。進捗は未変更です。';
+  return '進捗を保存できませんでした。進捗は未変更です。';
+}
 async function advancePortalWorkflow(portalUid,id,action,providedReason){
   if(!_videoCanEdit())return toast('権限がありません','err');
   const j=(PORTAL_JOBS||[]).find(x=>x._portalUid===portalUid&&x.id===id);if(!j)return;
+  if(action==='clientApproved'&&_editorOwnsPortalCompletion(j))return toast('この案件の完了は担当編集者が本人画面で記録します','warn');
   if(action==='clientApproved'&&(!_videoSafeUrl(j.evidenceUrl||'')||String(j.blocker||'').trim()))return toast('完了前に提出リンクと停止理由を確認してください','warn');
   const current=_videoWorkflow(j),at=Date.now(),reason=providedReason===undefined?(document.getElementById('vp-correction')?.value.trim()||''):String(providedReason).trim();let workflow,status,type;
   if(action==='directorRevision'&&current.stage==='director_review'){if(!reason)return toast('修正指示の内容を入力してください','warn');workflow={round:current.round+1,stage:'editing'};status='修正中';type='director_revision_requested';}
@@ -6472,11 +6499,28 @@ async function advancePortalWorkflow(portalUid,id,action,providedReason){
   const pendingKey=`${portalUid}:${id}`;
   if(PORTAL_WORKFLOW_ACTION_PENDING.has(pendingKey))return toast('進捗を保存しています。完了までお待ちください','warn');
   PORTAL_WORKFLOW_ACTION_PENDING.add(pendingKey);
-  const eventData={at,byUid:FB_USER?.uid||'',byEmail:_myEmail(),byRole:_isOwner()?'owner':'director',type,action,fromStage:current.stage,toStage:workflow.stage,round:workflow.round,workflow,status,...(reason?{reason}:{})};
+  // A role preview changes the UI boundary only. The authenticated owner must
+  // still write the owner event shape required by the Firestore rules.
+  const eventData={at,byUid:FB_USER?.uid||'',byEmail:_myEmail(),byRole:_isActualOwner()?'owner':'director',type,action,fromStage:current.stage,toStage:workflow.stage,round:workflow.round,workflow,status,...(reason?{reason}:{})};
   const isRevision=['directorRevision','clientRevision'].includes(action),data={workflow,progressEvents:[...(j.progressEvents||[]).slice(-99),eventData],status,updatedAt:at,updatedBy:_myEmail(),history:[...(j.history||[]).slice(-49),eventData],...(isRevision?{correctionReason:reason}:{correctionReason:''}),...(action==='clientApproved'?{completedDeliveryDate:j.completedDeliveryDate||today()}: {})};
-  try{const ref=fbDb.collection('editor_portals').doc(portalUid).collection('editor_jobs').doc(id),event=ref.collection('events').doc(),batch=fbDb.batch();batch.set(ref,data,{merge:true});batch.set(event,{at:firebase.firestore.FieldValue.serverTimestamp(),...eventData});await batch.commit();if(_applyPortalToLegacy({...j,...data},false))save();closeModal();toast('進捗を更新しました');}catch(e){console.warn('workflow update',e);toast('進捗の更新に失敗しました','err');}finally{PORTAL_WORKFLOW_ACTION_PENDING.delete(pendingKey);}
+  try{
+    const ref=fbDb.collection('editor_portals').doc(portalUid).collection('editor_jobs').doc(id),event=ref.collection('events').doc(),batch=fbDb.batch();
+    batch.set(ref,data,{merge:true});
+    batch.set(event,{at:firebase.firestore.FieldValue.serverTimestamp(),...eventData});
+    await batch.commit();
+  }catch(e){
+    console.warn('workflow commit',e);
+    toast(_portalWorkflowSaveErrorMessage(e),'err');
+    PORTAL_WORKFLOW_ACTION_PENDING.delete(pendingKey);
+    return;
+  }
+  let legacyProjectionSaved=true;
+  try{if(_applyPortalToLegacy({...j,...data},false))save();}catch(e){legacyProjectionSaved=false;console.warn('workflow legacy projection',e);}
+  closeModal();
+  toast(legacyProjectionSaved?'進捗を更新しました':`${videoStatusLabel(status)}は保存済みです。社内案件一覧への反映は保留です。画面を再読み込みしてください`,legacyProjectionSaved?'':'warn');
+  PORTAL_WORKFLOW_ACTION_PENDING.delete(pendingKey);
 }
-function _editorMilestoneSummary(j){const saved=Array.isArray(j?.progressMilestones)?j.progressMilestones:[],events=Array.isArray(j?.progressEvents)?j.progressEvents:[],defs=[['initial_submitted','初稿提出',events.some(x=>x?.type==='editor_submitted'&&x?.status==='初稿提出済み')],['revision_submitted','修正稿提出',events.some(x=>x?.type==='editor_submitted'&&x?.status==='修正稿提出済み')],['actual_delivery','完了',!!j?.completedDeliveryDate||events.some(x=>['client_approved_completed','editor_delivery_completed'].includes(x?.type))]];return`<div class="card" style="margin:8px 0;background:var(--card2)"><div style="font-size:11px;font-weight:800">案件の提出・完了記録</div><div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px">${defs.map(([key,label,hasEvent])=>{const x=saved.find(v=>v?.key===key),done=!!x||hasEvent;return`<span class="badge ${done?'bg':'ba'}">${done?'✓':'未'} ${label}</span>`}).join('')}</div><div style="font-size:10px;color:var(--t3);margin-top:6px">担当編集者は編集開始・初稿提出・修正稿提出を記録します。ディレクターまたはオーナーは修正指示・D確認OK・先方確認中・クライアントOK後の完了を記録します。</div></div>`;}
+function _editorMilestoneSummary(j){const saved=Array.isArray(j?.progressMilestones)?j.progressMilestones:[],events=Array.isArray(j?.progressEvents)?j.progressEvents:[],defs=[['initial_submitted','初稿提出',events.some(x=>x?.type==='editor_submitted'&&x?.status==='初稿提出済み')],['revision_submitted','修正稿提出',events.some(x=>x?.type==='editor_submitted'&&x?.status==='修正稿提出済み')],['actual_delivery','完了',!!j?.completedDeliveryDate||events.some(x=>['client_approved_completed','editor_delivery_completed'].includes(x?.type))]],completionOwner=_editorOwnsPortalCompletion(j)?'編集者派遣案件は、先方OK後の完了を担当編集者が実納品日・URLとともに記録します。':'編集代行案件は、クライアントOK後の完了をディレクターまたはオーナーが記録します。';return`<div class="card" style="margin:8px 0;background:var(--card2)"><div style="font-size:11px;font-weight:800">案件の提出・完了記録</div><div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px">${defs.map(([key,label,hasEvent])=>{const x=saved.find(v=>v?.key===key),done=!!x||hasEvent;return`<span class="badge ${done?'bg':'ba'}">${done?'✓':'未'} ${label}</span>`}).join('')}</div><div style="font-size:10px;color:var(--t3);margin-top:6px">担当編集者は編集開始・初稿提出・修正稿提出を記録します。${completionOwner}</div></div>`;}
 const VIDEO_PROGRESS_STEPS=[['editor_work','編集者の作業'],['director_review','D確認'],['client_submission','クライアントへ提出'],['client_review','先方確認'],['delivered','完了']];
 function _videoProgressStepState(job,key){
   const status=String(job?.status||''),workflow=_videoWorkflow(job),stage=workflow.stage,round=Math.max(1,Number(workflow.round)||1),order=['editing','director_review','client_submission','client_review','delivered'],current=order.indexOf(stage),target=order.indexOf(key==='editor_work'?'editing':key),isRevision=round>1||['修正中','修正稿提出済み'].includes(status)||(Array.isArray(job?.progressEvents)&&job.progressEvents.some(x=>x?.type==='editor_submitted'&&x?.status==='修正稿提出済み'));
@@ -6489,7 +6533,7 @@ function _videoProgressStepState(job,key){
   if(target===current)return key==='delivered'?{state:'done',label:'完了'}:{state:'active',label:key==='director_review'?'確認待ち':key==='client_submission'?'先方へ提出する':'先方確認中'};
   return{state:'waiting',label:key==='director_review'?(isRevision?'修正稿提出後':'初稿提出後'):key==='client_submission'?'D確認後':key==='client_review'?'クライアント提出後':'先方OK後'};
 }
-function _videoProgressNextAction(job){const workflow=_videoWorkflow(job),round=Math.max(1,Number(workflow.round)||1);return workflow.stage==='editing'?(round>1?'編集者が修正稿を提出する':'編集者が初稿を提出する'):workflow.stage==='director_review'?'ディレクターが内容を確認する':workflow.stage==='client_submission'?'ディレクターがクライアントへ提出する':workflow.stage==='client_review'?'クライアントの返事待ち（OKならDが完了／修正なら編集者へ戻す）':'対応完了';}
+function _videoProgressNextAction(job){const workflow=_videoWorkflow(job),round=Math.max(1,Number(workflow.round)||1);return workflow.stage==='editing'?(round>1?'編集者が修正稿を提出する':'編集者が初稿を提出する'):workflow.stage==='director_review'?'ディレクターが内容を確認する':workflow.stage==='client_submission'?'ディレクターがクライアントへ提出する':workflow.stage==='client_review'?(_editorOwnsPortalCompletion(job)?'クライアントの返事待ち（OKなら担当編集者が実納品日・納品URLを記録して完了／修正ならDが編集者へ戻す）':'クライアントの返事待ち（OKならDが完了／修正なら編集者へ戻す）'):'対応完了';}
 function _videoProgressRows(items){
   return items.flatMap(parent=>{
     const base={_parent:parent,clientDisplay:parent.clientDisplay,assignee:parent.assignee};
@@ -6568,9 +6612,26 @@ function saveVideoLegacySafe(id){const j=(S.jobs||[]).find(x=>x.id===id);if(!j||
 function _portalAccessRecord(portalUid){return(ACCESS_RECORDS||[]).find(x=>x.id===portalUid)||null;}
 function _portalIsExternal(portalUid){return _portalAccessRecord(portalUid)?.editorKind==='external';}
 function _portalBillingTerms(completedDeliveryDate){return window.EditflowBilling?.forCompletedDelivery(String(completedDeliveryDate||''))||null;}
+function _portalPricingCaseDate(job){
+  for(const value of [job?.sharedDate,job?.createdAt,job?.updatedAt]){
+    if(/^\d{4}-\d{2}-\d{2}$/.test(String(value||'')))return String(value);
+    const millis=value&&typeof value.toMillis==='function'?value.toMillis():Number(value||0);
+    if(millis>0){const d=new Date(millis);if(!Number.isNaN(d.getTime()))return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+  }
+  return today();
+}
 function _ownerPortalClientPricingSnapshot(j){
-  if(!_isOwner()||typeof window.managerOwnerClientPricingSnapshot!=='function'||typeof window.managerClientPricingReady!=='function'||!window.managerClientPricingReady())return null;
+  if(!_isOwner())return null;
   const accountId=String(j?.accountId||'');
+  const lookup=String(j?.sourceClientId||j?.clientId||j?.clientDisplay||''),caseDate=_portalPricingCaseDate(j);
+  if(typeof window.managerOwnerClientRateForCase==='function'){
+    const rate=window.managerOwnerClientRateForCase(lookup,accountId,caseDate);
+    if(rate){
+      const amount=Number(rate.clientUnitPrice),editorPayAmount=Number(rate.editorPayAmount);
+      if(Number.isInteger(amount)&&amount>0&&Number.isInteger(editorPayAmount)&&editorPayAmount>=0)return{amount,editorPayAmount,pricingId:String(rate.id||''),pricingRateId:String(rate.id||''),pricingEffectiveFrom:String(rate.effectiveFrom||''),pricingSource:String(rate.pricingSource||'client_schedule'),pricingRevision:Number(rate.revision||1),pricingUpdatedAt:rate.updatedAt||null,sourceClientId:String(rate.sourceClientId||lookup),clientSource:String(rate.clientSource||'projects'),caseDate};
+    }
+  }
+  if(typeof window.managerOwnerClientPricingSnapshot!=='function'||typeof window.managerClientPricingReady!=='function'||!window.managerClientPricingReady())return null;
   let snapshot=window.managerOwnerClientPricingSnapshot(String(j?.sourceClientId||j?.clientId||''),accountId);
   if(!snapshot&&j?.clientDisplay)snapshot=window.managerOwnerClientPricingSnapshot(String(j.clientDisplay),accountId);
   if(!snapshot){
@@ -6578,16 +6639,17 @@ function _ownerPortalClientPricingSnapshot(j){
     if(client)snapshot=window.managerOwnerClientPricingSnapshot(String(client.id||''),accountId);
   }
   if(!snapshot||snapshot.amount===null||snapshot.amount===undefined||snapshot.amount==='')return null;
-  const amount=Number(snapshot.amount);return Number.isInteger(amount)&&amount>=0?{...snapshot,amount}:null;
+  const amount=Number(snapshot.amount);return Number.isInteger(amount)&&amount>=0?{...snapshot,amount,legacyPricing:true,caseDate}:null;
 }
 function _ownerPortalClientUnitPrice(j){return _ownerPortalClientPricingSnapshot(j)?.amount??null;}
-function openPortalJobModal(portalUid,id){
+async function openPortalJobModal(portalUid,id){
   const j=(PORTAL_JOBS||[]).find(x=>x._portalUid===portalUid&&x.id===id);if(!j)return;
   const canEdit=_videoCanEdit(),owner=_isOwner(),external=_portalIsExternal(portalUid),portalBiz=_portalVideoBiz(j);
+  if(owner&&portalBiz==='haken'&&!_ownerFinanceForPortalJob(j)&&typeof window.managerEnsureClientRatesReady==='function')await window.managerEnsureClientRatesReady();
   const deliveryDate=j.deliveryDate||j.deadline||'',completedDeliveryDate=j.completedDeliveryDate||'',billingTerms=_portalBillingTerms(completedDeliveryDate),draftSetter=_editorDraftDateSetter(j);
   const billingText=billingTerms?`請求可能日 <b>${esc(billingTerms.invoiceAvailableOn)}</b> ・ 支払予定日 <b>${esc(billingTerms.paymentDueDate)}</b>`:'納品日が記録されると、請求可能日と支払予定日が自動で決まります。';
-  const linkedLegacyJob=j.linkedLegacyJobId?(S.jobs||[]).find(row=>String(row.id)===String(j.linkedLegacyJobId)):null,financeRecord=_ownerFinanceForPortalJob(j),pricingSnapshot=_ownerPortalClientPricingSnapshot(j),masterClientUnitPrice=pricingSnapshot?.amount??null,clientUnitPrice=financeRecord?Number(financeRecord.clientUnitPrice||0):masterClientUnitPrice,editorPayAmount=Math.max(0,Number(j.editorPayAmount)||0),confirmedDirectPay=Math.max(0,Number(financeRecord?.approvedPayAmount)||Number(j.ownPay)||editorPayAmount),confirmedDirectorPay=Math.max(0,Number(financeRecord?.approvedPayAmount)||0);
-  const clientPriceBlock=owner&&portalBiz==='haken'?`<div class="card" style="background:var(--card2)"><div style="font-size:14px;font-weight:800;margin-bottom:6px">オーナーのみ・クライアント単価</div><div class="fg"><div class="fl">クライアント単価（円） *</div><input id="vp-client-unit" type="number" min="1" step="1" inputmode="numeric" value="${clientUnitPrice===null?'':esc(clientUnitPrice)}" ${financeRecord?'disabled':''}></div><div class="fg"><div class="fl">今回だけ単価を変更する理由</div><textarea id="vp-client-price-reason" maxlength="500" placeholder="標準単価と異なる場合は必ず入力" ${financeRecord?'disabled':''}>${esc(financeRecord?.overrideReason||'')}</textarea></div><div style="font-size:12px;line-height:1.65;color:var(--t2)">${financeRecord?'オーナー専用の案件金額台帳に確定済みです。':'クライアント一覧の標準単価・アカウント別単価を自動入力しています。今回だけ金額が違う場合は理由とともに変更できます。'}<br>この金額は編集者の画面や共有クライアント一覧には表示されません。</div></div>`:'';
+  const linkedLegacyJob=j.linkedLegacyJobId?(S.jobs||[]).find(row=>String(row.id)===String(j.linkedLegacyJobId)):null,financeRecord=_ownerFinanceForPortalJob(j),pricingSnapshot=_ownerPortalClientPricingSnapshot(j),masterClientUnitPrice=pricingSnapshot?.amount??null,clientUnitPrice=financeRecord?Number(financeRecord.clientUnitPrice||0):masterClientUnitPrice,editorPayAmount=Math.max(0,Number(j.editorPayAmount)||0),scheduledEditorPay=Math.max(0,Number(pricingSnapshot?.editorPayAmount)||0),confirmedDirectPay=Math.max(0,Number(financeRecord?.approvedPayAmount)||scheduledEditorPay||Number(j.ownPay)||editorPayAmount),confirmedDirectorPay=Math.max(0,Number(financeRecord?.approvedPayAmount)||scheduledEditorPay||0);
+  const clientPriceBlock=owner&&portalBiz==='haken'?`<div class="card" style="background:var(--card2)"><div style="font-size:14px;font-weight:800;margin-bottom:6px">オーナーのみ・クライアント単価</div><div class="fg"><div class="fl">クライアント単価（円） *</div><input id="vp-client-unit" type="number" min="1" step="1" inputmode="numeric" value="${clientUnitPrice===null?'':esc(clientUnitPrice)}" ${financeRecord?'disabled':''}></div><div class="fg"><div class="fl">今回だけ単価を変更する理由</div><textarea id="vp-client-price-reason" maxlength="500" placeholder="標準単価と異なる場合は必ず入力" ${financeRecord?'disabled':''}>${esc(financeRecord?.overrideReason||'')}</textarea></div><div style="font-size:12px;line-height:1.65;color:var(--t2)">${financeRecord?'オーナー専用の案件金額台帳に確定済みです。':pricingSnapshot&&!pricingSnapshot.legacyPricing?`${esc(pricingSnapshot.pricingEffectiveFrom)} からの単価履歴を自動入力しています。今回だけ金額が違う場合は理由とともに変更できます。`:'適用開始日つき単価が未登録です。クライアント画面で登録するか、今回だけの金額と理由を入力してください。'}<br>この金額は編集者の画面や共有クライアント一覧には表示されません。</div></div>`:'';
   const payBlock=owner&&!external?`<div class="card" style="background:var(--card2)"><div style="font-size:14px;font-weight:800;margin-bottom:6px">オーナー確認・編集者支払額</div><div style="font-size:12px;color:var(--t2);margin-bottom:7px">編集者の入力額：<b>¥${editorPayAmount.toLocaleString()}</b>。${financeRecord?'オーナー確定後の金額はオーナー専用台帳に固定されています。':'この案件だけ変更する場合は下で修正できます。'}</div><div class="frow"><div class="fg"><div class="fl">確定支払額（円）</div><input id="vp-pay" type="number" min="1" step="1" value="${confirmedDirectPay||''}" ${financeRecord?'disabled':''}></div><div class="fg"><div class="fl">請求対象月（自動）</div><input id="vp-pay-month" type="month" value="${esc(billingTerms?.invoiceMonth||'')}" disabled></div></div><div class="notice" style="box-shadow:none;margin:7px 0;font-size:14px;line-height:1.6">${billingText}</div><div class="fg"><div class="fl">請求承認</div><select id="vp-payable"><option value="false" ${j.payableApproved?'':'selected'}>未承認</option><option value="true" ${j.payableApproved?'selected':''}>承認済み</option></select></div></div>`:owner&&external?`<div class="card" style="background:var(--card2)"><div style="font-size:14px;font-weight:800;margin-bottom:6px">オーナーのみ・担当ディレクターへの精算</div><div style="font-size:12px;color:var(--t2);margin-bottom:7px">外部編集者の入力額：<b>¥${editorPayAmount.toLocaleString()}</b>。作業担当は外部編集者、精算先はその担当ディレクターに固定します。</div><div class="fg"><div class="fl">ディレクター精算額（円） *</div><input id="vp-director-settlement" type="number" min="1" step="1" value="${confirmedDirectorPay||''}" ${financeRecord?'disabled':''}></div><div style="font-size:12px;line-height:1.65;color:var(--t2)">この確定額はオーナーの案件台帳と担当ディレクターのまとめ請求にだけ使います。外部編集者のポータルには、クライアント単価・利益・ディレクター精算額を保存しません。</div></div>`:'';
   const legacyBlock=owner?`<div class="card" style="margin-top:8px;background:var(--card2)"><div style="font-size:11px;font-weight:800">社内案件台帳</div><div style="font-size:11px;color:var(--t3);margin:4px 0 8px">${j.linkedLegacyJobId?(financeRecord?'連携済み。進行情報は社内案件台帳、金額はオーナー専用台帳で管理します。':'案件は連携済みですが、金額が旧形式です。オーナー専用台帳へ移行してください。'):'クライアント単価と支払額をオーナーが確定すると、案件台帳とオーナー専用金額台帳へ登録されます。'}</div>${j.linkedLegacyJobId&&financeRecord?`<button class="btn btn-g btn-sm" onclick="openJobModal('${esc(j.linkedLegacyJobId)}')">連携先を開く</button>`:`<button class="btn btn-p btn-sm" onclick="promotePortalJob('${esc(portalUid)}','${esc(id)}')">${j.linkedLegacyJobId?'金額をオーナー専用台帳へ移行':'金額を確定して案件台帳へ登録'}</button>`}</div>`:'';
   openModal(`<div class="mhdr"><div class="mtitle">${portalBiz==='haken'?'編集者派遣案件':'編集代行案件'}</div><button class="mclose" onclick="closeModal()">✕</button></div>
@@ -6597,7 +6659,7 @@ function openPortalJobModal(portalUid,id){
 <div class="frow"><div class="fg"><div class="fl">受注日</div><input id="vp-shared" type="date" value="${esc(j.sharedDate||'')}" ${canEdit?'':'disabled'}></div><div class="fg"><div class="fl">編集者初稿の設定者</div><select id="vp-editor-draft-setter" ${canEdit?'':'disabled'} onchange="changeEditorDraftDateSetter(this,'vp-editor-draft')"><option value="creator" ${draftSetter==='creator'?'selected':''}>案件追加者が設定</option><option value="editor" ${draftSetter==='editor'?'selected':''}>担当編集者が設定</option></select></div></div>
 <div class="frow"><div class="fg"><div class="fl">編集者 初稿</div><input id="vp-editor-draft" type="date" value="${esc(j.editorDraftDate||'')}" ${canEdit&&draftSetter==='creator'?'':'disabled'}><div style="font-size:10px;color:var(--t3);margin-top:3px">${draftSetter==='creator'?'ここで案件追加者が設定します。':'担当編集者の画面で設定します。'}</div></div><div class="fg"><div class="fl">クライアント提出 初稿</div><input id="vp-client-draft" type="date" value="${esc(j.clientDraftDate||'')}" ${canEdit?'':'disabled'}></div></div>
 <div class="frow"><div class="fg"><div class="fl">サムネイル納品日</div><input id="vp-thumbnail" type="date" value="${esc(j.thumbnailDate||'')}" ${canEdit?'':'disabled'}></div><div class="fg"></div></div>
-	<div class="frow"><div class="fg"><div class="fl">納期（予定・任意）</div><input id="vp-deadline" type="date" value="${esc(deliveryDate)}" ${canEdit?'':'disabled'}></div><div class="fg"><div class="fl">納品日</div><input type="date" value="${esc(completedDeliveryDate)}" disabled aria-label="担当編集者が記録する納品日"><div style="font-size:10px;color:var(--t3);margin-top:3px">先方OK後に、担当編集者が記録します。未記録の案件には報酬が発生しません。</div></div></div>
+	<div class="frow"><div class="fg"><div class="fl">納期（予定・任意）</div><input id="vp-deadline" type="date" value="${esc(deliveryDate)}" ${canEdit?'':'disabled'}></div><div class="fg"><div class="fl">納品日</div><input type="date" value="${esc(completedDeliveryDate)}" disabled aria-label="${portalBiz==='haken'?'担当編集者':'Dまたはオーナー'}が記録する納品日"><div style="font-size:10px;color:var(--t3);margin-top:3px">${portalBiz==='haken'?'先方OK後に担当編集者が、実納品日と納品URLを付けて記録します。':'先方OK後にDまたはオーナーが、実納品日と納品URLを付けて記録します。'}未記録の案件には報酬が発生しません。</div></div></div>
 <div class="fg"><div class="fl">ステータス</div><input id="vp-status" value="${esc(bizStatusLabel(portalBiz,j.status))}" data-status="${esc(j.status)}" readonly aria-readonly="true"><div class="fhint">進捗は下の「進捗共有」の操作から更新します。</div></div>
 	<div class="fg"><div class="fl">指示・確認メモ</div><textarea id="vp-instructions" ${canEdit?'':'disabled'}>${esc(j.instructions||'')}</textarea></div>
 	${canEdit?_videoAttachmentEditorHtml(j.attachments||[],"addVideoAttachmentRow(document.getElementById('vp-attachment-list'))",'vp-attachment-list'):`<div class="video-attachment-editor"><div class="video-attachment-heading"><div><b>素材・資料</b><span>閲覧のみ</span></div></div>${_videoAttachmentLinksHtml(_videoCaseMaterials(j.attachments,j))||'<div class="video-attachment-hint">添付された素材・資料はありません。</div>'}</div>`}
@@ -6799,12 +6861,17 @@ function _applyPortalToLegacy(j,createMissing=false){
 async function promotePortalJob(portalUid,id){
   if(!_isOwner())return toast('オーナーのみ操作できます','err');
   const j=(PORTAL_JOBS||[]).find(x=>x._portalUid===portalUid&&x.id===id);if(!j)return;
-  const portalBiz=_portalVideoBiz(j),external=_portalIsExternal(portalUid),editorPay=Math.max(0,Number(j.editorPayAmount)||0),pricingSnapshot=_ownerPortalClientPricingSnapshot(j),unitInput=document.getElementById('vp-client-unit'),clientUnitPrice=unitInput?Number(unitInput.value):pricingSnapshot?.amount,payInput=document.getElementById(external?'vp-director-settlement':'vp-pay'),ownerWorkerPay=payInput?Number(payInput.value):(!external?Number(j.ownPay||editorPay):0),overrideReason=String(document.getElementById('vp-client-price-reason')?.value||'').trim();
-  if(portalBiz==='haken'&&(!Number.isInteger(editorPay)||editorPay<=0))return toast('編集者支払額が未入力です。担当編集者へ確認してください','warn');
-  if(portalBiz==='haken'&&(!pricingSnapshot||!Number.isInteger(pricingSnapshot.amount)||pricingSnapshot.amount<=0))return toast('先にクライアント一覧で標準単価またはアカウント別単価を設定してください','warn');
+  const portalBiz=_portalVideoBiz(j),external=_portalIsExternal(portalUid);
+  if(portalBiz==='haken'&&typeof window.managerEnsureClientRatesReady==='function'){
+    const rateLoad=await window.managerEnsureClientRatesReady();
+    if(!rateLoad?.ok)return toast('単価履歴を確認できないため、金額確定を中止しました。再読み込みしてください','warn');
+  }
+  const pricingSnapshot=_ownerPortalClientPricingSnapshot(j),scheduledEditorPay=Math.max(0,Number(pricingSnapshot?.editorPayAmount)||0),editorPay=Math.max(0,scheduledEditorPay||Number(j.editorPayAmount)||0),unitInput=document.getElementById('vp-client-unit'),clientUnitPrice=unitInput?Number(unitInput.value):pricingSnapshot?.amount,payInput=document.getElementById(external?'vp-director-settlement':'vp-pay'),ownerWorkerPay=payInput?Number(payInput.value):(!external?Number(j.ownPay||editorPay):editorPay),overrideReason=String(document.getElementById('vp-client-price-reason')?.value||'').trim();
+  if(portalBiz==='haken'&&(!Number.isInteger(editorPay)||editorPay<=0))return toast('クライアントの単価履歴に編集者支払額を登録してください','warn');
+  if(portalBiz==='haken'&&(!pricingSnapshot||!Number.isInteger(pricingSnapshot.amount)||pricingSnapshot.amount<=0))return toast('先にクライアント一覧で適用開始日つき単価を設定してください','warn');
   if(portalBiz==='haken'&&(!Number.isInteger(clientUnitPrice)||clientUnitPrice<=0))return toast('クライアント一覧で単価を設定するか、今回のクライアント単価を入力してください','warn');
   if(portalBiz==='haken'&&(!Number.isInteger(ownerWorkerPay)||ownerWorkerPay<=0))return toast(external?'担当ディレクターへの精算額を入力してください':'編集者への確定支払額を入力してください','warn');
-  const financeRequired=portalBiz==='haken',pricingSource=clientUnitPrice===pricingSnapshot?.amount?(pricingSnapshot?.pricingSource||'master'):'case_override';
+  const financeRequired=portalBiz==='haken',pricingSource=clientUnitPrice===pricingSnapshot?.amount&&!pricingSnapshot?.legacyPricing?(pricingSnapshot?.pricingSource||'client_schedule'):'case_override';
   if(financeRequired&&pricingSource==='case_override'&&!overrideReason)return toast('標準単価と異なるため、今回だけ変更する理由を入力してください','warn');
   const linkedId=j.linkedLegacyJobId||_portalLegacyId(portalUid,id);
   const access=_portalAccessRecord(portalUid),workerId=String(access?.workerId||''),recipient=financeRequired?resolvePaymentRecipient(workerId):null;
@@ -6816,7 +6883,7 @@ async function promotePortalJob(portalUid,id){
   try{
     const ref=fbDb.collection('editor_portals').doc(portalUid).collection('editor_jobs').doc(id),event=ref.collection('events').doc(),financeRef=fbDb.collection('owner_job_finance').doc(linkedId),batch=fbDb.batch(),at=Date.now(),serverAt=firebase.firestore.FieldValue.serverTimestamp();
     const linkData={linkedLegacyJobId:linkedId,integratedAt:at,integratedBy:_myEmail(),updatedAt:at};if(!external&&portalBiz==='haken')linkData.ownPay=ownerWorkerPay;
-    const financeData=financeRequired?{recordType:'owner_job_finance',portalUid,portalJobId:id,legacyJobId:linkedId,parentCaseId:String(j.parentCaseId||''),sourceClientId,accountId:String(j.accountId||''),clientUnitPrice,masterClientUnitPrice:pricingSnapshot?.amount??null,pricingSource,pricingRevision:Number(pricingSnapshot?.pricingRevision||0),pricingUpdatedAt:pricingSnapshot?.pricingUpdatedAt||null,overrideReason:pricingSource==='case_override'?overrideReason:'',editorPayReference:editorPay,approvedPayAmount:ownerWorkerPay,payRoute:recipient.route,payeeUid:String(recipient.payeeUid||portalUid),payeeWorkerId:String(recipient.payeeWorkerId||''),assigneeUid:portalUid,assigneeWorkerId:workerId,approvedBy:_myEmail(),approvedAt:serverAt,updatedAt:serverAt}:null;
+    const financeData=financeRequired?{recordType:'owner_job_finance',portalUid,portalJobId:id,legacyJobId:linkedId,parentCaseId:String(j.parentCaseId||''),sourceClientId,accountId:String(j.accountId||''),clientUnitPrice,masterClientUnitPrice:pricingSnapshot?.amount??null,pricingSource,pricingRevision:Number(pricingSnapshot?.pricingRevision||0),pricingUpdatedAt:pricingSnapshot?.pricingUpdatedAt||null,pricingRateId:pricingSource==='case_override'?'':String(pricingSnapshot?.pricingRateId||''),pricingEffectiveFrom:pricingSource==='case_override'?'':String(pricingSnapshot?.pricingEffectiveFrom||''),overrideReason:pricingSource==='case_override'?overrideReason:'',editorPayReference:editorPay,approvedPayAmount:ownerWorkerPay,payRoute:recipient.route,payeeUid:String(recipient.payeeUid||portalUid),payeeWorkerId:String(recipient.payeeWorkerId||''),assigneeUid:portalUid,assigneeWorkerId:workerId,approvedBy:_myEmail(),approvedAt:serverAt,updatedAt:serverAt}:null;
     batch.set(ref,linkData,{merge:true});batch.set(event,{at:serverAt,byUid:FB_USER.uid,byEmail:_myEmail(),type:'integrated_to_legacy',linkedLegacyJobId:linkedId,status:j.status});if(financeData)batch.set(financeRef,financeData);await batch.commit();
     _applyPortalToLegacy({...j,...linkData,_portalUid:portalUid,_ownerFinanceId:financeRequired?linkedId:''},true);
     const legacy=(S.jobs||[]).find(row=>String(row.id||'')===String(linkedId));
@@ -7001,7 +7068,7 @@ function _guideRoleLabel(){
   return labels.join(' / ')||'承認済みメンバー';
 }
 const GUIDE_PAGE_GROUPS=[
-  {label:'動画編集事業',ids:['editorportal','videoedit','videosubmissions','videohaken','videoclients','workers','videoschedules','videomanuals','videoinvoices','directmessages','videosuggestions']},
+  {label:'動画編集事業',ids:['editorportal','videoedit','videosubmissions','videohaken','videoclients','workers','videoschedules','videomanuals','videofeedback','videoperformance','videoinvoices','directmessages','videosuggestions']},
   {label:'ホームページ事業',ids:['hpprojects','hpfee']},
   {label:'営業・顧客',ids:['salesleads','pipeline','inquiries','crm']},
   {label:'経営',ids:['bizboard']},
@@ -7012,11 +7079,13 @@ const GUIDE_PAGE_DEFS={
   editorportal:{purpose:'編集者が、自分の案件を受け、初稿・修正稿の提出、予定の登録、請求書の作成をする画面です。',steps:['左メニューの「編集者本人ポータル」を開きます。','「編集者本人ポータルを開く」を押して、本人用画面を開きます。','「案件を探す」で募集案件を受け、「担当案件」で初稿または修正稿を提出します。','予定、マニュアル、匿名目安箱、請求書、登録情報もこの画面から開けます。'],access:'オーナー、動画編集ディレクター。動画編集者はログイン後に本人用画面を開けます。'},
   videoedit:{purpose:'mono.createがクライアントから受けた編集代行案件を、募集から完了まで管理する画面です。',steps:['「＋ 編集代行案件」で親案件と子案件を登録し、必要に応じて編集者の募集を開始します。','編集者が「この案件を受ける」を押したら、担当者・編集者初稿・クライアント初稿・納期（予定）を確認します。','親案件の「サブ案件」を開き、各動画の担当者・初稿日・期限・状況を確認します。','編集者は編集開始・初稿提出・修正稿提出を記録します。ディレクターまたはオーナーは修正指示・D確認OK・先方確認中を更新し、クライアントOK後に完了へ進めます。完了日が未記録の案件には報酬が発生しません。'],access:'オーナー、動画編集ディレクター、営業など、アクセスを許可された社内メンバー。'},
   videosubmissions:{purpose:'編集者から届いた未確認の初稿・修正稿と提出リンクを、D確認待ちの一覧として確認する画面です。',steps:['左メニューの「提出確認」を開きます。','新しい順に案件・クライアント・担当編集者・稿種別を確認します。','「提出リンクを開く」で提出物を確認します。','「案件・D確認を開く」から、D確認OKまたは理由付きの修正指示を記録します。'],access:'オーナー、動画編集ディレクター'},
-  videohaken:{purpose:'編集者が派遣先から直接受けた案件を登録し、進み具合を管理する画面です。',steps:['編集者は編集者本人ポータルの「担当案件」から、「9月分」などの親案件と各動画の子案件を登録します。','オーナー・ディレクターは、各子案件の担当者・編集者初稿・クライアント初稿・納期（予定）・進み具合を確認します。','親案件の「サブ案件」を開き、各動画の担当者・初稿日・期限・状況を確認します。','編集者は編集開始・初稿提出・修正稿提出を記録します。ディレクターまたはオーナーは修正指示・D確認OK・先方確認中を更新し、クライアントOK後に完了へ進めます。完了日が未記録の案件には報酬が発生しません。'],access:'オーナー、動画編集ディレクター、営業など、アクセスを許可された社内メンバー。'},
-  videoclients:{purpose:'既存クライアントと、そのクライアントから依頼されるアカウントを分けて管理します。',steps:['既存クライアントを選び、必要なアカウント名を追加します。','案件を担当する編集者へ、必要なクライアント・アカウントだけ共有します。','名称や契約情報が変わったときだけ制作台帳を更新します。'],access:'オーナー、動画編集ディレクター'},
+  videohaken:{purpose:'編集者が派遣先から直接受けた案件を登録し、進み具合を管理する画面です。',steps:['編集者は編集者本人ポータルの「担当案件」から、「9月分」などの親案件と各動画の子案件を登録します。','オーナー・ディレクターは、各子案件の担当者・編集者初稿・クライアント初稿・納期（予定）・進み具合を確認します。','親案件の「サブ案件」を開き、各動画の担当者・初稿日・期限・状況を確認します。','編集者は編集開始・初稿提出・修正稿提出を記録し、先方OK後は実納品日と納品URLを付けて完了へ進めます。編集代行案件の完了は従来どおりオーナーまたはDが行います。'],access:'オーナー、動画編集ディレクター、営業など、アクセスを許可された社内メンバー。'},
+  videoclients:{purpose:'クライアント、任意のアカウント、適用開始日つき単価・編集者支払額を管理します。',steps:['既存クライアントを選びます。アカウント名が不要な案件は空欄のままで構いません。','クライアント共通またはアカウント別の単価・編集者支払額・適用開始日を登録します。','案件を担当する編集者へ必要なクライアント情報だけ共有します。','過去案件の確定金額を変えず、新規案件に適用される金額を確認します。'],access:'オーナー、動画編集ディレクター。金額の登録と確認はオーナーのみ'},
   workers:{purpose:'編集者の採用状況、スキル、担当案件、契約区分を確認するページです。',steps:['編集者名を開き、採用状況・スキル・最低依頼料を確認します。','ログインを許可する編集者には、担当ディレクターと契約区分を設定します。','担当中案件を確認し、割り当てや進捗に漏れがないか確認します。'],access:'オーナー、動画編集ディレクター'},
   videoschedules:{purpose:'編集者が登録した今週の1週間を、カレンダーで確認するページです。',steps:['月曜日に届く通知から開き、今週の編集可能日を入力します。','同じ予定は一括登録し、毎週同じ場合はルーティン保存を使います。','案件を割り当てる前に、曜日・時間・受託可能本数を確認します。'],access:'オーナー、動画編集ディレクター。入力は編集者本人'},
-  videomanuals:{purpose:'共通手順やクライアント別の編集ルールを、対象編集者へ共有します。',steps:['共通・クライアント別・アカウント別から対象を選びます。','タイトル、説明、マニュアルURL、共有相手を登録します。','内容を更新したらリンクを開いて確認し、対象者へ更新を知らせます。'],access:'オーナー、動画編集ディレクター'},
+  videomanuals:{purpose:'共通手順やクライアント・任意アカウント別の編集ルールを、対象案件へ自動で付けます。',steps:['共通・クライアント別・アカウント別から対象を選びます。','タイトル、説明、マニュアルURL、共有相手を登録します。','案件依頼でクライアントを選び、該当マニュアルが自動添付されることを確認します。','内容を更新したらリンクを開いて対象者へ更新を知らせます。'],access:'オーナー、動画編集ディレクター'},
+  videofeedback:{purpose:'編集者が修正指示から残した学びを確認し、承認した内容だけ個人向けマニュアルへ反映します。',steps:['「確認待ち」の記録を開き、修正指示と編集者の学びを確認します。','必要なら確認コメントを入力します。','問題なければ「承認してマニュアル化」、不足があれば「差し戻し」を押します。'],access:'オーナー、担当動画編集ディレクター。記入は担当編集者本人'},
+  videoperformance:{purpose:'月の納品本数・確定売上・目標ペースと、週間編集者ランキングをオーナーが確認します。',steps:['月の目標金額と目標納品本数を設定します。','社内編集・編集代行・編集者派遣・合計の実績と、日・週に必要な本数と金額を確認します。','完了案件の品質を1〜5で評価します。','ランキングを確認して公開し、毎朝の実績確認を確定します。'],access:'オーナーのみ'},
   videoinvoices:{purpose:'クライアントへ出す請求書と、編集者から届く請求書を分けて確認します。',steps:['完了案件と金額を確認し、クライアント向け請求書を作成します。','編集者の請求書は原本・請求者名・明細・登録番号を確認します。','確認後に承認、支払処理中、支払済みの順で更新します。'],access:'オーナー。外部編集者分は担当ディレクターも確認可能'},
   directmessages:{purpose:'編集者・動画編集ディレクターとの社内DMと端末通知を、案件や請求の金額を表示せずに管理する画面です。',steps:['左メニューの「DM」を開きます。','「この端末の通知をオンにする」を押し、PC・スマホの通知を許可します。','左側で編集者またはディレクターを選び、過去のやり取りを確認します。','本文を入力して送信し、未読の連絡はDMとアプリアイコンの赤い件数で確認します。'],access:'オーナーのみ'},
   videosuggestions:{purpose:'編集者から届いた匿名の意見を、投稿者を特定せずに確認します。',steps:['未確認の投稿を開き、内容だけを確認します。','対応が必要な内容は社内で処理し、個人の特定を試みません。','必要な場合は返信コードを使い、匿名のまま回答します。'],access:'オーナーのみ'},
@@ -7044,6 +7113,8 @@ const GUIDE_PAGE_CHECKS={
   workers:'編集者の契約区分、担当ディレクター、ログイン権限が正しく表示される。',
   videoschedules:'今週の月曜日から日曜日までに、編集可能日・時間・本数が表示される。',
   videomanuals:'登録件数が増え、対象者が最新版のマニュアルを開いて読了できる。',
+  videofeedback:'編集者の記録が確認待ちに表示され、承認後は本人のマニュアルとして表示される。',
+  videoperformance:'完了案件の実納品日と確定単価から本数・金額が自動集計され、本日の確認済み状態が保存される。',
   videoinvoices:'プレビューの明細・金額・請求先が正しく、対応後の状態が「提出済み」「承認済み」「支払済み」のいずれかで表示される。',
   directmessages:'端末通知が「通知を受け取れます」となり、承認済みの編集者・ディレクター、未読件数・履歴・送信欄が表示される。',
   videosuggestions:'投稿者の氏名・メールなしで内容が届き、必要な場合は匿名のまま返信済みになる。',
@@ -7067,10 +7138,12 @@ const GUIDE_PAGE_TIPS={
   videoedit:'この画面はmono.create受託案件専用です。「確認待ち」と「修正中」は期限超過に数えません。',
   videosubmissions:'提出リンクを開いただけでは確認済みになりません。内容を判断した後、必ずD確認OKまたは修正指示を記録します。',
   videohaken:'この画面は派遣先から編集者へ直接来た案件専用です。編集代行の募集案件は入れません。',
-  videoclients:'クライアント名とアカウント名は別の項目です。例：クライアント「大塚周平さん」、アカウント「YouTube A」。',
+  videoclients:'アカウント名は任意です。単価変更は適用開始日を分け、過去の確定金額を上書きしません。',
 	  workers:'外部編集者にはクライアント単価、利益、mono.createから担当ディレクターへの依頼単価・請求額を見せません。',
   videoschedules:'入力対象は今週の1週間だけです。同じ予定は一括登録かルーティン登録を使います。',
   videomanuals:'パスワード本体は保存せず、管理サービスのリンクだけを共有します。',
+  videofeedback:'修正指示そのものと、編集者が書いた次回の注意点を分けて確認します。承認前の内容はマニュアル化しません。',
+  videoperformance:'金額未設定の納品を0円として確定しません。該当クライアントの単価を登録してから朝確認を完了します。',
   videoinvoices:'クライアント向け請求は単価が入ったサブタスクだけを合計し、親案件の金額は足しません。',
   directmessages:'案件・クライアント・請求の金額はDMやロック画面通知へ表示しません。iPhoneはホーム画面に追加したアプリから通知を許可します。',
   videosuggestions:'匿名性を守るため、文面から投稿者を特定しようとしません。',
@@ -7101,14 +7174,17 @@ function _guidePageGroups(){
 // direct-messages.js が参加者と読み書きの権限を持つ唯一のデータ層です。
 // この画面では案件・請求・金額を結合しないため、DM画面から金額が見えることはありません。
 const OWNER_DM_STATE={peers:[],threads:[],messages:[],activePeerUid:'',activeThreadId:'',startedFor:'',threadUnsub:null,messageUnsub:null,loading:false,sending:false,error:'',draft:''};
-const OWNER_PUSH_STATE={status:null,loading:false,forUid:'',pendingCount:0};
+const OWNER_PUSH_STATE={status:null,loading:false,forUid:''};
 let _ownerDmRenderQueued=false;
 function ownerDmIsDemo(){try{return _rolePreviewActive()||new URLSearchParams(location.search).has('demo');}catch(_){return _rolePreviewActive();}}
 function ownerDmApi(){return window.EditflowDM||null;}
 function ownerPushApi(){return window.EditorPush||null;}
 function ownerDmMs(value){return value&&typeof value.toMillis==='function'?value.toMillis():Number(value||0);}
-function ownerDmUnreadCount(){return Math.max(OWNER_PUSH_STATE.pendingCount||0,OWNER_DM_STATE.threads.filter(thread=>thread&&thread.unread).length);}
-function ownerSyncAppBadge(){try{ownerPushApi()?.syncBadge?.(ownerDmUnreadCount())}catch(_){}return ownerDmUnreadCount();}
+function ownerUnreadApi(){return window.EditflowUnread||null;}
+function ownerSetUnreadSource(source,items){const api=ownerUnreadApi();if(!api)return;api.set(source,items);}
+function ownerUnreadCount(){return ownerUnreadApi()?.snapshot?.().count||0;}
+function ownerDmUnreadCount(){return ownerUnreadApi()?.sourceSnapshot?.('owner-dm').count||0;}
+function ownerSyncAppBadge(){const count=ownerUnreadCount();try{ownerPushApi()?.syncBadge?.(count)}catch(_){}return count;}
 function ownerPushCopy(status){
   if(status?.ready)return 'この端末はDMなどの新着通知を受け取れる状態です。';
   return status?.reason||'端末通知の状態を確認しています。';
@@ -7117,7 +7193,7 @@ async function ownerRefreshPushStatus(shouldRender=false){
   const api=ownerPushApi(),uid=FB_USER?.uid||'';
   if(ownerDmIsDemo()||!_isOwner()||!api||!fbDb||!uid||OWNER_PUSH_STATE.loading)return;
   OWNER_PUSH_STATE.loading=true;
-  try{OWNER_PUSH_STATE.status=await api.status({db:fbDb,uid});OWNER_PUSH_STATE.pendingCount=Math.max(OWNER_PUSH_STATE.pendingCount||0,Number(await api.pendingBadgeCount?.())||0);OWNER_PUSH_STATE.forUid=uid;ownerSyncAppBadge();}
+  try{OWNER_PUSH_STATE.status=await api.status({db:fbDb,uid});OWNER_PUSH_STATE.forUid=uid;ownerSyncAppBadge();}
   catch(error){console.warn('owner push status',error);OWNER_PUSH_STATE.status={ready:false,reason:'通知の状態を確認できませんでした。'};OWNER_PUSH_STATE.forUid=uid;}
   finally{OWNER_PUSH_STATE.loading=false;}
   if(shouldRender&&FB_USER?.uid===uid)render();
@@ -7147,7 +7223,7 @@ function ownerDmStop(reset=false){
   try{OWNER_DM_STATE.threadUnsub?.()}catch(_){}
   try{OWNER_DM_STATE.messageUnsub?.()}catch(_){}
   OWNER_DM_STATE.threadUnsub=null;OWNER_DM_STATE.messageUnsub=null;OWNER_DM_STATE.startedFor='';
-  if(reset){OWNER_DM_STATE.peers=[];OWNER_DM_STATE.threads=[];OWNER_DM_STATE.messages=[];OWNER_DM_STATE.activePeerUid='';OWNER_DM_STATE.activeThreadId='';OWNER_DM_STATE.loading=false;OWNER_DM_STATE.sending=false;OWNER_DM_STATE.error='';OWNER_DM_STATE.draft='';}
+  if(reset){OWNER_DM_STATE.peers=[];OWNER_DM_STATE.threads=[];OWNER_DM_STATE.messages=[];OWNER_DM_STATE.activePeerUid='';OWNER_DM_STATE.activeThreadId='';OWNER_DM_STATE.loading=false;OWNER_DM_STATE.sending=false;OWNER_DM_STATE.error='';OWNER_DM_STATE.draft='';ownerSetUnreadSource('owner-dm',[]);ownerSyncAppBadge();}
 }
 function ownerDmPeer(peerUid){return OWNER_DM_STATE.peers.find(peer=>String(peer.uid)===String(peerUid))||null;}
 function ownerDmThread(peerUid){return OWNER_DM_STATE.threads.find(thread=>String(thread.counterpartUid)===String(peerUid))||null;}
@@ -7175,7 +7251,7 @@ function ownerDmStart(){
   OWNER_DM_STATE.threadUnsub=api.watch((threads,error)=>{
     if(OWNER_DM_STATE.startedFor!==FB_USER?.uid)return;
     if(error){OWNER_DM_STATE.error='DM履歴を読み込めませんでした';console.warn('owner dm threads',error);ownerDmRenderSoon();return;}
-    OWNER_DM_STATE.threads=Array.isArray(threads)?threads:[];OWNER_DM_STATE.error='';OWNER_PUSH_STATE.pendingCount=0;ownerSyncAppBadge();
+    OWNER_DM_STATE.threads=Array.isArray(threads)?threads:[];OWNER_DM_STATE.error='';ownerSetUnreadSource('owner-dm',api.unreadItems?.(OWNER_DM_STATE.threads)||[]);ownerSyncAppBadge();
     const active=ownerDmThread(OWNER_DM_STATE.activePeerUid);
     if(active&&String(active.id)!==String(OWNER_DM_STATE.activeThreadId))ownerDmWatchMessages(active.id);
     if(active)ownerDmMarkRead(active);
@@ -7245,8 +7321,18 @@ function ownerDmEnsureStyles(){
 }
 window.addEventListener('editflow-push-received',event=>{
   if(!_isOwner()||ownerDmIsDemo())return;
-  OWNER_PUSH_STATE.pendingCount=Math.max(OWNER_PUSH_STATE.pendingCount||0,Math.min(999,Number(event?.detail?.badgeCount)||1));
+  // Push is only a hint.  The DM/case/bulletin Firestore snapshots above own
+  // the count, so a stale browser notification cannot add a phantom badge.
   ownerSyncAppBadge();ownerDmRenderSoon();
+});
+// Other owner-visible Firestore sources (case notifications and bulletins)
+// publish their current snapshot here.  Replacing a source is idempotent, and
+// matching notificationId values are counted once across all categories.
+window.addEventListener('editflow-unread-source',event=>{
+  if(!_isOwner()||ownerDmIsDemo())return;
+  const detail=event?.detail||{},source=String(detail.source||'').trim();
+  if(!source||!Array.isArray(detail.items))return;
+  ownerSetUnreadSource(source,detail.items);ownerSyncAppBadge();ownerDmRenderSoon();
 });
 function rOwnerDirectMessages(){
   ownerDmEnsureStyles();
@@ -7285,7 +7371,7 @@ function rEditorPortal(){
   </div>`;
 }
 function rGuide(){
-  const canVideoEdit=isViewAllowed('videoedit'),canVideoSubmissions=isViewAllowed('videosubmissions'),canVideoHaken=isViewAllowed('videohaken'),canVideo=canVideoEdit||canVideoHaken,canWorkers=isViewAllowed('workers'),canVideoClients=isViewAllowed('videoclients'),canVideoSchedules=isViewAllowed('videoschedules'),canVideoManuals=isViewAllowed('videomanuals'),canVideoInvoices=isViewAllowed('videoinvoices'),canHp=isViewAllowed('hpprojects'),canHpFee=isViewAllowed('hpfee'),canSales=isViewAllowed('salesleads'),canDocs=isViewAllowed('docs');
+  const canVideoEdit=isViewAllowed('videoedit'),canVideoSubmissions=isViewAllowed('videosubmissions'),canVideoHaken=isViewAllowed('videohaken'),canVideo=canVideoEdit||canVideoHaken,canWorkers=isViewAllowed('workers'),canVideoClients=isViewAllowed('videoclients'),canVideoSchedules=isViewAllowed('videoschedules'),canVideoManuals=isViewAllowed('videomanuals'),canVideoFeedback=isViewAllowed('videofeedback'),canVideoPerformance=isViewAllowed('videoperformance'),canVideoInvoices=isViewAllowed('videoinvoices'),canHp=isViewAllowed('hpprojects'),canHpFee=isViewAllowed('hpfee'),canSales=isViewAllowed('salesleads'),canDocs=isViewAllowed('docs');
   return`<div class="guide-hero">
     <div class="guide-kicker">MONO.CREATE WORK GUIDE</div>
     <div class="guide-title">初めてでも、することがすぐ分かる使い方ガイド</div>
@@ -7299,7 +7385,7 @@ function rGuide(){
     <div class="guide-start-card"><span class="guide-start-mark">2</span><b>「*」が付いた項目を入力する</b><span>保存できないときは、未入力の必須項目とURL・日付の順序を確認します。</span></div>
     <div class="guide-start-card"><span class="guide-start-mark">3</span><b>保存完了は画面で確認する</b><span>完了メッセージと一覧の変更を確認します。画面を開いただけでは保存完了ではありません。</span></div>
   </div>
-  ${canVideo?`<div class="guide-section-title">動画案件の状態の見方</div><div class="guide-status-grid"><div class="guide-status editing"><b>編集者進行中</b><span>編集者が作業を開始した状態。納期（予定）が明日の案件は赤、2日後の案件は黄で表示します。</span></div><div class="guide-status review"><b>初稿・修正稿提出済み</b><span>編集者がリンク付きで稿を提出し、D確認を待っている状態です。</span></div><div class="guide-status review"><b>修正中</b><span>Dまたはクライアントからの修正指示に対応している状態。期限超過には入りません。</span></div><div class="guide-status review"><b>先方確認中</b><span>Dがクライアントへ提出し、確認結果を待っている状態です。</span></div><div class="guide-status done"><b>完了</b><span>クライアントOK後にDまたはオーナーが完了へ進めた状態です。完了日が未記録の案件には報酬が発生しません。</span></div></div>`:''}
+  ${canVideo?`<div class="guide-section-title">動画案件の状態の見方</div><div class="guide-status-grid"><div class="guide-status editing"><b>編集者進行中</b><span>編集者が作業を開始した状態。納期（予定）が明日の案件は赤、2日後の案件は黄で表示します。</span></div><div class="guide-status review"><b>初稿・修正稿提出済み</b><span>編集者がリンク付きで稿を提出し、D確認を待っている状態です。</span></div><div class="guide-status review"><b>修正中</b><span>Dまたはクライアントからの修正指示に対応している状態。期限超過には入りません。</span></div><div class="guide-status review"><b>先方確認中</b><span>Dがクライアントへ提出し、確認結果を待っている状態です。</span></div><div class="guide-status done"><b>完了</b><span>クライアントOK後、編集代行はDまたはオーナー、編集者派遣は担当編集者が実納品日とURLを記録して完了へ進めます。</span></div></div>`:''}
   <div class="guide-section-title">動画編集案件の基本の流れ</div>
   <div class="guide-flow">
     <div class="guide-step"><div class="guide-step-no">STEP 1</div><b>案件を受ける</b><span>クライアントとアカウント、納期を確認します。</span></div>
@@ -7310,7 +7396,7 @@ function rGuide(){
   </div>
   <div class="guide-section-title">やりたいことから開く</div>
   <div class="guide-business-grid">
-    ${canVideo?`<section class="guide-business video"><h2>動画編集事業</h2><p>編集代行と編集者派遣は、受注の流れが異なるため別画面で管理します。</p><ul><li>編集代行：mono.createが受けて編集者へ募集</li><li>編集者派遣：編集者が直接受けて登録</li><li>予定・マニュアル・請求は共通ページ</li></ul><div style="display:flex;gap:6px;flex-wrap:wrap">${canVideoEdit?`<button class="btn btn-p btn-sm" onclick="setV('videoedit')">編集代行案件</button>`:''}${canVideoSubmissions?`<button class="btn btn-p btn-sm" onclick="setV('videosubmissions')">提出確認</button>`:''}${canVideoHaken?`<button class="btn btn-p btn-sm" onclick="setV('videohaken')">編集者派遣案件</button>`:''}${canVideoClients?`<button class="btn btn-g btn-sm" onclick="setV('videoclients')">顧客・アカウント</button>`:''}${canWorkers?`<button class="btn btn-g btn-sm" onclick="setV('workers')">編集者</button>`:''}${canVideoSchedules?`<button class="btn btn-g btn-sm" onclick="setV('videoschedules')">予定</button>`:''}${canVideoManuals?`<button class="btn btn-g btn-sm" onclick="setV('videomanuals')">マニュアル</button>`:''}${canVideoInvoices?`<button class="btn btn-g btn-sm" onclick="setV('videoinvoices')">請求書</button>`:''}</div></section>`:''}
+    ${canVideo?`<section class="guide-business video"><h2>動画編集事業</h2><p>編集代行と編集者派遣は、受注の流れが異なるため別画面で管理します。</p><ul><li>編集代行：mono.createが受けて編集者へ募集</li><li>編集者派遣：編集者が直接受けて登録</li><li>予定・マニュアル・請求は共通ページ</li></ul><div style="display:flex;gap:6px;flex-wrap:wrap">${canVideoEdit?`<button class="btn btn-p btn-sm" onclick="setV('videoedit')">編集代行案件</button>`:''}${canVideoSubmissions?`<button class="btn btn-p btn-sm" onclick="setV('videosubmissions')">提出確認</button>`:''}${canVideoHaken?`<button class="btn btn-p btn-sm" onclick="setV('videohaken')">編集者派遣案件</button>`:''}${canVideoClients?`<button class="btn btn-g btn-sm" onclick="setV('videoclients')">顧客・アカウント</button>`:''}${canWorkers?`<button class="btn btn-g btn-sm" onclick="setV('workers')">編集者</button>`:''}${canVideoSchedules?`<button class="btn btn-g btn-sm" onclick="setV('videoschedules')">予定</button>`:''}${canVideoManuals?`<button class="btn btn-g btn-sm" onclick="setV('videomanuals')">マニュアル</button>`:''}${canVideoFeedback?`<button class="btn btn-g btn-sm" onclick="setV('videofeedback')">過去フィードバック</button>`:''}${canVideoPerformance?`<button class="btn btn-g btn-sm" onclick="setV('videoperformance')">納品・目標</button>`:''}${canVideoInvoices?`<button class="btn btn-g btn-sm" onclick="setV('videoinvoices')">請求書</button>`:''}</div></section>`:''}
     ${canHp?`<section class="guide-business hp"><h2>ホームページ事業</h2><p>HP制作の案件と、公開後の月額維持費を管理します。</p><ul><li>HP案件の制作工程</li><li>公開・検収・納品の確認</li><li>月額維持費の管理</li></ul><button class="btn btn-p btn-sm" onclick="setV('hpprojects')">HP案件を開く</button>${canHpFee?`<button class="btn btn-g btn-sm" style="margin-top:6px" onclick="setV('hpfee')">維持費を確認する</button>`:''}</section>`:''}
     ${canSales?`<section class="guide-business sales"><h2>営業・顧客</h2><p>見込み客から商談、契約後のクライアント情報まで管理します。</p><ul><li>見込み客の連絡状況</li><li>商談とお問い合わせ</li><li>クライアント情報</li></ul><button class="btn btn-p btn-sm" onclick="setV('salesleads')">営業リストを開く</button></section>`:''}
   </div>
@@ -7334,6 +7420,18 @@ function rManagerVideoFeature(globalName,label){
 function rVideoClients(){return rManagerVideoFeature('managerVideoClientsPage','クライアント・アカウント管理');}
 function rVideoSchedules(){return rManagerVideoFeature('managerVideoSchedulesPage','編集可能スケジュール');}
 function rVideoManuals(){return rManagerVideoFeature('managerVideoManualsPage','マニュアル保管庫');}
+function rVideoFeedback(){
+  const api=window.EditflowFeedback;
+  if(!api)return`<div class="empty"><div class="empty-title">過去フィードバックを読み込めません</div></div>`;
+  api.configure({db:fbDb,user:FB_USER,access:APP_ACCESS,getJobs:()=>PORTAL_JOBS,getPortalUids:()=>[...new Set((PORTAL_JOBS||[]).map(row=>String(row._portalUid||'')).filter(Boolean))]});
+  api.start('manager');
+  return api.renderManagerPage();
+}
+function rVideoPerformance(){
+  if(!_isActualOwner()||_rolePreviewActive())return`<div class="empty"><div class="empty-title">オーナー専用ページです</div></div>`;
+  const api=window.EditflowOwnerPerformance;
+  return api?api.renderPage(null,_ownerPerformanceOptions()):`<div class="empty"><div class="empty-title">納品実績を読み込めません</div></div>`;
+}
 function rVideoInvoices(){return rManagerVideoFeature('managerVideoInvoicesPage','請求書');}
 function rVideoSuggestions(){return rManagerVideoFeature('managerVideoSuggestionsPage','匿名目安箱');}
 
@@ -7422,7 +7520,7 @@ function _videoReferenceTopbar(tabs=[]){
   return`<div class="ref-workspace-topbar">
     <div class="ref-topbar-module" title="移動するページを選択"><span aria-hidden="true">▣</span><select aria-label="移動するページを選択" onchange="setVideoTab(this.value)">${choices.map(([key,label])=>`<option value="${esc(key)}" ${VIDEO_TAB===key?'selected':''}>${esc(_videoReferenceTabLabel(label))}</option>`).join('')}</select><span aria-hidden="true">⌄</span></div>
     <div class="ref-topbar-search"><span aria-hidden="true">⌕</span><input aria-label="案件を検索" value="${esc(VIDEO_QUERY)}" placeholder="案件を検索" oninput="setVideoQuery(this.value)"></div>
-    <div class="ref-topbar-tools"><button class="ref-icon-button" type="button" aria-label="通知" title="通知" onclick="setVideoTab('queue')">♢</button><button class="ref-icon-button" type="button" aria-label="ヘルプ" title="使い方ガイド" onclick="setV('guide')">?</button><button class="ref-icon-button" type="button" aria-label="管理画面" title="案件一覧" onclick="setVideoTab('manage-board')">⚙</button><span class="ref-user-avatar" title="${esc(FB_USER?.displayName||FB_USER?.email||'オーナー')}">${esc(String(FB_USER?.displayName||'オ').trim().slice(0,1)||'オ')}</span></div>
+    <div class="ref-topbar-tools"><button class="ref-icon-button" type="button" aria-label="通知" title="通知" onclick="setVideoTab('queue')">♢</button><button class="ref-icon-button" type="button" aria-label="ヘルプ" title="使い方ガイド" onclick="setV('guide')">?</button><button class="ref-icon-button" type="button" aria-label="案件一覧" title="案件一覧" onclick="setVideoTab('board')">⚙</button><span class="ref-user-avatar" title="${esc(FB_USER?.displayName||FB_USER?.email||'オーナー')}">${esc(String(FB_USER?.displayName||'オ').trim().slice(0,1)||'オ')}</span></div>
   </div>`;
 }
 function _videoReferenceTabLabel(label){
@@ -7455,13 +7553,15 @@ function _videoReferenceTabIcon(key){
 function _videoReferenceTabs(tabs){
   // 編集代行では「編集者」は名簿・チーム管理を開く導線に統一する。
   // 旧来の編集者別集計は、同じデータを保ったまま「その他」に残す。
+  // 「案件」は legacy 台帳だけでなく editor_portals の直接登録も含む
+  // unified board を正本にする。旧 manage-board は表示入口から外す。
   const coreKeys=tabs.some(([key])=>key==='manager-editors')
-    ?['manage-board','manage-profit','manage-payment','manage-completed','manager-editors','manager-clients']
-    :['manage-board','manage-profit','manage-payment','manage-completed','manage-worker'];
+    ?['board','manage-profit','manage-payment','manage-completed','manager-editors','manager-clients']
+    :['board','manage-profit','manage-payment','manage-completed','manage-worker'];
   let primary=coreKeys.map(key=>tabs.find(([tabKey])=>tabKey===key)).filter(Boolean);
   if(!primary.length)primary=tabs.slice(0,5);
   const primaryKeys=new Set(primary.map(([key])=>key)),extra=tabs.filter(([key])=>!primaryKeys.has(key));
-  const shortLabels={'manage-board':'案件','manage-profit':'利益','manage-payment':'支払','manage-completed':'完了','manage-worker':'編集者別','manager-editors':'編集者','manager-clients':'顧客'};
+  const shortLabels={board:'案件','manage-profit':'利益','manage-payment':'支払','manage-completed':'完了','manage-worker':'編集者別','manager-editors':'編集者','manager-clients':'顧客'};
   const iconButton=([key,label])=>{const name=_videoReferenceTabLabel(label),short=shortLabels[key]||name.slice(0,4);return`<button type="button" aria-label="${esc(name)}" title="${esc(name)}" data-tooltip="${esc(name)}" ${VIDEO_TAB===key?'aria-current="page"':''} onclick="setVideoTab('${key}')">${_videoReferenceTabIcon(key)}<span class="ref-tab-label" aria-hidden="true">${esc(short)}</span></button>`};
   return`<nav class="ref-global-tabs" aria-label="案件管理ページ"><div class="ref-primary-tabs">${primary.map(iconButton).join('')}</div>${extra.length?`<details class="ref-more-tabs" ${extra.some(([key])=>key===VIDEO_TAB)?'data-active="true"':''}><summary aria-label="その他のページ" title="その他のページ">${_videoReferenceTabIcon('manage-list')}<span class="ref-tab-label" aria-hidden="true">その他</span></summary><div class="ref-more-tabs-menu">${extra.map(([key,label])=>{const name=_videoReferenceTabLabel(label);return`<button type="button" ${VIDEO_TAB===key?'aria-current="page"':''} onclick="setVideoTab('${key}')">${_videoReferenceTabIcon(key)}<span>${esc(name)}</span></button>`}).join('')}</div></details>`:''}</nav>`;
 }
@@ -7518,13 +7618,15 @@ function _videoReferenceWorkspace({biz,all,active,title,addJobAction,tabs,screen
 
 function rVideoOperations(showBusinessSwitcher=false,biz=PBIZ){
   biz=biz==='haken'?'haken':'edit';PBIZ=biz;
+  // 旧セッションの案件一覧は、portal と legacy の両方を表示する工程ボードへ移す。
+  if(VIDEO_TAB==='manage-board'){VIDEO_TAB='board';sessionStorage.setItem('mc_video_tab',VIDEO_TAB);}
   if(VIDEO_STATUS&&!BIZ_CFG[biz].statuses.includes(VIDEO_STATUS))VIDEO_STATUS='';
   const all=_videoJobs().filter(j=>j.biz===biz),active=all.filter(j=>!['完了','キャンセル'].includes(j.status)),overdue=active.filter(j=>_videoIsOverdue(j)),unassigned=active.filter(j=>j._source==='legacy'&&j.assignee==='未割当'),blocked=active.filter(j=>j.blocker),review=active.filter(j=>_videoPhase(j.status).id==='review'),portalCount=all.reduce((count,j)=>count+(j._portalChildCount||Number(j._source==='portal')),0),subcaseCount=all.reduce((n,j)=>n+(j.subtasks||[]).length,0);
   const editorPortalReady=ACCESS_CONTROL.configured===true&&Array.isArray(ACCESS_CONTROL.compatibilityEmails)&&ACCESS_CONTROL.compatibilityEmails.length>0;
   const operationTabs=[['overview','要対応'],['progress','編集進行ボード'],['board','工程ボード'],['queue','対応キュー']];
   // 旧画面の管理機能は別画面へ隔離せず、同じ新ワークスペースから直接開く。
   // 集計や保存処理は従来の renderer を再利用し、旧データと二重管理しない。
-  const managementTabs=_isScopedVideoDirectorAccess()?[]:BIZ_CFG[biz].tabs.filter(_canOpenProjectTab).map(k=>[`manage-${k}`,VIDEO_MANAGEMENT_LABELS[k]||(k==='worker'?BIZ_CFG[biz].lbl.member:PTAB_LBL[k])]);
+  const managementTabs=_isScopedVideoDirectorAccess()?[]:BIZ_CFG[biz].tabs.filter(k=>k!=='board'&&_canOpenProjectTab(k)).map(k=>[`manage-${k}`,VIDEO_MANAGEMENT_LABELS[k]||(k==='worker'?BIZ_CFG[biz].lbl.member:PTAB_LBL[k])]);
   // 左メニューではなく、編集代行ワークスペース内で関係管理を完結させる。
   // ページ本体の権限・金額非表示ロジックは manager-features.js の既存実装をそのまま使う。
   const embeddedManagerTabs=biz==='edit'&&(_isOwner()||_isScopedVideoDirectorAccess())?[['manager-editors','編集者管理'],['manager-clients','クライアント・アカウント管理']]:[];
@@ -13456,15 +13558,15 @@ function _jobModalInternalOnly(){
   return ids.length>0&&ids.every(id=>id===SELF_WID);
 }
 function updateJobInternalScheduleRules(){
-  const internal=_jobModalInternalOnly(),hasSubs=!!document.querySelector('#j-sub-cont .j-sub-shell');
+  const internal=_jobModalInternalOnly(),hasSubs=!!document.querySelector('#j-sub-cont .j-sub-shell'),editorCompletes=_curJobBiz()==='haken'&&!internal;
   const draftLabel=document.getElementById('jl-editor-draft'),draftHint=document.getElementById('j-editor-draft-hint');
   if(draftLabel)draftLabel.textContent=`編集者 初稿${internal?'（任意）':''}`;
   if(draftHint)draftHint.textContent=hasSubs?'子案件ごとに下の欄で設定します。':internal?'mono.create社内対応のため、未設定でも保存できます。':document.getElementById('j-editor-draft-setter')?.value==='creator'?'案件追加時に入力します。':'担当編集者の画面で入力します。';
   const completed=document.getElementById('j-completed-delivery'),completedLabel=document.getElementById('j-completed-delivery-label'),completedHint=document.getElementById('j-completed-delivery-hint');
   const editable=internal&&!hasSubs;
   if(completed)completed.disabled=!editable;
-  if(completedLabel)completedLabel.textContent=editable?'納品日（オーナーが記録）':'納品日';
-  if(completedHint)completedHint.textContent=hasSubs?'子案件ごとに納品日を記録します。':editable?'社内対応の実際の納品日を記録します。':'先方OK後に担当編集者が記録します。納品日が未記録の案件には報酬が発生しません。';
+  if(completedLabel)completedLabel.textContent=editable?'納品日（オーナーが記録）':editorCompletes?'納品日（担当編集者が記録）':'納品日（Dまたはオーナーが記録）';
+  if(completedHint)completedHint.textContent=hasSubs?'子案件ごとの進捗操作で納品日を記録します。':editable?'社内対応の実際の納品日を記録します。':editorCompletes?'先方OK後に担当編集者が記録します。納品日が未記録の案件には報酬が発生しません。':'先方OK後にDまたはオーナーが記録します。納品日が未記録の案件には報酬が発生しません。';
 }
 function updateJobSubInternalRules(row){
   if(!row)return;
@@ -13473,10 +13575,10 @@ function updateJobSubInternalRules(row){
   if(draftLabel)draftLabel.textContent=`編集者初稿${internal?'（任意）':''}`;
   if(draftHint)draftHint.textContent=internal?'mono.create社内対応のため、未設定でも保存できます。':'';
   if(draft)draft.disabled=setter==='editor';
-  const completed=row.querySelector('.j-sub-completed-delivery'),completedLabel=row.querySelector('.j-sub-completed-delivery-label'),completedHint=row.querySelector('.j-sub-completed-delivery-hint');
+  const editorCompletes=_curJobBiz()==='haken'&&!internal,completed=row.querySelector('.j-sub-completed-delivery'),completedLabel=row.querySelector('.j-sub-completed-delivery-label'),completedHint=row.querySelector('.j-sub-completed-delivery-hint');
   if(completed)completed.disabled=!internal;
-  if(completedLabel)completedLabel.textContent=internal?'納品日（オーナーが記録）':'納品日（担当編集者が記録）';
-  if(completedHint)completedHint.textContent=internal?'社内対応の実際の納品日を記録します。':'未記録の案件には報酬が発生しません。';
+  if(completedLabel)completedLabel.textContent=internal?'納品日（オーナーが記録）':editorCompletes?'納品日（担当編集者が記録）':'納品日（Dまたはオーナーが記録）';
+  if(completedHint)completedHint.textContent=internal?'社内対応の実際の納品日を記録します。':editorCompletes?'先方OK後に担当編集者が記録します。':'先方OK後にDまたはオーナーが記録します。';
 }
 function toggleJobAssigneePicker(){
   const picker=document.getElementById('j-worker-picker');
@@ -13703,7 +13805,7 @@ function openJobModal(id,preStatus,preClientId){
   <div class="fg"><div class="fl" id="jl-d2">クライアント提出 初稿</div><input type="date" id="j-client-draft" value="${j?.clientDraftDate||''}"></div>
   <div class="fg"></div>
 </div>
-	<div class="frow"><div class="fg"><div class="fl" id="j-completed-delivery-label">納品日</div><input id="j-completed-delivery" type="date" value="${j?.completedDeliveryDate||''}" disabled aria-label="実際の納品日"><div id="j-completed-delivery-hint" style="font-size:10px;color:var(--t3);margin-top:3px">先方OK後に担当編集者が記録します。納品日が未記録の案件には報酬が発生しません。</div></div><div class="fg"></div></div>
+	<div class="frow"><div class="fg"><div class="fl" id="j-completed-delivery-label">納品日</div><input id="j-completed-delivery" type="date" value="${j?.completedDeliveryDate||''}" disabled aria-label="実際の納品日"><div id="j-completed-delivery-hint" style="font-size:10px;color:var(--t3);margin-top:3px">案件種別に応じた進捗操作で納品日を記録します。未記録の案件には報酬が発生しません。</div></div><div class="fg"></div></div>
 	<div class="frow" id="jf-thumb">
   <div class="fg"><div class="fl">🖼 サムネイル納品日</div><input type="date" id="j-thumbnail" value="${j?.thumbnailDate||''}"></div>
   <div class="fg"></div>
@@ -13897,7 +13999,7 @@ function _portalWorkflowActionsForJob(job){
   const stage=_videoWorkflow(job).stage;
   if(stage==='director_review')return[['directorRevision','修正指示（修正中）'],['directorApprove','D確認OKにする']];
   if(stage==='client_submission')return[['clientSubmitted','先方確認中にする']];
-  if(stage==='client_review')return[['clientRevision','修正指示（修正中）'],['clientApproved','先方OK（完了）']];
+  if(stage==='client_review')return _editorOwnsPortalCompletion(job)?[['clientRevision','修正指示（修正中）']]:[['clientRevision','修正指示（修正中）'],['clientApproved','先方OK（完了）']];
   return[];
 }
 async function advanceLegacyPortalSubcaseWorkflow(portalUid,jobId,controlKey){
@@ -13922,7 +14024,7 @@ function mkSubRow(s,ph,bk,originalIndex=-1,financeLocked=false){
   const portalConfirmAction=portalStatusLocked?`advanceLegacyPortalSubcaseWorkflow(${JSON.stringify(String(s.portalUid))},${JSON.stringify(String(s.portalJobId))},${JSON.stringify(portalControlKey)})`:'';
   const portalInlineWorkflow=portalStatusLocked?`<div class="j-sub-portal-progress" style="margin:8px 0;padding:8px;border:1px solid var(--purple);border-radius:var(--rs);background:var(--card)"><div style="font-size:11px;font-weight:800;margin-bottom:6px">連携済みサブ案件の進捗操作</div>${portalActions.length?`<div style="display:flex;gap:6px;align-items:end;flex-wrap:wrap"><div style="min-width:190px;flex:1"><label for="${esc(portalControlKey)}-action" style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">実行する操作</label><select id="${esc(portalControlKey)}-action" style="font-size:12px;padding:4px 6px">${portalActions.map(([value,label])=>`<option value="${esc(value)}">${esc(label)}</option>`).join('')}</select></div><div style="min-width:220px;flex:2"><label for="${esc(portalControlKey)}-reason" style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">修正指示の内容（修正指示を選んだ場合は必須）</label><input id="${esc(portalControlKey)}-reason" maxlength="2000" placeholder="修正指示の場合のみ入力"></div><button type="button" class="btn btn-p btn-xs" onclick="${esc(portalConfirmAction)}">進捗を確定</button></div>`:'<div style="font-size:11px;color:var(--t2)">この工程で実行できるD／オーナー操作はありません。担当編集者の提出をお待ちください。</div>'}</div>`:'';
   const draftSetter=Object.keys(s||{}).length?_editorDraftDateSetter(s):'creator';
-  const isNew=!Object.keys(s||{}).length,internal=s.workerId===SELF_WID,masterPrice=isNew?_ownerMasterClientUnitPrice(document.getElementById('j-cl')?.value||''):null,subPrice=s.unitPrice||(masterPrice===null?'':masterPrice);
+  const isNew=!Object.keys(s||{}).length,internal=s.workerId===SELF_WID,editorCompletes=_bk==='haken'&&!internal,masterPrice=isNew?_ownerMasterClientUnitPrice(document.getElementById('j-cl')?.value||''):null,subPrice=s.unitPrice||(masterPrice===null?'':masterPrice);
   return`<div class="j-sub-row" data-sub-id="${esc(s.id||'')}" data-original-index="${Number.isInteger(originalIndex)?originalIndex:-1}" style="background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);padding:10px;margin-bottom:8px">
   <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
     <div class="chk${s.done?' done':''}" onclick="this.classList.toggle('done');updSubPrices()" style="flex-shrink:0"></div>
@@ -13970,9 +14072,9 @@ function mkSubRow(s,ph,bk,originalIndex=-1,financeLocked=false){
 	<div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">納期（予定・任意）</div>
 	  <input class="j-sub-deliver" type="date" value="${s.deliveryDate||''}" style="font-size:12px;padding:4px 6px">
 	</div>
-	<div><div class="j-sub-completed-delivery-label" style="font-size:10px;color:var(--t3);margin-bottom:2px">${internal?'納品日（オーナーが記録）':'納品日（担当編集者が記録）'}</div>
+	<div><div class="j-sub-completed-delivery-label" style="font-size:10px;color:var(--t3);margin-bottom:2px">${internal?'納品日（オーナーが記録）':editorCompletes?'納品日（担当編集者が記録）':'納品日（Dまたはオーナーが記録）'}</div>
 	  <input class="j-sub-completed-delivery" type="date" value="${s.completedDeliveryDate||''}" style="font-size:12px;padding:4px 6px" ${internal?'':'disabled'}>
-	  <div class="j-sub-completed-delivery-hint" style="font-size:10px;color:var(--t3);margin-top:3px">${internal?'社内対応の実際の納品日を記録します。':'未記録の案件には報酬が発生しません。'}</div>
+	  <div class="j-sub-completed-delivery-hint" style="font-size:10px;color:var(--t3);margin-top:3px">${internal?'社内対応の実際の納品日を記録します。':editorCompletes?'先方OK後に担当編集者が記録します。':'先方OK後にDまたはオーナーが記録します。'}</div>
 	</div>
 	    <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">請求書提出日</div><input class="j-sub-invoice" type="date" value="${s.invoiceDate||''}" style="font-size:12px;padding:4px 6px"></div>
 	    <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">支払期日</div><input class="j-sub-due" type="date" value="${s.dueDate||''}" style="font-size:12px;padding:4px 6px"></div>
@@ -14628,6 +14730,8 @@ function ownerNavIcon(id){
     videosubmissions:'<path d="M4 5h16v14H4z"></path><path d="m4 7 8 6 8-6"></path><path d="M8 16h8"></path>',
     videoschedules:'<rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M8 3v4M16 3v4M3 10h18"></path>',
     videomanuals:'<path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M8 17h11M8 8h7M8 12h6"></path>',
+    videofeedback:'<path d="M5 4h14v16H5z"></path><path d="M8 8h8M8 12h8M8 16h5"></path>',
+    videoperformance:'<path d="M4 20V10M10 20V5M16 20v-8M22 20H2"></path><path d="m4 8 6-4 6 5 5-4"></path>',
     videoinvoices:'<path d="M6 3h9l4 4v14H6z"></path><path d="M15 3v5h5M9 13h6M9 17h6"></path>',
     directmessages:'<path d="M4 5h16v12H9l-5 4z"></path><path d="M8 9h8M8 13h5"></path>',
     videosuggestions:'<path d="M4 5h16v12H8l-4 4z"></path><path d="M8 9h8M8 13h5"></path>',
@@ -14651,7 +14755,7 @@ function ownerNavIcon(id){
 // ナビのカテゴリー分け(2026-07-10 会長指示)。開閉状態は端末localStorage記憶。設定/カスタマイズは従来どおり下部固定。
 const NAV_CATS=[
   {id:'start',label:'はじめに',views:['guide']},
-  {id:'video',label:'動画編集事業',views:['editorportal','videoedit','videosubmissions','videohaken','videoclients','workers','videoschedules','videomanuals','videoinvoices','directmessages','videosuggestions']},
+  {id:'video',label:'動画編集事業',views:['editorportal','videoedit','videosubmissions','videohaken','videoclients','workers','videoschedules','videomanuals','videofeedback','videoperformance','videoinvoices','directmessages','videosuggestions']},
   {id:'hp',label:'ホームページ事業',views:['hpprojects','hpfee']},
   {id:'sales',label:'営業・顧客',views:['salesleads','pipeline','inquiries','crm']},
   {id:'mgmt',label:'経営',views:['bizboard']},
@@ -14681,7 +14785,7 @@ const ROLE_PREVIEW_DESCRIPTIONS={
   'SNSマーケター':'投稿管理、動画案件、クライアント、ドキュメント・議事録'
 };
 const ROLE_VIEW_ACCESS={
-  '動画編集ディレクター':['guide','editorportal','videoedit','videosubmissions','videohaken','videoclients','workers','videoschedules','videomanuals','videoinvoices'],
+  '動画編集ディレクター':['guide','editorportal','videoedit','videosubmissions','videohaken','videoclients','workers','videoschedules','videomanuals','videofeedback','videoinvoices'],
   'AIコンサルタント':['guide','videoedit','videohaken','docs','minutes','bizinfo'],
   'AIエンジニア':['guide','videoedit','videohaken','docs','tasks','bizinfo'],
   'Webデザイナー':['guide','hpprojects','docs','tasks','hpfee'],
@@ -14700,6 +14804,8 @@ let PORTAL_PROFILES=[];
 let PORTAL_AUTHORIZATIONS=[];
 let OWNER_JOB_FINANCE=[];
 let OWNER_LEGACY_FINANCE=[];
+let OWNER_JOB_FINANCE_READY=false;
+let OWNER_LEGACY_FINANCE_READY=false;
 // オーナー画面の manager-features は下記の5つを再購読せず、この橋渡しから
 // 既存の owner 同期結果を受け取る。空の配列と未読込を区別するため、各値の
 // ready は onSnapshot が一度でも届いた時だけ true になる。
@@ -15197,6 +15303,7 @@ function renderNav(){
 }
 function setV(view){
   if(V==='directmessages'&&view!=='directmessages'&&typeof ownerDmStop==='function')ownerDmStop(false);
+  if(V==='videofeedback'&&view!=='videofeedback')window.EditflowFeedback?.stop?.();
   V=view;CP_EDIT_MODE=false;render();
 }
 function toggleDrawer(){
@@ -17754,7 +17861,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260831-05';
+const APP_VERSION='20260831-06';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -17830,11 +17937,12 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServe
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
 <script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
-<script src="./editor-push.js?v=20260831-05"></script>
-<script src="./direct-messages.js?v=20260831-05"></script>
+<script src="./editor-push.js?v=20260831-06"></script>
+<script src="./bulletin.js?v=20260831-06"></script>
+<script src="./direct-messages.js?v=20260831-06"></script>
 <script>
   try{if(V==='directmessages')render();else renderNav();}catch(error){console.warn('owner dm init',error);}
 </script>
-<script src="./manager-features.js?v=20260831-05"></script>
+<script src="./manager-features.js?v=20260831-06"></script>
 </body>
 </html>

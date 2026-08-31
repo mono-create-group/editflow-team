@@ -227,29 +227,22 @@
   }
 
   async function pendingBadgeCount() {
-    try {
-      const reg = await registration();
-      const notices = typeof reg.getNotifications === 'function' ? await reg.getNotifications() : [];
-      return (Array.isArray(notices) ? notices : []).reduce(
-        (max, notice) => Math.max(max, Math.min(999, Number(notice?.data?.badgeCount) || 0)),
-        0,
-      );
-    } catch (_) {
-      return 0;
-    }
+    // Browser notifications are delivery attempts, not unread records.  A
+    // stale notification (or a second tab) must never inflate the icon badge.
+    // Callers re-sync their Firestore-backed registries after a push hint.
+    return 0;
   }
 
   // A push can arrive while the page is open but its Firestore listener has
-  // not delivered the new thread yet. Reflect the service-worker count on the
-  // app icon immediately; the authoritative unread snapshot replaces it when
-  // that snapshot arrives.
+  // not delivered the new record yet. Treat it as a re-sync hint only: the
+  // service-worker badge count is not authoritative and is deliberately not
+  // copied into the app badge.
   if (global.navigator?.serviceWorker?.addEventListener) {
     global.navigator.serviceWorker.addEventListener('message', (event) => {
       if (event?.data?.type !== 'editflow-push-received') return;
-      const badgeCount = Math.max(1, Math.min(999, Number(event.data.badgeCount) || 1));
-      syncBadge(badgeCount);
+      const notificationId = string(event?.data?.notificationId, 512);
       try {
-        global.dispatchEvent(new CustomEvent('editflow-push-received', { detail: { badgeCount } }));
+        global.dispatchEvent(new CustomEvent('editflow-push-received', { detail: { notificationId, authoritative: false } }));
       } catch (_) {}
     });
   }

@@ -32,7 +32,9 @@ test('client pricing is held in an owner-only master and never in editor catalog
 
 test('owner case integration auto-fills client price and routes editor payment separately', () => {
   assert.match(index, /function _ownerPortalClientPricingSnapshot\(j\)/);
-  assert.match(index, /クライアント一覧の標準単価・アカウント別単価を自動入力しています/);
+  assert.match(index, /からの単価履歴を自動入力しています/);
+  assert.match(index, /managerEnsureClientRatesReady/);
+  assert.match(index, /managerOwnerClientRateForCase/);
   assert.match(index, /今回だけ金額が違う場合/);
   assert.match(index, /vp-director-settlement/);
   assert.match(index, /collection\('owner_job_finance'\)/);

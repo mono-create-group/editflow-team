@@ -51,7 +51,7 @@ test('linked parent subcases expose only current valid workflow actions inline',
   assert.match(index, /function _portalWorkflowActionsForJob\(job\)\{/);
   assert.match(index, /stage==='director_review'\)return\[\['directorRevision','修正指示（修正中）'\],\['directorApprove','D確認OKにする'\]\]/);
   assert.match(index, /stage==='client_submission'\)return\[\['clientSubmitted','先方確認中にする'\]\]/);
-  assert.match(index, /stage==='client_review'\)return\[\['clientRevision','修正指示（修正中）'\],\['clientApproved','先方OK（完了）'\]\]/);
+  assert.match(index, /stage==='client_review'\)return _editorOwnsPortalCompletion\(job\)\?\[\['clientRevision','修正指示（修正中）'\]\]:\[\['clientRevision','修正指示（修正中）'\],\['clientApproved','先方OK（完了）'\]\]/);
   assert.match(index, /function advanceLegacyPortalSubcaseWorkflow\(portalUid,jobId,controlKey\)\{/);
   assert.match(index, /const allowed=_portalWorkflowActionsForJob\(job\)\.map\(\(\[value\]\)=>value\);/);
   assert.match(index, /if\(!allowed\.includes\(action\)\)return toast\('現在の工程ではこの操作はできません。案件を開き直してください','warn'\);/);
@@ -61,7 +61,12 @@ test('linked parent subcases expose only current valid workflow actions inline',
   assert.match(index, /providedReason===undefined\?\(document\.getElementById\('vp-correction'\)\?\.value\.trim\(\)\|\|''\):String\(providedReason\)\.trim\(\)/);
   assert.match(index, /const PORTAL_WORKFLOW_ACTION_PENDING=new Set\(\);/);
   assert.match(index, /if\(PORTAL_WORKFLOW_ACTION_PENDING\.has\(pendingKey\)\)return toast\('進捗を保存しています。完了までお待ちください','warn'\);/);
-  assert.match(index, /finally\{PORTAL_WORKFLOW_ACTION_PENDING\.delete\(pendingKey\);\}/);
+  assert.match(index, /byRole:_isActualOwner\(\)\?'owner':'director'/);
+  assert.match(index, /function _portalWorkflowSaveErrorMessage\(error\)/);
+  assert.match(index, /await batch\.commit\(\);/);
+  assert.match(index, /workflow legacy projection/);
+  assert.match(index, /は保存済みです。社内案件一覧への反映は保留です。画面を再読み込みしてください/);
+  assert.ok((index.match(/PORTAL_WORKFLOW_ACTION_PENDING\.delete\(pendingKey\);/g) || []).length >= 2);
 });
 
 test('inline portal workflow actions quote escaped JSON before placement in an HTML attribute', () => {
