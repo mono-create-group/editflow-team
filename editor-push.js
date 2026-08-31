@@ -37,6 +37,23 @@
     );
   }
 
+  // Desktop browsers can receive Web Push without an installed PWA.  iOS is
+  // the exception: Apple only exposes push to a Home Screen web app.  Keeping
+  // that distinction here avoids telling PC users that installation is a
+  // prerequisite when it is not.
+  function requiresInstalledApp() {
+    const ua = String(global.navigator?.userAgent || '');
+    return /iphone|ipad|ipod/i.test(ua);
+  }
+
+  // The worker accepts only these two fixed destinations.  A device record
+  // never gets to choose an arbitrary URL from a DM or case payload.
+  function appPath() {
+    return /\/editor\.html$/i.test(String(global.location?.pathname || ''))
+      ? './editor.html?notification=1'
+      : './?notification=1';
+  }
+
   function supported() {
     return Boolean(
       isSecure()
@@ -91,7 +108,11 @@
       endpoint,
       keys: { p256dh: string(keys.p256dh, 300), auth: string(keys.auth, 300) },
       permission: permission(),
-      appInstalled: isInstalled(),
+      // This remains true for desktop clients because an installed PWA is not
+      // required there.  The server-side device record is a delivery target,
+      // not proof of an app installation.
+      appInstalled: isInstalled() || !requiresInstalledApp(),
+      appPath: appPath(),
       platform: string(global.navigator?.platform || global.navigator?.userAgent || '', 180),
       userAgent: string(global.navigator?.userAgent || '', 400),
       schemaVersion: SCHEMA_VERSION,
@@ -127,7 +148,7 @@
       result.reason = 'この端末・ブラウザでは通知を利用できません。';
       return result;
     }
-    if (!result.installed) {
+    if (requiresInstalledApp() && !result.installed) {
       result.reason = 'iPhoneではホーム画面に追加してから通知を設定してください。';
       return result;
     }
@@ -155,7 +176,7 @@
     const db = options?.db;
     const uid = string(options?.uid, 128);
     if (!supported()) throw new Error('push_unsupported');
-    if (!isInstalled()) throw new Error('push_install_required');
+    if (requiresInstalledApp() && !isInstalled()) throw new Error('push_install_required');
     const active = config();
     if (!active.enabled) throw new Error('push_server_not_ready');
     let currentPermission = permission();
@@ -170,7 +191,11 @@
       });
     }
     const data = subscriptionData(subscription, uid);
-    await deviceRef(db, uid).set({ ...data, createdAt: Date.now() }, { merge: true });
+    const ref = deviceRef(db, uid);
+    const existing = await ref.get();
+    // Firestore keeps createdAt immutable.  Old device rows can therefore be
+    // upgraded with appPath without rewriting their original creation time.
+    await ref.set(existing.exists ? data : { ...data, createdAt: Date.now() }, { merge: true });
     return status({ db, uid });
   }
 
@@ -182,6 +207,51 @@
     if (subscription) await subscription.unsubscribe();
     if (db && uid) await deviceRef(db, uid).delete();
     return { unsubscribed: true };
+  }
+
+  // The app icon badge is a local reflection of already-authoritative unread
+  // records.  It never writes to Firestore and silently falls back on browsers
+  // that do not support the Badging API.
+  async function syncBadge(count) {
+    const value = Math.max(0, Math.min(999, Number(count) || 0));
+    try {
+      if (value > 0 && typeof global.navigator?.setAppBadge === 'function') {
+        await global.navigator.setAppBadge(value);
+      } else if (value === 0 && typeof global.navigator?.clearAppBadge === 'function') {
+        await global.navigator.clearAppBadge();
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  async function pendingBadgeCount() {
+    try {
+      const reg = await registration();
+      const notices = typeof reg.getNotifications === 'function' ? await reg.getNotifications() : [];
+      return (Array.isArray(notices) ? notices : []).reduce(
+        (max, notice) => Math.max(max, Math.min(999, Number(notice?.data?.badgeCount) || 0)),
+        0,
+      );
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  // A push can arrive while the page is open but its Firestore listener has
+  // not delivered the new thread yet. Reflect the service-worker count on the
+  // app icon immediately; the authoritative unread snapshot replaces it when
+  // that snapshot arrives.
+  if (global.navigator?.serviceWorker?.addEventListener) {
+    global.navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event?.data?.type !== 'editflow-push-received') return;
+      const badgeCount = Math.max(1, Math.min(999, Number(event.data.badgeCount) || 1));
+      syncBadge(badgeCount);
+      try {
+        global.dispatchEvent(new CustomEvent('editflow-push-received', { detail: { badgeCount } }));
+      } catch (_) {}
+    });
   }
 
   /*
@@ -206,7 +276,8 @@
   }
 
   global.EditorPush = Object.freeze({
-    config, supported, isInstalled, permission, status, subscribe, unsubscribe,
+    config, supported, isInstalled, requiresInstalledApp, appPath, permission, status, subscribe, unsubscribe,
     enable: subscribe, disable: unsubscribe, dispatchDirectThread, stableDeviceId,
+    syncBadge, pendingBadgeCount,
   });
 }(window));

@@ -3,6 +3,7 @@ import { buildPushPayload } from '@block65/webcrypto-web-push';
 const MAX_BODY = 4 * 1024;
 const MAX_DEVICES = 20;
 const TOKEN_AUDIENCE_PREFIX = 'https://securetoken.google.com/';
+const DEVICE_APP_PATHS = new Set(['./?notification=1', './editor.html?notification=1']);
 let cachedServiceToken = null;
 
 function json(value, status = 200, origin = '') {
@@ -92,6 +93,20 @@ function firestoreValue(value) {
   return null;
 }
 
+function safeDeviceAppPath(value) {
+  const appPath = String(value || '');
+  return DEVICE_APP_PATHS.has(appPath) ? appPath : '';
+}
+
+function recipientDeviceAppPath(value) {
+  const appPath = String(value || '');
+  // Existing editor subscriptions predate appPath.  They were only created
+  // from editor.html, so preserve their route while rejecting any non-empty
+  // value outside the current allow-list.
+  if (!appPath) return './editor.html?notification=1';
+  return safeDeviceAppPath(appPath);
+}
+
 async function readDirectThread(env, token, threadId) {
   const project = encodeURIComponent(env.FIREBASE_PROJECT_ID);
   const database = encodeURIComponent(env.FIRESTORE_DATABASE_ID || '(default)');
@@ -110,7 +125,13 @@ async function listRecipientDevices(env, token, uid) {
   return (Array.isArray(body.documents) ? body.documents : []).slice(0, MAX_DEVICES).map((doc) => ({
     name: String(doc.name || ''),
     data: firestoreValue({ mapValue: { fields: doc.fields || {} } }) || {},
-  })).filter(({ name, data }) => name && /^https:\/\//.test(String(data.endpoint || '')) && data.keys?.p256dh && data.keys?.auth && data.permission === 'granted' && data.appInstalled === true);
+  })).filter(({ name, data }) => name
+    && /^https:\/\//.test(String(data.endpoint || ''))
+    && data.keys?.p256dh
+    && data.keys?.auth
+    && data.permission === 'granted'
+    && data.appInstalled === true
+    && recipientDeviceAppPath(data.appPath));
 }
 
 async function deleteExpiredDevice(token, name) {
@@ -121,10 +142,21 @@ async function deleteExpiredDevice(token, name) {
 async function sendWebPushes(env, recipientUid, token) {
   const devices = await listRecipientDevices(env, token, recipientUid);
   const vapid = { subject: String(env.WEB_PUSH_VAPID_SUBJECT || ''), publicKey: String(env.WEB_PUSH_VAPID_PUBLIC_KEY || ''), privateKey: String(env.WEB_PUSH_VAPID_PRIVATE_KEY || '') };
-  const message = { data: JSON.stringify({ title: 'mono.create', body: '新しい連絡があります。アプリを開いて確認してください。', url: './editor.html?notification=1', tag: 'editor-dm' }), options: { ttl: 60 } };
   let sent = 0, expired = 0, failed = 0;
   await Promise.all(devices.map(async ({ name, data }) => {
     try {
+      // `appPath` is constrained at registration and checked again here.  No
+      // thread, case, sender, money, or message content is included in the
+      // encrypted payload visible on a locked device.
+      const message = {
+        data: JSON.stringify({
+          title: 'mono.create',
+          body: '新しい連絡があります。アプリを開いて確認してください。',
+          url: recipientDeviceAppPath(data.appPath),
+          tag: 'editor-dm',
+        }),
+        options: { ttl: 60 },
+      };
       const payload = await buildPushPayload(message, { endpoint: data.endpoint, expirationTime: null, keys: data.keys }, vapid);
       const response = await fetch(data.endpoint, { ...payload, signal: AbortSignal.timeout(10_000) });
       if (response.ok) { sent += 1; return; }

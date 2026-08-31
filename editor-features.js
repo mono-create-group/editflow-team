@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-const PORTAL_APP_VERSION='20260831-02';
+const PORTAL_APP_VERSION='20260831-03';
   const feature={
     board:[],boardSelectedId:'',boardSearch:'',catalog:[],manuals:[],schedules:[],release:null,
     messages:new Map(),messageUnsubs:new Map(),messageLoading:new Set(),openMessageJobIds:new Set(),groupDraftSaving:new Set(),unsubs:[],startedFor:'',serverVersion:'',jobsListMode:'active',jobsTypeFilter:'all',lastSuggestionCode:'',
@@ -65,10 +65,29 @@ const PORTAL_APP_VERSION='20260831-02';
       }
       if(read&&!read.querySelector('.application-icon'))read.innerHTML=`${applicationIcon('check')}<span class="app-sr-only">既読</span>`;
     });
+    const topNotice=document.querySelector('.editor-top-icon[aria-label="通知"]');
+    if(topNotice){
+      const count=editorUnreadBadgeCount(),badge=topNotice.querySelector('.editor-top-notification-count');
+      if(count>0){
+        const text=count>99?'99+':String(count);
+        if(badge)badge.textContent=text;
+        else topNotice.insertAdjacentHTML('beforeend',`<span class="editor-top-notification-count" aria-label="未読 ${text}件">${text}</span>`);
+      }else badge?.remove();
+    }
   }
   function notificationReadKey(){return`editor_notification_read_${user?.uid||'guest'}`}
   function notificationReadIds(){try{return new Set(JSON.parse(localStorage.getItem(notificationReadKey())||'[]'))}catch(_){return new Set()}}
   function saveNotificationReadIds(ids){try{localStorage.setItem(notificationReadKey(),JSON.stringify([...ids].slice(-1000)))}catch(_){}}
+  function editorUnreadBadgeCount(){
+    // DM read receipts are Firestore-authoritative. Other cards are local UI
+    // reminders, so this never creates a write merely to draw a badge.
+    return Math.max(0,Math.min(999,dmUnreadCount()+unreadNotificationItems().length));
+  }
+  function syncEditorAppBadge(){
+    const count=editorUnreadBadgeCount();
+    try{window.EditorPush?.syncBadge?.(count)}catch(_){}
+    return count;
+  }
   function activeJob(job){return !['完了','キャンセル'].includes(job?.status)}
   function daysFromToday(value){if(!value)return null;return Math.round((dateAtNoon(value)-dateAtNoon(localDate()))/86400000)}
   function editorDeadlineExemptStatus(status){return isJobDeadlineExemptStatus(status)}
@@ -129,6 +148,7 @@ const PORTAL_APP_VERSION='20260831-02';
       .role-chip{display:inline-flex;align-items:center;margin-top:4px;padding:2px 7px;border-radius:99px;background:var(--purple2);color:#5b21b6;font-size:9px;font-weight:800}
       .nav .btn.accept-entry{border:2px solid #7c3aed;background:#f5f3ff;color:#5b21b6;box-shadow:0 4px 14px rgba(124,58,237,.18);font-weight:850}.nav .btn.accept-entry.active{background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;border-color:#5b21b6}.accept-count{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:99px;background:#dc2626;color:#fff;font-size:10px;font-weight:900}
       .notification-button{position:relative}.notification-count{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;border-radius:99px;background:#dc2626;color:#fff;font-size:9px;font-weight:900}.notification-list{display:flex;flex-direction:column;gap:7px}.notification-item{display:flex;align-items:stretch;gap:7px;border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:10px;background:var(--card);padding:7px}.notification-open{width:100%;display:flex;align-items:center;gap:10px;min-width:0;text-align:left;border:0;border-radius:7px;background:transparent;padding:3px;cursor:pointer}.notification-open:hover,.notification-open:focus-visible{background:var(--card2)}.notification-read{flex:0 0 auto;min-height:36px;padding:0 9px;white-space:nowrap;font-size:11px}.notification-copy{flex:1;min-width:0}.notification-copy b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.notification-copy span{display:block;font-size:10.5px;color:var(--t2);margin-top:2px}.quick-draft,.group-draft-panel{display:flex;align-items:end;gap:8px;margin:9px 0;padding:10px;border:1px solid #c4b5fd;border-radius:10px;background:#f5f3ff}.quick-draft .field,.group-draft-panel .field{flex:1;margin:0}.quick-draft .btn,.group-draft-panel .btn{min-height:40px}.group-draft-panel b{display:block;font-size:14px;color:#4c1d95}.group-draft-panel .muted{margin-top:2px}
+      .editor-top-icon{position:relative}.editor-top-notification-count{position:absolute;right:-6px;top:-6px;display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 4px;border:2px solid #fff;border-radius:99px;background:#dc2626;color:#fff;font-size:9px;font-weight:900;line-height:1}
       .feature-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.feature-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
       .board-card{display:flex;flex-direction:column;gap:8px;border:2px solid #c4b5fd;box-shadow:0 6px 20px rgba(91,33,182,.10)}.board-card .actions{margin-top:auto}.claim-button{width:100%;min-height:52px;font-size:14px;background:linear-gradient(135deg,#7c3aed,#5b21b6)!important;box-shadow:0 7px 18px rgba(91,33,182,.25)}.claim-button:hover{transform:translateY(-1px)}.accept-howto{display:flex;align-items:flex-start;gap:10px;margin:10px 0 14px;padding:12px 14px;border:1px solid #c4b5fd;border-radius:11px;background:#f5f3ff;color:#4c1d95}.accept-howto b{display:block;font-size:12px}.accept-howto span{display:block;margin-top:2px;font-size:10.5px;color:#6d28d9;line-height:1.6}.scope-line{display:flex;gap:5px;flex-wrap:wrap}.scope-chip{display:inline-flex;padding:3px 7px;border-radius:7px;background:var(--card2);font-size:10px;color:var(--t2)}
       .message-thread{border-top:1px solid var(--border);margin-top:12px;padding-top:10px}.message{padding:8px 9px;margin:6px 0;border-radius:9px;background:var(--card2);font-size:11px}.message.mine{background:var(--purple2)}.message-head{display:flex;justify-content:space-between;gap:8px;color:var(--t3);font-size:9.5px;margin-bottom:3px}.message-body{white-space:pre-wrap;overflow-wrap:anywhere}
@@ -162,7 +182,7 @@ const PORTAL_APP_VERSION='20260831-02';
   }
 
   function navHtmlExtended(){
-    const items=[['dashboard','ホーム'],['jobs','担当案件'],['board','案件を探す'],['dm','DM'],['notifications','通知'],['schedule','スケジュール'],['manuals','マニュアル'],['invoices',isExternal()?'支払い案内':'請求書'],['settings','登録情報'],['mobile-setup','スマホ通知'],['guide','使い方ガイド'],['suggestion','匿名目安箱']];
+    const items=[['dashboard','ホーム'],['jobs','担当案件'],['board','案件を探す'],['dm','DM'],['notifications','通知'],['schedule','スケジュール'],['manuals','マニュアル'],['invoices',isExternal()?'支払い案内':'請求書'],['settings','登録情報'],['mobile-setup','端末通知'],['guide','使い方ガイド'],['suggestion','匿名目安箱']];
     const work=[['dashboard','ホーム'],['jobs','担当案件'],['board','案件を探す']],communication=[['dm','DM'],['notifications','通知']],tools=[['schedule','スケジュール'],['manuals','マニュアル'],['invoices',isExternal()?'支払い案内':'請求書'],['settings','登録情報']];
     const mobile=[['dashboard','ホーム'],['jobs','案件'],['dm','DM'],['notifications','通知']];
     const open=feature.board.filter(x=>x.status==='open').length;
@@ -357,7 +377,7 @@ const PORTAL_APP_VERSION='20260831-02';
   function pushClient(){return window.EditorPush||null}
   function pushStatusCopy(status){
     if(status?.ready)return 'この端末は、アプリを閉じていてもDMの通知を受け取れる状態です。';
-    return status?.reason||'スマホ通知の状態を確認しています。';
+    return status?.reason||'端末通知の状態を確認しています。';
   }
   async function refreshEditorPushStatus(shouldRender=false){
     if(window.EditflowFirestoreQuota?.isOpen?.()){if(shouldRender)toast('クラウド接続停止中。再読み込み後に操作してください');return}
@@ -370,19 +390,19 @@ const PORTAL_APP_VERSION='20260831-02';
   function pushSetupBannerHtml(){
     if(ADMIN_PREVIEW||DEMO||feature.pushStatus?.ready)return '';
     const copy=pushStatusCopy(feature.pushStatus);
-    return `<section class="push-setup-banner" aria-label="スマホ通知の設定"><div><b>スマホ通知の設定がまだ完了していません</b><span>${esc(copy)}</span></div><button class="btn primary small" type="button" onclick="setView('mobile-setup')">設定を開く</button></section>`;
+    return `<section class="push-setup-banner" aria-label="端末通知の設定"><div><b>端末通知の設定がまだ完了していません</b><span>${esc(copy)}</span></div><button class="btn primary small" type="button" onclick="setView('mobile-setup')">設定を開く</button></section>`;
   }
   function mobileSetupHtml(){
     const status=feature.pushStatus,statusCopy=pushStatusCopy(status),canEnable=!!pushClient()&&!DEMO&&!ADMIN_PREVIEW;
     const actions=status?.ready
       ?`<div class="push-actions"><button class="btn small" type="button" onclick="refreshEditorPushSetup()">状態を再確認</button><button class="btn danger small" type="button" onclick="disableEditorPushNotifications()">この端末の通知をオフにする</button></div>`
       :`<div class="push-actions"><button class="btn primary" type="button" ${canEnable?'':'disabled'} onclick="enableEditorPushNotifications()">通知を有効にする</button><button class="btn small" type="button" onclick="refreshEditorPushSetup()">状態を再確認</button></div>`;
-    return `${pageHead('スマホ通知の設定','iPhoneを閉じている間もDMの通知を受け取るための設定です。')}<section class="card push-setup-card"><h2>最初に一度だけ設定します</h2><ol><li>iPhoneでは Safari または Chrome でこのアプリを開き、サインインします。</li><li>共有メニューから「ホーム画面に追加」を選びます。</li><li>追加したアプリアイコンから、もう一度このアプリを開きます。</li><li>下の「通知を有効にする」を押して、通知を許可します。</li></ol><div class="push-status ${status?.ready?'ready':''}"><b>${status?.ready?'✓ 設定完了':'現在の状態'}</b><br>${esc(statusCopy)}</div>${actions}<p class="muted" style="margin:12px 0 0">通知本文にはDMや案件の内容を表示しません。通知を押すとアプリのDM画面を開きます。</p></section>`;
+    return `${pageHead('端末通知の設定','PC・スマホでDMや案件の新着に気づけるようにします。')}<section class="card push-setup-card"><h2>最初に一度だけ設定します</h2><ol><li><b>iPhone</b>：Safari または Chrome でアプリを開き、「共有」→「ホーム画面に追加」後、追加したアプリから開き直します。</li><li><b>Android</b>：Chrome のメニューから「アプリをインストール」または「ホーム画面に追加」を選びます。</li><li><b>PC</b>：このページを開いたまま、下のボタンでブラウザ通知を許可します。PWAとしてインストールしている場合も同じです。</li><li>下の「通知を有効にする」を押し、OS・ブラウザの通知を許可します。</li></ol><div class="push-status ${status?.ready?'ready':''}"><b>${status?.ready?'✓ 設定完了':'現在の状態'}</b><br>${esc(statusCopy)}</div>${actions}<p class="muted" style="margin:12px 0 0">通知本文にはDMや案件の内容・金額を表示しません。未読はアプリ内とアイコンの赤い件数表示で確認できます。</p></section>`;
   }
   async function enableEditorPushNotifications(){
     if(DEMO||ADMIN_PREVIEW)return toast('確認画面では通知を変更できません');
     const api=pushClient();if(!api||!db||!user?.uid)return toast('通知の準備ができていません');
-    try{const status=await api.enable({db,uid:user.uid});feature.pushStatus=status;feature.pushStatusFor=user.uid;render();toast(status?.ready?'通知を有効にしました':'通知の登録を完了できませんでした')}catch(error){console.warn('push enable',error);await refreshEditorPushStatus(false);render();toast('通知を有効にできませんでした。SafariまたはChromeでホーム画面に追加してからお試しください')}
+    try{const status=await api.enable({db,uid:user.uid});feature.pushStatus=status;feature.pushStatusFor=user.uid;render();toast(status?.ready?'通知を有効にしました':'通知の登録を完了できませんでした')}catch(error){console.warn('push enable',error);await refreshEditorPushStatus(false);render();toast('通知を有効にできませんでした。端末・ブラウザ・ホーム画面追加の設定を確認してください')}
   }
   async function disableEditorPushNotifications(){
     if(DEMO||ADMIN_PREVIEW)return toast('確認画面では通知を変更できません');
@@ -392,8 +412,8 @@ const PORTAL_APP_VERSION='20260831-02';
 
   function deviceNotificationHtml(){
     if(pushClient()){
-      const status=feature.pushStatus,copy=pushStatusCopy(status),action=status?.ready?'<button class="btn small" type="button" onclick="setView(\'mobile-setup\')">設定を確認</button>':'<button class="btn primary" type="button" onclick="setView(\'mobile-setup\')">スマホ通知を設定</button>';
-      return`<section class="card device-notification-card"><div><h2>スマホ通知</h2><p>${esc(copy)}</p></div>${action}</section>`;
+      const status=feature.pushStatus,copy=pushStatusCopy(status),action=status?.ready?'<button class="btn small" type="button" onclick="setView(\'mobile-setup\')">設定を確認</button>':'<button class="btn primary" type="button" onclick="setView(\'mobile-setup\')">端末通知を設定</button>';
+      return`<section class="card device-notification-card"><div><h2>端末通知</h2><p>${esc(copy)}</p></div>${action}</section>`;
     }
     const supported=typeof Notification!=='undefined',permission=supported?Notification.permission:'unsupported',installed=!!(window.matchMedia?.('(display-mode: standalone)').matches||navigator.standalone);
     const copy=!supported?'このブラウザは端末通知に対応していません。':permission==='granted'?`端末通知はオンです。アプリを開いている間の新着DMを知らせます。${installed?'ホーム画面からアプリとして開けます。':'iPhoneはSafariの共有から「ホーム画面に追加」するとアプリのように開けます。'}`:permission==='denied'?'端末側で通知が拒否されています。SafariまたはChromeの設定から通知を許可してください。':'アプリを開いている間の新着DMを、端末通知で知らせます。';
@@ -428,14 +448,14 @@ const PORTAL_APP_VERSION='20260831-02';
 
   function showForegroundDmNotification(thread){
     if(typeof Notification==='undefined'||Notification.permission!=='granted'||!document.hidden)return;
-    try{const notice=new Notification(thread.counterpartName||'新しいDM',{body:thread.lastMessagePreview||'メッセージが届きました',icon:'./icon-192.png',tag:`dm:${thread.id}`});notice.onclick=()=>{window.focus();view='dm';openDirectMessage(thread.counterpartUid,thread.id)}}catch(error){console.warn('notification',error)}
+    try{const notice=new Notification('mono.create',{body:'新しい連絡があります。アプリを開いて確認してください。',icon:'./icon-192.png',tag:`dm:${thread.id}`});notice.onclick=()=>{window.focus();view='dm';openDirectMessage(thread.counterpartUid,thread.id)}}catch(error){console.warn('notification',error)}
   }
 
   function updateDmThreads(next,error){
     if(error)return portalReadError(error,'DM一覧',err=>{feature.dmError=String(err?.message||err);feature.dmLoading=false;scheduleSnapshotRender()});
     const incoming=Array.isArray(next)?next:[];
     incoming.forEach(thread=>{const key=`${stamp(thread.lastMessageAt)}:${thread.lastSenderUid||''}:${thread.lastMessagePreview||''}`,previous=feature.dmSeenMessages.get(thread.id);if(feature.dmInitialSnapshot&&thread.unread&&previous&&previous!==key)showForegroundDmNotification(thread);feature.dmSeenMessages.set(thread.id,key)});
-    feature.dmInitialSnapshot=true;feature.dmThreads=incoming;feature.dmLoading=false;feature.dmError='';
+    feature.dmInitialSnapshot=true;feature.dmThreads=incoming;feature.dmLoading=false;feature.dmError='';syncEditorAppBadge();
     // The message listener can arrive before the thread-list listener.  Retry
     // the active-thread acknowledgement after the authoritative unread state
     // is installed so listener delivery order cannot leave a visible DM unread.
@@ -582,7 +602,7 @@ const PORTAL_APP_VERSION='20260831-02';
     injectStyles();
     document.body.classList.toggle('editor-slack-layout',!!(user&&access?.approved));
     const who=document.querySelector('#account b');if(who&&!document.querySelector('#account .role-chip'))who.insertAdjacentHTML('afterend',`<span class="role-chip">${isExternal()?'外部編集者':'直接契約編集者'}</span>`);
-    mountUpdateBanner();mountPushSetupBanner();syncMessageSubscriptions();applyAdminPreviewReadOnly();
+    mountUpdateBanner();mountPushSetupBanner();syncMessageSubscriptions();syncEditorAppBadge();applyAdminPreviewReadOnly();
   }
 
   function mountPushSetupBanner(){
@@ -816,7 +836,7 @@ const PORTAL_APP_VERSION='20260831-02';
     if(user&&access?.approved){
       let body;
       if(view==='notifications')body=notificationsHtml();else if(view==='dm')body=dmHtml();else if(view==='board')body=boardHtml();else if(view==='schedule')body=scheduleHtml();else if(view==='manuals')body=manualsHtml();else if(view==='suggestion')body=suggestionHtml();else if(view==='mobile-setup')body=mobileSetupHtml();
-      if(body){accountHtml();$('#app').innerHTML=adminPreviewBanner()+navHtml()+body;hydrateEditorVisualMarks();injectStyles();mountUpdateBanner();mountPushSetupBanner();applyAdminPreviewReadOnly();return}
+      if(body){accountHtml();$('#app').innerHTML=adminPreviewBanner()+navHtml()+body;hydrateEditorVisualMarks();injectStyles();mountUpdateBanner();mountPushSetupBanner();syncEditorAppBadge();applyAdminPreviewReadOnly();return}
     }
     originalRenderBody();
   };

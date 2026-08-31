@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260831-02"></script>
+<script src="./billing-terms.js?v=20260831-03"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -995,7 +995,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260831-02">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260831-03">
 </head>
 <body class="owner-yellow-ui">
 
@@ -2911,7 +2911,7 @@ function _lsPutState(obj){
 }
 
 // ===STATE===
-let S=load(), V=sessionStorage.getItem('ef_team_view')||'videoedit', TV='today', HV='weekly', WO=0, MO=0, EID=null, PVM='board', JD=today();
+let S=load(), V=new URLSearchParams(location.search).get('notification')==='1'?'directmessages':sessionStorage.getItem('ef_team_view')||'videoedit', TV='today', HV='weekly', WO=0, MO=0, EID=null, PVM='board', JD=today();
 if(V==='projects')V='videoedit'; // 旧セッションは編集代行画面へ非破壊移行
 if(window.AIBridge)_personalTaskBaseline=AIBridge.taskBaseline(S.tasks||[]);
 let KV=null; // 現在の事業部ID
@@ -7007,7 +7007,7 @@ const GUIDE_PAGE_DEFS={
   videoschedules:{purpose:'編集者が登録した今週の1週間を、カレンダーで確認するページです。',steps:['月曜日に届く通知から開き、今週の編集可能日を入力します。','同じ予定は一括登録し、毎週同じ場合はルーティン保存を使います。','案件を割り当てる前に、曜日・時間・受託可能本数を確認します。'],access:'オーナー、動画編集ディレクター。入力は編集者本人'},
   videomanuals:{purpose:'共通手順やクライアント別の編集ルールを、対象編集者へ共有します。',steps:['共通・クライアント別・アカウント別から対象を選びます。','タイトル、説明、マニュアルURL、共有相手を登録します。','内容を更新したらリンクを開いて確認し、対象者へ更新を知らせます。'],access:'オーナー、動画編集ディレクター'},
   videoinvoices:{purpose:'クライアントへ出す請求書と、編集者から届く請求書を分けて確認します。',steps:['完了案件と金額を確認し、クライアント向け請求書を作成します。','編集者の請求書は原本・請求者名・明細・登録番号を確認します。','確認後に承認、支払処理中、支払済みの順で更新します。'],access:'オーナー。外部編集者分は担当ディレクターも確認可能'},
-  directmessages:{purpose:'編集者・動画編集ディレクターとの社内DMを、案件や請求の金額を表示せずに確認・送信する画面です。',steps:['左メニューの「DM」を開きます。','左側で編集者またはディレクターを選び、過去のやり取りを確認します。','本文を入力して送信し、未読の連絡は一覧と左メニューの件数表示で確認します。'],access:'オーナーのみ'},
+  directmessages:{purpose:'編集者・動画編集ディレクターとの社内DMと端末通知を、案件や請求の金額を表示せずに管理する画面です。',steps:['左メニューの「DM」を開きます。','「この端末の通知をオンにする」を押し、PC・スマホの通知を許可します。','左側で編集者またはディレクターを選び、過去のやり取りを確認します。','本文を入力して送信し、未読の連絡はDMとアプリアイコンの赤い件数で確認します。'],access:'オーナーのみ'},
   videosuggestions:{purpose:'編集者から届いた匿名の意見を、投稿者を特定せずに確認します。',steps:['未確認の投稿を開き、内容だけを確認します。','対応が必要な内容は社内で処理し、個人の特定を試みません。','必要な場合は返信コードを使い、匿名のまま回答します。'],access:'オーナーのみ'},
   hpprojects:{purpose:'ホームページ制作案件の受注から公開・検収・納品までを管理します。',steps:['クライアントと制作範囲、担当者、各期限を登録します。','制作状況に合わせて工程と確認待ち項目を更新します。','公開URL・検収・納品証跡を確認して完了へ移します。'],access:'オーナー、Webデザイナー、営業'},
   hpfee:{purpose:'公開後のホームページ月額維持費と入金状況を月ごとに管理します。',steps:['クライアント、開始月、月額、支払条件を登録します。','対象月の請求・入金状況を確認します。','入金後は支払済みに更新し、未入金だけを連絡対象にします。'],access:'オーナー、Webデザイナー'},
@@ -7033,7 +7033,7 @@ const GUIDE_PAGE_CHECKS={
   videoschedules:'今週の月曜日から日曜日までに、編集可能日・時間・本数が表示される。',
   videomanuals:'登録件数が増え、対象者が最新版のマニュアルを開いて読了できる。',
   videoinvoices:'プレビューの明細・金額・請求先が正しく、対応後の状態が「提出済み」「承認済み」「支払済み」のいずれかで表示される。',
-  directmessages:'承認済みの編集者・ディレクターだけが選択でき、未読件数・履歴・送信欄が表示される。',
+  directmessages:'端末通知が「通知を受け取れます」となり、承認済みの編集者・ディレクター、未読件数・履歴・送信欄が表示される。',
   videosuggestions:'投稿者の氏名・メールなしで内容が届き、必要な場合は匿名のまま返信済みになる。',
   hpprojects:'最新工程・各期限・公開URL・検収証跡が揃い、納品後に完了と表示される。',
   hpfee:'対象月の請求額と入金状況が表示され、入金後は支払済みになる。',
@@ -7059,7 +7059,7 @@ const GUIDE_PAGE_TIPS={
   videoschedules:'入力対象は今週の1週間だけです。同じ予定は一括登録かルーティン登録を使います。',
   videomanuals:'パスワード本体は保存せず、管理サービスのリンクだけを共有します。',
   videoinvoices:'クライアント向け請求は単価が入ったサブタスクだけを合計し、親案件の金額は足しません。',
-  directmessages:'案件・クライアント・請求の金額はDMへ表示しません。送信はクラウド接続中だけ行われ、停止中は再読み込みまで保存しません。',
+  directmessages:'案件・クライアント・請求の金額はDMやロック画面通知へ表示しません。iPhoneはホーム画面に追加したアプリから通知を許可します。',
   videosuggestions:'匿名性を守るため、文面から投稿者を特定しようとしません。',
   hpprojects:'確認待ちの項目を完了扱いにせず、公開・検収・納品の証跡を残します。',
   hpfee:'入金を確認する前に「支払済み」にしません。',
@@ -7088,11 +7088,41 @@ function _guidePageGroups(){
 // direct-messages.js が参加者と読み書きの権限を持つ唯一のデータ層です。
 // この画面では案件・請求・金額を結合しないため、DM画面から金額が見えることはありません。
 const OWNER_DM_STATE={peers:[],threads:[],messages:[],activePeerUid:'',activeThreadId:'',startedFor:'',threadUnsub:null,messageUnsub:null,loading:false,sending:false,error:'',draft:''};
+const OWNER_PUSH_STATE={status:null,loading:false,forUid:'',pendingCount:0};
 let _ownerDmRenderQueued=false;
 function ownerDmIsDemo(){try{return _rolePreviewActive()||new URLSearchParams(location.search).has('demo');}catch(_){return _rolePreviewActive();}}
 function ownerDmApi(){return window.EditflowDM||null;}
+function ownerPushApi(){return window.EditorPush||null;}
 function ownerDmMs(value){return value&&typeof value.toMillis==='function'?value.toMillis():Number(value||0);}
-function ownerDmUnreadCount(){return OWNER_DM_STATE.threads.filter(thread=>thread&&thread.unread).length;}
+function ownerDmUnreadCount(){return Math.max(OWNER_PUSH_STATE.pendingCount||0,OWNER_DM_STATE.threads.filter(thread=>thread&&thread.unread).length);}
+function ownerSyncAppBadge(){try{ownerPushApi()?.syncBadge?.(ownerDmUnreadCount())}catch(_){}return ownerDmUnreadCount();}
+function ownerPushCopy(status){
+  if(status?.ready)return 'この端末はDMなどの新着通知を受け取れる状態です。';
+  return status?.reason||'端末通知の状態を確認しています。';
+}
+async function ownerRefreshPushStatus(shouldRender=false){
+  const api=ownerPushApi(),uid=FB_USER?.uid||'';
+  if(ownerDmIsDemo()||!_isOwner()||!api||!fbDb||!uid||OWNER_PUSH_STATE.loading)return;
+  OWNER_PUSH_STATE.loading=true;
+  try{OWNER_PUSH_STATE.status=await api.status({db:fbDb,uid});OWNER_PUSH_STATE.pendingCount=Math.max(OWNER_PUSH_STATE.pendingCount||0,Number(await api.pendingBadgeCount?.())||0);OWNER_PUSH_STATE.forUid=uid;ownerSyncAppBadge();}
+  catch(error){console.warn('owner push status',error);OWNER_PUSH_STATE.status={ready:false,reason:'通知の状態を確認できませんでした。'};OWNER_PUSH_STATE.forUid=uid;}
+  finally{OWNER_PUSH_STATE.loading=false;}
+  if(shouldRender&&FB_USER?.uid===uid)render();
+}
+async function ownerEnablePushNotifications(){
+  const api=ownerPushApi(),uid=FB_USER?.uid||'';
+  if(ownerDmWriteBlocked()||!api||!fbDb||!uid)return;
+  try{OWNER_PUSH_STATE.status=await api.enable({db:fbDb,uid});OWNER_PUSH_STATE.forUid=uid;toast(OWNER_PUSH_STATE.status?.ready?'端末通知を有効にしました':'通知の登録を完了できませんでした');}
+  catch(error){console.warn('owner push enable',error);await ownerRefreshPushStatus(false);toast('通知を有効にできませんでした。端末・ブラウザの通知設定を確認してください','warn');}
+  render();
+}
+function ownerPushSetupHtml(){
+  const status=OWNER_PUSH_STATE.status,ready=!!status?.ready,copy=ownerPushCopy(status);
+  const action=ready
+    ?'<button type="button" class="btn btn-g btn-sm" onclick="ownerRefreshPushStatus(true)">状態を再確認</button>'
+    :'<button type="button" class="btn btn-p btn-sm" onclick="ownerEnablePushNotifications()">この端末の通知をオンにする</button>';
+  return `<section class="owner-dm-push"><div><b>端末通知</b><span>${esc(copy)}</span><small>PCはブラウザ通知を許可します。iPhoneはホーム画面に追加したアプリから開いて許可します。未読件数はアプリ内とアイコンの赤い件数で確認できます。</small></div>${action}</section>`;
+}
 function ownerDmReadBlocked(){return !!(_fbQuotaReadCircuitOpen||window.EditflowFirestoreQuota?.isOpen?.());}
 function ownerDmRenderSoon(){
   if(_ownerDmRenderQueued)return;
@@ -7132,7 +7162,7 @@ function ownerDmStart(){
   OWNER_DM_STATE.threadUnsub=api.watch((threads,error)=>{
     if(OWNER_DM_STATE.startedFor!==FB_USER?.uid)return;
     if(error){OWNER_DM_STATE.error='DM履歴を読み込めませんでした';console.warn('owner dm threads',error);ownerDmRenderSoon();return;}
-    OWNER_DM_STATE.threads=Array.isArray(threads)?threads:[];OWNER_DM_STATE.error='';
+    OWNER_DM_STATE.threads=Array.isArray(threads)?threads:[];OWNER_DM_STATE.error='';OWNER_PUSH_STATE.pendingCount=0;ownerSyncAppBadge();
     const active=ownerDmThread(OWNER_DM_STATE.activePeerUid);
     if(active&&String(active.id)!==String(OWNER_DM_STATE.activeThreadId))ownerDmWatchMessages(active.id);
     if(active)ownerDmMarkRead(active);
@@ -7181,6 +7211,7 @@ async function ownerDmSend(){
     OWNER_DM_STATE.draft='';OWNER_DM_STATE.error='';
     if(result?.threadId)ownerDmWatchMessages(result.threadId);
     if(result?.id)OWNER_DM_STATE.messages=[...OWNER_DM_STATE.messages,{id:result.id,senderUid:FB_USER?.uid||'',senderName:OWNER_NAME,body,createdAt:Date.now()}];
+    const push=ownerPushApi();if(push&&result?.threadId&&FB_USER?.getIdToken){FB_USER.getIdToken().then(idToken=>push.dispatchDirectThread({threadId:result.threadId,idToken})).catch(error=>console.warn('owner dm push dispatch',error));}
     toast('DMを送信しました');
   }catch(error){
     OWNER_DM_STATE.error='DMを送信できませんでした';
@@ -7193,11 +7224,17 @@ function ownerDmEnsureStyles(){
   if(document.getElementById('owner-dm-style'))return;
   const style=document.createElement('style');style.id='owner-dm-style';style.textContent=`
     .owner-dm-nav-badge{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;margin-left:auto;padding:0 5px;border-radius:99px;background:#dc2626;color:#fff;font-size:9px;font-weight:900;line-height:1}
+    .owner-dm-push{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px;padding:12px 14px;border:1px solid #c4b5fd;border-radius:12px;background:#f5f3ff;color:#312e81}.owner-dm-push b,.owner-dm-push span,.owner-dm-push small{display:block}.owner-dm-push b{font-size:14px}.owner-dm-push span{margin-top:3px;font-size:12px}.owner-dm-push small{margin-top:5px;color:#6d28d9;font-size:10.5px;line-height:1.55}.owner-dm-push .btn{flex:0 0 auto}
     .owner-dm-shell{display:grid;grid-template-columns:minmax(260px,330px) minmax(0,1fr);min-height:640px;overflow:hidden;border:1px solid var(--border);border-radius:14px;background:#fff;box-shadow:var(--shadow)}
     .owner-dm-inbox{min-width:0;border-right:1px solid var(--border);background:#fff}.owner-dm-head{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:70px;padding:13px 15px;border-bottom:1px solid var(--border)}.owner-dm-head h1,.owner-dm-head h2{margin:0;font-size:18px}.owner-dm-head span{display:block;margin-top:3px;color:var(--t2);font-size:12px}.owner-dm-list{display:grid;max-height:566px;overflow-y:auto}.owner-dm-label{padding:14px 14px 6px;color:var(--t2);font-size:12px;font-weight:850}.owner-dm-person{position:relative;display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:9px;width:100%;min-height:68px;padding:9px 12px;border:0;border-bottom:1px solid #f1f5f9;background:#fff;color:var(--text);text-align:left}.owner-dm-person:hover,.owner-dm-person:focus-visible,.owner-dm-person.active{background:#fff8db}.owner-dm-avatar{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:11px;background:linear-gradient(145deg,#d97706,#b45309);color:#fff;font-weight:900}.owner-dm-person-copy{min-width:0}.owner-dm-person-copy b,.owner-dm-person-copy span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.owner-dm-person-copy b{font-size:14px}.owner-dm-person-copy span{margin-top:2px;color:var(--t2);font-size:12px}.owner-dm-person-meta{display:grid;justify-items:end;gap:5px;color:var(--t3);font-size:10px}.owner-dm-unread-dot{width:9px;height:9px;border-radius:50%;background:#dc2626}.owner-dm-chat{display:flex;min-width:0;min-height:640px;flex-direction:column;background:#fff}.owner-dm-chat-empty{display:grid;flex:1;place-items:center;padding:28px;color:var(--t2);text-align:center;line-height:1.7}.owner-dm-messages{display:flex;flex:1;min-height:0;max-height:480px;flex-direction:column;gap:4px;overflow-y:auto;padding:14px}.owner-dm-message{display:grid;grid-template-columns:38px minmax(0,1fr);gap:9px;padding:8px;border-radius:9px}.owner-dm-message.mine{background:#fffbeb}.owner-dm-message .owner-dm-avatar{width:38px;height:38px;border-radius:9px;font-size:12px}.owner-dm-message-head{display:flex;align-items:baseline;gap:7px}.owner-dm-message-head b{font-size:14px}.owner-dm-message-head time{color:var(--t3);font-size:10px}.owner-dm-message-body{margin-top:2px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.65}.owner-dm-compose{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:auto;padding:12px 14px;border-top:1px solid var(--border);background:#fff}.owner-dm-compose textarea{width:100%;min-height:54px;max-height:160px;resize:vertical;border:1px solid #cbd5e1;border-radius:10px;padding:10px 12px}.owner-dm-compose .btn{min-width:92px}.owner-dm-note{margin:0 14px 12px;padding:9px 10px;border-radius:8px;background:#f8fafc;color:#475569;font-size:12px;line-height:1.6}.owner-dm-error{margin:10px 14px 0;padding:9px 10px;border-radius:8px;background:#fff1f2;color:#9f1239;font-size:12px}
     @media(max-width:760px){.owner-dm-shell{display:block;min-height:calc(100dvh - 145px)}.owner-dm-inbox{border-right:0}.owner-dm-chat{min-height:calc(100dvh - 145px)}.owner-dm-messages{max-height:none;min-height:45dvh}.owner-dm-compose{position:sticky;bottom:0;grid-template-columns:minmax(0,1fr) auto}.owner-dm-compose .btn{min-width:72px;padding-inline:10px}}
   `;document.head.appendChild(style);
 }
+window.addEventListener('editflow-push-received',event=>{
+  if(!_isOwner()||ownerDmIsDemo())return;
+  OWNER_PUSH_STATE.pendingCount=Math.max(OWNER_PUSH_STATE.pendingCount||0,Math.min(999,Number(event?.detail?.badgeCount)||1));
+  ownerSyncAppBadge();ownerDmRenderSoon();
+});
 function rOwnerDirectMessages(){
   ownerDmEnsureStyles();
   if(!_isOwner())return _financialAccessDenied('DM');
@@ -7208,10 +7245,11 @@ function rOwnerDirectMessages(){
   const peers=[...OWNER_DM_STATE.peers].sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ja'));
   const rows=peers.map(peer=>({peer,thread:ownerDmThread(peer.uid)})).sort((a,b)=>ownerDmMs(b.thread?.lastMessageAt||b.thread?.updatedAt)-ownerDmMs(a.thread?.lastMessageAt||a.thread?.updatedAt)||String(a.peer.name||'').localeCompare(String(b.peer.name||''),'ja'));
   const active=ownerDmActivePeer(),activeThread=active?ownerDmThread(active.uid):null,unread=ownerDmUnreadCount();
+  if(OWNER_PUSH_STATE.forUid!==FB_USER?.uid&&!OWNER_PUSH_STATE.loading)ownerRefreshPushStatus(true);
   const people=rows.length?rows.map(({peer,thread})=>`<button type="button" class="owner-dm-person ${String(OWNER_DM_STATE.activePeerUid)===String(peer.uid)?'active':''}" data-owner-dm-peer="${esc(String(peer.uid))}" onclick="ownerDmOpenPeerFromEvent(event)"><span class="owner-dm-avatar">${esc(String(peer.name||'編').slice(0,1))}</span><span class="owner-dm-person-copy"><b>${esc(peer.name||'編集者')}</b><span>${esc(thread?.lastMessagePreview||'新しいDMを開始')}</span></span><span class="owner-dm-person-meta">${thread?.unread?'<i class="owner-dm-unread-dot" aria-label="未読"></i>':''}<small>${thread?.lastMessageAt?esc(ownerDmTime(thread.lastMessageAt)):''}</small></span></button>`).join(''):`<div class="owner-dm-label">承認済みの編集者がまだいません。</div>`;
   const messages=OWNER_DM_STATE.messages.length?OWNER_DM_STATE.messages.map(message=>{const mine=String(message.senderUid||'')===String(FB_USER?.uid||'');return`<article class="owner-dm-message ${mine?'mine':''}"><span class="owner-dm-avatar">${esc(String(mine?(APP_ACCESS?.name||OWNER_NAME):(active?.name||message.senderName||'編')).slice(0,1))}</span><div><div class="owner-dm-message-head"><b>${esc(mine?(APP_ACCESS?.name||OWNER_NAME):(message.senderName||active?.name||'編集者'))}</b><time>${esc(ownerDmTime(message.createdAt))}</time></div><div class="owner-dm-message-body">${esc(message.body||'')}</div></div></article>`;}).join(''):`<div class="owner-dm-chat-empty">まだメッセージはありません。<br>最初のDMを送るとここに履歴が表示されます。</div>`;
   const chat=active?`<section class="owner-dm-chat" aria-label="${esc(active.name||'編集者')}とのDM"><header class="owner-dm-head"><div><h2>${esc(active.name||'編集者')}</h2><span>${active.roles?.includes?.('動画編集ディレクター')?'動画編集ディレクター':'動画編集者'}との社内DM</span></div></header>${OWNER_DM_STATE.error?`<div class="owner-dm-error">${esc(OWNER_DM_STATE.error)}</div>`:''}<div class="owner-dm-messages">${messages}</div><div class="owner-dm-note">案件・クライアント・請求の金額はこのDMには表示しません。未読は開いた時点で既読になります。</div><div class="owner-dm-compose"><textarea id="owner-dm-compose" maxlength="2000" placeholder="${esc(active.name||'編集者')}さんへメッセージを入力" oninput="ownerDmSetDraft(this.value)">${esc(OWNER_DM_STATE.draft)}</textarea><button type="button" class="btn btn-p" onclick="ownerDmSend()" ${OWNER_DM_STATE.sending?'disabled':''}>${OWNER_DM_STATE.sending?'送信中…':'送信'}</button></div></section>`:`<section class="owner-dm-chat"><div class="owner-dm-chat-empty"><div><b style="display:block;font-size:17px;color:var(--text);margin-bottom:5px">編集者を選択してください</b>左側から相手を選ぶと、履歴の確認とDM送信ができます。</div></div></section>`;
-  return`<div class="guide-hero" style="margin-bottom:14px"><div class="guide-kicker">DIRECT MESSAGE</div><div class="guide-title">DM</div><div class="guide-lead">編集者・ディレクターとの社内連絡です。未読 ${unread}件。案件の進捗は案件画面で管理し、DMには連絡内容だけを残します。</div></div><section class="owner-dm-shell"><aside class="owner-dm-inbox"><header class="owner-dm-head"><div><h2>編集者を選択</h2><span>${OWNER_DM_STATE.loading?'読み込み中…':`${rows.length}名`}</span></div></header>${OWNER_DM_STATE.error?`<div class="owner-dm-error">${esc(OWNER_DM_STATE.error)}</div>`:''}<div class="owner-dm-list"><div class="owner-dm-label">${unread?`未読DM ${unread}件`:'編集者・ディレクター'}</div>${people}</div></aside>${chat}</section>`;
+  return`<div class="guide-hero" style="margin-bottom:14px"><div class="guide-kicker">DIRECT MESSAGE</div><div class="guide-title">DM</div><div class="guide-lead">編集者・ディレクターとの社内連絡です。未読 ${unread}件。案件の進捗は案件画面で管理し、DMには連絡内容だけを残します。</div></div>${ownerPushSetupHtml()}<section class="owner-dm-shell"><aside class="owner-dm-inbox"><header class="owner-dm-head"><div><h2>編集者を選択</h2><span>${OWNER_DM_STATE.loading?'読み込み中…':`${rows.length}名`}</span></div></header>${OWNER_DM_STATE.error?`<div class="owner-dm-error">${esc(OWNER_DM_STATE.error)}</div>`:''}<div class="owner-dm-list"><div class="owner-dm-label">${unread?`未読DM ${unread}件`:'編集者・ディレクター'}</div>${people}</div></aside>${chat}</section>`;
 }
 function rEditorPortal(){
   const previewActive=_rolePreviewActive(),previewUid=previewActive?rolePreviewUid():'';
@@ -15042,7 +15080,7 @@ function _navCatOf(id){return NAV_CATS.find(cat=>cat.views.includes(id))||null;}
 function renderNav(){
   // DMの未読数はDM画面を一度開いて読み込んだ分だけ表示します。
   // 一覧画面ごとにFirestoreの会話監視を始めないため、通常操作の読み取りを増やしません。
-  if(_isOwner()&&typeof ownerDmEnsureStyles==='function')ownerDmEnsureStyles();
+  if(_isOwner()&&typeof ownerDmEnsureStyles==='function'){ownerDmEnsureStyles();ownerDmStart();ownerSyncAppBadge();}
   const cfg=getNavCfg();
   const el=document.getElementById('nav-items');if(!el)return;
   const visible=cfg.filter(c=>!c.hidden&&isViewAllowed(c.id)&&!VIDEO_EMBEDDED_VIEW_IDS.has(c.id));
@@ -17665,7 +17703,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260831-02';
+const APP_VERSION='20260831-03';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -17740,10 +17778,12 @@ setInterval(checkServerVersion,5*60*1000);                                      
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
-<script src="./direct-messages.js?v=20260831-02"></script>
+<script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
+<script src="./editor-push.js?v=20260831-03"></script>
+<script src="./direct-messages.js?v=20260831-03"></script>
 <script>
   try{if(V==='directmessages')render();else renderNav();}catch(error){console.warn('owner dm init',error);}
 </script>
-<script src="./manager-features.js?v=20260831-02"></script>
+<script src="./manager-features.js?v=20260831-03"></script>
 </body>
 </html>

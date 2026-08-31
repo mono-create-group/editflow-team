@@ -11,7 +11,7 @@ test('owner navigation exposes a direct-message page in the video workspace', ()
   assert.match(source, /views:\['editorportal','videoedit','videohaken','videoclients','workers','videoschedules','videomanuals','videoinvoices','directmessages','videosuggestions'\]/);
   assert.match(source, /directmessages:rOwnerDirectMessages/);
   assert.match(source, /if\(v==='directmessages'\)return false/);
-  assert.match(source, /<script src="\.\/direct-messages\.js\?v=20260831-02"><\/script>/);
+  assert.match(source, /<script src="\.\/direct-messages\.js\?v=20260831-03"><\/script>/);
 });
 
 test('owner DM reuses the guarded shared data layer for peers, threads, history, send, and read receipts', () => {
@@ -41,7 +41,7 @@ test('DM peer IDs are carried as HTML data, not interpolated into executable Jav
 });
 
 test('owner DM styling is available when the navigation is rendered and demo mode has no dead return action', () => {
-  assert.match(source, /if\(_isOwner\(\)&&typeof ownerDmEnsureStyles==='function'\)ownerDmEnsureStyles\(\);/);
+  assert.match(source, /if\(_isOwner\(\)&&typeof ownerDmEnsureStyles==='function'\)\{ownerDmEnsureStyles\(\);ownerDmStart\(\);ownerSyncAppBadge\(\);\}/);
   assert.match(page, /const returnButton=_rolePreviewActive\(\)\?/);
   assert.match(page, /通常のオーナー画面でDMを開いてください/);
 });

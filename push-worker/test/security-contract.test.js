@@ -29,6 +29,12 @@ test('expired endpoints are removed and delivery remains bounded and private', (
   assert.match(source, /response\.status === 404 \|\| response\.status === 410/);
   assert.match(source, /deleteExpiredDevice\(token, name\)/);
   assert.match(source, /新しい連絡があります。アプリを開いて確認してください。/);
+  assert.match(source, /const DEVICE_APP_PATHS = new Set\(\['\.\/\?notification=1', '\.\/editor\.html\?notification=1'\]\)/);
+  assert.match(source, /recipientDeviceAppPath\(data\.appPath\)/);
+  assert.match(source, /function recipientDeviceAppPath\(value\)/);
+  assert.match(source, /if \(!appPath\) return '\.\/editor\.html\?notification=1'/);
+  assert.match(source, /url: recipientDeviceAppPath\(data\.appPath\)/);
+  assert.doesNotMatch(source, /url: '\.\/editor\.html\?notification=1'/);
 });
 
 test('worker remains free tier and secret-free in tracked configuration', () => {

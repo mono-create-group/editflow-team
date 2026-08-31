@@ -207,6 +207,15 @@ service cloud.firestore {
         || hasRole(uid, '動画編集ディレクター'));
     }
 
+    // Push subscriptions are an account-private device capability, rather
+    // than an editor-portal capability.  In particular, the owner can use
+    // the owner app before an editor_portals/{uid} document exists.
+    function pushDeviceOwner(uid) {
+      return self(uid) && (owner()
+        || hasRole(uid, '動画編集者')
+        || hasRole(uid, '動画編集ディレクター'));
+    }
+
     function pureEditor(uid) {
       return signedIn()
         && exists(accessPath(uid))
@@ -1547,17 +1556,18 @@ service cloud.firestore {
         allow delete: if false;
       }
 
-      // One installed device owns one immutable document ID.  An editor can
-      // only see and replace their own subscription.  Managers may read
-      // status for setup follow-up, but never receive a write route here.
+      // One installed device owns one immutable document ID.  Each eligible
+      // account (owner, director, or editor) can only see and replace its own
+      // subscription.  Endpoint and encryption material are never visible to
+      // a manager acting on somebody else's portal.
       // The subscription endpoint is sensitive and must never be listed to
       // other editors or exposed in any shared case/DM document.
       match /push_devices/{deviceId} {
-        allow read: if portalManager(uid) || editor(uid);
-        allow create: if editor(uid)
+        allow read: if pushDeviceOwner(uid);
+        allow create: if pushDeviceOwner(uid)
           && request.resource.data.keys().hasOnly([
             'deviceId','endpoint','keys','permission','appInstalled',
-            'platform','userAgent','schemaVersion','createdAt','updatedAt'
+            'appPath','platform','userAgent','schemaVersion','createdAt','updatedAt'
           ])
           && request.resource.data.deviceId == deviceId
           && request.resource.data.deviceId is string
@@ -1575,15 +1585,18 @@ service cloud.firestore {
           && request.resource.data.keys.auth.size() <= 300
           && request.resource.data.permission == 'granted'
           && request.resource.data.appInstalled == true
+          && request.resource.data.appPath in [
+            './?notification=1', './editor.html?notification=1'
+          ]
           && request.resource.data.platform is string
           && request.resource.data.platform.size() <= 180
           && request.resource.data.userAgent is string
           && request.resource.data.userAgent.size() <= 400
           && request.resource.data.schemaVersion == 1;
-        allow update: if editor(uid)
+        allow update: if pushDeviceOwner(uid)
           && request.resource.data.deviceId == resource.data.deviceId
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'endpoint','keys','permission','appInstalled','platform','userAgent','schemaVersion','updatedAt'
+            'endpoint','keys','permission','appInstalled','appPath','platform','userAgent','schemaVersion','updatedAt'
           ])
           && request.resource.data.endpoint is string
           && request.resource.data.endpoint.matches('^https://.+')
@@ -1598,12 +1611,15 @@ service cloud.firestore {
           && request.resource.data.keys.auth.size() <= 300
           && request.resource.data.permission == 'granted'
           && request.resource.data.appInstalled == true
+          && request.resource.data.appPath in [
+            './?notification=1', './editor.html?notification=1'
+          ]
           && request.resource.data.platform is string
           && request.resource.data.platform.size() <= 180
           && request.resource.data.userAgent is string
           && request.resource.data.userAgent.size() <= 400
           && request.resource.data.schemaVersion == 1;
-        allow delete: if editor(uid);
+        allow delete: if pushDeviceOwner(uid);
       }
     }
 

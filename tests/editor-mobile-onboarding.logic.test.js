@@ -6,7 +6,7 @@ const path = require('node:path');
 const source = fs.readFileSync(path.resolve(__dirname, '..', 'editor-features.js'), 'utf8');
 
 test('mobile setup is reachable through the existing more menu without adding a sixth primary mobile button', () => {
-  assert.match(source, /\['mobile-setup','スマホ通知'\]/);
+  assert.match(source, /\['mobile-setup','端末通知'\]/);
   assert.match(source, /const mobile=\[\['dashboard','ホーム'\],\['jobs','案件'\],\['dm','DM'\],\['notifications','通知'\]\]/);
   assert.match(source, /grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
 });
@@ -14,9 +14,11 @@ test('mobile setup is reachable through the existing more menu without adding a 
 test('approved editors see clear iPhone installation and permission instructions until true ready status', () => {
   assert.match(source, /function pushSetupBannerHtml\(\)/);
   assert.match(source, /feature\.pushStatus\?\.ready\)return ''/);
-  assert.match(source, /Safari または Chrome/);
+  assert.match(source, /<b>iPhone<\/b>：Safari または Chrome/);
   assert.match(source, /ホーム画面に追加/);
-  assert.match(source, /アプリアイコンから/);
+  assert.match(source, /追加したアプリから開き直します/);
+  assert.match(source, /<b>Android<\/b>：Chrome/);
+  assert.match(source, /<b>PC<\/b>：このページを開いたまま/);
   assert.match(source, /通知を有効にする/);
   assert.match(source, /api\.status\(\{db,uid\}\)/);
 });
