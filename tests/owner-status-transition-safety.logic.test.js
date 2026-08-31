@@ -96,6 +96,10 @@ test('completion records the selected non-future date in both the job and audit 
   assert.match(index, /action==='clientApproved'\?\{completedDeliveryDate:completionDate\}:\{\}/);
   assert.match(index, /event\.completedDeliveryDate/);
   assert.match(index, /id="\$\{esc\(portalControlKey\)\}-completed-date"/);
+  assert.match(index, /data-portal-manager-completion="\$\{managerCompletesPortal\?'1':'0'\}"/);
+  assert.match(index, /managerCanSetCompletion=internal\|\|portalManagerCompletion\|\|\(_curJobBiz\(\)==='edit'&&!portalStatusLocked\)/);
+  assert.match(index, /if\(completed\)completed\.disabled=!managerCanSetCompletion/);
+  assert.match(index, /completedLabel\.textContent=managerCanSetCompletion\?'完了日（Dまたはオーナーが記録）'/);
   assert.match(index, /「完了」にするとき、実際に完了した日を記録します。/);
 });
 
