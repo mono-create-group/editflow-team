@@ -11,7 +11,7 @@ test('owner navigation exposes a direct-message page in the video workspace', ()
   assert.match(source, /views:\['editorportal','videoedit','videohaken','videoclients','workers','videoschedules','videomanuals','videoinvoices','directmessages','videosuggestions'\]/);
   assert.match(source, /directmessages:rOwnerDirectMessages/);
   assert.match(source, /if\(v==='directmessages'\)return false/);
-  assert.match(source, /<script src="\.\/direct-messages\.js\?v=20260831-01"><\/script>/);
+  assert.match(source, /<script src="\.\/direct-messages\.js\?v=20260831-02"><\/script>/);
 });
 
 test('owner DM reuses the guarded shared data layer for peers, threads, history, send, and read receipts', () => {

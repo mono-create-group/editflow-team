@@ -44,5 +44,32 @@ test('portal job administration displays status only and rejects tampered raw st
   assert.match(modal, /進捗は下の「進捗共有」の操作から更新します。/);
   assert.match(save, /const statusField=document\.getElementById\('vp-status'\),requestedStatus=String\(statusField\?\.dataset\.status\|\|j\.status\);/);
   assert.match(save, /if\(String\(statusField\?\.value\|\|''\)!==bizStatusLabel\(_portalVideoBiz\(j\),j\.status\)\|\|requestedStatus!==j\.status\)return toast\('進捗は「進捗共有」の操作から更新してください','warn'\);/);
-  assert.match(index, /function advancePortalWorkflow\(portalUid,id,action\)/);
+  assert.match(index, /function advancePortalWorkflow\(portalUid,id,action,providedReason\)/);
+});
+
+test('linked parent subcases expose only current valid workflow actions inline', () => {
+  assert.match(index, /function _portalWorkflowActionsForJob\(job\)\{/);
+  assert.match(index, /stage==='director_review'\)return\[\['directorRevision','修正指示（修正中）'\],\['directorApprove','D確認OKにする'\]\]/);
+  assert.match(index, /stage==='client_submission'\)return\[\['clientSubmitted','先方確認中にする'\]\]/);
+  assert.match(index, /stage==='client_review'\)return\[\['clientRevision','修正指示（修正中）'\],\['clientApproved','先方OK（完了）'\]\]/);
+  assert.match(index, /function advanceLegacyPortalSubcaseWorkflow\(portalUid,jobId,controlKey\)\{/);
+  assert.match(index, /const allowed=_portalWorkflowActionsForJob\(job\)\.map\(\(\[value\]\)=>value\);/);
+  assert.match(index, /if\(!allowed\.includes\(action\)\)return toast\('現在の工程ではこの操作はできません。案件を開き直してください','warn'\);/);
+  assert.match(index, /修正指示の内容（修正指示を選んだ場合は必須）/);
+  assert.match(index, /await advancePortalWorkflow\(portalUid,jobId,action,reason\);/);
+  assert.match(index, /async function advancePortalWorkflow\(portalUid,id,action,providedReason\)/);
+  assert.match(index, /providedReason===undefined\?\(document\.getElementById\('vp-correction'\)\?\.value\.trim\(\)\|\|''\):String\(providedReason\)\.trim\(\)/);
+  assert.match(index, /const PORTAL_WORKFLOW_ACTION_PENDING=new Set\(\);/);
+  assert.match(index, /if\(PORTAL_WORKFLOW_ACTION_PENDING\.has\(pendingKey\)\)return toast\('進捗を保存しています。完了までお待ちください','warn'\);/);
+  assert.match(index, /finally\{PORTAL_WORKFLOW_ACTION_PENDING\.delete\(pendingKey\);\}/);
+});
+
+test('inline portal workflow actions quote escaped JSON before placement in an HTML attribute', () => {
+  assert.match(index, /const portalConfirmAction=portalStatusLocked\?`advanceLegacyPortalSubcaseWorkflow\(\$\{JSON\.stringify\(String\(s\.portalUid\)\)\},\$\{JSON\.stringify\(String\(s\.portalJobId\)\)\},\$\{JSON\.stringify\(portalControlKey\)\}\)`:'';/);
+  assert.match(index, /onclick="\$\{esc\(portalConfirmAction\)\}">進捗を確定<\/button>/);
+  const esc = value => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const action = `advanceLegacyPortalSubcaseWorkflow(${JSON.stringify('uid"quoted')},${JSON.stringify('job"quoted')},${JSON.stringify('safe-key')})`;
+  const rendered = `<button onclick="${esc(action)}">進捗を確定</button>`;
+  assert.match(rendered, /onclick="advanceLegacyPortalSubcaseWorkflow\(&quot;uid\\&quot;quoted&quot;,&quot;job\\&quot;quoted&quot;,&quot;safe-key&quot;\)"/);
+  assert.doesNotMatch(rendered, /onclick="advanceLegacyPortalSubcaseWorkflow\("/);
 });

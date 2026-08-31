@@ -60,7 +60,7 @@ test('workflow keeps repeatable director and client review rounds without rewrit
   assert.deepEqual({...context.workflow({status:'FB待ち'})}, {round:1,stage:'director_review'});
   assert.deepEqual({...context.workflow({status:'確認待ち'})}, {round:1,stage:'client_review'});
   assert.deepEqual({...context.workflow({workflow:{round:3,stage:'director_review'},status:'修正稿提出済み'})}, {round:3,stage:'director_review'});
-  assert.match(html, /function advancePortalWorkflow\(portalUid,id,action\)/);
+  assert.match(html, /function advancePortalWorkflow\(portalUid,id,action,providedReason\)/);
   assert.match(html, /progressEvents:/);
 });
 

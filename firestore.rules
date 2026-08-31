@@ -669,6 +669,9 @@ service cloud.firestore {
       let events = reviewEvents(request.resource.data);
       let event = events[events.size() - 1];
       return appendsOneReviewEvent()
+        && request.resource.data.status == status
+        && reviewStage(request.resource.data) == toStage
+        && reviewRound(request.resource.data) == round
         && lastReviewEventMatches(
           type, fromStage, toStage, round, status, managerEventRole()
         )
@@ -816,6 +819,37 @@ service cloud.firestore {
               && validManagerProgressEvent(
                 'director_revision_requested', 'director_review', 'editing',
                 reviewRound(request.resource.data), '修正中'
+              ))
+            // Saved before workflow metadata existed: only migrate the
+            // displayed legacy state through the same explicit manager action
+            // and append-only event used by new portal jobs.
+            || (!hasReviewWorkflow(resource.data)
+              && resource.data.status == 'D確認OK'
+              && reviewStage(request.resource.data) == 'client_review'
+              && reviewRound(request.resource.data) == 1
+              && validManagerProgressEvent(
+                'client_submitted', 'client_submission', 'client_review',
+                reviewRound(request.resource.data), '先方確認中'
+              ))
+            || (!hasReviewWorkflow(resource.data)
+              && resource.data.status in ['先方確認中', '確認待ち']
+              && reviewStage(request.resource.data) == 'editing'
+              && reviewRound(request.resource.data) == 2
+              && validManagerProgressEvent(
+                'client_revision_requested', 'client_review', 'editing',
+                reviewRound(request.resource.data), '修正中'
+              ))
+            || (!hasReviewWorkflow(resource.data)
+              && resource.data.status in ['先方確認中', '確認待ち']
+              && reviewStage(request.resource.data) == 'delivered'
+              && reviewRound(request.resource.data) == 1
+              && request.resource.data.status == '完了'
+              && request.resource.data.get('completedDeliveryDate', '') is string
+              && request.resource.data.get('completedDeliveryDate', '') != ''
+              && validCompletedJobEvidence()
+              && validManagerProgressEvent(
+                'client_approved_completed', 'client_review', 'delivered',
+                reviewRound(request.resource.data), '完了'
               ))
             || (hasReviewWorkflow(resource.data)
               && reviewStage(request.resource.data) == reviewStage(resource.data)

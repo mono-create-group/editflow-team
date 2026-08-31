@@ -89,8 +89,27 @@ test('legacy manager metadata saves cannot jump directly into workflow-owned sta
   }
 });
 
+test('legacy portal review statuses can migrate only through the matching manager workflow action', () => {
+  const body = rules.match(/function validManagerReviewTransition\(\) \{([\s\S]*?)\n    \}/)?.[1] || '';
+  for (const marker of [
+    "&& resource.data.status == 'D確認OK'",
+    "reviewStage(request.resource.data) == 'client_review'",
+    "'client_submitted', 'client_submission', 'client_review'",
+    "&& resource.data.status in ['先方確認中', '確認待ち']",
+    "'client_revision_requested', 'client_review', 'editing'",
+    "'client_approved_completed', 'client_review', 'delivered'",
+    "request.resource.data.get('completedDeliveryDate', '') != ''",
+    'validCompletedJobEvidence()',
+  ]) assert.ok(body.includes(marker), `missing ${marker}`);
+  assert.ok((body.match(/reviewRound\(request\.resource\.data\) == 2/g) || []).length >= 2);
+  assert.ok((body.match(/reviewRound\(request\.resource\.data\) == 1/g) || []).length >= 2);
+});
+
 test('director and client revision events require a bounded non-empty correction reason', () => {
   const body = rules.match(/function validManagerProgressEvent\([^]*?\n    \}/)?.[0] || '';
+  assert.match(body, /request\.resource\.data\.status == status/);
+  assert.match(body, /reviewStage\(request\.resource\.data\) == toStage/);
+  assert.match(body, /reviewRound\(request\.resource\.data\) == round/);
   assert.match(body, /type in \['director_revision_requested', 'client_revision_requested'\]/);
   assert.match(body, /event\.get\('reason', ''\) is string/);
   assert.match(body, /event\.get\('reason', ''\)\.size\(\) > 0/);
