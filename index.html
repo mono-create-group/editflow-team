@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260831-09"></script>
+<script src="./billing-terms.js?v=20260831-10"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -998,7 +998,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260831-09">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260831-10">
 </head>
 <body class="owner-yellow-ui">
 
@@ -1058,8 +1058,8 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="./ai-bridge-client.js"></script>
-<script src="./owner-video-performance.js?v=20260831-09"></script>
-<script src="./feedback-workflow.js?v=20260831-09"></script>
+<script src="./owner-video-performance.js?v=20260831-10"></script>
+<script src="./feedback-workflow.js?v=20260831-10"></script>
 <script>/* lz-string 1.5.0 (MIT) — CDN非依存でオフライン/圧縮チーム同期を保証するためインライン化 */
 var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",e={};function t(r,o){if(!e[r]){e[r]={};for(var n=0;n<r.length;n++)e[r][r.charAt(n)]=n}return e[r][o]}var i={compressToBase64:function(r){if(null==r)return"";var n=i._compress(r,6,function(r){return o.charAt(r)});switch(n.length%4){default:case 0:return n;case 1:return n+"===";case 2:return n+"==";case 3:return n+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(n){return t(o,r.charAt(n))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(r){return null==r?"":""==r?null:i._decompress(r.length,16384,function(o){return r.charCodeAt(o)-32})},compressToUint8Array:function(r){for(var o=i.compress(r),n=new Uint8Array(2*o.length),e=0,t=o.length;e<t;e++){var s=o.charCodeAt(e);n[2*e]=s>>>8,n[2*e+1]=s%256}return n},decompressFromUint8Array:function(o){if(null==o)return i.decompress(o);for(var n=new Array(o.length/2),e=0,t=n.length;e<t;e++)n[e]=256*o[2*e]+o[2*e+1];var s=[];return n.forEach(function(o){s.push(r(o))}),i.decompress(s.join(""))},compressToEncodedURIComponent:function(r){return null==r?"":i._compress(r,6,function(r){return n.charAt(r)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),i._decompress(r.length,32,function(o){return t(n,r.charAt(o))}))},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(r,o,n){if(null==r)return"";var e,t,i,s={},u={},a="",p="",c="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<r.length;i+=1)if(a=r.charAt(i),Object.prototype.hasOwnProperty.call(s,a)||(s[a]=f++,u[a]=!0),p=c+a,Object.prototype.hasOwnProperty.call(s,p))c=p;else{if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++),s[p]=f++,c=String(a)}if(""!==c){if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++)}for(t=2,e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;for(;;){if(m<<=1,v==o-1){d.push(n(m));break}v++}return d.join("")},decompress:function(r){return null==r?"":""==r?null:i._decompress(r.length,32768,function(o){return r.charCodeAt(o)})},_decompress:function(o,n,e){var t,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:e(0),position:n,index:1};for(t=0;t<3;t+=1)l[t]=t;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return i}();"function"==typeof define&&define.amd?define(function(){return LZString}):"undefined"!=typeof module&&null!=module?module.exports=LZString:"undefined"!=typeof angular&&null!=angular&&angular.module("LZString",[]).factory("LZString",function(){return LZString});
 </script>
@@ -7801,7 +7801,7 @@ ${(()=>{
       warnings.push(`<div style="background:var(--adim);border:1px solid var(--amber);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer" onclick="openJobModal('${j.id}')">
         <span style="font-size:18px">💸</span>
         <div style="flex:1">
-          <div style="font-weight:700;font-size:13px">💸 ワーカー支払日: ${esc(j.title)} — ${esc(workerName)}</div>
+          <div style="font-weight:700;font-size:13px">💸 ワーカー支払予定日: ${esc(j.title)} — ${esc(workerName)}</div>
           <div style="font-size:12px;color:var(--t2)">${j.payoutDate} — ${dayLbl}</div>
         </div>
         <span class="badge ba">⚠️</span>
@@ -7857,7 +7857,7 @@ function rProjListing(){
           ${s.sharedDate?`<span>📤 共有: ${s.sharedDate}</span>`:''}
           ${s.editorDraftDate?`<span>✏️ 初稿: ${s.editorDraftDate}</span>`:''}
           ${s.deliveryDate?`<span class="${urgCls(s.deliveryDate)}">📅 納期（予定）: ${s.deliveryDate} (${fmt(s.deliveryDate)})</span>`:''}
-          ${s.payoutDate?`<span>💸 支払: ${s.payoutDate}</span>`:''}
+          ${s.payoutDate?`<span>💸 支払予定: ${s.payoutDate}</span>`:''}
         </div>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;font-size:11px">
@@ -8128,12 +8128,6 @@ function unmarkPaidFrom(cutoff){
   const now=Date.now();
   affected.forEach(j=>{j.paymentDate=null;j.updatedAt=now;});
   save();render();toast(`✅ ${affected.length}件を未入金に戻しました`);
-}
-function markJobPayout(id){
-  if(!_canViewFinancials())return toast('財務操作の権限がありません','err');
-  const j=S.jobs.find(j=>j.id===id);if(!j)return;
-  j.payoutDate=today();
-  save();render();toast('💳 支払い済みにしました');
 }
 function rProjCard(j){
   const cbz=bizCfgOf(jobBiz(j));
@@ -8768,21 +8762,41 @@ function getPayEntries(month){
     const subs=j.subtasks||[];
     const hasPricedSubs=subs.some(s=>s.unitPrice>0||s.workerPay>0);
     if(hasPricedSubs){
-      subs.forEach(s=>{
+      subs.forEach((s,subtaskIndex)=>{
         if(!s.workerPay||s.workerId===SELF_WID)return;
         const pd=s.payoutDate||j.payoutDate;
         if(!pd?.startsWith(month))return;
         const recipient=_paymentRecipientForRecord(s,s.workerId);
-        entries.push({jobId:j.id,jobTitle:j.title,label:s.title||'サブ案件',assigneeWorkerId:s.workerId||'__none',payeeWorkerId:recipient.ok?recipient.payeeWorkerId:'__unresolved',payeeUid:recipient.payeeUid||'',billingRoute:recipient.route,blocked:!recipient.ok,blockReason:recipient.reason||'',workerPay:s.workerPay,payoutDate:pd});
+        entries.push({jobId:j.id,subtaskId:String(s.id||''),subtaskIndex,jobTitle:j.title,label:s.title||'サブ案件',assigneeWorkerId:s.workerId||'__none',payeeWorkerId:recipient.ok?recipient.payeeWorkerId:'__unresolved',payeeUid:recipient.payeeUid||'',billingRoute:recipient.route,blocked:!recipient.ok,blockReason:recipient.reason||'',workerPay:s.workerPay,payoutDate:pd,workerPaidAt:s.workerPaidAt||null});
       });
     }else{
       const wids=getJobWorkerIds(j);if(!j.workerPay||(!wids.length||wids.every(id=>id===SELF_WID)))return;
       if(!j.payoutDate?.startsWith(month))return;
       const recipient=_paymentRecipientForRecord(j,j.workerId);
-      entries.push({jobId:j.id,jobTitle:j.title,label:j.title||'案件',assigneeWorkerId:j.workerId||'__none',payeeWorkerId:recipient.ok?recipient.payeeWorkerId:'__unresolved',payeeUid:recipient.payeeUid||'',billingRoute:recipient.route,blocked:!recipient.ok,blockReason:recipient.reason||'',workerPay:j.workerPay,payoutDate:j.payoutDate});
+      entries.push({jobId:j.id,subtaskId:'',subtaskIndex:-1,jobTitle:j.title,label:j.title||'案件',assigneeWorkerId:j.workerId||'__none',payeeWorkerId:recipient.ok?recipient.payeeWorkerId:'__unresolved',payeeUid:recipient.payeeUid||'',billingRoute:recipient.route,blocked:!recipient.ok,blockReason:recipient.reason||'',workerPay:j.workerPay,payoutDate:j.payoutDate,workerPaidAt:j.workerPaidAt||null});
     }
   });
   return entries;
+}
+function toggleWorkerPaymentPaid(jobId,subtaskId='',subtaskIndex=-1){
+  if(!_canViewFinancials()){toast('財務操作の権限がありません','err');return false;}
+  const job=(S.jobs||[]).find(j=>String(j.id)===String(jobId)&&!j.deleted);if(!job)return false;
+  const index=Number(subtaskIndex);
+  const target=subtaskId
+    ?(job.subtasks||[]).find(s=>String(s.id||'')===String(subtaskId))
+    :(Number.isInteger(index)&&index>=0?(job.subtasks||[])[index]:job);
+  if(!target)return false;
+  const recipient=_paymentRecipientForRecord(target,target.workerId);
+  if(!target.workerPaidAt&&!recipient.ok){toast(recipient.reason||'支払先を確定してください','warn');return false;}
+  const label=String(target.title||job.title||'案件');
+  if(target.workerPaidAt&&!confirm(`「${label}」の支払済みを取り消し、未払いに戻しますか？`))return false;
+  const at=Date.now();
+  target.workerPaidAt=target.workerPaidAt?null:today();
+  target.workerPaidBy=target.workerPaidAt?_myEmail():null;
+  target.workerPaymentUpdatedAt=at;
+  job.updatedAt=at;job.updatedBy=_myEmail();
+  save();render();toast(target.workerPaidAt?'編集者への支払いを支払済みにしました':'編集者への支払いを未払いに戻しました');
+  return true;
 }
 function rProjPayment(){
   if(!_canViewFinancials())return _financialAccessDenied('支払い');
@@ -8798,9 +8812,8 @@ function rProjPayment(){
   const entries=getPayEntries(curM);
   const total=entries.reduce((s,e)=>s+e.workerPay,0);
   const blockedEntries=entries.filter(e=>e.blocked),blockedTotal=blockedEntries.reduce((s,e)=>s+e.workerPay,0);
-  // 入金済み件数・未入金件数の集計
-  const paidEntries=entries.filter(e=>{const j=S.jobs.find(j=>j.id===e.jobId);return isJobPaid(j);});
-  const unpaidEntries=entries.filter(e=>{const j=S.jobs.find(j=>j.id===e.jobId);return !isJobPaid(j);});
+  const paidEntries=entries.filter(e=>e.workerPaidAt),unpaidEntries=entries.filter(e=>!e.workerPaidAt);
+  const paidTotal=paidEntries.reduce((s,e)=>s+e.workerPay,0),unpaidTotal=unpaidEntries.reduce((s,e)=>s+e.workerPay,0);
   const byWorker={};
   entries.forEach(e=>{if(!byWorker[e.payeeWorkerId])byWorker[e.payeeWorkerId]=[];byWorker[e.payeeWorkerId].push(e);});
   const rewardsAll=(S.rewards||[]).filter(r=>!r.deleted);
@@ -8824,6 +8837,7 @@ function rProjPayment(){
     </div>`:`<div style="font-size:12px;color:var(--t3);margin-bottom:14px">${curM} の${title}なし</div>`}`;
   };
   return`${secTitle('💳 編集費用の支払い')}
+<div style="font-size:12px;color:var(--t2);line-height:1.65;margin:-6px 0 12px">編集者への振込が完了したら、対象行の「支払済み」を押してください。支払予定日は変更せず、実際に支払った日を別に保存します。</div>
 <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
   <select style="width:160px" onchange="window._payMonth=this.value;render()">
     ${months.map(m=>`<option value="${m}" ${m===curM?'selected':''}>${m}</option>`).join('')}
@@ -8831,11 +8845,12 @@ function rProjPayment(){
   <span style="font-size:18px;font-weight:700;color:var(--amber)">支払合計 ¥${total.toLocaleString()}</span>
 </div>
 ${entries.length?`<div class="card" style="margin-bottom:14px;display:flex;gap:20px;flex-wrap:wrap">
-  <div><div style="font-size:11px;color:var(--t2)">入金済み案件</div><div style="font-size:16px;font-weight:700;color:var(--green)">${paidEntries.length}件</div></div>
-  <div><div style="font-size:11px;color:var(--t2)">入金待ち案件</div><div style="font-size:16px;font-weight:700;color:${unpaidEntries.length?'var(--amber)':'var(--t2)'}">${unpaidEntries.length}件</div></div>
+  <div><div style="font-size:11px;color:var(--t2)">支払済み</div><div style="font-size:16px;font-weight:700;color:var(--green)">${paidEntries.length}件 ／ ¥${paidTotal.toLocaleString()}</div></div>
+  <div><div style="font-size:11px;color:var(--t2)">未払い</div><div style="font-size:16px;font-weight:700;color:${unpaidEntries.length?'var(--amber)':'var(--t2)'}">${unpaidEntries.length}件 ／ ¥${unpaidTotal.toLocaleString()}</div></div>
 </div>`:''}
 ${blockedEntries.length?`<div class="card notice warn" style="margin-bottom:14px"><b>支払先を確定できない案件が ${blockedEntries.length}件あります</b><div style="font-size:14px;line-height:1.65;color:var(--t2);margin-top:4px">合計 ¥${blockedTotal.toLocaleString()} は誤送金を防ぐため、支払先の設定が完了するまで保留します。外部編集者の「所属・契約区分」で担当ディレクターを確認してください。</div></div>`:''}
 ${Object.entries(byWorker).length?Object.entries(byWorker).map(([wid,es])=>{
+  es.sort((a,b)=>Number(!!a.workerPaidAt)-Number(!!b.workerPaidAt)||String(a.payoutDate||'').localeCompare(String(b.payoutDate||'')));
   const w=S.workers.find(w=>w.id===wid);
   const wTotal=es.reduce((s,e)=>s+e.workerPay,0);
   const byParent=es.reduce((m,e)=>{(m[e.jobId]=m[e.jobId]||[]).push(e);return m;},{});
@@ -8847,12 +8862,20 @@ ${Object.entries(byWorker).length?Object.entries(byWorker).map(([wid,es])=>{
       return`<div class="payment-row" style="flex-wrap:wrap;gap:4px">
         <span class="pmt-worker">${esc(e.label)}<span style="display:block;font-size:11px;color:var(--t2);margin-top:2px">作業担当：${esc(_paymentWorkerName(e.assigneeWorkerId))}${e.blocked?` ／ ${esc(e.blockReason)}`:''}</span></span>
         <span class="pmt-amount">¥${e.workerPay.toLocaleString()}</span>
-        <span style="font-size:11px;color:var(--t2)">${e.payoutDate}</span>
+        <span style="font-size:11px;color:var(--t2)">支払予定 ${e.payoutDate}</span>
+        ${e.workerPaidAt
+          ?`<span class="badge bg" style="font-size:10px">✅ 支払済み ${e.workerPaidAt}</span>`
+          :`<span class="badge ba" style="font-size:10px">⏳ 未払い</span>`
+        }
         ${isClientPaid
           ?`<span class="badge bg" style="font-size:10px">💰 入金済</span>`
           :`<span class="badge ba" style="font-size:10px">⏳ 入金待ち</span>`
         }
         <div style="display:flex;gap:4px">
+          ${e.blocked&&!e.workerPaidAt
+            ?`<button class="btn btn-g btn-xs" disabled title="支払先を確定してください">支払先確認待ち</button>`
+            :`<button class="btn btn-g btn-xs" style="color:${e.workerPaidAt?'var(--t2)':'var(--green)'}" aria-label="${esc(e.label)}を${e.workerPaidAt?'未払いに戻す':'支払済みにする'}" onclick="${esc(`toggleWorkerPaymentPaid(${JSON.stringify(String(e.jobId))},${JSON.stringify(String(e.subtaskId||''))},${e.subtaskIndex})`)}">${e.workerPaidAt?'未払いに戻す':'支払済み'}</button>`
+          }
           ${!isClientPaid?`<button class="btn btn-g btn-xs" style="color:var(--green)" onclick="markJobPaid('${e.jobId}')">💰 入金済みにする</button>`:''}
           <button class="btn btn-g btn-xs" onclick="openJobModal('${e.jobId}')">詳細</button>
         </div>
@@ -13875,7 +13898,7 @@ function openJobModal(id,preStatus,preClientId){
     <input type="date" id="j-payin" value="${j?.paymentDate||''}" style="width:100%">
     <div style="font-size:10px;color:var(--t3);margin-top:3px">入金が予定される日付。入れても入金済みにはなりません（「💰 利益」タブの月分けに使います）。</div>
   </div>
-  <div class="fg"><div class="fl">支払日</div><input type="date" id="j-payout" value="${j?.payoutDate||''}"></div>
+  <div class="fg"><div class="fl">支払予定日</div><input type="date" id="j-payout" value="${j?.payoutDate||''}"></div>
 </div>
 <div class="fg"><div class="fl">入金状態</div>
   <input type="hidden" id="j-paid-val" value="${j?.paidAt||''}">
@@ -14111,7 +14134,7 @@ function mkSubRow(s,ph,bk,originalIndex=-1,financeLocked=false){
 	    <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">請求書提出日</div><input class="j-sub-invoice" type="date" value="${s.invoiceDate||''}" style="font-size:12px;padding:4px 6px"></div>
 	    <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">支払期日</div><input class="j-sub-due" type="date" value="${s.dueDate||''}" style="font-size:12px;padding:4px 6px"></div>
 	    <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">入金予定日</div><input class="j-sub-payment" type="date" value="${s.paymentDate||''}" style="font-size:12px;padding:4px 6px"></div>
-	    <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">支払日</div><input class="j-sub-payout" type="date" value="${s.payoutDate||''}" style="font-size:12px;padding:4px 6px"></div>
+	    <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">支払予定日</div><input class="j-sub-payout" type="date" value="${s.payoutDate||''}" style="font-size:12px;padding:4px 6px"></div>
 	  </div>
 	  <div class="frow" style="margin-top:8px">
 	    <div class="fg"><div class="fl">この子案件だけの台本・依頼URL（任意）</div><input class="j-sub-request" type="url" inputmode="url" maxlength="2000" value="${esc(s.requestUrl||'')}" placeholder="空欄なら親案件の共通URLを使用"></div>
@@ -17893,7 +17916,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260831-09';
+const APP_VERSION='20260831-10';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -17969,12 +17992,12 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServe
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
 <script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
-<script src="./editor-push.js?v=20260831-09"></script>
-<script src="./bulletin.js?v=20260831-09"></script>
-<script src="./direct-messages.js?v=20260831-09"></script>
+<script src="./editor-push.js?v=20260831-10"></script>
+<script src="./bulletin.js?v=20260831-10"></script>
+<script src="./direct-messages.js?v=20260831-10"></script>
 <script>
   try{if(V==='directmessages')render();else renderNav();}catch(error){console.warn('owner dm init',error);}
 </script>
-<script src="./manager-features.js?v=20260831-09"></script>
+<script src="./manager-features.js?v=20260831-10"></script>
 </body>
 </html>
