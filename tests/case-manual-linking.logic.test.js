@@ -42,7 +42,10 @@ test('rules cap manual references and caution text on board and portal cases',()
   assert.match(rules,/validCaseManualLinks\(request\.resource\.data\)/);
   const ownerUpdate=rules.slice(rules.indexOf('allow update: if owner()',rules.indexOf('match /editor_jobs/{jobId}')),rules.indexOf('allow delete: if false',rules.indexOf('match /editor_jobs/{jobId}')));
   assert.match(ownerUpdate,/'manualIds','parentManualIds','caution','parentCaution'/);
-  assert.match(ownerUpdate,/validCaseManualLinks\(request\.resource\.data\)/);
+  assert.match(ownerUpdate,/validManagerJobShapeUpdate\(request\.resource\.data\)/);
+  const managerShape=rules.match(/function validManagerJobShapeUpdate\(data\) \{([\s\S]*?)\n    \}/)?.[1]||'';
+  assert.match(managerShape,/'manualIds','parentManualIds','caution','parentCaution'/);
+  assert.match(managerShape,/validCaseManualLinks\(data\)/);
 });
 
 test('legacy parent and child editors preserve linked manuals and highlight cautions before notes',()=>{

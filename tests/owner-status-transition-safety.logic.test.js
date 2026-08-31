@@ -48,6 +48,11 @@ test('portal job administration displays status only and rejects tampered raw st
 });
 
 test('linked parent subcases expose only current valid workflow actions inline', () => {
+  assert.match(index, /function _canManagePortalWorkflow\(job\)\{/);
+  assert.match(index, /if\(_isActualOwner\(\)\)return FB_USER\?\.emailVerified===true/);
+  assert.match(index, /return hasAppRole\('動画編集ディレクター'\)/);
+  assert.match(index, /String\(job\.directorUid\)===String\(FB_USER\?\.uid\|\|''\)/);
+  assert.match(index, /if\(!_canManagePortalWorkflow\(j\)\)return toast\('この案件の進捗を変更する権限がありません','err'\)/);
   assert.match(index, /function _portalWorkflowActionsForJob\(job\)\{/);
   assert.match(index, /stage==='director_review'\)return\[\['directorRevision','修正指示（修正中）'\],\['directorApprove','D確認OKにする'\]\]/);
   assert.match(index, /stage==='client_submission'\)return\[\['clientSubmitted','先方確認中にする'\]\]/);
@@ -64,6 +69,7 @@ test('linked parent subcases expose only current valid workflow actions inline',
   assert.match(index, /byRole:_isActualOwner\(\)\?'owner':'director'/);
   assert.match(index, /function _portalWorkflowSaveErrorMessage\(error\)/);
   assert.match(index, /await batch\.commit\(\);/);
+  assert.match(index, /batch\.set\(event,\{\.\.\.eventData,at:firebase\.firestore\.FieldValue\.serverTimestamp\(\)\}\)/);
   assert.match(index, /workflow legacy projection/);
   assert.match(index, /は保存済みです。社内案件一覧への反映は保留です。画面を再読み込みしてください/);
   assert.ok((index.match(/PORTAL_WORKFLOW_ACTION_PENDING\.delete\(pendingKey\);/g) || []).length >= 2);

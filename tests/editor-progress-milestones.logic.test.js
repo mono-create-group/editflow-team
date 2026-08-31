@@ -46,5 +46,14 @@ test('Firestore accepts editor milestones and protects manager-owned review stat
   }
   assert.match(rules, /request\.resource\.data\.get\('lastProgressChangedByUid', uid\) == uid/);
   assert.match(rules, /request\.resource\.data\.get\('lastProgressChangedByRole', '担当編集者'\) == '担当編集者'/);
-  assert.equal((rules.match(/!\(request\.resource\.data\.status in \['初稿提出済み','修正稿提出済み','D確認OK','先方確認中','完了'\]\)/g) || []).length, 2);
+  const controlled = rules.match(/function workflowControlledStatus\(status\) \{([\s\S]*?)\n    \}/)?.[1] || '';
+  for (const status of ['初稿提出済み', '修正稿提出済み', 'D確認OK', '先方確認中', '完了']) {
+    assert.match(controlled, new RegExp(`'${status}'`));
+  }
+  const jobsStart = rules.indexOf('match /editor_jobs/{jobId}');
+  const directorStart = rules.indexOf('allow update: if directorFor(uid)', jobsStart);
+  const ownerStart = rules.indexOf('allow update: if owner()', directorStart);
+  const deleteStart = rules.indexOf('// Legacy-synchronised portal rows', ownerStart);
+  assert.equal((rules.slice(directorStart, ownerStart).match(/validManagerReviewTransition\(\)/g) || []).length, 1);
+  assert.equal((rules.slice(ownerStart, deleteStart).match(/validManagerReviewTransition\(\)/g) || []).length, 1);
 });

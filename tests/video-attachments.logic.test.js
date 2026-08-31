@@ -88,7 +88,10 @@ test('Firestore limits attachment writes to portal managers while editors remain
   assert.doesNotMatch(editorBlock, /'attachments'/);
   const managerBlock = rules.slice(rules.indexOf('allow update: if directorFor(uid)'), rules.indexOf('allow delete: if false', rules.indexOf('allow update: if directorFor(uid)')));
   assert.match(managerBlock, /'workflow','progressEvents','attachments'/);
-  assert.match(managerBlock, /validAttachments\(request\.resource\.data\)/);
+  assert.match(managerBlock, /validManagerJobShapeUpdate\(request\.resource\.data\)/);
+  const managerShape=rules.match(/function validManagerJobShapeUpdate\(data\) \{([\s\S]*?)\n    \}/)?.[1]||'';
+  assert.match(managerShape,/'attachments'/);
+  assert.match(managerShape,/validAttachments\(data\)/);
   const createBlock = rules.slice(rules.indexOf('allow create: if editor(uid)'), rules.indexOf('// One-time owner migration'));
   assert.match(createBlock, /'parentJobId','parentJobTitle','attachments'/);
   assert.match(createBlock, /validAttachments\(request\.resource\.data\)/);

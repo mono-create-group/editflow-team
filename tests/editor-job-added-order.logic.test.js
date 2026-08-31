@@ -73,5 +73,8 @@ test('Firestore accepts only a bounded integer addition index', () => {
   assert.match(rules, /function validSubtaskIndex\(data\)/);
   assert.match(rules, /data\.subtaskIndex is int && data\.subtaskIndex >= 0 && data\.subtaskIndex < 500/);
   assert.ok((rules.match(/'subtaskIndex'/g) || []).length >= 4);
-  assert.ok((rules.match(/validSubtaskIndex\(request\.resource\.data\)/g) || []).length >= 4);
+  assert.ok((rules.match(/validSubtaskIndex\(request\.resource\.data\)/g) || []).length >= 3);
+  const managerShape=rules.match(/function validManagerJobShapeUpdate\(data\) \{([\s\S]*?)\n    \}/)?.[1]||'';
+  assert.match(managerShape,/'subtaskIndex'/);
+  assert.match(managerShape,/validSubtaskIndex\(data\)/);
 });

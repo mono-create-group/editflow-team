@@ -33,7 +33,10 @@ test('owner performance records are owner-only and daily check includes immutabl
 test('dispatch completion cannot use the manager completion route',()=>{
   assert.match(rules,/function managerMayCompleteJob\(\)/);
   assert.match(rules,/businessType', ''\) != 'dispatch'/);
-  const manager=rules.match(/function validManagerReviewTransition\(\) \{([\s\S]*?)\n    \}/)?.[1]||'';
+  const manager=[
+    rules.match(/function validCurrentManagerReviewTransition\(\) \{([\s\S]*?)\n    \}/)?.[1]||'',
+    rules.match(/function validLegacyManagerReviewTransition\(\) \{([\s\S]*?)\n    \}/)?.[1]||'',
+  ].join('\n');
   assert.equal((manager.match(/managerMayCompleteJob\(\)/g)||[]).length,2);
   assert.match(manager,/resource\.data\.status in \['先方確認中', '確認待ち'\][\s\S]*?managerMayCompleteJob\(\)[\s\S]*?reviewStage\(request\.resource\.data\) == 'delivered'[\s\S]*?client_approved_completed/);
   assert.match(manager,/reviewStage\(resource\.data\) == 'client_review'[\s\S]*?managerMayCompleteJob\(\)[\s\S]*?reviewStage\(request\.resource\.data\) == 'delivered'[\s\S]*?client_approved_completed/);
