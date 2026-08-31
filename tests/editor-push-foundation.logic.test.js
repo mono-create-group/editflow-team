@@ -77,6 +77,13 @@ test('notification taps open the matching DM page before the unread snapshot is 
   const editor = fs.readFileSync(path.join(root, 'editor.html'), 'utf8');
   assert.match(owner, /new URLSearchParams\(location\.search\)\.get\('notification'\)==='1'\?'directmessages'/);
   assert.match(editor, /view=PAGE_PARAMS\.get\('notification'\)==='1'\?'dm':'dashboard'/);
+  const renderStart = owner.indexOf('function render(){');
+  const authWait = owner.indexOf('if(!_authSettled){', renderStart);
+  const accessWait = owner.indexOf('if(FB_USER&&!ACCESS_RESOLVED)', renderStart);
+  const roleGuard = owner.indexOf('if(!isViewAllowed(V))', renderStart);
+  assert.ok(renderStart >= 0 && authWait > renderStart && authWait < accessWait && authWait < roleGuard);
+  const authWaitEnd = owner.indexOf('if(FB_USER&&!ACCESS_RESOLVED)', authWait);
+  assert.doesNotMatch(owner.slice(authWait, authWaitEnd), /sessionStorage\.setItem\('ef_team_view'/);
 });
 
 test('desktop browsers can register notifications while iPhone still requires a Home Screen app', () => {

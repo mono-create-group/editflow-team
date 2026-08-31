@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260831-03"></script>
+<script src="./billing-terms.js?v=20260831-04"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -120,6 +120,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 .video-progress-board{display:grid;gap:9px}.video-progress-head,.video-progress-row{display:grid;grid-template-columns:minmax(220px,1.6fr) repeat(5,minmax(100px,.72fr));gap:8px;align-items:stretch}.video-progress-head{padding:0 10px;color:var(--t2);font-size:14px;font-weight:850;text-align:center}.video-progress-head span:first-child{text-align:left}.video-progress-row{padding:10px;background:var(--card);border:1.5px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow-sm)}
 .video-progress-info{display:flex;min-width:0;min-height:72px;flex-direction:column;align-items:flex-start;justify-content:center;text-align:left;padding:9px 10px;border-radius:9px;background:transparent}.video-progress-info:hover,.video-progress-info:focus-visible{background:var(--pdim)}.video-progress-info:focus-visible{outline:3px solid var(--purple);outline-offset:2px}.video-progress-info b{display:block;font-size:14px;line-height:1.45;overflow-wrap:anywhere}.video-progress-info span{display:block;margin-top:4px;color:var(--t2);font-size:14px;line-height:1.45}.video-progress-info .video-progress-current{display:inline-flex;margin-top:7px;padding:5px 9px;color:#4c1d95;font-size:14px;font-weight:900;border:1.5px solid #7c3aed;border-radius:999px;background:#ede9fe}.video-progress-info .video-progress-next{color:#334155;font-weight:800}.video-progress-parent-state{display:inline-block;max-width:100%;color:#4c1d95;font-weight:900;overflow-wrap:anywhere}.video-progress-stage{display:flex;min-width:0;min-height:72px;align-items:center;justify-content:center;gap:6px;padding:10px 8px;border:1.5px solid var(--border);border-radius:9px;background:var(--card2);font-size:14px;font-weight:850;text-align:center}.video-progress-stage.done{border-color:#6ee7b7;background:#ecfdf5;color:#065f46}.video-progress-stage.active{border:2px solid #7c3aed;background:#ede9fe;color:#4c1d95;box-shadow:inset 0 0 0 1px rgba(124,58,237,.12)}.video-progress-stage.waiting{border-color:#cbd5e1;background:#f8fafc;color:#64748b}.video-progress-stage.cancelled{color:var(--t2);text-decoration:line-through}
 .video-breadcrumb{font-size:14px;color:var(--t3);margin-bottom:7px}.video-role-note{font-size:14px;color:var(--t2);margin-top:3px}.video-toolbar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}.video-toolbar [role=tab]{min-height:44px}.video-action-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:10px}.video-action-metric{display:block;text-align:left;min-height:78px;padding:12px;border:1.5px solid var(--border);border-left:4px solid var(--metric-color,var(--purple));border-radius:var(--r);background:var(--card);box-shadow:var(--shadow-sm)}.video-action-metric:hover,.video-action-metric:focus-visible{background:var(--card2);outline:2px solid var(--purple);outline-offset:2px}.video-action-metric small{display:block;color:var(--t2);font-size:14px;font-weight:700}.video-action-metric b{display:block;font-size:24px;line-height:1.1;margin-top:3px;font-variant-numeric:tabular-nums}.video-metrics-lite{display:flex;gap:12px;flex-wrap:wrap;padding:8px 2px;color:var(--t2);font-size:14px}.video-case-summary,.video-card-dates{display:flex;flex-wrap:wrap;gap:7px 10px;margin-top:7px;font-size:14px;color:var(--t2)}.video-case-summary span,.video-card-dates span{padding:4px 7px;border-radius:6px;background:var(--card2)}.video-case-summary b,.video-card-dates b{color:var(--text)}.video-mobile-phase{display:none}
+.video-submission-nav-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;margin-left:auto;padding:0 6px;border-radius:999px;background:#dc2626;color:#fff;font-size:11px;font-weight:900}.video-submission-list{display:grid;gap:10px}.video-submission-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:16px;border-left:5px solid var(--purple)}.video-submission-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.video-submission-title{font-size:16px;line-height:1.45;overflow-wrap:anywhere}.video-submission-meta{display:flex;gap:6px 12px;flex-wrap:wrap;margin-top:8px;color:var(--t2);font-size:13px;line-height:1.55}.video-submission-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}.video-submission-missing{display:inline-flex;align-items:center;min-height:36px;padding:6px 10px;border:1px solid #fecaca;border-radius:8px;background:#fef2f2;color:#b91c1c;font-size:12px;font-weight:800}
 @media(min-width:701px) and (max-width:820px){.video-progress-head{display:none}.video-progress-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.video-progress-info{grid-column:1/-1;padding:5px}.video-progress-stage{justify-content:flex-start;text-align:left}.video-progress-stage::before{content:attr(data-label) " ";color:var(--t3);font-weight:700}}
 @media(max-width:700px){
   .video-job-main{padding:13px 12px}
@@ -134,6 +135,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
   .video-attachment-row{grid-template-columns:1fr auto}.video-attachment-row .video-attachment-title,.video-attachment-row .video-attachment-url{grid-column:1/-1}.video-material-link b{white-space:normal;overflow-wrap:anywhere}
   .video-progress-head{display:none}.video-progress-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.video-progress-info{grid-column:1/-1;padding:5px}.video-progress-stage{justify-content:flex-start;text-align:left}.video-progress-stage::before{content:attr(data-label) " ";color:var(--t3);font-weight:700}
   .video-action-metrics{grid-template-columns:1fr}.video-action-metric{min-height:64px}.video-metrics-lite{gap:7px 12px}.video-board-desktop{display:none}.video-mobile-phase{display:grid;gap:7px}.video-mobile-phase details{border:1px solid var(--border);border-radius:var(--r);background:var(--card);padding:10px}.video-mobile-phase summary{display:flex;justify-content:space-between;gap:8px;cursor:pointer;font-weight:800;list-style:none}.video-mobile-phase summary::-webkit-details-marker{display:none}
+  .video-submission-card{grid-template-columns:1fr;padding:13px}.video-submission-actions{justify-content:flex-start}.video-submission-actions .btn,.video-submission-actions a{flex:1;justify-content:center;min-height:44px}
 }
 
 /* ─── BADGES ─── */
@@ -995,7 +997,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260831-03">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260831-04">
 </head>
 <body class="owner-yellow-ui">
 
@@ -1065,6 +1067,7 @@ const BUILTIN_VIEWS=[
   {id:'guide',label:'使い方ガイド',icon:'📘'},
   {id:'editorportal',label:'編集者本人ポータル',icon:'👤'},
   {id:'videoedit',label:'編集代行案件',icon:'🎥'},
+  {id:'videosubmissions',label:'提出確認',icon:'📨'},
   {id:'videohaken',label:'編集者派遣案件',icon:'🤝'},
   {id:'videoclients',label:'クライアント・アカウント管理',icon:'🏷️'},
   {id:'videoschedules',label:'編集可能スケジュール',icon:'🗓️'},
@@ -3675,6 +3678,13 @@ function render(){
   const previousBoardScrollLeft=_captureViewBoardScroll();
   _renderEpoch+=1;
   try{
+    // 認証確定前はURLで指定された遷移先を権限ガードで上書きしない。
+    // 通知タップの directmessages などは、認証確定後の render() で正式に判定する。
+    if(!_authSettled){
+      document.getElementById('view').innerHTML=`<div class="empty"><div class="empty-title">読み込み中です</div></div>`;
+      const side=document.getElementById('sidebar');if(side)side.style.display='none';
+      return;
+    }
     if(FB_USER&&!ACCESS_RESOLVED){
       document.getElementById('view').innerHTML=`<div class="empty"><div class="empty-title">アクセス権を確認中です</div></div>`;
       const side=document.getElementById('sidebar');if(side)side.style.display='none';
@@ -3728,7 +3738,7 @@ function render(){
     // 役割ガード(2026-07-23): 営業スタッフは「営業」「情報」タブ以外を開けない。許可外Vは営業リストへ退避。
     if(!isViewAllowed(V)){V=(BUILTIN_VIEWS.find(x=>isViewAllowed(x.id))?.id)||'videoedit';sessionStorage.setItem('ef_team_view',V);}
     if(V==='kpi'){V='goals';} // KPI管理は目標・KPI統合ページにリダイレクト
-    const views={dashboard:rDash,tasks:rTasks,guide:rGuide,editorportal:rEditorPortal,projects:rProjects,videoedit:rVideoEditProjects,videohaken:rVideoHakenProjects,videoclients:rVideoClients,videoschedules:rVideoSchedules,videomanuals:rVideoManuals,videoinvoices:rVideoInvoices,directmessages:rOwnerDirectMessages,videosuggestions:rVideoSuggestions,hpprojects:rHpProjects,pipeline:rPipeline,teamgoals:rTeamGoals,posts:rPosts,docs:rDocs,workers:rWorkers,habits:rHabits,goals:rGoals,journal:rJournal,revenue:rRevenue,memo:rMemo,settings:rSettings,customize:rCustomize,aichat:rAIChat,fitness:rFitness,kpi:rKpi,bizboard:rBizBoard,bizunits:rBizUnits,bizinfo:rBizInfo,minutes:rMinutes,salesleads:rSalesLeads,salesrank:rSalesRank,igaccounts:rIgAccounts,hpfee:rHpFee,salessites:rSalesSites,inquiries:rInquiries,templates:rTemplates,crm:rCrm,accounts:rAccounts};
+    const views={dashboard:rDash,tasks:rTasks,guide:rGuide,editorportal:rEditorPortal,projects:rProjects,videoedit:rVideoEditProjects,videosubmissions:rVideoSubmissions,videohaken:rVideoHakenProjects,videoclients:rVideoClients,videoschedules:rVideoSchedules,videomanuals:rVideoManuals,videoinvoices:rVideoInvoices,directmessages:rOwnerDirectMessages,videosuggestions:rVideoSuggestions,hpprojects:rHpProjects,pipeline:rPipeline,teamgoals:rTeamGoals,posts:rPosts,docs:rDocs,workers:rWorkers,habits:rHabits,goals:rGoals,journal:rJournal,revenue:rRevenue,memo:rMemo,settings:rSettings,customize:rCustomize,aichat:rAIChat,fitness:rFitness,kpi:rKpi,bizboard:rBizBoard,bizunits:rBizUnits,bizinfo:rBizInfo,minutes:rMinutes,salesleads:rSalesLeads,salesrank:rSalesRank,igaccounts:rIgAccounts,hpfee:rHpFee,salessites:rSalesSites,inquiries:rInquiries,templates:rTemplates,crm:rCrm,accounts:rAccounts};
     let html;
     if(V.startsWith('doc_')){
       // Googleドキュメント風エディタ(teamPages.htmlを編集)。BUILTIN_VIEWSガードを迂回する。
@@ -6991,7 +7001,7 @@ function _guideRoleLabel(){
   return labels.join(' / ')||'承認済みメンバー';
 }
 const GUIDE_PAGE_GROUPS=[
-  {label:'動画編集事業',ids:['editorportal','videoedit','videohaken','videoclients','workers','videoschedules','videomanuals','videoinvoices','directmessages','videosuggestions']},
+  {label:'動画編集事業',ids:['editorportal','videoedit','videosubmissions','videohaken','videoclients','workers','videoschedules','videomanuals','videoinvoices','directmessages','videosuggestions']},
   {label:'ホームページ事業',ids:['hpprojects','hpfee']},
   {label:'営業・顧客',ids:['salesleads','pipeline','inquiries','crm']},
   {label:'経営',ids:['bizboard']},
@@ -7001,6 +7011,7 @@ const GUIDE_PAGE_GROUPS=[
 const GUIDE_PAGE_DEFS={
   editorportal:{purpose:'編集者が、自分の案件を受け、初稿・修正稿の提出、予定の登録、請求書の作成をする画面です。',steps:['左メニューの「編集者本人ポータル」を開きます。','「編集者本人ポータルを開く」を押して、本人用画面を開きます。','「案件を探す」で募集案件を受け、「担当案件」で初稿または修正稿を提出します。','予定、マニュアル、匿名目安箱、請求書、登録情報もこの画面から開けます。'],access:'オーナー、動画編集ディレクター。動画編集者はログイン後に本人用画面を開けます。'},
   videoedit:{purpose:'mono.createがクライアントから受けた編集代行案件を、募集から完了まで管理する画面です。',steps:['「＋ 編集代行案件」で親案件と子案件を登録し、必要に応じて編集者の募集を開始します。','編集者が「この案件を受ける」を押したら、担当者・編集者初稿・クライアント初稿・納期（予定）を確認します。','親案件の「サブ案件」を開き、各動画の担当者・初稿日・期限・状況を確認します。','編集者は編集開始・初稿提出・修正稿提出を記録します。ディレクターまたはオーナーは修正指示・D確認OK・先方確認中を更新し、クライアントOK後に完了へ進めます。完了日が未記録の案件には報酬が発生しません。'],access:'オーナー、動画編集ディレクター、営業など、アクセスを許可された社内メンバー。'},
+  videosubmissions:{purpose:'編集者から届いた未確認の初稿・修正稿と提出リンクを、D確認待ちの一覧として確認する画面です。',steps:['左メニューの「提出確認」を開きます。','新しい順に案件・クライアント・担当編集者・稿種別を確認します。','「提出リンクを開く」で提出物を確認します。','「案件・D確認を開く」から、D確認OKまたは理由付きの修正指示を記録します。'],access:'オーナー、動画編集ディレクター'},
   videohaken:{purpose:'編集者が派遣先から直接受けた案件を登録し、進み具合を管理する画面です。',steps:['編集者は編集者本人ポータルの「担当案件」から、「9月分」などの親案件と各動画の子案件を登録します。','オーナー・ディレクターは、各子案件の担当者・編集者初稿・クライアント初稿・納期（予定）・進み具合を確認します。','親案件の「サブ案件」を開き、各動画の担当者・初稿日・期限・状況を確認します。','編集者は編集開始・初稿提出・修正稿提出を記録します。ディレクターまたはオーナーは修正指示・D確認OK・先方確認中を更新し、クライアントOK後に完了へ進めます。完了日が未記録の案件には報酬が発生しません。'],access:'オーナー、動画編集ディレクター、営業など、アクセスを許可された社内メンバー。'},
   videoclients:{purpose:'既存クライアントと、そのクライアントから依頼されるアカウントを分けて管理します。',steps:['既存クライアントを選び、必要なアカウント名を追加します。','案件を担当する編集者へ、必要なクライアント・アカウントだけ共有します。','名称や契約情報が変わったときだけ制作台帳を更新します。'],access:'オーナー、動画編集ディレクター'},
   workers:{purpose:'編集者の採用状況、スキル、担当案件、契約区分を確認するページです。',steps:['編集者名を開き、採用状況・スキル・最低依頼料を確認します。','ログインを許可する編集者には、担当ディレクターと契約区分を設定します。','担当中案件を確認し、割り当てや進捗に漏れがないか確認します。'],access:'オーナー、動画編集ディレクター'},
@@ -7027,6 +7038,7 @@ const GUIDE_PAGE_DEFS={
 const GUIDE_PAGE_CHECKS={
   editorportal:'案件を探す・担当案件・スケジュール・マニュアル・匿名目安箱・請求書・登録情報のメニューが表示される。',
   videoedit:'掲載後は「案件を探す」に表示され、受託後は担当編集者の「担当案件」とこの画面に親案件・サブ案件が表示される。',
+  videosubmissions:'D確認待ちの初稿・修正稿だけが表示され、D確認OKまたは修正指示を確定すると一覧から外れる。',
   videohaken:'編集者が登録した親案件とサブ案件の担当者・期限・最新ステータス・証跡URLが表示される。',
   videoclients:'クライアントの下にアカウント名が表示され、共有先の編集者名も一覧で確認できる。',
   workers:'編集者の契約区分、担当ディレクター、ログイン権限が正しく表示される。',
@@ -7053,6 +7065,7 @@ const GUIDE_PAGE_CHECKS={
 const GUIDE_PAGE_TIPS={
   editorportal:'ここで扱う案件・予定・請求は、ログインしている本人分です。ディレクターの管理対象案件は「編集代行案件」「編集者派遣案件」で確認します。',
   videoedit:'この画面はmono.create受託案件専用です。「確認待ち」と「修正中」は期限超過に数えません。',
+  videosubmissions:'提出リンクを開いただけでは確認済みになりません。内容を判断した後、必ずD確認OKまたは修正指示を記録します。',
   videohaken:'この画面は派遣先から編集者へ直接来た案件専用です。編集代行の募集案件は入れません。',
   videoclients:'クライアント名とアカウント名は別の項目です。例：クライアント「大塚周平さん」、アカウント「YouTube A」。',
 	  workers:'外部編集者にはクライアント単価、利益、mono.createから担当ディレクターへの依頼単価・請求額を見せません。',
@@ -7272,7 +7285,7 @@ function rEditorPortal(){
   </div>`;
 }
 function rGuide(){
-  const canVideoEdit=isViewAllowed('videoedit'),canVideoHaken=isViewAllowed('videohaken'),canVideo=canVideoEdit||canVideoHaken,canWorkers=isViewAllowed('workers'),canVideoClients=isViewAllowed('videoclients'),canVideoSchedules=isViewAllowed('videoschedules'),canVideoManuals=isViewAllowed('videomanuals'),canVideoInvoices=isViewAllowed('videoinvoices'),canHp=isViewAllowed('hpprojects'),canHpFee=isViewAllowed('hpfee'),canSales=isViewAllowed('salesleads'),canDocs=isViewAllowed('docs');
+  const canVideoEdit=isViewAllowed('videoedit'),canVideoSubmissions=isViewAllowed('videosubmissions'),canVideoHaken=isViewAllowed('videohaken'),canVideo=canVideoEdit||canVideoHaken,canWorkers=isViewAllowed('workers'),canVideoClients=isViewAllowed('videoclients'),canVideoSchedules=isViewAllowed('videoschedules'),canVideoManuals=isViewAllowed('videomanuals'),canVideoInvoices=isViewAllowed('videoinvoices'),canHp=isViewAllowed('hpprojects'),canHpFee=isViewAllowed('hpfee'),canSales=isViewAllowed('salesleads'),canDocs=isViewAllowed('docs');
   return`<div class="guide-hero">
     <div class="guide-kicker">MONO.CREATE WORK GUIDE</div>
     <div class="guide-title">初めてでも、することがすぐ分かる使い方ガイド</div>
@@ -7297,7 +7310,7 @@ function rGuide(){
   </div>
   <div class="guide-section-title">やりたいことから開く</div>
   <div class="guide-business-grid">
-    ${canVideo?`<section class="guide-business video"><h2>動画編集事業</h2><p>編集代行と編集者派遣は、受注の流れが異なるため別画面で管理します。</p><ul><li>編集代行：mono.createが受けて編集者へ募集</li><li>編集者派遣：編集者が直接受けて登録</li><li>予定・マニュアル・請求は共通ページ</li></ul><div style="display:flex;gap:6px;flex-wrap:wrap">${canVideoEdit?`<button class="btn btn-p btn-sm" onclick="setV('videoedit')">編集代行案件</button>`:''}${canVideoHaken?`<button class="btn btn-p btn-sm" onclick="setV('videohaken')">編集者派遣案件</button>`:''}${canVideoClients?`<button class="btn btn-g btn-sm" onclick="setV('videoclients')">顧客・アカウント</button>`:''}${canWorkers?`<button class="btn btn-g btn-sm" onclick="setV('workers')">編集者</button>`:''}${canVideoSchedules?`<button class="btn btn-g btn-sm" onclick="setV('videoschedules')">予定</button>`:''}${canVideoManuals?`<button class="btn btn-g btn-sm" onclick="setV('videomanuals')">マニュアル</button>`:''}${canVideoInvoices?`<button class="btn btn-g btn-sm" onclick="setV('videoinvoices')">請求書</button>`:''}</div></section>`:''}
+    ${canVideo?`<section class="guide-business video"><h2>動画編集事業</h2><p>編集代行と編集者派遣は、受注の流れが異なるため別画面で管理します。</p><ul><li>編集代行：mono.createが受けて編集者へ募集</li><li>編集者派遣：編集者が直接受けて登録</li><li>予定・マニュアル・請求は共通ページ</li></ul><div style="display:flex;gap:6px;flex-wrap:wrap">${canVideoEdit?`<button class="btn btn-p btn-sm" onclick="setV('videoedit')">編集代行案件</button>`:''}${canVideoSubmissions?`<button class="btn btn-p btn-sm" onclick="setV('videosubmissions')">提出確認</button>`:''}${canVideoHaken?`<button class="btn btn-p btn-sm" onclick="setV('videohaken')">編集者派遣案件</button>`:''}${canVideoClients?`<button class="btn btn-g btn-sm" onclick="setV('videoclients')">顧客・アカウント</button>`:''}${canWorkers?`<button class="btn btn-g btn-sm" onclick="setV('workers')">編集者</button>`:''}${canVideoSchedules?`<button class="btn btn-g btn-sm" onclick="setV('videoschedules')">予定</button>`:''}${canVideoManuals?`<button class="btn btn-g btn-sm" onclick="setV('videomanuals')">マニュアル</button>`:''}${canVideoInvoices?`<button class="btn btn-g btn-sm" onclick="setV('videoinvoices')">請求書</button>`:''}</div></section>`:''}
     ${canHp?`<section class="guide-business hp"><h2>ホームページ事業</h2><p>HP制作の案件と、公開後の月額維持費を管理します。</p><ul><li>HP案件の制作工程</li><li>公開・検収・納品の確認</li><li>月額維持費の管理</li></ul><button class="btn btn-p btn-sm" onclick="setV('hpprojects')">HP案件を開く</button>${canHpFee?`<button class="btn btn-g btn-sm" style="margin-top:6px" onclick="setV('hpfee')">維持費を確認する</button>`:''}</section>`:''}
     ${canSales?`<section class="guide-business sales"><h2>営業・顧客</h2><p>見込み客から商談、契約後のクライアント情報まで管理します。</p><ul><li>見込み客の連絡状況</li><li>商談とお問い合わせ</li><li>クライアント情報</li></ul><button class="btn btn-p btn-sm" onclick="setV('salesleads')">営業リストを開く</button></section>`:''}
   </div>
@@ -7323,6 +7336,42 @@ function rVideoSchedules(){return rManagerVideoFeature('managerVideoSchedulesPag
 function rVideoManuals(){return rManagerVideoFeature('managerVideoManualsPage','マニュアル保管庫');}
 function rVideoInvoices(){return rManagerVideoFeature('managerVideoInvoicesPage','請求書');}
 function rVideoSuggestions(){return rManagerVideoFeature('managerVideoSuggestionsPage','匿名目安箱');}
+
+function _videoSubmissionEpoch(value){
+  if(value&&typeof value.toMillis==='function')return Number(value.toMillis())||0;
+  if(value&&Number.isFinite(Number(value.seconds)))return Number(value.seconds)*1000;
+  const numeric=Number(value);if(Number.isFinite(numeric)&&numeric>0)return numeric;
+  const parsed=Date.parse(String(value||''));return Number.isFinite(parsed)?parsed:0;
+}
+function _videoLatestSubmissionEvent(job,round){
+  const events=(Array.isArray(job?.progressEvents)?job.progressEvents:[]).filter(event=>event?.type==='editor_submitted');
+  const current=events.filter(event=>(Math.max(1,Number(event?.round)||1))===round);
+  const sorted=current.slice().sort((a,b)=>_videoSubmissionEpoch(a?.at)-_videoSubmissionEpoch(b?.at));
+  return sorted[sorted.length-1]||null;
+}
+function _videoSubmissionReviewItems(source=PORTAL_JOBS){
+  return(Array.isArray(source)?source:[]).filter(job=>{
+    const status=String(job?.status||'');
+    return ['初稿提出済み','修正稿提出済み'].includes(status)&&_videoWorkflow(job).stage==='director_review';
+  }).map(job=>{
+    const workflow=_videoWorkflow(job),event=_videoLatestSubmissionEvent(job,workflow.round),status=String(job.status||''),revision=status==='修正稿提出済み'||String(event?.status||'')==='修正稿提出済み'||workflow.round>1;
+    const evidenceUrl=_videoSafeUrl(event?.evidenceUrl||'')||_videoSafeUrl(job.evidenceUrl||''),submittedAt=_videoSubmissionEpoch(event?.at)||_videoSubmissionEpoch(job.updatedAt);
+    return{portalUid:String(job._portalUid||''),id:String(job.id||''),kind:revision?'修正稿':'初稿',round:workflow.round,title:String(job.title||'案件名未設定'),parentCaseName:String(job.parentCaseName||job.caseName||''),clientDisplay:String(job.clientDisplay||'クライアント未設定'),accountDisplay:String(job.accountDisplay||''),editorName:String(event?.byName||job.editorName||event?.byEmail||job.editorEmail||'担当編集者'),submittedAt,evidenceUrl,editorDraftDate:String(job.editorDraftDate||''),clientDraftDate:String(job.clientDraftDate||''),deadline:String(job.deliveryDate||job.deadline||'')};
+  }).sort((a,b)=>b.submittedAt-a.submittedAt||a.title.localeCompare(b.title,'ja'));
+}
+function _videoSubmissionTime(value){
+  if(!value)return'日時未記録';
+  try{return new Intl.DateTimeFormat('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(value));}catch(_){return'日時未記録';}
+}
+function rVideoSubmissions(){
+  if(!_videoCanEdit())return`<div class="empty"><div class="empty-title">提出確認を開く権限がありません</div></div>`;
+  const items=_videoSubmissionReviewItems();
+  const cards=items.map(item=>{
+    const openAction=`openPortalJobModal(${JSON.stringify(item.portalUid)},${JSON.stringify(item.id)})`,title=item.parentCaseName&&item.parentCaseName!==item.title?`${item.parentCaseName} / ${item.title}`:item.title,client=[item.clientDisplay,item.accountDisplay].filter(Boolean).join(' / ');
+    return`<article class="card video-submission-card"><div><div class="video-submission-head"><span class="badge ${item.kind==='修正稿'?'br':'bp'}">${esc(item.kind)}</span><span class="badge bk">第${Number(item.round)||1}回</span><b class="video-submission-title">${esc(title)}</b></div><div class="video-submission-meta"><span>クライアント <b>${esc(client)}</b></span><span>担当編集者 <b>${esc(item.editorName)}</b></span><span>提出日時 <b>${esc(_videoSubmissionTime(item.submittedAt))}</b></span><span>編集者初稿 <b>${esc(item.editorDraftDate||'未設定')}</b></span><span>クライアント初稿 <b>${esc(item.clientDraftDate||'未設定')}</b></span><span>納期（予定） <b>${esc(item.deadline||'未設定')}</b></span></div></div><div class="video-submission-actions">${item.evidenceUrl?`<a class="btn btn-p btn-sm" href="${esc(item.evidenceUrl)}" target="_blank" rel="noopener noreferrer">提出リンクを開く</a>`:'<span class="video-submission-missing">提出リンク未登録</span>'}<button class="btn btn-g btn-sm" type="button" onclick="${esc(openAction)}">案件・D確認を開く</button></div></article>`;
+  }).join('');
+  return`<div class="ph"><div><div class="ph-title">提出確認</div><div style="font-size:13px;color:var(--t2);margin-top:4px">編集者から提出され、まだD確認が確定していない初稿・修正稿です。</div></div><span class="badge ${items.length?'br':'bg'}">${items.length}件</span></div><div class="notice" style="margin-bottom:12px;box-shadow:none"><b>確認後は案件を開いて「D確認OK」または「修正指示」を記録してください。</b><div style="font-size:12px;color:var(--t2);margin-top:4px">判断を確定すると、この一覧から自動的に外れます。リンクを開いただけでは確認済みになりません。</div></div><div class="video-submission-list">${cards||'<div class="empty"><div class="empty-icon">✓</div><div class="empty-title">未確認の初稿・修正稿はありません</div></div>'}</div>`;
+}
 
 function _videoNotificationItems(biz=PBIZ){
   const items=[];
@@ -14576,6 +14625,7 @@ function ownerNavIcon(id){
     guide:'<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21.5z"></path><path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13v16h4.5a2.5 2.5 0 0 1 2.5 2.5z"></path>',
     editorportal:'<circle cx="12" cy="8" r="3"></circle><path d="M5 20a7 7 0 0 1 14 0"></path>',
     videoedit:'<rect x="3" y="6" width="13" height="12" rx="2"></rect><path d="m16 10 5-3v10l-5-3"></path>',
+    videosubmissions:'<path d="M4 5h16v14H4z"></path><path d="m4 7 8 6 8-6"></path><path d="M8 16h8"></path>',
     videoschedules:'<rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M8 3v4M16 3v4M3 10h18"></path>',
     videomanuals:'<path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M8 17h11M8 8h7M8 12h6"></path>',
     videoinvoices:'<path d="M6 3h9l4 4v14H6z"></path><path d="M15 3v5h5M9 13h6M9 17h6"></path>',
@@ -14601,7 +14651,7 @@ function ownerNavIcon(id){
 // ナビのカテゴリー分け(2026-07-10 会長指示)。開閉状態は端末localStorage記憶。設定/カスタマイズは従来どおり下部固定。
 const NAV_CATS=[
   {id:'start',label:'はじめに',views:['guide']},
-  {id:'video',label:'動画編集事業',views:['editorportal','videoedit','videohaken','videoclients','workers','videoschedules','videomanuals','videoinvoices','directmessages','videosuggestions']},
+  {id:'video',label:'動画編集事業',views:['editorportal','videoedit','videosubmissions','videohaken','videoclients','workers','videoschedules','videomanuals','videoinvoices','directmessages','videosuggestions']},
   {id:'hp',label:'ホームページ事業',views:['hpprojects','hpfee']},
   {id:'sales',label:'営業・顧客',views:['salesleads','pipeline','inquiries','crm']},
   {id:'mgmt',label:'経営',views:['bizboard']},
@@ -14631,7 +14681,7 @@ const ROLE_PREVIEW_DESCRIPTIONS={
   'SNSマーケター':'投稿管理、動画案件、クライアント、ドキュメント・議事録'
 };
 const ROLE_VIEW_ACCESS={
-  '動画編集ディレクター':['guide','editorportal','videoedit','videohaken','videoclients','workers','videoschedules','videomanuals','videoinvoices'],
+  '動画編集ディレクター':['guide','editorportal','videoedit','videosubmissions','videohaken','videoclients','workers','videoschedules','videomanuals','videoinvoices'],
   'AIコンサルタント':['guide','videoedit','videohaken','docs','minutes','bizinfo'],
   'AIエンジニア':['guide','videoedit','videohaken','docs','tasks','bizinfo'],
   'Webデザイナー':['guide','hpprojects','docs','tasks','hpfee'],
@@ -15089,7 +15139,8 @@ function renderNav(){
     const{label}=navMeta(c.id),icon=ownerNavIcon(c.id);
     const idx=cfg.indexOf(c);
     const unread=c.id==='directmessages'?ownerDmUnreadCount():0;
-    const badge=unread?`<span class="owner-dm-nav-badge" aria-label="未読DM ${unread}件">${unread>99?'99+':unread}</span>`:'';
+    const submissions=c.id==='videosubmissions'?_videoSubmissionReviewItems().length:0;
+    const badge=unread?`<span class="owner-dm-nav-badge" aria-label="未読DM ${unread}件">${unread>99?'99+':unread}</span>`:submissions?`<span class="video-submission-nav-badge" aria-label="D確認待ち ${submissions}件">${submissions>99?'99+':submissions}</span>`:'';
     if(draggable){
       return`<div class="nav-item${V===c.id?' active':''}" data-view="${c.id}"
         draggable="true"
@@ -17703,7 +17754,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260831-03';
+const APP_VERSION='20260831-04';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -17779,11 +17830,11 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServe
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
   </script>
 <script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
-<script src="./editor-push.js?v=20260831-03"></script>
-<script src="./direct-messages.js?v=20260831-03"></script>
+<script src="./editor-push.js?v=20260831-04"></script>
+<script src="./direct-messages.js?v=20260831-04"></script>
 <script>
   try{if(V==='directmessages')render();else renderNav();}catch(error){console.warn('owner dm init',error);}
 </script>
-<script src="./manager-features.js?v=20260831-03"></script>
+<script src="./manager-features.js?v=20260831-04"></script>
 </body>
 </html>
