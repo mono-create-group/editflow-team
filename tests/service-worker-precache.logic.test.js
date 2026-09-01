@@ -38,5 +38,18 @@ test('service worker retains its versioned cache and independent precache contra
   assert.match(source,/caches\.match\(canonicalNavigationKey\(e\.request\),\{ignoreSearch:true\}\)/);
   assert.match(source,/caches\.match\(e\.request,\{ignoreSearch:true\}\)/);
   assert.match(source,/u\.includes\('script\.google\.com'\)/);
+  assert.match(source,/requestUrl\.origin!==self\.location\.origin/);
   assert.match(source,/caches\.open\(CACHE\)\.then\(c=>precacheAssets\(c\)\)\.then\(\(\)=>self\.skipWaiting\(\)\)/);
+});
+
+test('cross-origin auth, avatar, and API responses bypass the app cache',()=>{
+  const handlers={};let responded=false,fetched=false;
+  const context={
+    self:{location:{origin:'https://app.example'},addEventListener:(name,handler)=>{handlers[name]=handler}},
+    fetch:async()=>{fetched=true;return{ok:true}},caches:{},Promise,Error,URL,
+  };
+  vm.runInNewContext(source,context,{filename:'sw.js'});
+  handlers.fetch({request:{method:'GET',url:'https://accounts.google.com/gsi/client',mode:'cors'},respondWith:()=>{responded=true}});
+  assert.equal(responded,false);
+  assert.equal(fetched,false);
 });
