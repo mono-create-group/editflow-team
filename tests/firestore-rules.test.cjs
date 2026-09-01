@@ -85,8 +85,9 @@ function manualInvoice(uid, overrides = {}) {
 
 function boardJob(overrides = {}) {
   return {
-    businessType: 'edit_agency', title: '公開案件', caseName: '9月分', clientId: 'c1', clientName: 'クライアントA',
-    accountId: 'a1', accountName: 'アカウントA', summary: '概要', instructions: '編集指示',
+    businessType: 'edit_agency', title: '公開案件', caseName: '9月分', parentCaseId: 'parent-board-1', parentCaseName: '9月分', subtaskIndex: 0,
+    clientId: 'c1', clientName: 'クライアントA', accountId: 'a1', accountName: 'アカウントA',
+    summary: '概要', instructions: '編集指示', attachments: [], manualIds: [], parentManualIds: [], caution: '', parentCaution: '',
     requestUrl: 'https://example.com/request', sourceUrl: 'https://example.com/source',
     editorDraftDate: '2026-09-05', editorDraftDateSetter: 'creator', clientDraftDate: '2026-09-06', thumbnailDate: '',
     deliveryDate: '2026-09-10', urgent: false, status: 'open', audience: 'direct',
@@ -94,6 +95,42 @@ function boardJob(overrides = {}) {
     createdAt: 1, updatedAt: 1, assignedUid: '', assignedName: '', assignedAt: null,
     ...overrides,
   };
+}
+
+function legacyBoardJob(overrides = {}) {
+  const job = boardJob({
+    parentCaseId: undefined, parentCaseName: undefined, sourceClientId: undefined,
+    editorDraftDateSetter: undefined, instructions: undefined,
+    ...overrides,
+  });
+  ['parentCaseId', 'parentCaseName', 'sourceClientId', 'editorDraftDateSetter', 'instructions'].forEach(key => delete job[key]);
+  return job;
+}
+
+// Mirrors the production claim payload in editor-features.js.  Keeping this
+// fixture field-for-field with the board document proves the rules permit the
+// normal atomic claim while rejecting a clone or a tampered projection.
+function claimedBoardPortalJob(uid, jobId, board, overrides = {}) {
+  const parentCaseId = board.parentCaseId || jobId;
+  const parentCaseName = board.parentCaseName || board.caseName || board.title || '';
+  const sourceClientId = board.sourceClientId || board.clientId || '';
+  const editorDraftDateSetter = board.editorDraftDateSetter === 'creator' ? 'creator' : 'editor';
+  const instructions = board.instructions || board.summary || '';
+  return portalJob(uid, {
+    businessType: board.businessType, boardJobId: jobId, source: 'job_board',
+    title: board.title, caseName: board.caseName, parentCaseId, parentCaseName, subtaskIndex: board.subtaskIndex || 0,
+    clientId: board.clientId, sourceClientId, clientDisplay: board.clientName,
+    accountId: board.accountId, accountDisplay: board.accountName,
+    deadline: board.deliveryDate, sharedDate: '2026-09-01',
+    editorDraftDate: board.editorDraftDate, editorDraftDateSetter,
+    clientDraftDate: board.clientDraftDate, thumbnailDate: board.thumbnailDate,
+    deliveryDate: board.deliveryDate, requestUrl: board.requestUrl, sourceUrl: board.sourceUrl,
+    attachments: board.attachments || [], instructions,
+    manualIds: board.manualIds || [], parentManualIds: board.parentManualIds || [],
+    caution: board.caution || '', parentCaution: board.parentCaution || '',
+    urgent: board.urgent, directorUid: board.directorUid,
+    ...overrides,
+  });
 }
 
 function clientCatalog(overrides = {}) {
@@ -200,12 +237,15 @@ async function expectAllowed(label, promise) {
         ['external2', { uid: 'external2', email: 'external2@example.com', approved: true, roles: ['動画編集者'], editorKind: 'external', directorUid: 'dir2', invoiceRecipientName: 'Dir 2', workerId: 'worker-external2' }],
         ['externalHybrid', { uid: 'externalHybrid', email: 'externalHybrid@example.com', approved: true, roles: ['動画編集者', 'Webデザイナー'], editorKind: 'external', directorUid: 'dir1', invoiceRecipientName: 'Dir 1' }],
         ['hybrid1', { uid: 'hybrid1', email: 'hybrid1@example.com', approved: true, roles: ['動画編集者', 'Webデザイナー'], editorKind: 'direct' }],
+        ['sales1', { uid: 'sales1', email: 'sales1@example.com', approved: true, roles: ['営業'], editorKind: 'direct' }],
         ['dir1', { uid: 'dir1', email: 'dir1@example.com', approved: true, roles: ['動画編集ディレクター'], workerId: 'worker-dir1' }],
         ['dir2', { uid: 'dir2', email: 'dir2@example.com', approved: true, roles: ['動画編集ディレクター'], workerId: 'worker-dir2' }],
       ];
       for (const [uid, data] of access) await setDoc(doc(db, 'access', uid), data);
       await setDoc(doc(db, 'system', 'access_control'), { enforced: true, compatibilityEmails: [] });
       await setDoc(doc(db, 'editor_job_board', 'direct-open'), boardJob());
+      await setDoc(doc(db, 'editor_job_board', 'direct-tamper'), boardJob({ title: '改竄禁止の公開案件' }));
+      await setDoc(doc(db, 'editor_job_board', 'direct-legacy'), legacyBoardJob({ title: '旧形式の公開案件', summary: '旧形式の概要だけを編集指示に使う' }));
       await setDoc(doc(db, 'editor_job_board', 'external-one'), boardJob({ audience: 'director_team', directorUid: 'dir1', eligibleUids: ['external1'] }));
       await setDoc(doc(db, 'editor_job_board', 'external-two'), boardJob({ audience: 'director_team', directorUid: 'dir2', eligibleUids: ['external2'] }));
       await setDoc(doc(db, 'editor_portals', 'external1', 'editor_jobs', 'done1'), portalJob('external1', { directorUid: 'dir1', status: '完了', evidenceUrl: 'https://example.com/delivery' }));
@@ -263,6 +303,7 @@ async function expectAllowed(label, promise) {
     const external1 = env.authenticatedContext('external1', claims('external1@example.com')).firestore();
     const externalHybrid = env.authenticatedContext('externalHybrid', claims('externalHybrid@example.com')).firestore();
     const hybrid1 = env.authenticatedContext('hybrid1', claims('hybrid1@example.com')).firestore();
+    const sales1 = env.authenticatedContext('sales1', claims('sales1@example.com')).firestore();
     const dir1 = env.authenticatedContext('dir1', claims('dir1@example.com')).firestore();
     const dir2 = env.authenticatedContext('dir2', claims('dir2@example.com')).firestore();
     const owner = env.authenticatedContext('owner', claims('mono.create.group@gmail.com')).firestore();
@@ -625,6 +666,7 @@ async function expectAllowed(label, promise) {
     await expectDenied('editor cannot store private schedule reason', setDoc(doc(direct1, 'editor_schedules', 'direct1'), weeklySchedule({ privateReason: '通院' })));
     await expectDenied('editor cannot save more than one week', setDoc(doc(direct1, 'editor_schedules', 'direct1'), weeklySchedule({ days: [...weeklySchedule().days, weeklySchedule().days[0]] })));
     await expectAllowed('editors see team availability', getDoc(doc(external1, 'editor_schedules', 'direct1')));
+    await expectDenied('non-video staff cannot read editor availability', getDoc(doc(sales1, 'editor_schedules', 'direct1')));
     await expectAllowed('owner synchronizes direct-editor catalog with rename trail', setDoc(doc(owner, 'editor_portals', 'direct1', 'client_catalog', 'master-c1'), clientCatalog({ formerNames: ['旧クライアントA'], accounts: [{ id: 'a1', name: '新アカウントA', formerNames: ['旧アカウントA'] }] })));
     await expectAllowed('owner explicitly shares a catalog with an external editor', setDoc(doc(owner, 'editor_portals', 'external1', 'client_catalog', 'master-c1'), clientCatalog({ formerNames: ['旧クライアントA'] })));
     await expectDenied('direct editor cannot auto-sync a master catalog', setDoc(doc(direct1, 'editor_portals', 'direct1', 'client_catalog', 'master-c2'), clientCatalog({ sourceClientId: 'legacy-client-2' })));
@@ -637,6 +679,10 @@ async function expectAllowed(label, promise) {
     await expectAllowed('global manual is visible', getDoc(doc(direct1, 'editor_manuals', 'global')));
     await expectAllowed('assigned manual is visible to assignee', getDoc(doc(external1, 'editor_manuals', 'assigned')));
     await expectDenied('assigned manual hidden from unrelated editor', getDoc(doc(direct1, 'editor_manuals', 'assigned')));
+    await expectAllowed('director can read manuals authored for own external team', getDoc(doc(dir1, 'editor_manuals', 'assigned')));
+    await expectDenied('other director cannot read another directors manual', getDoc(doc(dir2, 'editor_manuals', 'assigned')));
+    await expectDenied('non-video staff cannot read a global editor manual', getDoc(doc(sales1, 'editor_manuals', 'global')));
+    await expectDenied('portal submissions fail closed until a schema-backed path is shipped', addDoc(collection(direct1, 'editor_portals', 'direct1', 'submissions'), { arbitrary: 'untrusted' }));
 
     await expectAllowed('anonymous suggestion stores no identity', addDoc(collection(direct1, 'editor_suggestions'), { category: '業務改善', message: '改善案', replyCode: 'abc', status: '未確認', createdAt: serverTimestamp() }));
     await expectDenied('suggestion rejects submitter UID', addDoc(collection(direct1, 'editor_suggestions'), { category: '業務改善', message: '改善案', replyCode: '', status: '未確認', submitterUid: 'direct1', createdAt: serverTimestamp() }));
@@ -668,8 +714,30 @@ async function expectAllowed(label, promise) {
       const snap = await tx.get(boardRef);
       if (snap.data().status !== 'open') throw new Error('not open');
       tx.update(boardRef, { status: 'assigned', assignedUid: 'direct1', assignedName: 'Direct 1', assignedAt: serverTimestamp(), updatedAt: serverTimestamp() });
-      tx.set(doc(direct1, 'editor_portals', 'direct1', 'editor_jobs', 'direct-open'), portalJob('direct1', { businessType: 'edit_agency', boardJobId: 'direct-open', source: 'job_board' }));
+      tx.set(doc(direct1, 'editor_portals', 'direct1', 'editor_jobs', 'direct-open'), claimedBoardPortalJob('direct1', 'direct-open', snap.data()));
     }));
+    await expectDenied('accepted board job cannot be cloned under another portal document id', setDoc(
+      doc(direct1, 'editor_portals', 'direct1', 'editor_jobs', 'direct-open-clone'),
+      claimedBoardPortalJob('direct1', 'direct-open', boardJob())
+    ));
+    await expectAllowed('legacy board missing optional projection fields still claims through the UI fallbacks', runTransaction(direct2, async (tx) => {
+      const boardRef = doc(direct2, 'editor_job_board', 'direct-legacy');
+      const snap = await tx.get(boardRef);
+      tx.update(boardRef, { status: 'assigned', assignedUid: 'direct2', assignedName: 'Direct 2', assignedAt: serverTimestamp(), updatedAt: serverTimestamp() });
+      tx.set(doc(direct2, 'editor_portals', 'direct2', 'editor_jobs', 'direct-legacy'), claimedBoardPortalJob('direct2', 'direct-legacy', snap.data()));
+    }));
+    await expectDenied('atomic claim rejects a portal payload that differs from the published board', runTransaction(direct2, async (tx) => {
+      const boardRef = doc(direct2, 'editor_job_board', 'direct-tamper');
+      const snap = await tx.get(boardRef);
+      tx.update(boardRef, { status: 'assigned', assignedUid: 'direct2', assignedName: 'Direct 2', assignedAt: serverTimestamp(), updatedAt: serverTimestamp() });
+      tx.set(doc(direct2, 'editor_portals', 'direct2', 'editor_jobs', 'direct-tamper'), claimedBoardPortalJob('direct2', 'direct-tamper', snap.data(), { title: '改竄後の案件名' }));
+    }));
+    await expectDenied('director cannot republish own team board job to the direct pool', updateDoc(
+      doc(dir1, 'editor_job_board', 'external-one'), { audience: 'direct', eligibleUids: [], directorUid: '', updatedAt: serverTimestamp() }
+    ));
+    await expectDenied('director cannot transfer own team board job to another directors editor', updateDoc(
+      doc(dir1, 'editor_job_board', 'external-one'), { eligibleUids: ['external2'], updatedAt: serverTimestamp() }
+    ));
     await expectDenied('second editor cannot double claim board', runTransaction(direct2, async (tx) => {
       const boardRef = doc(direct2, 'editor_job_board', 'direct-open');
       const snap = await tx.get(boardRef);

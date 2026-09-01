@@ -1,12 +1,35 @@
 // mono.create 社内連絡アプリ SW
 const CACHE='mcshanai-20260901-10';
 const URLS=['./','./index.html','./editor.html','./billing-terms.js','./editor-features.js','./editor-push.js','./bulletin.js','./direct-messages.js','./feedback-workflow.js','./manager-features.js','./owner-video-performance.js','./sales-video-leads.js','./app-ui.css','./owner-yellow-ui.css','./editor-yellow-ui.css','./editflow-logo.svg','./manifest.json','./editor-manifest.json','./icon-192.png','./icon-512.png','./icon-512-maskable.png','./apple-touch-icon.png','./ai-bridge-client.js'];
-self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(URLS)).then(()=>self.skipWaiting()))});
+const REQUIRED_URLS=['./','./index.html','./editor.html','./billing-terms.js','./editor-features.js','./editor-push.js','./bulletin.js','./direct-messages.js','./feedback-workflow.js','./manager-features.js','./owner-video-performance.js','./sales-video-leads.js','./app-ui.css','./owner-yellow-ui.css','./editor-yellow-ui.css','./ai-bridge-client.js'];
+const OPTIONAL_URLS=URLS.filter(url=>!REQUIRED_URLS.includes(url));
+async function cacheOne(cache,url){
+  const response=await fetch(url,{cache:'no-store'});
+  if(!response.ok)throw new Error(`precache ${response.status}`);
+  await cache.put(url,response);
+}
+async function precacheAssets(cache,required=REQUIRED_URLS,optional=OPTIONAL_URLS){
+  // A partial UI bundle is unsafe: required pages, JS, and CSS deliberately
+  // fail installation. Images/manifests are recoverable enhancements only.
+  await Promise.all(required.map(url=>cacheOne(cache,url)));
+  await Promise.allSettled(optional.map(url=>cacheOne(cache,url)));
+}
+function canonicalNavigationKey(request){
+  const path=new URL(request.url).pathname;
+  return path.endsWith('/editor.html')?'./editor.html':'./index.html';
+}
+self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>precacheAssets(c)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('mcshanai-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',e=>{
   if(e.request.method!=='GET')return;
-  const u=e.request.url; if(u.includes('firestore')||u.includes('googleapis')||u.includes('gstatic')||u.includes('firebaseio'))return;
-  e.respondWith(fetch(e.request).then(r=>{const cp=r.clone();caches.open(CACHE).then(c=>c.put(e.request,cp)).catch(()=>{});return r}).catch(()=>caches.match(e.request)));
+  // Authenticated APIs and Apps Script actions must never fall back to a stale
+  // cached response: an old success would misrepresent a current 403 or send.
+  const u=e.request.url; if(u.includes('firestore')||u.includes('googleapis')||u.includes('script.google.com')||u.includes('gstatic')||u.includes('firebaseio'))return;
+  if(e.request.mode==='navigate'){
+    e.respondWith(fetch(e.request,{cache:'no-store'}).then(r=>{const cp=r.clone();caches.open(CACHE).then(c=>c.put(canonicalNavigationKey(e.request),cp)).catch(()=>{});return r}).catch(()=>caches.match(canonicalNavigationKey(e.request),{ignoreSearch:true}).then(hit=>hit||caches.match(e.request,{ignoreSearch:true}))));
+    return;
+  }
+  e.respondWith(fetch(e.request).then(r=>{const cp=r.clone();caches.open(CACHE).then(c=>c.put(e.request,cp)).catch(()=>{});return r}).catch(()=>caches.match(e.request,{ignoreSearch:true})));
 });
 self.addEventListener('push',event=>{
   let data={};

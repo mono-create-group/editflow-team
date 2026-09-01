@@ -770,6 +770,80 @@ service cloud.firestore {
         );
     }
 
+    // A video-workspace document can contain client instructions, source URLs,
+    // or availability details.  "approved" alone is not a sufficient reason
+    // to read it: non-video staff must use their own scoped surfaces.
+    function videoWorkspaceMember() {
+      return owner() || (approvedMember()
+        && get(accessPath(request.auth.uid)).data.roles.hasAny([
+          '動画編集者','動画編集ディレクター'
+        ]));
+    }
+
+    // Directors may publish only to one of their own external editors.  The
+    // owner is the sole actor that can publish to the direct-editor pool.
+    function validDirectorBoardAudience(data) {
+      let targets = data.get('eligibleUids', []);
+      return data.get('audience', '') == 'director_team'
+        && data.get('directorUid', '') == request.auth.uid
+        && targets is list
+        && targets.size() == 1
+        && exists(accessPath(targets[0]))
+        && editorKind(targets[0]) == 'external'
+        && get(accessPath(targets[0])).data.get('directorUid', '') == request.auth.uid;
+    }
+
+    // A director may correct the descriptive content of their still-open
+    // listing, but may never republish it, transfer it, or alter its claim
+    // state.  Those fields are authorization boundaries, not UI preferences.
+    function validDirectorBoardUpdate() {
+      return resource.data.get('directorUid', '') == request.auth.uid
+        && validDirectorBoardAudience(resource.data)
+        && validDirectorBoardAudience(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'title','caseName','parentCaseName','clientName','accountName',
+          'summary','instructions','requestUrl','sourceUrl','attachments',
+          'manualIds','parentManualIds','caution','parentCaution',
+          'editorDraftDate','editorDraftDateSetter','clientDraftDate',
+          'thumbnailDate','deliveryDate','urgent','updatedAt'
+        ]);
+    }
+
+    // A claimed board record is the authority for its portal projection.  Keep
+    // this deliberately to identity, ownership, and finance-routing fields:
+    // this function is evaluated beside the already-large portal-create
+    // validator in one atomic claim, and a full text/URL/date copy comparison
+    // exceeds the Rules engine's 1000-expression limit.  The omitted display
+    // instructions, URLs, attachments, and dates are not finance/identity
+    // inputs. They remain client-supplied operational content, not an
+    // authorization boundary; later date/workflow edits use their dedicated
+    // role-owned validators.
+    // In particular, a claimant still cannot manufacture further portal
+    // records from one accepted board job or change its team/client routing.
+    function validClaimedBoardProjection(jobId) {
+      let boardPath = /databases/$(database)/documents/editor_job_board/$(jobId);
+      let board = getAfter(boardPath).data;
+      return request.resource.data.get('boardJobId', '') == jobId
+        && request.resource.data.get('businessType', '') == board.get('businessType', '')
+        && request.resource.data.get('title', '') == board.get('title', '')
+        && request.resource.data.get('caseName', '') == board.get('caseName', '')
+        // Keep these fallbacks identical to editor-features.js claimBoardJob
+        // so a legacy open board can be accepted without weakening the
+        // projection identity or allowing a claimant to choose its own data.
+        && request.resource.data.get('parentCaseId', '') == (board.get('parentCaseId', '') != '' ? board.get('parentCaseId', '') : jobId)
+        && request.resource.data.get('parentCaseName', '') == (board.get('parentCaseName', '') != '' ? board.get('parentCaseName', '') : (board.get('caseName', '') != '' ? board.get('caseName', '') : board.get('title', '')))
+        && request.resource.data.get('subtaskIndex', 0) == board.get('subtaskIndex', 0)
+        && request.resource.data.get('clientId', '') == board.get('clientId', '')
+        && request.resource.data.get('sourceClientId', '') == (board.get('sourceClientId', '') != '' ? board.get('sourceClientId', '') : board.get('clientId', ''))
+        && request.resource.data.get('clientDisplay', '') == board.get('clientName', '')
+        && request.resource.data.get('accountId', '') == board.get('accountId', '')
+        && request.resource.data.get('accountDisplay', '') == board.get('accountName', '')
+        && request.resource.data.get('directorUid', '') == board.get('directorUid', '')
+        && request.resource.data.get('status', '') == 'アサイン済み'
+        && board.get('status', '') == 'assigned'
+        && board.get('assignedUid', '') == request.auth.uid;
+    }
+
     function validJobStatus(status) {
       return status in [
         '案件掲載中','募集中','編集者決定','アサイン済み','受注済み','進行中','編集者進行中',
@@ -1579,8 +1653,9 @@ service cloud.firestore {
           && request.resource.data.get('source', '') in ['direct_client','job_board']
           && (request.resource.data.get('source', '') != 'job_board'
             || (request.resource.data.get('boardJobId', '') is string
-              && exists(/databases/$(database)/documents/editor_job_board/$(request.resource.data.boardJobId))
-              && getAfter(/databases/$(database)/documents/editor_job_board/$(request.resource.data.boardJobId)).data.assignedUid == uid))
+              && request.resource.data.boardJobId == jobId
+              && exists(/databases/$(database)/documents/editor_job_board/$(jobId))
+              && validClaimedBoardProjection(jobId)))
           && request.resource.data.title is string
           && request.resource.data.title.size() > 0
           && request.resource.data.title.size() <= 120
@@ -1932,7 +2007,10 @@ service cloud.firestore {
 
       match /submissions/{submissionId} {
         allow read: if portalManager(uid) || editor(uid);
-        allow create: if portalManager(uid) || editor(uid);
+        // No shipped write path uses this legacy collection.  Its former
+        // free-form write permission made arbitrary, unauditable submission
+        // records look authoritative beside workflow events, so fail closed.
+        allow create: if false;
         allow update, delete: if false;
       }
 
@@ -2063,9 +2141,14 @@ service cloud.firestore {
         && validSubtaskIndex(request.resource.data)
         && request.resource.data.eligibleUids is list
         && request.resource.data.get('assignedUid', '') == ''
-        && (owner() || request.resource.data.directorUid == request.auth.uid);
-      allow update: if videoManager()
-        && (owner() || resource.data.get('directorUid', '') == request.auth.uid)
+        && (owner() || validDirectorBoardAudience(request.resource.data));
+      allow update: if owner()
+        && validAttachments(request.resource.data)
+        && validEditorDraftDateAssignment(request.resource.data)
+        && validCaseManualLinks(request.resource.data);
+      allow update: if !owner()
+        && videoManager()
+        && validDirectorBoardUpdate()
         && validAttachments(request.resource.data)
         && validEditorDraftDateAssignment(request.resource.data)
         && validCaseManualLinks(request.resource.data);
@@ -2081,7 +2164,7 @@ service cloud.firestore {
     }
 
     match /editor_schedules/{uid} {
-      allow read: if owner() || approvedMember();
+      allow read: if videoWorkspaceMember();
       allow create, update: if editor(uid)
         && request.resource.data.keys().hasOnly([
           'name','fromDate','toDate','hoursPerWeek','capacity','workType',
@@ -2227,10 +2310,15 @@ service cloud.firestore {
     }
 
     match /editor_manuals/{manualId} {
-      allow read: if owner() || coreStaff() || (approvedMember()
+      allow read: if owner() || (videoWorkspaceMember()
         && (resource.data.get('audience', '') == 'all'
           || (resource.data.get('allowedUids', []) is list
-            && request.auth.uid in resource.data.get('allowedUids', []))));
+            && request.auth.uid in resource.data.get('allowedUids', []))
+          // A director must be able to manage only the manuals they authored
+          // for their external team.  This supports the scoped manager query
+          // without reopening another director's client instructions.
+          || (hasRole(request.auth.uid, '動画編集ディレクター')
+            && resource.data.get('directorUid', '') == request.auth.uid)));
       allow create: if videoManager()
         && (validOrdinaryManualWrite() || validFeedbackManualCreate(manualId));
       allow update: if videoManager()

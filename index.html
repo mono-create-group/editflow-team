@@ -10311,6 +10311,15 @@ const POITTO_EXEC='https://script.google.com/macros/s/AKfycbzftG_O0GsR_8_TYwUwSG
 const INQ_STATUSES=['未対応','連絡済み','商談中','成約','見送り'];
 let INQ_STATE='idle'; // idle | loading | ready | error | noconfig
 let INQ_ERR='';
+function _poittoNeedsAuthorization(message){
+  const text=String(message||'').toLowerCase();
+  return text.includes('failed to fetch')||text.includes('load failed')||text.includes('networkerror')||/http\s+(401|403)\b/.test(text);
+}
+function _poittoRecoveryNotice(scope){
+  const owner=typeof _isOwner==='function'&&_isOwner();
+  const retry=scope==='ig'?'igLoad(true)':'inqReload()';
+  return`<div style="font-size:13px;color:var(--t2);line-height:1.8">ぽいっとHP連携のGoogle承認が切れているか、連携先に接続できません。${owner?'オーナーのGoogleアカウントで連携画面を開き、必要な承認を完了してから再読み込みしてください。':'オーナーにGoogle連携の再承認を依頼してください。'}</div><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">${owner?`<a class="btn btn-p btn-sm" href="${esc(POITTO_EXEC)}" target="_blank" rel="noopener noreferrer">Google連携を確認</a>`:''}<button class="btn btn-g btn-sm" onclick="${retry}">再読み込み</button></div>`;
+}
 async function _poittoKey(){
   const ls=(localStorage.getItem('poitto_admin_key')||'').trim();
   if(ls)return ls;
@@ -10356,6 +10365,7 @@ function rInquiries(){
     return`${head}<div class="card"><div style="color:var(--t2);font-size:13px">読み込み中…</div></div>`;
   }
   if(INQ_STATE==='error'){
+    if(_poittoNeedsAuthorization(INQ_ERR))return`${head}<div class="card" style="border-left:3px solid var(--amber)"><div style="font-weight:800;margin-bottom:6px">Google連携に接続できません</div>${_poittoRecoveryNotice('inquiries')}</div>`;
     return`${head}<div class="card" style="border-left:3px solid var(--red)"><div style="font-weight:800;margin-bottom:6px">読み込みに失敗しました</div><div style="font-size:12px;color:var(--t2);white-space:pre-wrap;line-height:1.7">${esc(INQ_ERR)}</div><div style="margin-top:10px"><button class="btn btn-p btn-sm" onclick="inqReload()">🔄 再読み込み</button></div></div>`;
   }
   const rows=Array.isArray(window.__poittoRows)?window.__poittoRows:[];
@@ -17058,14 +17068,14 @@ function igLoad(force){
   if(!k){_igErr='NOKEY';render();return;}
   _igLoading=true;_igErr='';render();
   fetch(IG_API+'?action=dmstaff_view&vkey='+encodeURIComponent(k))
-    .then(r=>r.json())
+    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
     .then(d=>{
       _igLoading=false;
       if(d&&d.success){_igRows=d.rows||[];_igErr='';}
       else{_igErr=(d&&d.error==='unauthorized')?'BADKEY':'ERR';}
       render();
     })
-    .catch(()=>{_igLoading=false;_igErr='NET';render();});
+    .catch(e=>{_igLoading=false;_igErr=_poittoNeedsAuthorization(e&&e.message)?'NET':'ERR';render();});
 }
 function igTogglePw(i){_igShowPw[i]=!_igShowPw[i];render();}
 function igCopy(txt,label){
@@ -17089,7 +17099,8 @@ function rIgAccounts(){
     </div>`;
   }
   if(_igErr==='NET'||_igErr==='ERR'){
-    return head+`<div class="card" style="padding:20px"><div style="font-weight:700;color:var(--red);margin-bottom:6px">読み込みに失敗しました</div><div style="font-size:13px;color:var(--t2)">通信環境を確認して「更新」を押してください。</div></div>`;
+    if(_igErr==='NET')return head+`<div class="card" style="padding:20px;border-left:3px solid var(--amber)"><div style="font-weight:800;margin-bottom:6px">Google連携に接続できません</div>${_poittoRecoveryNotice('ig')}</div>`;
+    return head+`<div class="card" style="padding:20px"><div style="font-weight:700;color:var(--red);margin-bottom:6px">読み込みに失敗しました</div><div style="font-size:13px;color:var(--t2)">連携先から正しい応答を受け取れませんでした。「更新」で再試行してください。</div></div>`;
   }
   if(_igLoading&&_igRows===null)return head+`<div class="card" style="padding:24px;text-align:center;color:var(--t3);font-size:13px">読み込み中…</div>`;
   const rows=_igRows||[];
@@ -18033,6 +18044,7 @@ function checkServerVersion(){
 setInterval(checkServerVersion,5*60*1000);                                         // 5分ごと
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkServerVersion();});  // タブへ戻った時
 window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});     // bfcache復帰時
+checkServerVersion();                                                              // 初回表示でも旧版を即時検出
   </script>
 <script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
 <script src="./editor-push.js?v=20260901-10"></script>
