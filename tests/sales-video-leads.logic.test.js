@@ -77,6 +77,20 @@ test('platform fees and estimated take-home are calculated from official rates',
   assert.match(lancers.source,/lancers\.jp/);
 });
 
+test('Lancers instant payout shows the additional five percent without allocating a per-withdrawal bank fee',()=>{
+  const ctx=makeContext();
+  const low={...ctx.SalesVideoLeads.instantPayout('ランサーズ',4175)};
+  assert.equal(low.feeAmount,209);
+  assert.equal(low.netAfterInstantFee,3966);
+  assert.equal(low.eligibleAsSingle,false);
+  assert.equal(low.bankFeeRakuten,110);
+  assert.equal(low.bankFeeOther,550);
+  const eligible={...ctx.SalesVideoLeads.instantPayout('ランサーズ',12000)};
+  assert.equal(eligible.netAfterInstantFee,11400);
+  assert.equal(eligible.eligibleAsSingle,true);
+  assert.equal(ctx.SalesVideoLeads.instantPayout('ココナラ',12000),null);
+});
+
 test('video sales-list page includes all requested report fields',()=>{
   const ctx=makeContext();
   ctx.SalesVideoLeads.upsert([{name:'ショート動画編集',jobUrl:'https://coconala.com/job_matching/5241190',unitPrice:'10000',totalReward:'10,000円',videoCount:'1本',postedAt:'2026-08-30',deadline:'2026-09-06',software:'Premiere Pro / Final Cut Pro',workContent:'継続ショート動画制作',editContent:'カット・テロップ・BGM',requiredSkills:'縦型動画編集',freshness:'新着',listingStatus:'募集中',lastCheckedAt:'2026-09-01'}]);
@@ -85,11 +99,19 @@ test('video sales-list page includes all requested report fields',()=>{
   for(const text of ['案件ページを開く','提示 1本 10,000円','手数料差引後（見込） 7,800円','プラットフォーム手数料: 2,200円（22%）','本数: 1本','掲載日: 2026-08-30','応募期限: 2026-09-06','ソフト指定:','業務内容:','編集内容:','必要スキル:'])assert.match(html,new RegExp(text));
 });
 
+test('Lancers card includes instant payout estimate, aggregate eligibility, and separate bank fees',()=>{
+  const ctx=makeContext();
+  ctx.SalesVideoLeads.upsert([{name:'ランサーズ案件',jobUrl:'https://www.lancers.jp/work/detail/5594638',unitPrice:'5000',totalReward:'5000円',videoCount:'1本',software:'Premiere Pro',workContent:'制作',editContent:'編集'}]);
+  ctx._slBiz='video';
+  const html=ctx.rSalesLeads();
+  for(const text of ['即日払い5%差引後（概算・振込手数料前） 3,966円','即日払い手数料（概算）: 209円','この案件単体では金額条件未達です','楽天銀行110円／その他銀行550円'])assert.match(html,new RegExp(text));
+});
+
 test('owner shell and service worker load the video-lead extension on the same release',()=>{
   const index=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
   const sw=fs.readFileSync(path.join(__dirname,'..','sw.js'),'utf8');
-  assert.match(index,/const APP_VERSION='20260901-03';/);
-  assert.match(index,/<script src="\.\/sales-video-leads\.js\?v=20260901-03"><\/script>/);
-  assert.match(sw,/const CACHE='mcshanai-20260901-03';/);
+  assert.match(index,/const APP_VERSION='20260901-04';/);
+  assert.match(index,/<script src="\.\/sales-video-leads\.js\?v=20260901-04"><\/script>/);
+  assert.match(sw,/const CACHE='mcshanai-20260901-04';/);
   assert.match(sw,/'\.\/sales-video-leads\.js'/);
 });

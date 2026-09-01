@@ -6,6 +6,11 @@ const VIDEO_PLATFORM_FEES={
   'ココナラ':{rate:.22,label:'22%',source:'https://coconala-support.zendesk.com/hc/ja/articles/230180287-%E8%B2%A9%E5%A3%B2%E6%99%82%E3%81%AE%E6%89%8B%E6%95%B0%E6%96%99%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6'},
   'ランサーズ':{rate:.165,label:'16.5%',source:'https://www.lancers.jp/faq/A1034/936'}
 };
+const LANCERS_INSTANT_PAYOUT={
+  rate:.05,minAfterFee:10000,maxAfterFee:500000,bankFeeRakuten:110,bankFeeOther:550,
+  source:'https://www.lancers.jp/faq/l1019/774',
+  changeNotice:'https://info.lancers.jp/34798'
+};
 let _videoLeadStatus='all';
 let _videoLeadService='all';
 let _videoLeadSearch='';
@@ -30,6 +35,20 @@ function _videoLeadFee(service,unitPrice){
   if(!profile||!Number.isFinite(amount)||amount<=0)return{rate:0,label:'未確認',feeAmount:0,netAmount:0,source:''};
   const feeAmount=Math.round(amount*profile.rate);
   return{rate:profile.rate,label:profile.label,feeAmount,netAmount:amount-feeAmount,source:profile.source};
+}
+function _videoLeadInstantPayout(service,netUnitPrice){
+  if(service!=='ランサーズ')return null;
+  const amount=Number(netUnitPrice||0);
+  if(!Number.isFinite(amount)||amount<=0)return null;
+  const feeAmount=Math.round(amount*LANCERS_INSTANT_PAYOUT.rate);
+  const netAfterInstantFee=amount-feeAmount;
+  return{
+    rate:LANCERS_INSTANT_PAYOUT.rate,feeAmount,netAfterInstantFee,
+    eligibleAsSingle:netAfterInstantFee>=LANCERS_INSTANT_PAYOUT.minAfterFee&&netAfterInstantFee<=LANCERS_INSTANT_PAYOUT.maxAfterFee,
+    minAfterFee:LANCERS_INSTANT_PAYOUT.minAfterFee,maxAfterFee:LANCERS_INSTANT_PAYOUT.maxAfterFee,
+    bankFeeRakuten:LANCERS_INSTANT_PAYOUT.bankFeeRakuten,bankFeeOther:LANCERS_INSTANT_PAYOUT.bankFeeOther,
+    source:LANCERS_INSTANT_PAYOUT.source,changeNotice:LANCERS_INSTANT_PAYOUT.changeNotice
+  };
 }
 function _videoLeadCapCutText(x){
   return [x.software,x.workContent,x.editContent].map(v=>String(v||'')).join(' ');
@@ -128,6 +147,7 @@ function _videoLeadCards(rows){
   return rows.map(l=>{
     const st=slStatusOf(l,VIDEO_BIZ);
     const fee=_videoLeadFee(l.service,l.unitPrice);
+    const instant=_videoLeadInstantPayout(l.service,fee.netAmount);
     const statusBtns=VIDEO_STATUSES.map(s=>`<button class="sl-status-btn" onclick="SalesVideoLeads.setStatus('${l.id}','${s}')" style="opacity:${st===s?1:.42};border-color:${_videoLeadStatusColor(s)};color:${_videoLeadStatusColor(s)}">${s}</button>`).join('');
     return`<article class="sl-row sl-lead-row" style="align-items:flex-start">
       <div class="sl-row-body" style="flex:1;min-width:0">
@@ -142,12 +162,14 @@ function _videoLeadCards(rows){
           <strong style="color:var(--green);font-size:14px">提示 1本 ${_videoLeadMoney(l.unitPrice)}</strong>
           <strong style="color:var(--blue);font-size:14px">手数料差引後（見込） ${_videoLeadMoney(fee.netAmount)}</strong>
           <span style="color:var(--t2)">プラットフォーム手数料: ${_videoLeadMoney(fee.feeAmount)}（${esc(fee.label)}）</span>
+          ${instant?`<strong style="color:var(--amber);font-size:14px">即日払い5%差引後（概算・振込手数料前） ${_videoLeadMoney(instant.netAfterInstantFee)}</strong><span style="color:var(--t2)">即日払い手数料（概算）: ${_videoLeadMoney(instant.feeAmount)}</span>`:''}
           <span style="color:var(--t2)">総報酬: ${esc(l.totalReward||'未確認')}</span>
           <span style="color:var(--t2)">本数: ${esc(l.videoCount||'未確認')}</span>
           <span style="color:var(--t2)">掲載日: ${esc(l.postedAt||'未確認')}</span>
           <span style="color:var(--t2)">応募期限: ${esc(l.deadline||'未確認')}</span>
         </div>
         <div style="margin-top:5px;font-size:10.5px;color:var(--t3)">差引後金額は提示単価からプラットフォーム手数料のみを控除した見込額です。振込手数料・源泉徴収等は含みません。 <a href="${esc(fee.source||'#')}" target="_blank" rel="noopener">手数料の公式根拠</a></div>
+        ${instant?`<div style="margin-top:5px;padding:7px 9px;border-radius:var(--rs);background:var(--adim);font-size:10.5px;color:var(--t2)"><b>ランサーズ即日払い:</b> この案件単体では${instant.eligibleAsSingle?'金額条件内です':'金額条件未達です'}。利用可否は払出合計で判定され、5%控除後${_videoLeadMoney(instant.minAfterFee)}〜${_videoLeadMoney(instant.maxAfterFee)}が現行条件です。出金1回につき振込手数料は楽天銀行${_videoLeadMoney(instant.bankFeeRakuten)}／その他銀行${_videoLeadMoney(instant.bankFeeOther)}が別途かかるため、上の案件別概算には含めていません。 <a href="${esc(instant.source)}" target="_blank" rel="noopener">現行条件</a>・<a href="${esc(instant.changeNotice)}" target="_blank" rel="noopener">2026年9月28日変更予定</a></div>`:''}
         <div style="margin-top:8px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rs);background:var(--card2);font-size:12px;line-height:1.65">
           <div><b>ソフト指定:</b> ${esc(l.software||'未確認')}</div>
           <div><b>業務内容:</b> ${esc(l.workContent||'未確認')}</div>
@@ -235,7 +257,7 @@ slSetBiz=function(biz){
 };
 
 window.SalesVideoLeads={
-  parseCsv:_videoLeadParseCsv,normalize:_videoLeadNormalize,upsert:_videoLeadUpsert,fee:_videoLeadFee,
+  parseCsv:_videoLeadParseCsv,normalize:_videoLeadNormalize,upsert:_videoLeadUpsert,fee:_videoLeadFee,instantPayout:_videoLeadInstantPayout,
   setSearch(v){_videoLeadSearch=String(v||'');render();},
   setStatusFilter(v){_videoLeadStatus=v;render();},
   setServiceFilter(v){_videoLeadService=v;render();},
