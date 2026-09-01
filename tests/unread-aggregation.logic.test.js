@@ -56,8 +56,8 @@ test('push code does not use browser notification totals as unread badge totals'
 });
 
 test('owner app and service worker load the shared registry and never increment a push-local count', () => {
-  assert.match(owner, /<script src="\.\/bulletin\.js\?v=20260901-\d+"><\/script>/);
-  assert.match(editor, /<script src="\.\/bulletin\.js\?v=20260901-\d+"><\/script>/);
+  assert.match(owner, /<script src="\.\/bulletin\.js\?v=\d{8}-\d+"><\/script>/);
+  assert.match(editor, /<script src="\.\/bulletin\.js\?v=\d{8}-\d+"><\/script>/);
   assert.match(sw, /'\.\/bulletin\.js'/);
   assert.match(owner, /function ownerSetUnreadSource\(source,items\)/);
   assert.match(owner, /api\.unreadItems\?\.\(OWNER_DM_STATE\.threads\)/);

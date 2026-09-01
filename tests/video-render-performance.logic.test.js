@@ -62,6 +62,32 @@ test('phase batching keeps a review case visible even when earlier rows fill oth
   assert.equal(result.renderedCount, 11);
 });
 
+test('mono.create internal editing has its own display phase without changing saved statuses', () => {
+  const start = html.indexOf('const VIDEO_PHASES=');
+  const end = html.indexOf('function _videoIsOverdue', start);
+  const context = {};
+  vm.createContext(context);
+  vm.runInContext(`${html.slice(start, end)}\nthis.bucket=_videoPhaseBuckets;`, context);
+  const parent = { id:'mixed-parent', status:'進行中', subtasks:[
+    {id:'internal-child',status:'編集者進行中',workerId:'__self',assignee:'mono.create社内対応'},
+    {id:'external-child',status:'進行中',workerId:'worker-1',assignee:'外部編集者'},
+  ]};
+  const rows = [
+    {id:'internal-main',status:'進行中',_raw:{workerIds:['__self']},assignee:'mono.create社内対応'},
+    {id:'internal-normalized',status:'編集者進行中',assignee:'mono.create社内対応'},
+    {id:'external-main',status:'進行中',_raw:{workerIds:['worker-2']},assignee:'外部編集者'},
+    {id:'internal-review',status:'初稿提出済み',_raw:{workerIds:['__self']},assignee:'mono.create社内対応'},
+    parent,
+  ];
+  const result = context.bucket(rows, 50);
+  assert.equal(result.phaseCounts.get('internal-editing'), 3);
+  assert.equal(result.phaseCounts.get('editing'), 2);
+  assert.equal(result.phaseCounts.get('review'), 1);
+  assert.equal(result.byPhase.get('internal-editing').some(row=>row._phaseId==='internal-editing'), true);
+  assert.equal(result.byPhase.get('editing').some(row=>row._phaseId==='editing'), true);
+  assert.match(html, /label:'mono\.create内編集',hint:'社内で制作を進める'/);
+});
+
 test('a parent case is split by child status and each phase count reflects actual child cases', () => {
   const start = html.indexOf('const VIDEO_PHASES=');
   const end = html.indexOf('function _videoIsOverdue', start);

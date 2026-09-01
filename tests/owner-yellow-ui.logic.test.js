@@ -34,6 +34,7 @@ test('kanban uses a numbered semantic stage rail and compact action-first cards'
   for (const selector of ['.kanban-stage-marker', '.video-card-status', '.video-card-next', '.video-card-deadline', '.app-kanban-empty']) assert.ok(css.includes(selector), selector);
   assert.match(css, /\.app-kanban\{[^}]*scroll-snap-type:x proximity/);
   assert.match(css, /\.app-kanban-column\{[^}]*scroll-snap-align:start/);
+  assert.match(css, /\.app-kanban-column\[data-phase="internal-editing"\]\{[^}]*--phase-accent:#be123c/);
 });
 
 test('reference-style owner shell is white and uses yellow only as an accent', () => {

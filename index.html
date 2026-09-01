@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260901-11"></script>
+<script src="./billing-terms.js?v=20260902-01"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -998,7 +998,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260901-11">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260902-01">
 </head>
 <body class="owner-yellow-ui">
 
@@ -1058,8 +1058,8 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="./ai-bridge-client.js"></script>
-<script src="./owner-video-performance.js?v=20260901-11"></script>
-<script src="./feedback-workflow.js?v=20260901-11"></script>
+<script src="./owner-video-performance.js?v=20260902-01"></script>
+<script src="./feedback-workflow.js?v=20260902-01"></script>
 <script>/* lz-string 1.5.0 (MIT) — CDN非依存でオフライン/圧縮チーム同期を保証するためインライン化 */
 var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",e={};function t(r,o){if(!e[r]){e[r]={};for(var n=0;n<r.length;n++)e[r][r.charAt(n)]=n}return e[r][o]}var i={compressToBase64:function(r){if(null==r)return"";var n=i._compress(r,6,function(r){return o.charAt(r)});switch(n.length%4){default:case 0:return n;case 1:return n+"===";case 2:return n+"==";case 3:return n+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(n){return t(o,r.charAt(n))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(r){return null==r?"":""==r?null:i._decompress(r.length,16384,function(o){return r.charCodeAt(o)-32})},compressToUint8Array:function(r){for(var o=i.compress(r),n=new Uint8Array(2*o.length),e=0,t=o.length;e<t;e++){var s=o.charCodeAt(e);n[2*e]=s>>>8,n[2*e+1]=s%256}return n},decompressFromUint8Array:function(o){if(null==o)return i.decompress(o);for(var n=new Array(o.length/2),e=0,t=n.length;e<t;e++)n[e]=256*o[2*e]+o[2*e+1];var s=[];return n.forEach(function(o){s.push(r(o))}),i.decompress(s.join(""))},compressToEncodedURIComponent:function(r){return null==r?"":i._compress(r,6,function(r){return n.charAt(r)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),i._decompress(r.length,32,function(o){return t(n,r.charAt(o))}))},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(r,o,n){if(null==r)return"";var e,t,i,s={},u={},a="",p="",c="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<r.length;i+=1)if(a=r.charAt(i),Object.prototype.hasOwnProperty.call(s,a)||(s[a]=f++,u[a]=!0),p=c+a,Object.prototype.hasOwnProperty.call(s,p))c=p;else{if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++),s[p]=f++,c=String(a)}if(""!==c){if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++)}for(t=2,e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;for(;;){if(m<<=1,v==o-1){d.push(n(m));break}v++}return d.join("")},decompress:function(r){return null==r?"":""==r?null:i._decompress(r.length,32768,function(o){return r.charCodeAt(o)})},_decompress:function(o,n,e){var t,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:e(0),position:n,index:1};for(t=0;t<3;t+=1)l[t]=t;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return i}();"function"==typeof define&&define.amd?define(function(){return LZString}):"undefined"!=typeof module&&null!=module?module.exports=LZString:"undefined"!=typeof angular&&null!=angular&&angular.module("LZString",[]).factory("LZString",function(){return LZString});
 </script>
@@ -6245,10 +6245,13 @@ function sortJobs(jobs){
 const VIDEO_PHASES=[
   {id:'intake',label:'受付・募集',hint:'依頼を受ける',statuses:['案件掲載中','募集中','未着手']},
   {id:'assigned',label:'アサイン済み',hint:'担当を決める',statuses:['編集者決定','アサイン済み','受注済み']},
+  {id:'internal-editing',label:'mono.create内編集',hint:'社内で制作を進める',statuses:[]},
   {id:'editing',label:'編集',hint:'制作を進める',statuses:['進行中','編集者進行中']},
   {id:'review',label:'確認・修正',hint:'確認して戻す',statuses:['初稿提出済み','修正稿提出済み','D確認OK','先方確認中','初稿完成','確認待ち','FB待ち','修正中']},
   {id:'done',label:'完了',hint:'納品済み',statuses:['完了','キャンセル']}
 ];
+const SELF_WID='__self';
+const VIDEO_INTERNAL_EDITING_STATUSES=new Set(['進行中','編集者進行中']);
 const EDITOR_OWNED_VIDEO_STATUSES=new Set(['編集者進行中','初稿提出済み','修正稿提出済み']);
 const VIDEO_OVERDUE_EXCLUDED_STATUSES=new Set(['完了','キャンセル','初稿提出済み','初稿完成','修正中','修正稿提出済み','D確認OK','先方確認中','確認待ち','FB待ち','納品','納品済み']);
 function _editorDraftDateSetter(row,fallback='editor'){
@@ -6265,25 +6268,40 @@ function changeEditorDraftDateSetter(select,target){
   else updateJobInternalScheduleRules();
 }
 function _videoDeadlineExemptStatus(status){return VIDEO_OVERDUE_EXCLUDED_STATUSES.has(String(status||''));}
-function _videoPhase(status){return VIDEO_PHASES.find(p=>p.statuses.includes(status))||VIDEO_PHASES[0];}
+function _videoWorkerAssignmentIds(job){
+  if(!job||typeof job!=='object')return[];
+  const raw=job._raw&&typeof job._raw==='object'?job._raw:{};
+  return[...(Array.isArray(job.workerIds)?job.workerIds:[]),job.workerId,...(Array.isArray(raw.workerIds)?raw.workerIds:[]),raw.workerId].map(value=>String(value||'').trim()).filter((value,index,all)=>value&&all.indexOf(value)===index);
+}
+function _videoIsInternalEditing(job){
+  if(!job||typeof job!=='object'||!VIDEO_INTERNAL_EDITING_STATUSES.has(String(job.status||'')))return false;
+  const workerIds=_videoWorkerAssignmentIds(job);
+  return workerIds.length?workerIds.every(id=>id===SELF_WID):String(job.assignee||'')==='mono.create社内対応';
+}
+function _videoPhase(jobOrStatus){
+  const job=jobOrStatus&&typeof jobOrStatus==='object'?jobOrStatus:null,status=String(job?.status??jobOrStatus??'');
+  if(job?._phaseId){const fixed=VIDEO_PHASES.find(phase=>phase.id===job._phaseId);if(fixed)return fixed;}
+  if(job&&_videoIsInternalEditing(job))return VIDEO_PHASES.find(phase=>phase.id==='internal-editing');
+  return VIDEO_PHASES.find(phase=>phase.statuses.includes(status))||VIDEO_PHASES[0];
+}
 function _videoPhaseSlices(job,statusFilter=''){
   const allChildren=Array.isArray(job?.subtasks)?job.subtasks:[];
   if(!allChildren.length)return!statusFilter||job.status===statusFilter?[job]:[];
   const children=statusFilter?allChildren.filter(child=>child.status===statusFilter):allChildren;
   if(!children.length)return[];
   const byPhase=new Map(VIDEO_PHASES.map(phase=>[phase.id,[]]));
-  children.forEach(child=>byPhase.get(_videoPhase(child.status).id)?.push(child));
+  children.forEach(child=>byPhase.get(_videoPhase(child).id)?.push(child));
   return VIDEO_PHASES.flatMap(phase=>{
     const phaseChildren=byPhase.get(phase.id)||[];
     if(!phaseChildren.length)return[];
     const lead=[...phaseChildren].sort((a,b)=>String(a?.deadline||'9999-12-31').localeCompare(String(b?.deadline||'9999-12-31'))||String(a?.title||'').localeCompare(String(b?.title||''),'ja'))[0]||{},assignees=[...new Set(phaseChildren.map(child=>String(child.assignee||'未割当')).filter(Boolean))],deadlines=phaseChildren.map(child=>child.deadline).filter(Boolean).sort();
-    return[{...job,id:`${job.id}:phase:${phase.id}`,status:lead.status||phase.statuses[0],deadline:deadlines[0]||'',assignee:assignees.length===1?assignees[0]:`${assignees.length}名の担当者`,subtasks:phaseChildren,_phaseSlice:true,_allSubtaskCount:allChildren.length}];
+    return[{...job,id:`${job.id}:phase:${phase.id}`,status:lead.status||phase.statuses[0]||'進行中',deadline:deadlines[0]||'',assignee:assignees.length===1?assignees[0]:`${assignees.length}名の担当者`,subtasks:phaseChildren,_phaseId:phase.id,_phaseSlice:true,_allSubtaskCount:allChildren.length}];
   });
 }
 function _videoPhaseBuckets(filtered,renderLimit=VIDEO_RENDER_LIMIT,statusFilter=''){
   const byPhase=new Map(VIDEO_PHASES.map(p=>[p.id,[]]));
   const phaseCounts=new Map(VIDEO_PHASES.map(p=>[p.id,0])),expanded=(filtered||[]).flatMap(job=>_videoPhaseSlices(job,statusFilter));
-  expanded.forEach(j=>{const phaseId=_videoPhase(j.status).id;byPhase.get(phaseId)?.push(j);phaseCounts.set(phaseId,(phaseCounts.get(phaseId)||0)+(j._phaseSlice?(j.subtasks||[]).length:1));});
+  expanded.forEach(j=>{const phaseId=_videoPhase(j).id;byPhase.get(phaseId)?.push(j);phaseCounts.set(phaseId,(phaseCounts.get(phaseId)||0)+(j._phaseSlice?(j.subtasks||[]).length:1));});
   const perPhaseLimit=Math.max(10,Math.ceil(renderLimit/VIDEO_PHASES.length));
   const renderedCount=VIDEO_PHASES.reduce((sum,p)=>sum+Math.min((byPhase.get(p.id)||[]).length,perPhaseLimit),0);
   return{byPhase,phaseCounts,perPhaseLimit,renderedCount,totalCount:expanded.length};
@@ -6629,7 +6647,7 @@ function _videoCard(j){
   const subtasks=_videoSortJobs(j.subtasks||[]);
   const subtaskHtml=subtasks.length?`<details class="video-subcase-list" aria-label="${esc(j.title)}のサブ案件"><summary class="video-subcase-head"><span>↳ サブ案件</span><span>${subtasks.length}件</span></summary><div class="video-subcase-children">${subtasks.map(s=>{const subOverdue=_videoIsOverdue(s),subAlert=_videoDeadlineAlert(s),color=subAlert?.level==='danger'||subOverdue?'var(--red)':subAlert?.level==='warning'?'var(--amber)':BOARD_COL[s.status]||'var(--pl)',badge=SCOLBG[s.status]||'bk',materials=_videoAttachments(s.attachments),subId=String(s.id||''),openSubcase=s._portalChildJobId?`openPortalJobModal(${JSON.stringify(s._portalChildPortalUid)},${JSON.stringify(s._portalChildJobId)})`:j._source==='portal'?`openPortalSubcaseDetail(${JSON.stringify(j._portalUid)},${JSON.stringify(j.id)},${JSON.stringify(subId)})`:`openLegacySubcaseDetail(${JSON.stringify(j.id)},${JSON.stringify(subId)})`;return`<button type="button" class="video-subcase-row ${subAlert?`video-deadline-${subAlert.level}`:''}" style="--subcase-color:${color}" onclick="${esc(openSubcase)}" aria-label="${esc(s.title)}の詳細を開く"><div class="video-subcase-title">${esc(s.title)}</div><span class="badge ${badge} video-subcase-status">${esc(videoStatusLabel(s.status))}</span><div class="video-subcase-meta"><span>担当 ${esc(s.assignee)}</span>${_videoDeadlineAlertHtml(subAlert)}${_videoDraftMetaHtml('editor',s.editorDraftDate)}${_videoDraftMetaHtml('client',s.clientDraftDate)}<span style="color:${subOverdue?'var(--red)':'var(--t3)'}">納期（予定） ${esc(s.deadline||'未設定')}</span><span>納品日 ${esc(s.completedDeliveryDate||'未記録')}</span>${materials.length?`<span class="video-material-count">素材 ${materials.length}件</span>`:''}</div></button>`;}).join('')}</div></details>`:'';
   const materials=_videoAttachments(j.attachments);
-  const phase=_videoPhase(j.status),phaseLabel=phase.label,totalSubtasks=Math.max(subtasks.length,Number(j._allSubtaskCount||0)),done=phase.id==='done';
+  const phase=_videoPhase(j),phaseLabel=phase.label,totalSubtasks=Math.max(subtasks.length,Number(j._allSubtaskCount||0)),done=phase.id==='done';
   const meta=`<div class="video-card-meta"><span class="video-card-client">${esc(j.clientDisplay||'クライアント未設定')}</span><span class="video-card-assignee">担当 ${esc(j.assignee)}</span></div>`;
   const parentSummary=`<div class="video-card-status-row"><span class="video-card-status">${esc(phaseLabel)}</span>${_videoDeadlineAlertHtml(alert)}</div><div class="video-card-next"><span>この工程</span><b>${subtasks.length}件</b>${totalSubtasks>subtasks.length?`<small>全体 ${totalSubtasks}件</small>`:''}</div><div class="video-card-deadline"><span>最短納期</span><b>${esc(j.deadline||'未設定')}</b></div>`;
   const deadlineLabel=done?'納品日':'納期',deadlineValue=done?(j.completedDeliveryDate||j.deadline||'未記録'):(j.deadline||'未設定'),nextLabel=done?'状態':'次に',nextValue=done?'対応完了':_videoNextOwner(j);
@@ -7678,7 +7696,7 @@ function rVideoOperations(showBusinessSwitcher=false,biz=PBIZ){
   // 旧セッションの案件一覧は、portal と legacy の両方を表示する工程ボードへ移す。
   if(VIDEO_TAB==='manage-board'){VIDEO_TAB='board';sessionStorage.setItem('mc_video_tab',VIDEO_TAB);}
   if(VIDEO_STATUS&&!BIZ_CFG[biz].statuses.includes(VIDEO_STATUS))VIDEO_STATUS='';
-  const all=_videoJobs().filter(j=>j.biz===biz),active=all.filter(j=>!['完了','キャンセル'].includes(j.status)),overdue=active.filter(j=>_videoIsOverdue(j)),unassigned=active.filter(j=>j._source==='legacy'&&j.assignee==='未割当'),blocked=active.filter(j=>j.blocker),review=active.filter(j=>_videoPhase(j.status).id==='review'),portalCount=all.reduce((count,j)=>count+(j._portalChildCount||Number(j._source==='portal')),0),subcaseCount=all.reduce((n,j)=>n+(j.subtasks||[]).length,0);
+  const all=_videoJobs().filter(j=>j.biz===biz),active=all.filter(j=>!['完了','キャンセル'].includes(j.status)),overdue=active.filter(j=>_videoIsOverdue(j)),unassigned=active.filter(j=>j._source==='legacy'&&j.assignee==='未割当'),blocked=active.filter(j=>j.blocker),review=active.filter(j=>_videoPhase(j).id==='review'),portalCount=all.reduce((count,j)=>count+(j._portalChildCount||Number(j._source==='portal')),0),subcaseCount=all.reduce((n,j)=>n+(j.subtasks||[]).length,0);
   const editorPortalReady=ACCESS_CONTROL.configured===true&&Array.isArray(ACCESS_CONTROL.compatibilityEmails)&&ACCESS_CONTROL.compatibilityEmails.length>0;
   const operationTabs=[['overview','要対応'],['progress','編集進行ボード'],['board','工程ボード'],['queue','対応キュー']];
   // 旧画面の管理機能は別画面へ隔離せず、同じ新ワークスペースから直接開く。
@@ -8100,7 +8118,6 @@ function jobTotalIn(j){
   if(subs.some(s=>s.unitPrice>0))return subs.reduce((s,sub)=>s+(sub.unitPrice||0),0);
   return j.unitPrice||j.profit||0;
 }
-const SELF_WID='__self';
 function getJobWorkerIds(j){return j.workerIds||(j.workerId?[j.workerId]:[]);}
 function getJobWorkerNames(j){
   const ids=getJobWorkerIds(j);
@@ -17970,7 +17987,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260901-11';
+const APP_VERSION='20260902-01';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -18047,13 +18064,13 @@ window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});  
 checkServerVersion();                                                              // 初回表示でも旧版を即時検出
   </script>
 <script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
-<script src="./editor-push.js?v=20260901-11"></script>
-<script src="./bulletin.js?v=20260901-11"></script>
-<script src="./direct-messages.js?v=20260901-11"></script>
+<script src="./editor-push.js?v=20260902-01"></script>
+<script src="./bulletin.js?v=20260902-01"></script>
+<script src="./direct-messages.js?v=20260902-01"></script>
 <script>
   try{if(V==='directmessages')render();else renderNav();}catch(error){console.warn('owner dm init',error);}
 </script>
-<script src="./manager-features.js?v=20260901-11"></script>
-<script src="./sales-video-leads.js?v=20260901-11"></script>
+<script src="./manager-features.js?v=20260902-01"></script>
+<script src="./sales-video-leads.js?v=20260902-01"></script>
 </body>
 </html>
