@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260902-02"></script>
+<script src="./billing-terms.js?v=20260902-03"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -998,7 +998,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260902-02">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260902-03">
 </head>
 <body class="owner-yellow-ui">
 
@@ -1058,8 +1058,8 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="./ai-bridge-client.js"></script>
-<script src="./owner-video-performance.js?v=20260902-02"></script>
-<script src="./feedback-workflow.js?v=20260902-02"></script>
+<script src="./owner-video-performance.js?v=20260902-03"></script>
+<script src="./feedback-workflow.js?v=20260902-03"></script>
 <script>/* lz-string 1.5.0 (MIT) — CDN非依存でオフライン/圧縮チーム同期を保証するためインライン化 */
 var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",e={};function t(r,o){if(!e[r]){e[r]={};for(var n=0;n<r.length;n++)e[r][r.charAt(n)]=n}return e[r][o]}var i={compressToBase64:function(r){if(null==r)return"";var n=i._compress(r,6,function(r){return o.charAt(r)});switch(n.length%4){default:case 0:return n;case 1:return n+"===";case 2:return n+"==";case 3:return n+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(n){return t(o,r.charAt(n))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(r){return null==r?"":""==r?null:i._decompress(r.length,16384,function(o){return r.charCodeAt(o)-32})},compressToUint8Array:function(r){for(var o=i.compress(r),n=new Uint8Array(2*o.length),e=0,t=o.length;e<t;e++){var s=o.charCodeAt(e);n[2*e]=s>>>8,n[2*e+1]=s%256}return n},decompressFromUint8Array:function(o){if(null==o)return i.decompress(o);for(var n=new Array(o.length/2),e=0,t=n.length;e<t;e++)n[e]=256*o[2*e]+o[2*e+1];var s=[];return n.forEach(function(o){s.push(r(o))}),i.decompress(s.join(""))},compressToEncodedURIComponent:function(r){return null==r?"":i._compress(r,6,function(r){return n.charAt(r)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),i._decompress(r.length,32,function(o){return t(n,r.charAt(o))}))},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(r,o,n){if(null==r)return"";var e,t,i,s={},u={},a="",p="",c="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<r.length;i+=1)if(a=r.charAt(i),Object.prototype.hasOwnProperty.call(s,a)||(s[a]=f++,u[a]=!0),p=c+a,Object.prototype.hasOwnProperty.call(s,p))c=p;else{if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++),s[p]=f++,c=String(a)}if(""!==c){if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++)}for(t=2,e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;for(;;){if(m<<=1,v==o-1){d.push(n(m));break}v++}return d.join("")},decompress:function(r){return null==r?"":""==r?null:i._decompress(r.length,32768,function(o){return r.charCodeAt(o)})},_decompress:function(o,n,e){var t,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:e(0),position:n,index:1};for(t=0;t<3;t+=1)l[t]=t;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return i}();"function"==typeof define&&define.amd?define(function(){return LZString}):"undefined"!=typeof module&&null!=module?module.exports=LZString:"undefined"!=typeof angular&&null!=angular&&angular.module("LZString",[]).factory("LZString",function(){return LZString});
 </script>
@@ -7227,7 +7227,7 @@ function _guidePageGroups(){
 // === オーナー用社内DM ===
 // direct-messages.js が参加者と読み書きの権限を持つ唯一のデータ層です。
 // この画面では案件・請求・金額を結合しないため、DM画面から金額が見えることはありません。
-const OWNER_DM_STATE={peers:[],threads:[],messages:[],activePeerUid:'',activeThreadId:'',startedFor:'',threadUnsub:null,messageUnsub:null,loading:false,sending:false,error:'',draft:''};
+const OWNER_DM_STATE={peers:[],threads:[],messages:[],activePeerUid:'',activeThreadId:'',startedFor:'',peersFor:'',threadUnsub:null,messageUnsub:null,loading:false,sending:false,error:'',draft:''};
 const OWNER_PUSH_STATE={status:null,loading:false,forUid:''};
 let _ownerDmRenderQueued=false;
 function ownerDmIsDemo(){try{return _rolePreviewActive()||new URLSearchParams(location.search).has('demo');}catch(_){return _rolePreviewActive();}}
@@ -7250,14 +7250,15 @@ function ownerSyncUnreadSources(){
   return api.snapshot();
 }
 function ownerVisibleNotificationCount(){
-  // The app badge uses the exact same submitted-item list as 「提出確認」.
-  // DM unread is shown only on the DM menu; combining it here made the Dock
-  // badge disagree with the visible notification count.
+  // The app badge is limited to two actionable owner queues: unread DM and
+  // the exact submitted-item list shown in 「提出確認」. Other unread sources
+  // stay available to their own UI but never change the Dock badge.
+  if(!_isOwner()||ownerDmIsDemo())return 0;
   ownerSyncUnreadSources();
-  const count=ownerUnreadApi()?.sourceSnapshot?.('owner-submissions').count;
-  return Number.isFinite(Number(count))
-    ?Math.max(0,Math.min(999,Number(count)))
-    :Math.max(0,Math.min(999,_isOwner()&&!ownerDmIsDemo()?ownerSubmissionUnreadItems().length:0));
+  const api=ownerUnreadApi(),dmCount=Number(api?.sourceSnapshot?.('owner-dm').count),submissionCount=Number(api?.sourceSnapshot?.('owner-submissions').count);
+  if(Number.isFinite(dmCount)&&Number.isFinite(submissionCount))return Math.max(0,Math.min(999,dmCount+submissionCount));
+  const dmItems=ownerDmApi()?.unreadItems?.(OWNER_DM_STATE.threads)||[];
+  return Math.max(0,Math.min(999,(Array.isArray(dmItems)?dmItems.length:0)+ownerSubmissionUnreadItems().length));
 }
 function ownerSyncAppBadge(){const count=ownerVisibleNotificationCount();try{ownerPushApi()?.syncBadge?.(count)}catch(_){}return count;}
 function ownerPushCopy(status){
@@ -7294,11 +7295,15 @@ function ownerDmRenderSoon(){
   const update=()=>{_ownerDmRenderQueued=false;if(V==='directmessages')render();else renderNav();};
   if(typeof requestAnimationFrame==='function')requestAnimationFrame(update);else setTimeout(update,0);
 }
+function ownerDmStopMessages(){
+  try{OWNER_DM_STATE.messageUnsub?.()}catch(_){}
+  OWNER_DM_STATE.messageUnsub=null;OWNER_DM_STATE.activeThreadId='';OWNER_DM_STATE.messages=[];
+}
 function ownerDmStop(reset=false){
   try{OWNER_DM_STATE.threadUnsub?.()}catch(_){}
-  try{OWNER_DM_STATE.messageUnsub?.()}catch(_){}
-  OWNER_DM_STATE.threadUnsub=null;OWNER_DM_STATE.messageUnsub=null;OWNER_DM_STATE.startedFor='';
-  if(reset){OWNER_DM_STATE.peers=[];OWNER_DM_STATE.threads=[];OWNER_DM_STATE.messages=[];OWNER_DM_STATE.activePeerUid='';OWNER_DM_STATE.activeThreadId='';OWNER_DM_STATE.loading=false;OWNER_DM_STATE.sending=false;OWNER_DM_STATE.error='';OWNER_DM_STATE.draft='';ownerSetUnreadSource('owner-dm',[]);ownerSyncAppBadge();}
+  ownerDmStopMessages();
+  OWNER_DM_STATE.threadUnsub=null;OWNER_DM_STATE.startedFor='';OWNER_DM_STATE.peersFor='';
+  if(reset){OWNER_DM_STATE.peers=[];OWNER_DM_STATE.threads=[];OWNER_DM_STATE.activePeerUid='';OWNER_DM_STATE.loading=false;OWNER_DM_STATE.sending=false;OWNER_DM_STATE.error='';OWNER_DM_STATE.draft='';ownerSetUnreadSource('owner-dm',[]);ownerSyncAppBadge();}
 }
 function ownerDmPeer(peerUid){return OWNER_DM_STATE.peers.find(peer=>String(peer.uid)===String(peerUid))||null;}
 function ownerDmThread(peerUid){return OWNER_DM_STATE.threads.find(thread=>String(thread.counterpartUid)===String(peerUid))||null;}
@@ -7308,30 +7313,43 @@ function ownerDmWriteBlocked(){
   if(ownerDmIsDemo()){toast('デモ・確認モードではDMを送信できません','warn');return true;}
   return false;
 }
-function ownerDmStart(){
-  const api=ownerDmApi();
-  if(!api||V!=='directmessages'||!_isOwner()||!FB_USER||ownerDmIsDemo()||ownerDmReadBlocked())return;
-  if(OWNER_DM_STATE.startedFor===FB_USER.uid&&OWNER_DM_STATE.threadUnsub)return;
-  ownerDmStop(true);
-  OWNER_DM_STATE.startedFor=FB_USER.uid;OWNER_DM_STATE.loading=true;
+function ownerDmLoadPeers(){
+  const api=ownerDmApi(),uid=FB_USER?.uid||'';
+  if(!api||V!=='directmessages'||!_isOwner()||!uid||ownerDmIsDemo()||ownerDmReadBlocked()||OWNER_DM_STATE.loading||OWNER_DM_STATE.peersFor===uid)return;
+  OWNER_DM_STATE.loading=true;OWNER_DM_STATE.peersFor=uid;
   Promise.resolve(api.loadPeers()).then(peers=>{
     if(OWNER_DM_STATE.startedFor!==FB_USER?.uid)return;
     OWNER_DM_STATE.peers=Array.isArray(peers)?peers:[];OWNER_DM_STATE.loading=false;OWNER_DM_STATE.error='';ownerDmRenderSoon();
   }).catch(error=>{
     if(OWNER_DM_STATE.startedFor!==FB_USER?.uid)return;
-    OWNER_DM_STATE.loading=false;OWNER_DM_STATE.error='編集者一覧を読み込めませんでした';
+    OWNER_DM_STATE.peersFor='';OWNER_DM_STATE.loading=false;OWNER_DM_STATE.error='編集者一覧を読み込めませんでした';
     if(!window.EditflowFirestoreQuota?.handle?.(error,'owner direct-message peers'))console.warn('owner dm peers',error);
     ownerDmRenderSoon();
   });
-  OWNER_DM_STATE.threadUnsub=api.watch((threads,error)=>{
-    if(OWNER_DM_STATE.startedFor!==FB_USER?.uid)return;
-    if(error){OWNER_DM_STATE.error='DM履歴を読み込めませんでした';console.warn('owner dm threads',error);ownerDmRenderSoon();return;}
-    OWNER_DM_STATE.threads=Array.isArray(threads)?threads:[];OWNER_DM_STATE.error='';ownerSetUnreadSource('owner-dm',api.unreadItems?.(OWNER_DM_STATE.threads)||[]);ownerSyncAppBadge();
+}
+function ownerDmStart(){
+  const api=ownerDmApi();
+  if(!api||!_isOwner()||!FB_USER||ownerDmIsDemo()||ownerDmReadBlocked())return;
+  if(OWNER_DM_STATE.startedFor!==FB_USER.uid||!OWNER_DM_STATE.threadUnsub){
+    ownerDmStop(true);
+    OWNER_DM_STATE.startedFor=FB_USER.uid;
+    OWNER_DM_STATE.threadUnsub=api.watch((threads,error)=>{
+      if(OWNER_DM_STATE.startedFor!==FB_USER?.uid)return;
+      if(error){OWNER_DM_STATE.error='DM履歴を読み込めませんでした';console.warn('owner dm threads',error);ownerDmRenderSoon();return;}
+      OWNER_DM_STATE.threads=Array.isArray(threads)?threads:[];OWNER_DM_STATE.error='';ownerSetUnreadSource('owner-dm',api.unreadItems?.(OWNER_DM_STATE.threads)||[]);ownerSyncAppBadge();
+      if(V==='directmessages'){
+        const active=ownerDmThread(OWNER_DM_STATE.activePeerUid);
+        if(active&&String(active.id)!==String(OWNER_DM_STATE.activeThreadId))ownerDmWatchMessages(active.id);
+        if(active)ownerDmMarkRead(active);
+      }
+      ownerDmRenderSoon();
+    });
+  }
+  if(V==='directmessages'){
+    ownerDmLoadPeers();
     const active=ownerDmThread(OWNER_DM_STATE.activePeerUid);
-    if(active&&String(active.id)!==String(OWNER_DM_STATE.activeThreadId))ownerDmWatchMessages(active.id);
-    if(active)ownerDmMarkRead(active);
-    ownerDmRenderSoon();
-  });
+    if(active){ownerDmWatchMessages(active.id);ownerDmMarkRead(active);}
+  }
 }
 function ownerDmWatchMessages(threadId){
   const api=ownerDmApi(),id=String(threadId||'');if(!api||V!=='directmessages'||!id||ownerDmIsDemo()||ownerDmReadBlocked())return;
@@ -7401,8 +7419,8 @@ window.addEventListener('editflow-push-received',event=>{
   ownerSyncAppBadge();ownerDmRenderSoon();
 });
 // Other owner-visible Firestore sources (case notifications and bulletins)
-// publish their current snapshot here.  Replacing a source is idempotent, and
-// matching notificationId values are counted once across all categories.
+// publish their current snapshot here for their own UI. The Dock badge still
+// reads only owner-dm and owner-submissions in ownerVisibleNotificationCount().
 window.addEventListener('editflow-unread-source',event=>{
   if(!_isOwner()||ownerDmIsDemo())return;
   const detail=event?.detail||{},source=String(detail.source||'').trim();
@@ -15359,8 +15377,8 @@ function toggleNavCat(cid){
 // viewId→カテゴリー(未分類は「その他」)
 function _navCatOf(id){return NAV_CATS.find(cat=>cat.views.includes(id))||null;}
 function renderNav(){
-  // DMの未読数はDM画面を一度開いて読み込んだ分だけ表示します。
-  // 一覧画面ごとにFirestoreの会話監視を始めないため、通常操作の読み取りを増やしません。
+  // 未読DMはオーナー画面全体で1本だけ監視し、Dock件数を正確に保ちます。
+  // 相手一覧と本文はDM画面を開いた時だけ読み込みます。
   if(_isOwner()&&typeof ownerDmEnsureStyles==='function'){ownerDmEnsureStyles();ownerDmStart();ownerSyncAppBadge();}
   const cfg=getNavCfg();
   const el=document.getElementById('nav-items');if(!el)return;
@@ -15427,7 +15445,7 @@ function renderNav(){
   });
 }
 function setV(view){
-  if(V==='directmessages'&&view!=='directmessages'&&typeof ownerDmStop==='function')ownerDmStop(false);
+  if(V==='directmessages'&&view!=='directmessages'&&typeof ownerDmStopMessages==='function')ownerDmStopMessages();
   if(V==='videofeedback'&&view!=='videofeedback')window.EditflowFeedback?.stop?.();
   V=view;CP_EDIT_MODE=false;render();
 }
@@ -17987,7 +18005,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260902-02';
+const APP_VERSION='20260902-03';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -18064,13 +18082,13 @@ window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});  
 checkServerVersion();                                                              // 初回表示でも旧版を即時検出
   </script>
 <script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
-<script src="./editor-push.js?v=20260902-02"></script>
-<script src="./bulletin.js?v=20260902-02"></script>
-<script src="./direct-messages.js?v=20260902-02"></script>
+<script src="./editor-push.js?v=20260902-03"></script>
+<script src="./bulletin.js?v=20260902-03"></script>
+<script src="./direct-messages.js?v=20260902-03"></script>
 <script>
   try{if(V==='directmessages')render();else renderNav();}catch(error){console.warn('owner dm init',error);}
 </script>
-<script src="./manager-features.js?v=20260902-02"></script>
-<script src="./sales-video-leads.js?v=20260902-02"></script>
+<script src="./manager-features.js?v=20260902-03"></script>
+<script src="./sales-video-leads.js?v=20260902-03"></script>
 </body>
 </html>

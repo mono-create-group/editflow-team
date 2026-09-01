@@ -29,13 +29,15 @@ test('four canonical unread notifications display as four even when categories r
   assert.equal(api.snapshot().count, 4);
 });
 
-test('visible submissions stay four when two separate DM records exist', () => {
+test('owner DM and submission sources stay separate from unrelated unread sources', () => {
   const { api } = registry();
   api.set('owner-submissions', [1, 2, 3, 4].map(id => ({ notificationId: `submission:${id}`, unread: true })));
   api.set('owner-dm', [1, 2].map(id => ({ notificationId: `dm:${id}`, unread: true })));
-  assert.equal(api.snapshot().count, 6);
+  api.set('owner-case', [1, 2, 3].map(id => ({ notificationId: `case:${id}`, unread: true })));
+  assert.equal(api.snapshot().count, 9);
   assert.equal(api.sourceSnapshot('owner-submissions').count, 4);
   assert.equal(api.sourceSnapshot('owner-dm').count, 2);
+  assert.equal(api.sourceSnapshot('owner-case').count, 3);
 });
 
 test('re-subscribing a source replaces its old records and zero clears the app state', () => {
@@ -66,12 +68,13 @@ test('owner app and service worker load the shared registry and never increment 
   assert.doesNotMatch(sw, /previous\+1|setAppBadge\?\.\(badgeCount\)/);
 });
 
-test('owner Dock badge is rebuilt from the same pending submissions shown in navigation, not DM unread', () => {
+test('owner Dock badge sums only unread DM and pending submissions', () => {
   assert.match(owner, /function ownerSubmissionUnreadItems\(source=_videoSubmissionReviewItems\(\)\)/);
   assert.match(owner, /notificationId:`submission:\$\{portalUid\}:\$\{jobId\}:/);
   assert.match(owner, /api\.set\('owner-submissions',_isOwner\(\)&&!ownerDmIsDemo\(\)\?ownerSubmissionUnreadItems\(\):\[\]\)/);
+  assert.match(owner, /sourceSnapshot\?\.\('owner-dm'\)\.count/);
   assert.match(owner, /function ownerVisibleNotificationCount\(\)\{[\s\S]*?sourceSnapshot\?\.\('owner-submissions'\)\.count/);
-  assert.match(owner, /ownerSubmissionUnreadItems\(\)\.length/);
+  assert.match(owner, /dmCount\+submissionCount/);
   assert.match(owner, /function ownerSyncAppBadge\(\)\{const count=ownerVisibleNotificationCount\(\);/);
   assert.doesNotMatch(owner, /function ownerSyncAppBadge\(\)\{[^}]*ownerUnreadCount\(/);
   assert.match(owner, /_ownerPortalBridgeReady\.jobs=true;_notifyOwnerPortalBridge\(\);\s*ownerSyncAppBadge\(\);/);
@@ -93,7 +96,26 @@ test('owner Dock badge is rebuilt from the same pending submissions shown in nav
   ]);
 });
 
-test('owner visible notification count falls back to the four rendered submissions without the registry', () => {
+test('owner visible notification count excludes unrelated registry sources', () => {
+  const source = owner.match(/function ownerVisibleNotificationCount\(\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(source);
+  const context = vm.createContext({
+    ownerSyncUnreadSources: () => null,
+    ownerUnreadApi: () => ({ sourceSnapshot: name => ({ count: ({ 'owner-dm': 2, 'owner-submissions': 4, 'owner-case': 30 })[name] || 0 }) }),
+    _isOwner: () => true,
+    ownerDmIsDemo: () => false,
+    ownerDmApi: () => ({ unreadItems: () => [] }),
+    OWNER_DM_STATE: { threads: [] },
+    ownerSubmissionUnreadItems: () => [{}, {}, {}, {}],
+    Array,
+    Number,
+    Math,
+  });
+  vm.runInContext(`${source};this.result=ownerVisibleNotificationCount();`, context);
+  assert.equal(context.result, 6);
+});
+
+test('owner visible notification count falls back to unread DM plus submissions without the registry', () => {
   const source = owner.match(/function ownerVisibleNotificationCount\(\)\{[\s\S]*?\n\}/)?.[0];
   assert.ok(source);
   const context = vm.createContext({
@@ -101,12 +123,15 @@ test('owner visible notification count falls back to the four rendered submissio
     ownerUnreadApi: () => null,
     _isOwner: () => true,
     ownerDmIsDemo: () => false,
+    ownerDmApi: () => ({ unreadItems: () => [{}, {}] }),
+    OWNER_DM_STATE: { threads: [{ unread: true }, { unread: true }] },
     ownerSubmissionUnreadItems: () => [{}, {}, {}, {}],
+    Array,
     Number,
     Math,
   });
   vm.runInContext(`${source};this.result=ownerVisibleNotificationCount();`, context);
-  assert.equal(context.result, 4);
+  assert.equal(context.result, 6);
 });
 
 test('authentication changes clear stale unread registry and device badge before rebuilding', () => {

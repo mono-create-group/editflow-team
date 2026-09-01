@@ -11,7 +11,7 @@ test('owner navigation exposes a direct-message page in the video workspace', ()
   assert.match(source, /views:\['editorportal','videoedit','videosubmissions','videohaken','videoclients','workers','videoschedules','videomanuals','videofeedback','videoperformance','videoinvoices','directmessages','videosuggestions'\]/);
   assert.match(source, /directmessages:rOwnerDirectMessages/);
   assert.match(source, /if\(v==='directmessages'\)return false/);
-  assert.match(source, /<script src="\.\/direct-messages\.js\?v=20260902-02"><\/script>/);
+  assert.match(source, /<script src="\.\/direct-messages\.js\?v=20260902-03"><\/script>/);
 });
 
 test('owner DM reuses the guarded shared data layer for peers, threads, history, send, and read receipts', () => {
@@ -24,12 +24,14 @@ test('owner DM reuses the guarded shared data layer for peers, threads, history,
   assert.match(page, /ownerDmStop\(true\)/);
 });
 
-test('DM listeners only start on the DM route and both quota circuits prevent new reads', () => {
-  assert.match(page, /V!=='directmessages'\|\|!_isOwner\(\)\|\|!FB_USER\|\|ownerDmIsDemo\(\)\|\|ownerDmReadBlocked\(\)/);
+test('DM unread stays current globally while peer and message reads stay on the DM route', () => {
+  assert.match(page, /if\(!api\|\|!_isOwner\(\)\|\|!FB_USER\|\|ownerDmIsDemo\(\)\|\|ownerDmReadBlocked\(\)\)return;/);
   assert.match(page, /function ownerDmReadBlocked\(\)\{return !!\(_fbQuotaReadCircuitOpen\|\|window\.EditflowFirestoreQuota\?\.isOpen\?\.\(\)\);\}/);
+  assert.match(page, /function ownerDmLoadPeers\(\)\{[\s\S]*?V!=='directmessages'/);
   assert.match(page, /if\(!api\|\|V!=='directmessages'\|\|!id\|\|ownerDmIsDemo\(\)\|\|ownerDmReadBlocked\(\)\)return;/);
-  assert.doesNotMatch(source, /function renderNav\(\)\{\s*if\(_isOwner\(\)&&typeof ownerDmStart/);
-  assert.match(source, /if\(V==='directmessages'&&view!=='directmessages'&&typeof ownerDmStop==='function'\)ownerDmStop\(false\);/);
+  assert.match(source, /if\(_isOwner\(\)&&typeof ownerDmEnsureStyles==='function'\)\{ownerDmEnsureStyles\(\);ownerDmStart\(\);ownerSyncAppBadge\(\);\}/);
+  assert.match(source, /if\(V==='directmessages'&&view!=='directmessages'&&typeof ownerDmStopMessages==='function'\)ownerDmStopMessages\(\);/);
+  assert.match(page, /if\(V==='directmessages'\)\{[\s\S]*?ownerDmWatchMessages/);
   assert.match(source, /try\{if\(V==='directmessages'\)render\(\);else renderNav\(\);\}/);
 });
 

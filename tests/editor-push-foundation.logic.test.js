@@ -69,6 +69,7 @@ test('unread counts use a local app badge without adding Firestore writes', () =
   assert.match(editorFeatures, /feature\.dmThreads=incoming;feature\.dmLoading=false;feature\.dmError='';syncEditorAppBadge\(\)/);
   assert.match(owner, /function ownerSyncAppBadge\(\)/);
   assert.match(owner, /function ownerVisibleNotificationCount\(\)/);
+  assert.match(owner, /sourceSnapshot\?\.\('owner-dm'\)\.count/);
   assert.match(owner, /sourceSnapshot\?\.\('owner-submissions'\)\.count/);
   assert.match(owner, /ownerSetUnreadSource\('owner-dm'/);
   assert.match(owner, /window\.addEventListener\('editflow-push-received'/);
