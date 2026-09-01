@@ -62,12 +62,12 @@ test('editor draft submissions bind the stored evidence URL to the appended work
 });
 
 test('workflow-aware editor saves cannot change director or client-owned statuses', () => {
-  const body = rules.match(/function validEditorWorkflowStatus\(uid, jobId\) \{([\s\S]*?)\n    \}/)?.[1] || '';
+  const body = rules.match(/function validEditorWorkflowStatus\(\) \{([\s\S]*?)\n    \}/)?.[1] || '';
   assert.match(body, /reviewStage\(resource\.data\) == 'editing'/);
   assert.match(body, /reviewStage\(request\.resource\.data\) == 'director_review'/);
   assert.match(body, /validEditorSubmissionStatus\([\s\S]*resource\.data\.status, request\.resource\.data\.status/);
   assert.match(body, /request\.resource\.data\.status == resource\.data\.status/);
-  assert.match(rules, /&& validEditorWorkflowStatus\(uid, jobId\)/);
+  assert.match(rules, /&& validEditorWorkflowStatus\(\)/);
 });
 
 test('manager same-stage updates keep both status and review event history intact', () => {

@@ -998,9 +998,7 @@ service cloud.firestore {
           &&
           validReviewWorkflow(request.resource.data)
           && validProgressEvents(request.resource.data)
-          && (validEditorDeliveryCompletion(uid, jobId)
-            ||
-            (!hasReviewWorkflow(resource.data)
+          && ((!hasReviewWorkflow(resource.data)
               && reviewStage(request.resource.data) == 'editing'
               && reviewEventsUnchanged())
             || (!hasReviewWorkflow(resource.data)
@@ -1025,16 +1023,32 @@ service cloud.firestore {
               && validEditorSubmittedEvent(
                 'editing', reviewRound(request.resource.data), request.resource.data.status
               ))
+            // Delivery completion is the most expensive branch because it
+            // verifies the paired immutable event with getAfter(). Keep it
+            // last so ordinary progress, date, and submission saves do not
+            // spend the request expression budget evaluating it.
+            || validEditorDeliveryCompletion(uid, jobId)
           )
         );
+    }
+
+    // The paired event and evidence are fully verified once by
+    // validEditorReviewTransition(). This ownership check validates only the
+    // workflow shape, avoiding the same expensive getAfter() contract twice.
+    function validEditorDeliveryWorkflowStatus() {
+      return hasReviewWorkflow(resource.data)
+        && hasReviewWorkflow(request.resource.data)
+        && reviewStage(resource.data) == 'client_review'
+        && reviewStage(request.resource.data) == 'delivered'
+        && reviewRound(request.resource.data) == reviewRound(resource.data)
+        && request.resource.data.status == '完了';
     }
 
     // Once a workflow exists, only the editor's own submission may change a
     // review status. A saved D/client/final status is manager-owned even when
     // the editor is merely saving dates or a progress memo.
-    function validEditorWorkflowStatus(uid, jobId) {
-      return validEditorDeliveryCompletion(uid, jobId)
-        || (!hasReviewWorkflow(resource.data)
+    function validEditorWorkflowStatus() {
+      return (!hasReviewWorkflow(resource.data)
           && !hasReviewWorkflow(request.resource.data)
           && (request.resource.data.status == resource.data.status
             || validEditorStartTransition(
@@ -1080,7 +1094,8 @@ service cloud.firestore {
           reviewStage(request.resource.data) == reviewStage(resource.data)
           && reviewRound(request.resource.data) == reviewRound(resource.data)
           && request.resource.data.status == resource.data.status
-        );
+        )
+        || validEditorDeliveryWorkflowStatus();
     }
 
     // Keep current-workflow and legacy migrations in separate branches. Apart
@@ -1653,7 +1668,48 @@ service cloud.firestore {
             'ownPay','payableApproved','payableApprovedAt','payableMonth',
             'updatedAt','updatedBy'
           ]);
-        allow update: if editor(uid)
+        // Initial and revision submissions append a role-owned workflow event.
+        // Keep this path separate from ordinary metadata saves so Firestore
+        // does not evaluate the event contract together with every unrelated
+        // general-save validator and exceed the expression budget.
+        allow update: if resource.data.status != request.resource.data.status
+          && request.resource.data.status in ['初稿提出済み','修正稿提出済み']
+          && editor(uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status','deadline','sharedDate','editorDraftDate','clientDraftDate',
+            'thumbnailDate','deliveryDate','progress','evidenceUrl','blocker',
+            'workDate','startTime','endTime','progressMilestones',
+            'lastProgressChangedByUid','lastProgressChangedByEmail',
+            'lastProgressChangedByRole','updatedAt','history','workflow','progressEvents'
+          ])
+          && request.resource.data.get('lastProgressChangedByUid', '') == uid
+          && request.resource.data.get('lastProgressChangedByRole', '') == '担当編集者'
+          && request.resource.data.get('progressMilestones', []) is list
+          && request.resource.data.get('history', []) is list
+          && editorDraftDateChangeAllowed()
+          && validEditorReviewTransition(uid, jobId)
+          && preservesFinalJob()
+          && validJobSchedule();
+        // Final editor delivery has a larger immutable-event contract than an
+        // ordinary progress save. Evaluate it on a narrow write shape before
+        // the general editor branch so the same request does not exhaust the
+        // Firestore Rules expression budget while rechecking unrelated fields.
+        allow update: if resource.data.status != '完了'
+          && request.resource.data.status == '完了'
+          && editor(uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status','completedDeliveryDate','evidenceUrl','blocker','workflow',
+            'progressEvents','lastProgressChangedByUid','lastProgressChangedByEmail',
+            'lastProgressChangedByRole','updatedAt','history'
+          ])
+          && request.resource.data.get('lastProgressChangedByUid', '') == uid
+          && request.resource.data.get('lastProgressChangedByRole', '') == '担当編集者'
+          && validEditorDeliveryCompletion(uid, jobId)
+          && preservesFinalJob();
+        allow update: if !(resource.data.status != request.resource.data.status
+            && request.resource.data.status in ['初稿提出済み','修正稿提出済み'])
+          && !(resource.data.status != '完了' && request.resource.data.status == '完了')
+          && editor(uid)
           && validJobStatus(request.resource.data.status)
           && validCompletedJobEvidence()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
@@ -1669,7 +1725,7 @@ service cloud.firestore {
           && request.resource.data.get('history', []) is list
           && editorDraftDateChangeAllowed()
           && validEditorReviewTransition(uid, jobId)
-          && validEditorWorkflowStatus(uid, jobId)
+          && validEditorWorkflowStatus()
           && preservesFinalJob()
           && validJobSchedule();
         allow update: if directorFor(uid)

@@ -35,21 +35,44 @@ function portalJob(uid, overrides = {}) {
     editorDraftDateSetter: 'editor',
     clientDraftDate: '2026-09-06', thumbnailDate: '', deliveryDate: '2026-09-10',
     requestUrl: 'https://example.com/request', sourceUrl: 'https://example.com/source',
-    instructions: '編集指示', urgent: false, status: '受注済み', progress: '', evidenceUrl: '', blocker: '',
+    instructions: '編集指示', urgent: false, status: 'アサイン済み', progress: '', evidenceUrl: '', blocker: '',
     editorPayAmount: 3000,
     workDate: '', startTime: '', endTime: '', submittedByUid: uid, editorUid: uid,
     editorEmail: `${uid}@example.com`, editorName: uid, directorUid: '', source: 'direct_client',
-    createdAt: 1, updatedAt: 1, history: [{ at: 1, type: 'created', by: uid, status: '受注済み' }],
+    createdAt: 1, updatedAt: 1, history: [{ at: 1, type: 'created', by: uid, status: 'アサイン済み' }],
     ...overrides,
   };
+}
+
+function externalWorkflowJob(overrides = {}) {
+  const job = portalJob('external1', {
+    businessType: 'edit_agency', title: 'WD-S086', caseName: '9月分_和光市デンタルオフィス',
+    parentCaseId: 'parent-wako-09', parentCaseName: '9月分_和光市デンタルオフィス',
+    deadline: '', deliveryDate: '', sharedDate: '2026-08-28', editorDraftDate: '2026-09-01',
+    clientDraftDate: '2026-09-11', instructions: '', status: '進行中', directorUid: 'dir1',
+    source: 'legacy_sync', legacyParentId: 'legacy-parent-wako-09',
+    legacySubtaskId: 'legacy-subtask-wd-s086', subtaskIndex: 0,
+    manualIds: [], parentManualIds: [], caution: '', parentCaution: '', attachments: [],
+    workflow: { round: 1, stage: 'editing' }, progressEvents: [], progressMilestones: [],
+    lastProgressChangedByUid: 'external1', lastProgressChangedByEmail: 'external1@example.com',
+    lastProgressChangedByRole: '担当編集者', updatedBy: 'owner',
+    history: [
+      { at: 1, type: 'synced', by: 'owner', status: '進行中' },
+      { at: 2, type: 'editor_progress', by: 'external1', status: '進行中' },
+    ],
+    ...overrides,
+  });
+  delete job.sourceClientId;
+  delete job.editorPayAmount;
+  return job;
 }
 
 function manualInvoice(uid, overrides = {}) {
   return {
     recordType: 'editor_invoice', editorUid: uid, editorEmail: `${uid}@example.com`, editorName: uid,
-    month: '2026-09', jobIds: ['done1'], lines: [{ title: '案件1', amount: 5000 }],
+    month: '2026-09', jobIds: ['done1'], lines: [{ jobId: 'done1', title: '案件1', amount: 5000, taxRate: 0 }],
     issuer: { name: uid }, recipientName: 'mono.create', documentType: 'invoice',
-    subtotal: 5000, taxByRate: {}, tax: 0, withholding: 0, withholdingStatus: 'none', total: 5000,
+    subtotal: 5000, taxByRate: { 0: 0 }, tax: 0, withholding: 0, withholdingStatus: 'none', total: 5000,
     status: '下書き', invoiceNumber: 'TEST-001', issueDate: '2026-09-25', dueDate: '2026-10-31',
     invoiceAvailableOn: '2026-09-25', paymentDueDate: '2026-10-31',
     retentionUntil: '2027-09-30', version: 1, idempotencyKey: `manual-${uid}`, file: {},
@@ -186,6 +209,25 @@ async function expectAllowed(label, promise) {
       await setDoc(doc(db, 'editor_job_board', 'external-one'), boardJob({ audience: 'director_team', directorUid: 'dir1', eligibleUids: ['external1'] }));
       await setDoc(doc(db, 'editor_job_board', 'external-two'), boardJob({ audience: 'director_team', directorUid: 'dir2', eligibleUids: ['external2'] }));
       await setDoc(doc(db, 'editor_portals', 'external1', 'editor_jobs', 'done1'), portalJob('external1', { directorUid: 'dir1', status: '完了', evidenceUrl: 'https://example.com/delivery' }));
+      await setDoc(doc(db, 'editor_portals', 'external1', 'editor_jobs', 'workflow-save-budget'), externalWorkflowJob());
+      await setDoc(doc(db, 'editor_portals', 'external1', 'editor_jobs', 'workflow-revision-save'), externalWorkflowJob({
+        title: 'WD-S087', status: '修正中', evidenceUrl: 'https://example.com/initial',
+        workflow: { round: 2, stage: 'editing' },
+        progressEvents: [{
+          at: 2, type: 'director_revision_requested', round: 2, byUid: 'dir1',
+          byEmail: 'dir1@example.com', byRole: 'director', fromStage: 'director_review',
+          toStage: 'editing', status: '修正中', reason: 'テロップ修正',
+        }],
+      }));
+      await setDoc(doc(db, 'editor_portals', 'external1', 'editor_jobs', 'workflow-delivery-save'), externalWorkflowJob({
+        businessType: 'dispatch', title: 'SU-S024', status: '先方確認中',
+        evidenceUrl: 'https://example.com/initial', workflow: { round: 1, stage: 'client_review' },
+        progressEvents: [{
+          at: 2, type: 'client_submitted', round: 1, byUid: 'dir1',
+          byEmail: 'dir1@example.com', byRole: 'director', fromStage: 'client_submission',
+          toStage: 'client_review', status: '先方確認中', evidenceUrl: 'https://example.com/initial',
+        }],
+      }));
       // This legacy fixture simulates a historically saved external job with a
       // mono.create settlement field. The external editor must fail closed
       // until an owner removes/migrates it out of this readable document.
@@ -425,6 +467,135 @@ async function expectAllowed(label, promise) {
         lastProgressChangedByRole: '担当編集者', updatedAt: 2,
       }
     ));
+    // Regression for the production-shaped save that previously exhausted the
+    // Firestore Rules 1,000-expression request budget. Each job update is
+    // committed atomically with the immutable event written by editor.html.
+    const workflowHistory = [
+      { at: 1, type: 'synced', by: 'owner', status: '進行中' },
+      { at: 2, type: 'editor_progress', by: 'external1', status: '進行中' },
+    ];
+    const startBatch = writeBatch(external1);
+    startBatch.update(doc(external1, 'editor_portals', 'external1', 'editor_jobs', 'workflow-save-budget'), {
+      status: '編集者進行中', deadline: '', deliveryDate: '', sharedDate: '2026-08-28',
+      editorDraftDate: '2026-09-01', clientDraftDate: '2026-09-11', thumbnailDate: '',
+      progress: '', evidenceUrl: '', blocker: '', workDate: '', startTime: '', endTime: '',
+      workflow: { round: 1, stage: 'editing' }, progressEvents: [], progressMilestones: [],
+      lastProgressChangedByUid: 'external1', lastProgressChangedByEmail: 'external1@example.com',
+      lastProgressChangedByRole: '担当編集者', updatedAt: 3,
+      history: [...workflowHistory, {
+        at: 3, type: 'editor_progress', by: 'external1', byEmail: 'external1@example.com',
+        byName: 'external1', byRole: '担当編集者', status: '編集者進行中',
+        milestone: null, evidenceUrl: null,
+      }],
+    });
+    startBatch.set(doc(external1, 'editor_portals', 'external1', 'editor_jobs', 'workflow-save-budget', 'events', 'progress-start'), {
+      at: serverTimestamp(), type: 'progress', byUid: 'external1', byEmail: 'external1@example.com',
+      byRole: '担当編集者', status: '編集者進行中', milestone: null, deliveryDate: '',
+      hasEvidence: false, hasBlocker: false,
+    });
+    await expectAllowed('production-shaped external editor progress save stays within rules budget', startBatch.commit());
+
+    const initialUrl = 'https://example.com/initial-draft';
+    const initialEvent = {
+      at: 4, type: 'editor_submitted', round: 1, byUid: 'external1',
+      byEmail: 'external1@example.com', byRole: '担当編集者', fromStage: 'editing',
+      toStage: 'director_review', status: '初稿提出済み', evidenceUrl: initialUrl,
+    };
+    const initialBatch = writeBatch(external1);
+    initialBatch.update(doc(external1, 'editor_portals', 'external1', 'editor_jobs', 'workflow-save-budget'), {
+      status: '初稿提出済み', evidenceUrl: initialUrl,
+      workflow: { round: 1, stage: 'director_review' }, progressEvents: [initialEvent],
+      progressMilestones: [{
+        key: 'initial_submitted', label: '初稿を提出', status: '初稿提出済み', at: 4,
+        byUid: 'external1', byEmail: 'external1@example.com', byName: 'external1',
+        byRole: '担当編集者', evidenceUrl: initialUrl,
+      }],
+      lastProgressChangedByUid: 'external1', lastProgressChangedByEmail: 'external1@example.com',
+      lastProgressChangedByRole: '担当編集者', updatedAt: 4,
+      history: [...workflowHistory, {
+        at: 3, type: 'editor_progress', by: 'external1', byEmail: 'external1@example.com',
+        byName: 'external1', byRole: '担当編集者', status: '編集者進行中',
+        milestone: null, evidenceUrl: null,
+      }, {
+        at: 4, type: 'editor_milestone', by: 'external1', byEmail: 'external1@example.com',
+        byName: 'external1', byRole: '担当編集者', status: '初稿提出済み',
+        milestone: 'initial_submitted', evidenceUrl: initialUrl,
+      }],
+    });
+    initialBatch.set(doc(external1, 'editor_portals', 'external1', 'editor_jobs', 'workflow-save-budget', 'events', 'initial-submission'), {
+      at: serverTimestamp(), type: 'editor_milestone', byUid: 'external1',
+      byEmail: 'external1@example.com', byRole: '担当編集者', status: '初稿提出済み',
+      milestone: 'initial_submitted', deliveryDate: '', hasEvidence: true, hasBlocker: false,
+    });
+    await expectAllowed('production-shaped initial submission stays within rules budget', initialBatch.commit());
+
+    const revisionUrl = 'https://example.com/revision';
+    const revisionRequestedEvent = {
+      at: 2, type: 'director_revision_requested', round: 2, byUid: 'dir1',
+      byEmail: 'dir1@example.com', byRole: 'director', fromStage: 'director_review',
+      toStage: 'editing', status: '修正中', reason: 'テロップ修正',
+    };
+    const revisionSubmittedEvent = {
+      at: 5, type: 'editor_submitted', round: 2, byUid: 'external1',
+      byEmail: 'external1@example.com', byRole: '担当編集者', fromStage: 'editing',
+      toStage: 'director_review', status: '修正稿提出済み', evidenceUrl: revisionUrl,
+    };
+    const revisionBatch = writeBatch(external1);
+    revisionBatch.update(doc(external1, 'editor_portals', 'external1', 'editor_jobs', 'workflow-revision-save'), {
+      status: '修正稿提出済み', evidenceUrl: revisionUrl,
+      workflow: { round: 2, stage: 'director_review' },
+      progressEvents: [revisionRequestedEvent, revisionSubmittedEvent],
+      progressMilestones: [{
+        key: 'revision_submitted', label: '修正稿を提出', status: '修正稿提出済み', at: 5,
+        byUid: 'external1', byEmail: 'external1@example.com', byName: 'external1',
+        byRole: '担当編集者', evidenceUrl: revisionUrl,
+      }],
+      lastProgressChangedByUid: 'external1', lastProgressChangedByEmail: 'external1@example.com',
+      lastProgressChangedByRole: '担当編集者', updatedAt: 5,
+      history: [...workflowHistory, {
+        at: 5, type: 'editor_milestone', by: 'external1', byEmail: 'external1@example.com',
+        byName: 'external1', byRole: '担当編集者', status: '修正稿提出済み',
+        milestone: 'revision_submitted', evidenceUrl: revisionUrl,
+      }],
+    });
+    revisionBatch.set(doc(external1, 'editor_portals', 'external1', 'editor_jobs', 'workflow-revision-save', 'events', 'revision-submission'), {
+      at: serverTimestamp(), type: 'editor_milestone', byUid: 'external1',
+      byEmail: 'external1@example.com', byRole: '担当編集者', status: '修正稿提出済み',
+      milestone: 'revision_submitted', deliveryDate: '', hasEvidence: true, hasBlocker: false,
+    });
+    await expectAllowed('production-shaped revision submission stays within rules budget', revisionBatch.commit());
+
+    const completedDeliveryDate = '2026-09-01';
+    const deliveryUrl = 'https://example.com/delivery-final';
+    const clientReviewEvent = {
+      at: 2, type: 'client_submitted', round: 1, byUid: 'dir1',
+      byEmail: 'dir1@example.com', byRole: 'director', fromStage: 'client_submission',
+      toStage: 'client_review', status: '先方確認中', evidenceUrl: 'https://example.com/initial',
+    };
+    const deliveryEvent = {
+      at: 4, type: 'editor_delivery_completed', round: 1, byUid: 'external1',
+      byEmail: 'external1@example.com', byRole: '担当編集者', fromStage: 'client_review',
+      toStage: 'delivered', status: '完了', completedDeliveryDate, evidenceUrl: deliveryUrl,
+    };
+    const deliveryBatch = writeBatch(external1);
+    deliveryBatch.update(doc(external1, 'editor_portals', 'external1', 'editor_jobs', 'workflow-delivery-save'), {
+      status: '完了', completedDeliveryDate, evidenceUrl: deliveryUrl, blocker: '',
+      workflow: { round: 1, stage: 'delivered' }, progressEvents: [clientReviewEvent, deliveryEvent],
+      lastProgressChangedByUid: 'external1', lastProgressChangedByEmail: 'external1@example.com',
+      lastProgressChangedByRole: '担当編集者', updatedAt: 4,
+      history: [...workflowHistory, {
+        at: 4, type: 'editor_delivery_completed', by: 'external1',
+        byEmail: 'external1@example.com', byName: 'external1', byRole: '担当編集者',
+        status: '完了', completedDeliveryDate, evidenceUrl: deliveryUrl,
+      }],
+    });
+    deliveryBatch.set(doc(external1, 'editor_portals', 'external1', 'editor_jobs', 'workflow-delivery-save', 'events', 'delivery-completion'), {
+      at: serverTimestamp(), type: 'editor_delivery_completed', byUid: 'external1',
+      byEmail: 'external1@example.com', byRole: '担当編集者', fromStage: 'client_review',
+      toStage: 'delivered', round: 1, status: '完了', completedDeliveryDate,
+      evidenceUrl: deliveryUrl,
+    });
+    await expectAllowed('production-shaped delivery completion stays within rules budget', deliveryBatch.commit());
     await expectAllowed('editor creates a direct-client dispatch without a planned delivery date', setDoc(
       doc(external1, 'editor_portals', 'external1', 'editor_jobs', 'normal-no-delivery-date'),
       portalJob('external1', { directorUid: 'dir1', deadline: '', deliveryDate: '' })
