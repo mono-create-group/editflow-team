@@ -23,6 +23,10 @@ test('theme covers desktop navigation, shared workspace surfaces, and financial 
   assert.match(css, /\.modal-hdr,\.mhdr\{background:#fff;color:var\(--owner-ink\);border-bottom:3px solid var\(--owner-yellow\)/);
 });
 
+test('kanban stage count stays beside its own stage label', () => {
+  assert.match(css, /\.app-kanban-column>summary\{justify-content:flex-start;/);
+});
+
 test('reference-style owner shell is white and uses yellow only as an accent', () => {
   assert.match(css, /#sidebar\{width:264px[^}]*background:#fff/);
   assert.match(css, /body::before\{display:none\}/);

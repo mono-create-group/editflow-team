@@ -23,7 +23,7 @@ test('hidden video tabs do not build card markup before they are selected', () =
 
 test('large case lists render in bounded batches and search waits for typing to pause', () => {
   assert.match(html, /let VIDEO_RENDER_LIMIT=50/);
-  assert.match(html, /function _videoPhaseBuckets\(filtered,renderLimit=VIDEO_RENDER_LIMIT\)/);
+  assert.match(html, /function _videoPhaseBuckets\(filtered,renderLimit=VIDEO_RENDER_LIMIT,statusFilter=''\)/);
   assert.match(html, /perPhaseLimit=Math\.max\(10,Math\.ceil\(renderLimit\/VIDEO_PHASES\.length\)\)/);
   assert.match(html, /shown=phaseJobs\.slice\(0,perPhaseLimit\)/);
   assert.match(html, /function showMoreVideoCases\(\)\{VIDEO_RENDER_LIMIT\+=50;render\(\);\}/);
@@ -32,8 +32,8 @@ test('large case lists render in bounded batches and search waits for typing to 
 });
 
 test('each kanban phase receives visible rows when its header count is non-zero', () => {
-  assert.match(html, /const filtered=_videoFiltered\(biz,all\),\{byPhase,perPhaseLimit,renderedCount\}=_videoPhaseBuckets\(filtered\)/);
-  assert.match(html, /<span class="badge bk">\$\{phaseJobs\.length\}<\/span>/);
+  assert.match(html, /const filtered=_videoFiltered\(biz,all\),\{byPhase,phaseCounts,perPhaseLimit,renderedCount,totalCount\}=_videoPhaseBuckets\(filtered,VIDEO_RENDER_LIMIT,VIDEO_STATUS\)/);
+  assert.match(html, /<span class="badge bk">\$\{phaseCounts\.get\(p\.id\)\|\|0\}<\/span>/);
   assert.match(html, /shown\.map\(_videoCard\)\.join\(''\)/);
   assert.match(html, /この工程の案件はありません/);
   assert.doesNotMatch(html, /visible\.forEach\(j=>byPhase\.get\(_videoPhase\(j\.status\)\.id\)/);
@@ -52,4 +52,24 @@ test('phase batching keeps a review case visible even when earlier rows fill oth
   assert.equal(result.byPhase.get('review').length, 1);
   assert.equal(result.byPhase.get('editing').slice(0, result.perPhaseLimit).length, 10);
   assert.equal(result.renderedCount, 11);
+});
+
+test('a parent case is split by child status and each phase count reflects actual child cases', () => {
+  const start = html.indexOf('const VIDEO_PHASES=');
+  const end = html.indexOf('function _videoIsOverdue', start);
+  const context = {};
+  vm.createContext(context);
+  vm.runInContext(`${html.slice(start, end)}\nthis.bucket=_videoPhaseBuckets;`, context);
+  const parent = { id:'parent', status:'進行中', subtasks:[
+    {id:'done-1',status:'完了',deadline:'2026-08-01',assignee:'A'},
+    {id:'done-2',status:'完了',deadline:'2026-08-02',assignee:'A'},
+    {id:'review-1',status:'修正中',deadline:'2026-08-03',assignee:'B'},
+  ]};
+  const result = context.bucket([parent], 50);
+  assert.equal(result.byPhase.get('editing').length, 0, 'stale parent status must not place the case in editing');
+  assert.equal(result.byPhase.get('review').length, 1);
+  assert.equal(result.byPhase.get('review')[0].subtasks.length, 1);
+  assert.equal(result.byPhase.get('done')[0].subtasks.length, 2);
+  assert.equal(result.phaseCounts.get('review'), 1);
+  assert.equal(result.phaseCounts.get('done'), 2);
 });

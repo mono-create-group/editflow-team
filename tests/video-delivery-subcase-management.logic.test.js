@@ -61,6 +61,20 @@ test('portal child documents are grouped under a display-only parent and keep a 
   assert.match(card, /親案件・集計/);
 });
 
+test('a portal child already projected into a visible legacy parent is not displayed twice', () => {
+  const start = index.indexOf('function _videoPortalProjectionTargetId');
+  const end = index.indexOf('function _videoJobs', start);
+  assert.ok(start >= 0 && end > start);
+  const context = {};
+  vm.createContext(context);
+  vm.runInContext(`${index.slice(start, end)}\nthis.represented=_videoPortalIsRepresentedByLegacy;`, context);
+  const legacyIds = new Set(['legacy-parent']);
+  const boardIds = new Set(['board-parent']);
+  assert.equal(context.represented({_raw:{legacyParentId:'legacy-parent'}},legacyIds,boardIds),true);
+  assert.equal(context.represented({_raw:{parentCaseId:'board-parent'}},legacyIds,boardIds),true);
+  assert.equal(context.represented({_raw:{parentCaseId:'portal-only'}},legacyIds,boardIds),false);
+});
+
 test('saving one legacy subcase draft schedule does not alter its parent or siblings', () => {
   const context = {
     S: { jobs: [{

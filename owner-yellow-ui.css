@@ -108,7 +108,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .app-metric-row{gap:8px}.app-metric{border-radius:6px;border-top:3px solid var(--owner-yellow);box-shadow:none}.app-metric strong{color:var(--owner-ink);font-size:26px}
 .app-searchbar{padding:8px;border-radius:8px;background:#fff;box-shadow:var(--app-shadow)}
 .app-scroll-hint{padding:5px 0;color:var(--owner-ink-soft);font-size:12px}
-.app-kanban{gap:12px;padding:2px 2px 16px}.app-kanban-column{padding:0;min-width:244px}.app-kanban-column>summary{padding:10px 0;color:var(--owner-ink);border-bottom:3px solid var(--owner-yellow);font-size:14px}.app-kanban-list{gap:8px;margin-top:10px}
+.app-kanban{gap:12px;padding:2px 2px 16px}.app-kanban-column{padding:0;min-width:244px}.app-kanban-column>summary{justify-content:flex-start;padding:10px 0;color:var(--owner-ink);border-bottom:3px solid var(--owner-yellow);font-size:14px}.app-kanban-list{gap:8px;margin-top:10px}
 .app-kanban .video-job-card,.app-kanban .card{border-radius:8px;box-shadow:0 1px 3px rgba(20,20,20,.06)}
 .app-kanban .video-job-card:hover{border-color:var(--owner-yellow-strong);transform:none}
 .app-queue-card{border-left-color:var(--owner-yellow-strong)}
