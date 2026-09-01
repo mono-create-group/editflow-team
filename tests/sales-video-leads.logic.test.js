@@ -43,6 +43,8 @@ test('video job CSV enforces price, count, official URL, and CapCut exclusion',(
   assert.equal(ctx.S.salesLeads[0].unitPrice,4000);
   assert.equal(ctx.S.salesLeads[0].videoCount,'1本');
   assert.equal(ctx.S.salesLeads[0].service,'ココナラ');
+  assert.equal(ctx.S.salesLeads[0].platformFeeAmount,880);
+  assert.equal(ctx.S.salesLeads[0].netUnitPrice,3120);
   assert.equal(ctx.S.salesLeads[0].biz.video.s,'新着');
 });
 
@@ -61,19 +63,33 @@ test('same job URL updates facts without duplicating or overwriting workflow sta
   assert.equal(ctx.slInPool(ctx.S.salesLeads[0],'app'),false);
 });
 
+test('platform fees and estimated take-home are calculated from official rates',()=>{
+  const ctx=makeContext();
+  const coco={...ctx.SalesVideoLeads.fee('ココナラ',3792)};
+  assert.equal(coco.rate,.22);
+  assert.equal(coco.feeAmount,834);
+  assert.equal(coco.netAmount,2958);
+  assert.match(coco.source,/coconala-support\.zendesk\.com/);
+  const lancers={...ctx.SalesVideoLeads.fee('ランサーズ',5000)};
+  assert.equal(lancers.rate,.165);
+  assert.equal(lancers.feeAmount,825);
+  assert.equal(lancers.netAmount,4175);
+  assert.match(lancers.source,/lancers\.jp/);
+});
+
 test('video sales-list page includes all requested report fields',()=>{
   const ctx=makeContext();
   ctx.SalesVideoLeads.upsert([{name:'ショート動画編集',jobUrl:'https://coconala.com/job_matching/5241190',unitPrice:'10000',totalReward:'10,000円',videoCount:'1本',postedAt:'2026-08-30',deadline:'2026-09-06',software:'Premiere Pro / Final Cut Pro',workContent:'継続ショート動画制作',editContent:'カット・テロップ・BGM',requiredSkills:'縦型動画編集',freshness:'新着',listingStatus:'募集中',lastCheckedAt:'2026-09-01'}]);
   ctx._slBiz='video';
   const html=ctx.rSalesLeads();
-  for(const text of ['案件ページを開く','1本 10,000円','本数: 1本','掲載日: 2026-08-30','応募期限: 2026-09-06','ソフト指定:','業務内容:','編集内容:','必要スキル:'])assert.match(html,new RegExp(text));
+  for(const text of ['案件ページを開く','提示 1本 10,000円','手数料差引後（見込） 7,800円','プラットフォーム手数料: 2,200円（22%）','本数: 1本','掲載日: 2026-08-30','応募期限: 2026-09-06','ソフト指定:','業務内容:','編集内容:','必要スキル:'])assert.match(html,new RegExp(text));
 });
 
 test('owner shell and service worker load the video-lead extension on the same release',()=>{
   const index=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
   const sw=fs.readFileSync(path.join(__dirname,'..','sw.js'),'utf8');
-  assert.match(index,/const APP_VERSION='20260901-02';/);
-  assert.match(index,/<script src="\.\/sales-video-leads\.js\?v=20260901-02"><\/script>/);
-  assert.match(sw,/const CACHE='mcshanai-20260901-02';/);
+  assert.match(index,/const APP_VERSION='20260901-03';/);
+  assert.match(index,/<script src="\.\/sales-video-leads\.js\?v=20260901-03"><\/script>/);
+  assert.match(sw,/const CACHE='mcshanai-20260901-03';/);
   assert.match(sw,/'\.\/sales-video-leads\.js'/);
 });

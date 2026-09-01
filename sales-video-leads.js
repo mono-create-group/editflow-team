@@ -2,6 +2,10 @@
 const VIDEO_BIZ='video';
 const VIDEO_SRC='video-job';
 const VIDEO_STATUSES=['新着','検討中','応募予定','応募済み','受注','見送り','募集終了'];
+const VIDEO_PLATFORM_FEES={
+  'ココナラ':{rate:.22,label:'22%',source:'https://coconala-support.zendesk.com/hc/ja/articles/230180287-%E8%B2%A9%E5%A3%B2%E6%99%82%E3%81%AE%E6%89%8B%E6%95%B0%E6%96%99%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6'},
+  'ランサーズ':{rate:.165,label:'16.5%',source:'https://www.lancers.jp/faq/A1034/936'}
+};
 let _videoLeadStatus='all';
 let _videoLeadService='all';
 let _videoLeadSearch='';
@@ -20,6 +24,13 @@ function _videoLeadAmount(value){
   const n=parseInt(String(value||'').replace(/[^0-9]/g,''),10);
   return Number.isFinite(n)?n:0;
 }
+function _videoLeadFee(service,unitPrice){
+  const amount=Number(unitPrice||0);
+  const profile=VIDEO_PLATFORM_FEES[service];
+  if(!profile||!Number.isFinite(amount)||amount<=0)return{rate:0,label:'未確認',feeAmount:0,netAmount:0,source:''};
+  const feeAmount=Math.round(amount*profile.rate);
+  return{rate:profile.rate,label:profile.label,feeAmount,netAmount:amount-feeAmount,source:profile.source};
+}
 function _videoLeadCapCutText(x){
   return [x.software,x.workContent,x.editContent].map(v=>String(v||'')).join(' ');
 }
@@ -34,11 +45,13 @@ function _videoLeadNormalize(raw){
   if(!videoCount)return{ok:false,reason:'本数が未確認です'};
   if(/cap\s*cut|キャップカット/i.test(_videoLeadCapCutText(raw)))return{ok:false,reason:'CapCut指定を含みます'};
   const service=/lancers\.jp/i.test(jobUrl)?'ランサーズ':'ココナラ';
+  const fee=_videoLeadFee(service,unitPrice);
   const flowStatus=VIDEO_STATUSES.includes(raw.flowStatus)?raw.flowStatus:'新着';
   const now=new Date().toISOString();
   return{ok:true,value:{
     id:raw.id||uid(),src:VIDEO_SRC,name,service,
-    jobUrl,unitPrice,totalReward:String(raw.totalReward||'').trim(),videoCount,
+    jobUrl,unitPrice,platformFeeRate:fee.rate,platformFeeAmount:fee.feeAmount,netUnitPrice:fee.netAmount,
+    platformFeeSource:fee.source,totalReward:String(raw.totalReward||'').trim(),videoCount,
     postedAt:String(raw.postedAt||'').trim(),deadline:String(raw.deadline||'').trim(),
     software:String(raw.software||'未確認').trim()||'未確認',
     workContent:String(raw.workContent||'').trim(),editContent:String(raw.editContent||'').trim(),
@@ -114,6 +127,7 @@ function _videoLeadCards(rows){
   if(!rows.length)return`<div class="empty"><div class="empty-icon">🎬</div><div class="empty-title">条件に合う動画編集案件はありません</div></div>`;
   return rows.map(l=>{
     const st=slStatusOf(l,VIDEO_BIZ);
+    const fee=_videoLeadFee(l.service,l.unitPrice);
     const statusBtns=VIDEO_STATUSES.map(s=>`<button class="sl-status-btn" onclick="SalesVideoLeads.setStatus('${l.id}','${s}')" style="opacity:${st===s?1:.42};border-color:${_videoLeadStatusColor(s)};color:${_videoLeadStatusColor(s)}">${s}</button>`).join('');
     return`<article class="sl-row sl-lead-row" style="align-items:flex-start">
       <div class="sl-row-body" style="flex:1;min-width:0">
@@ -125,12 +139,15 @@ function _videoLeadCards(rows){
         </div>
         <div class="sl-name" style="margin-top:7px">${esc(l.name||'')}</div>
         <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:7px;font-size:12px">
-          <strong style="color:var(--green);font-size:14px">1本 ${_videoLeadMoney(l.unitPrice)}</strong>
+          <strong style="color:var(--green);font-size:14px">提示 1本 ${_videoLeadMoney(l.unitPrice)}</strong>
+          <strong style="color:var(--blue);font-size:14px">手数料差引後（見込） ${_videoLeadMoney(fee.netAmount)}</strong>
+          <span style="color:var(--t2)">プラットフォーム手数料: ${_videoLeadMoney(fee.feeAmount)}（${esc(fee.label)}）</span>
           <span style="color:var(--t2)">総報酬: ${esc(l.totalReward||'未確認')}</span>
           <span style="color:var(--t2)">本数: ${esc(l.videoCount||'未確認')}</span>
           <span style="color:var(--t2)">掲載日: ${esc(l.postedAt||'未確認')}</span>
           <span style="color:var(--t2)">応募期限: ${esc(l.deadline||'未確認')}</span>
         </div>
+        <div style="margin-top:5px;font-size:10.5px;color:var(--t3)">差引後金額は提示単価からプラットフォーム手数料のみを控除した見込額です。振込手数料・源泉徴収等は含みません。 <a href="${esc(fee.source||'#')}" target="_blank" rel="noopener">手数料の公式根拠</a></div>
         <div style="margin-top:8px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rs);background:var(--card2);font-size:12px;line-height:1.65">
           <div><b>ソフト指定:</b> ${esc(l.software||'未確認')}</div>
           <div><b>業務内容:</b> ${esc(l.workContent||'未確認')}</div>
@@ -170,7 +187,7 @@ function _videoLeadPage(){
     <div class="filter-bar" style="margin-bottom:12px">${['all','ココナラ','ランサーズ'].map(s=>`<button class="fbtn${_videoLeadService===s?' act':''}" onclick="SalesVideoLeads.setServiceFilter('${s}')">${s==='all'?'サービスすべて':s}</button>`).join('')}</div>
     <div style="margin-bottom:14px;display:flex;gap:8px;align-items:center"><input type="search" placeholder="案件名・業務内容・ソフトで検索…" value="${esc(_videoLeadSearch)}" oninput="SalesVideoLeads.setSearch(this.value)" style="max-width:360px"><span style="font-size:12px;color:var(--t2)">${rows.length}件</span></div>
     <details class="card" style="margin-bottom:16px"><summary style="cursor:pointer;font-weight:700">CSV一括取り込み（毎朝の自動登録用）</summary>
-      <div style="font-size:11px;color:var(--t2);line-height:1.7;margin:9px 0">列順: 区分,サービス,案件名,案件URL,1本単価,総報酬,本数,掲載日,応募期限,ソフト指定,業務内容,編集内容,必要スキル,募集状態,最終確認日<br>同じ案件URLは重複追加せず、最新の確認内容へ更新します。1本3,000円未満・本数不明・CapCut指定は登録しません。</div>
+      <div style="font-size:11px;color:var(--t2);line-height:1.7;margin:9px 0">列順: 区分,サービス,案件名,案件URL,1本単価,総報酬,本数,掲載日,応募期限,ソフト指定,業務内容,編集内容,必要スキル,募集状態,最終確認日<br>同じ案件URLは重複追加せず、最新の確認内容へ更新します。1本3,000円未満・本数不明・CapCut指定は登録しません。手数料と差引後受取見込額はサービスと1本単価から自動計算します。</div>
       <textarea id="video-lead-csv" placeholder="確認済み案件のCSVを貼り付け…" style="min-height:100px;width:100%;font:11px monospace"></textarea>
       <div style="margin-top:8px"><button class="btn btn-p btn-sm" onclick="SalesVideoLeads.importCsv()">取り込む</button><span id="video-lead-import-result" style="margin-left:8px;font-size:11px;color:var(--t2)"></span></div>
     </details>
@@ -218,7 +235,7 @@ slSetBiz=function(biz){
 };
 
 window.SalesVideoLeads={
-  parseCsv:_videoLeadParseCsv,normalize:_videoLeadNormalize,upsert:_videoLeadUpsert,
+  parseCsv:_videoLeadParseCsv,normalize:_videoLeadNormalize,upsert:_videoLeadUpsert,fee:_videoLeadFee,
   setSearch(v){_videoLeadSearch=String(v||'');render();},
   setStatusFilter(v){_videoLeadStatus=v;render();},
   setServiceFilter(v){_videoLeadService=v;render();},
