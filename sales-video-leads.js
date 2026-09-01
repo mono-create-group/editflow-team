@@ -2,6 +2,7 @@
 const VIDEO_BIZ='video';
 const VIDEO_SRC='video-job';
 const VIDEO_STATUSES=['新着','検討中','応募予定','応募済み','受注','見送り','募集終了'];
+const VIDEO_SERVICES=['ココナラ','ランサーズ','Threads'];
 const VIDEO_PLATFORM_FEES={
   'ココナラ':{rate:.22,label:'22%',source:'https://coconala-support.zendesk.com/hc/ja/articles/230180287-%E8%B2%A9%E5%A3%B2%E6%99%82%E3%81%AE%E6%89%8B%E6%95%B0%E6%96%99%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6'},
   'ランサーズ':{rate:.165,label:'16.5%',source:'https://www.lancers.jp/faq/A1034/936'}
@@ -20,10 +21,19 @@ function _videoLeadUrl(value){
   try{
     const u=new URL(String(value||'').trim());
     if(!/^https?:$/.test(u.protocol))return'';
-    if(!/(^|\.)(coconala\.com|lancers\.jp)$/i.test(u.hostname))return'';
+    if(!/(^|\.)(coconala\.com|lancers\.jp|threads\.com)$/i.test(u.hostname))return'';
     u.hash='';
     return u.toString();
   }catch(_){return'';}
+}
+function _videoLeadServiceOf(jobUrl){
+  try{
+    const host=new URL(jobUrl).hostname;
+    if(/(^|\.)lancers\.jp$/i.test(host))return'ランサーズ';
+    if(/(^|\.)threads\.com$/i.test(host))return'Threads';
+    if(/(^|\.)coconala\.com$/i.test(host))return'ココナラ';
+  }catch(_){}
+  return'';
 }
 function _videoLeadAmount(value){
   const n=parseInt(String(value||'').replace(/[^0-9]/g,''),10);
@@ -32,9 +42,9 @@ function _videoLeadAmount(value){
 function _videoLeadFee(service,unitPrice){
   const amount=Number(unitPrice||0);
   const profile=VIDEO_PLATFORM_FEES[service];
-  if(!profile||!Number.isFinite(amount)||amount<=0)return{rate:0,label:'未確認',feeAmount:0,netAmount:0,source:''};
+  if(!profile||!Number.isFinite(amount)||amount<=0)return{known:false,rate:null,label:'個別確認',feeAmount:null,netAmount:null,source:''};
   const feeAmount=Math.round(amount*profile.rate);
-  return{rate:profile.rate,label:profile.label,feeAmount,netAmount:amount-feeAmount,source:profile.source};
+  return{known:true,rate:profile.rate,label:profile.label,feeAmount,netAmount:amount-feeAmount,source:profile.source};
 }
 function _videoLeadInstantPayout(service,netUnitPrice){
   if(service!=='ランサーズ')return null;
@@ -50,20 +60,24 @@ function _videoLeadInstantPayout(service,netUnitPrice){
     source:LANCERS_INSTANT_PAYOUT.source,changeNotice:LANCERS_INSTANT_PAYOUT.changeNotice
   };
 }
-function _videoLeadCapCutText(x){
-  return [x.software,x.workContent,x.editContent].map(v=>String(v||'')).join(' ');
+function _videoLeadCapCutRequired(x){
+  const software=String(x.software||'').trim();
+  if(/^(?:cap\s*cut|キャップカット)(?:\s*pro)?$/i.test(software))return true;
+  const text=[x.software,x.workContent,x.editContent].map(v=>String(v||'')).join(' ');
+  if(!/(?:cap\s*cut|キャップカット)/i.test(text))return false;
+  return /(?:cap\s*cut|キャップカット).{0,24}(?:必須|指定|のみ|限定|で編集|を使用|編集データ|プロジェクト)|(?:必須|指定ソフト).{0,24}(?:cap\s*cut|キャップカット)|(?:使用ソフト|編集ソフト)\s*(?:は|[:：])\s*(?:cap\s*cut|キャップカット)(?:\s*(?:です|のみ|限定))?/i.test(text);
 }
 function _videoLeadNormalize(raw){
   const jobUrl=_videoLeadUrl(raw.jobUrl);
   const unitPrice=_videoLeadAmount(raw.unitPrice);
   const name=String(raw.name||'').trim();
   const videoCount=String(raw.videoCount||'').trim();
-  if(!jobUrl)return{ok:false,reason:'ココナラ／ランサーズの案件URLがありません'};
+  if(!jobUrl)return{ok:false,reason:'ココナラ／ランサーズ／Threadsの案件URLがありません'};
   if(!name)return{ok:false,reason:'案件名がありません'};
   if(unitPrice<3000)return{ok:false,reason:'1本単価が3,000円未満または未確認です'};
   if(!videoCount)return{ok:false,reason:'本数が未確認です'};
-  if(/cap\s*cut|キャップカット/i.test(_videoLeadCapCutText(raw)))return{ok:false,reason:'CapCut指定を含みます'};
-  const service=/lancers\.jp/i.test(jobUrl)?'ランサーズ':'ココナラ';
+  if(_videoLeadCapCutRequired(raw))return{ok:false,reason:'CapCut必須・指定案件です'};
+  const service=_videoLeadServiceOf(jobUrl);
   const fee=_videoLeadFee(service,unitPrice);
   const flowStatus=VIDEO_STATUSES.includes(raw.flowStatus)?raw.flowStatus:'新着';
   const now=new Date().toISOString();
@@ -160,15 +174,14 @@ function _videoLeadCards(rows){
         <div class="sl-name" style="margin-top:7px">${esc(l.name||'')}</div>
         <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:7px;font-size:12px">
           <strong style="color:var(--green);font-size:14px">提示 1本 ${_videoLeadMoney(l.unitPrice)}</strong>
-          <strong style="color:var(--blue);font-size:14px">手数料差引後（見込） ${_videoLeadMoney(fee.netAmount)}</strong>
-          <span style="color:var(--t2)">プラットフォーム手数料: ${_videoLeadMoney(fee.feeAmount)}（${esc(fee.label)}）</span>
+          ${fee.known?`<strong style="color:var(--blue);font-size:14px">手数料差引後（見込） ${_videoLeadMoney(fee.netAmount)}</strong><span style="color:var(--t2)">プラットフォーム手数料: ${_videoLeadMoney(fee.feeAmount)}（${esc(fee.label)}）</span>`:`<strong style="color:var(--amber);font-size:14px">取引条件・手数料は投稿者へ個別確認</strong>`}
           ${instant?`<strong style="color:var(--amber);font-size:14px">即日払い5%差引後（概算・振込手数料前） ${_videoLeadMoney(instant.netAfterInstantFee)}</strong><span style="color:var(--t2)">即日払い手数料（概算）: ${_videoLeadMoney(instant.feeAmount)}</span>`:''}
           <span style="color:var(--t2)">総報酬: ${esc(l.totalReward||'未確認')}</span>
           <span style="color:var(--t2)">本数: ${esc(l.videoCount||'未確認')}</span>
           <span style="color:var(--t2)">掲載日: ${esc(l.postedAt||'未確認')}</span>
           <span style="color:var(--t2)">応募期限: ${esc(l.deadline||'未確認')}</span>
         </div>
-        <div style="margin-top:5px;font-size:10.5px;color:var(--t3)">差引後金額は提示単価からプラットフォーム手数料のみを控除した見込額です。振込手数料・源泉徴収等は含みません。 <a href="${esc(fee.source||'#')}" target="_blank" rel="noopener">手数料の公式根拠</a></div>
+        ${fee.known?`<div style="margin-top:5px;font-size:10.5px;color:var(--t3)">差引後金額は提示単価からプラットフォーム手数料のみを控除した見込額です。振込手数料・源泉徴収等は含みません。 <a href="${esc(fee.source)}" target="_blank" rel="noopener">手数料の公式根拠</a></div>`:`<div style="margin-top:5px;font-size:10.5px;color:var(--t3)">Threadsは募集投稿の提示額です。契約条件・支払方法・手数料・源泉徴収等は投稿者へ個別確認してください。</div>`}
         ${instant?`<div style="margin-top:5px;padding:7px 9px;border-radius:var(--rs);background:var(--adim);font-size:10.5px;color:var(--t2)"><b>ランサーズ即日払い:</b> この案件単体では${instant.eligibleAsSingle?'金額条件内です':'金額条件未達です'}。利用可否は払出合計で判定され、5%控除後${_videoLeadMoney(instant.minAfterFee)}〜${_videoLeadMoney(instant.maxAfterFee)}が現行条件です。出金1回につき振込手数料は楽天銀行${_videoLeadMoney(instant.bankFeeRakuten)}／その他銀行${_videoLeadMoney(instant.bankFeeOther)}が別途かかるため、上の案件別概算には含めていません。 <a href="${esc(instant.source)}" target="_blank" rel="noopener">現行条件</a>・<a href="${esc(instant.changeNotice)}" target="_blank" rel="noopener">2026年9月28日変更予定</a></div>`:''}
         <div style="margin-top:8px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rs);background:var(--card2);font-size:12px;line-height:1.65">
           <div><b>ソフト指定:</b> ${esc(l.software||'未確認')}</div>
@@ -196,7 +209,8 @@ function _videoLeadPage(){
   const newCount=all.filter(l=>l.freshness==='新着').length;
   const coco=all.filter(l=>l.service==='ココナラ').length;
   const lancers=all.filter(l=>l.service==='ランサーズ').length;
-  return`<div class="ph"><div class="ph-title">📞 営業リスト<small>ココナラ・ランサーズの動画編集案件</small></div>
+  const threads=all.filter(l=>l.service==='Threads').length;
+  return`<div class="ph"><div class="ph-title">📞 営業リスト<small>ココナラ・ランサーズ・Threadsの動画編集案件</small></div>
     <button class="btn btn-g btn-sm" onclick="SalesVideoLeads.openForm('')">＋ 案件を追加</button></div>
     <div class="sl-biz-tabs">${SL_BIZ.map(b=>`<button class="sl-biz-tab${_slBiz===b.k?' act':''}" onclick="slSetBiz('${b.k}')">${esc(b.label)}<span class="sl-biz-count">${b.k===VIDEO_BIZ?all.length:(S.salesLeads||[]).filter(l=>!l.deleted&&slInPool(l,b.k,'any')).length}</span></button>`).join('')}</div>
     <div style="margin-bottom:14px;display:flex;flex-wrap:wrap;gap:0">
@@ -204,12 +218,13 @@ function _videoLeadPage(){
       <span class="sl-summary-chip" style="color:var(--purple)">新着 <strong>${newCount}</strong></span>
       <span class="sl-summary-chip">ココナラ <strong>${coco}</strong></span>
       <span class="sl-summary-chip">ランサーズ <strong>${lancers}</strong></span>
+      <span class="sl-summary-chip">Threads <strong>${threads}</strong></span>
     </div>
     <div class="filter-bar" style="margin-bottom:8px">${['all',...VIDEO_STATUSES].map(s=>`<button class="fbtn${_videoLeadStatus===s?' act':''}" onclick="SalesVideoLeads.setStatusFilter('${s}')">${s==='all'?'すべて':s}</button>`).join('')}</div>
-    <div class="filter-bar" style="margin-bottom:12px">${['all','ココナラ','ランサーズ'].map(s=>`<button class="fbtn${_videoLeadService===s?' act':''}" onclick="SalesVideoLeads.setServiceFilter('${s}')">${s==='all'?'サービスすべて':s}</button>`).join('')}</div>
+    <div class="filter-bar" style="margin-bottom:12px">${['all',...VIDEO_SERVICES].map(s=>`<button class="fbtn${_videoLeadService===s?' act':''}" onclick="SalesVideoLeads.setServiceFilter('${s}')">${s==='all'?'サービスすべて':s}</button>`).join('')}</div>
     <div style="margin-bottom:14px;display:flex;gap:8px;align-items:center"><input type="search" placeholder="案件名・業務内容・ソフトで検索…" value="${esc(_videoLeadSearch)}" oninput="SalesVideoLeads.setSearch(this.value)" style="max-width:360px"><span style="font-size:12px;color:var(--t2)">${rows.length}件</span></div>
     <details class="card" style="margin-bottom:16px"><summary style="cursor:pointer;font-weight:700">CSV一括取り込み（毎朝の自動登録用）</summary>
-      <div style="font-size:11px;color:var(--t2);line-height:1.7;margin:9px 0">列順: 区分,サービス,案件名,案件URL,1本単価,総報酬,本数,掲載日,応募期限,ソフト指定,業務内容,編集内容,必要スキル,募集状態,最終確認日<br>同じ案件URLは重複追加せず、最新の確認内容へ更新します。1本3,000円未満・本数不明・CapCut指定は登録しません。手数料と差引後受取見込額はサービスと1本単価から自動計算します。</div>
+      <div style="font-size:11px;color:var(--t2);line-height:1.7;margin:9px 0">列順: 区分,サービス,案件名,案件URL,1本単価,総報酬,本数,掲載日,応募期限,ソフト指定,業務内容,編集内容,必要スキル,募集状態,最終確認日<br>同じ案件URLは重複追加せず、最新の確認内容へ更新します。1本3,000円未満・本数不明・CapCut必須案件は登録しません。ソフト未記載とCapCut任意案件は登録できます。ココナラ・ランサーズの手数料と差引後受取見込額は自動計算し、Threadsの取引条件は個別確認として表示します。</div>
       <textarea id="video-lead-csv" placeholder="確認済み案件のCSVを貼り付け…" style="min-height:100px;width:100%;font:11px monospace"></textarea>
       <div style="margin-top:8px"><button class="btn btn-p btn-sm" onclick="SalesVideoLeads.importCsv()">取り込む</button><span id="video-lead-import-result" style="margin-left:8px;font-size:11px;color:var(--t2)"></span></div>
     </details>

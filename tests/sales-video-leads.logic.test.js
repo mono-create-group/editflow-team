@@ -48,6 +48,20 @@ test('video job CSV enforces price, count, official URL, and CapCut exclusion',(
   assert.equal(ctx.S.salesLeads[0].biz.video.s,'新着');
 });
 
+test('Threads leads accept unknown software and optional CapCut but reject CapCut-required work',()=>{
+  const ctx=makeContext();
+  const result=ctx.SalesVideoLeads.upsert([
+    {name:'Threadsソフト未記載',jobUrl:'https://www.threads.com/@editor/post/abc123',unitPrice:'5000',videoCount:'1本',software:'未記載',workContent:'ショート動画編集',editContent:'カット・テロップ'},
+    {name:'Threadsソフト不問',jobUrl:'https://threads.com/@editor/post/def456',unitPrice:'3000',videoCount:'月10本',software:'使用ソフト不問（CapCut・Premiere Pro等）',workContent:'ショート動画編集',editContent:'カット・テロップ'},
+    {name:'CapCut必須',jobUrl:'https://www.threads.com/@editor/post/ghi789',unitPrice:'5000',videoCount:'1本',software:'CapCut必須',workContent:'ショート動画編集',editContent:'カット・テロップ'}
+  ]);
+  assert.deepEqual({added:result.added,updated:result.updated,skipped:result.skipped},{added:2,updated:0,skipped:1});
+  assert.deepEqual(Array.from(ctx.S.salesLeads,lead=>lead.service),['Threads','Threads']);
+  assert.equal(ctx.S.salesLeads[0].platformFeeRate,null);
+  assert.equal(ctx.S.salesLeads[0].platformFeeAmount,null);
+  assert.equal(ctx.S.salesLeads[0].netUnitPrice,null);
+});
+
 test('same job URL updates facts without duplicating or overwriting workflow status',()=>{
   const ctx=makeContext();
   let result=ctx.SalesVideoLeads.upsert([{name:'案件A',jobUrl:'https://www.lancers.jp/work/detail/5594318',unitPrice:'3000',videoCount:'1本',software:'Premiere Pro',workContent:'制作',editContent:'カット',freshness:'新着'}]);
@@ -75,6 +89,10 @@ test('platform fees and estimated take-home are calculated from official rates',
   assert.equal(lancers.feeAmount,825);
   assert.equal(lancers.netAmount,4175);
   assert.match(lancers.source,/lancers\.jp/);
+  const threads={...ctx.SalesVideoLeads.fee('Threads',5000)};
+  assert.equal(threads.known,false);
+  assert.equal(threads.feeAmount,null);
+  assert.equal(threads.netAmount,null);
 });
 
 test('Lancers instant payout shows the additional five percent without allocating a per-withdrawal bank fee',()=>{
@@ -107,11 +125,20 @@ test('Lancers card includes instant payout estimate, aggregate eligibility, and 
   for(const text of ['即日払い5%差引後（概算・振込手数料前） 3,966円','即日払い手数料（概算）: 209円','この案件単体では金額条件未達です','楽天銀行110円／その他銀行550円'])assert.match(html,new RegExp(text));
 });
 
+test('Threads cards expose the source filter and never invent a take-home amount',()=>{
+  const ctx=makeContext();
+  ctx.SalesVideoLeads.upsert([{name:'Threads案件',jobUrl:'https://www.threads.com/@editor/post/abc123',unitPrice:'5000',totalReward:'1本5,000円〜',videoCount:'継続',software:'未記載',workContent:'ショート動画制作',editContent:'カット・テロップ'}]);
+  ctx._slBiz='video';
+  const html=ctx.rSalesLeads();
+  for(const text of ['Threads <strong>1</strong>','setServiceFilter(\'Threads\')','取引条件・手数料は投稿者へ個別確認','Threadsは募集投稿の提示額です'])assert.ok(html.includes(text));
+  assert.doesNotMatch(html,/手数料差引後（見込）/);
+});
+
 test('owner shell and service worker load the video-lead extension on the same release',()=>{
   const index=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
   const sw=fs.readFileSync(path.join(__dirname,'..','sw.js'),'utf8');
-  assert.match(index,/const APP_VERSION='20260901-06';/);
-  assert.match(index,/<script src="\.\/sales-video-leads\.js\?v=20260901-06"><\/script>/);
-  assert.match(sw,/const CACHE='mcshanai-20260901-06';/);
+  assert.match(index,/const APP_VERSION='20260901-07';/);
+  assert.match(index,/<script src="\.\/sales-video-leads\.js\?v=20260901-07"><\/script>/);
+  assert.match(sw,/const CACHE='mcshanai-20260901-07';/);
   assert.match(sw,/'\.\/sales-video-leads\.js'/);
 });
