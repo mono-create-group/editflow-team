@@ -250,6 +250,20 @@ async function expectAllowed(label, promise) {
       await setDoc(doc(db, 'editor_job_board', 'external-two'), boardJob({ audience: 'director_team', directorUid: 'dir2', eligibleUids: ['external2'] }));
       await setDoc(doc(db, 'editor_portals', 'external1', 'editor_jobs', 'done1'), portalJob('external1', { directorUid: 'dir1', status: '完了', evidenceUrl: 'https://example.com/delivery' }));
       await setDoc(doc(db, 'editor_portals', 'external1', 'editor_jobs', 'workflow-save-budget'), externalWorkflowJob());
+      await setDoc(doc(db, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-director'), externalWorkflowJob({ title: '手動進捗変更-D' }));
+      await setDoc(doc(db, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-no-reason'), externalWorkflowJob({ title: '手動進捗変更-理由なし' }));
+      await setDoc(doc(db, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-revision'), externalWorkflowJob({ title: '手動進捗変更-修正稿' }));
+      await setDoc(doc(db, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-initial-round-two'), externalWorkflowJob({
+        title: '手動進捗変更-初稿', status: '修正中', workflow: { round: 2, stage: 'editing' },
+      }));
+      await setDoc(doc(db, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-owner-complete'), externalWorkflowJob({
+        title: '手動進捗変更-完了', status: 'D確認OK', evidenceUrl: 'https://example.com/final-delivery', blocker: '',
+        workflow: { round: 1, stage: 'client_submission' },
+      }));
+      await setDoc(doc(db, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-dispatch-complete'), externalWorkflowJob({
+        title: '手動進捗変更-派遣完了', businessType: 'dispatch', status: '先方確認中',
+        evidenceUrl: 'https://example.com/dispatch-delivery', blocker: '', workflow: { round: 1, stage: 'client_review' },
+      }));
       await setDoc(doc(db, 'editor_portals', 'external1', 'editor_jobs', 'workflow-revision-save'), externalWorkflowJob({
         title: 'WD-S087', status: '修正中', evidenceUrl: 'https://example.com/initial',
         workflow: { round: 2, stage: 'editing' },
@@ -404,6 +418,127 @@ async function expectAllowed(label, promise) {
     await expectAllowed('owner keeps legacy personal document access', updateDoc(doc(owner, 'users', 'dir1'), { ownerProbe: true }));
     await expectAllowed('hybrid editor also uses own editor portal', getDoc(doc(hybrid1, 'editor_portals', 'hybrid1', 'editor_jobs', 'own1')));
     await expectDenied('hybrid editor still cannot read another editor portal', getDoc(doc(hybrid1, 'editor_portals', 'external1', 'editor_jobs', 'done1')));
+
+    const managerOverrideEvent = ({
+      byUid = 'dir1', byEmail = `${byUid}@example.com`, byRole = 'director',
+      fromStatus = '進行中', fromStage = 'editing', status = 'D確認OK',
+      toStage = 'client_submission', round = 1, reason = '実際の進行状況に合わせて修正',
+      completedDeliveryDate = '', evidenceUrl = '', clientApprovalConfirmed = false,
+    } = {}) => ({
+      at: 3, byUid, byEmail, byRole, type: 'manager_status_changed',
+      action: 'managerStatusOverride', fromStatus, fromStage, toStage, round,
+      workflow: { round, stage: toStage }, status, reason,
+      ...(evidenceUrl ? { evidenceUrl } : {}),
+      ...(completedDeliveryDate ? { completedDeliveryDate } : {}),
+      ...(clientApprovalConfirmed ? { clientApprovalConfirmed: true } : {}),
+    });
+    const managerOverrideUpdate = (event, previousEvents = []) => ({
+      status: event.status, workflow: event.workflow, progressEvents: [...previousEvents, event],
+      correctionReason: event.status === '修正中' ? event.reason : '',
+      updatedAt: 3, updatedBy: event.byEmail,
+      history: [...externalWorkflowJob().history, ...previousEvents, event],
+      ...(event.evidenceUrl ? { evidenceUrl: event.evidenceUrl } : {}),
+      ...(event.completedDeliveryDate ? { completedDeliveryDate: event.completedDeliveryDate } : {}),
+    });
+    const manualDirectorRef = doc(dir1, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-director');
+    await expectDenied('unassigned director cannot manually override progress', updateDoc(
+      doc(dir2, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-director'),
+      managerOverrideUpdate(managerOverrideEvent({ byUid: 'dir2', byEmail: 'dir2@example.com' }))
+    ));
+    await expectDenied('assigned editor cannot claim a manager progress override', updateDoc(
+      doc(external1, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-director'),
+      managerOverrideUpdate(managerOverrideEvent({ byUid: 'external1', byEmail: 'external1@example.com' }))
+    ));
+    const directorOverride = managerOverrideEvent();
+    const directorOverrideBatch = writeBatch(dir1);
+    directorOverrideBatch.update(manualDirectorRef, managerOverrideUpdate(directorOverride));
+    directorOverrideBatch.set(doc(dir1, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-director', 'events', 'manager-override-1'), {
+      ...directorOverride, at: serverTimestamp(),
+    });
+    await expectAllowed('assigned director can choose a non-adjacent progress with an audit event', directorOverrideBatch.commit());
+    const missingReason = managerOverrideEvent({ reason: '' });
+    await expectDenied('manual progress override requires a reason', updateDoc(
+      doc(dir1, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-no-reason'),
+      managerOverrideUpdate(missingReason)
+    ));
+    const submittedWithoutEvidence = managerOverrideEvent({
+      status: '初稿提出済み', toStage: 'director_review', round: 1,
+    });
+    await expectDenied('manual submitted progress requires a matching evidence URL', updateDoc(
+      doc(dir1, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-no-reason'),
+      managerOverrideUpdate(submittedWithoutEvidence)
+    ));
+    const revisionWrongRound = managerOverrideEvent({
+      status: '修正稿提出済み', toStage: 'director_review', round: 1,
+      evidenceUrl: 'https://example.com/revision-manual',
+    });
+    await expectDenied('manual revision submission cannot be recorded as round one', updateDoc(
+      doc(dir1, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-revision'),
+      managerOverrideUpdate(revisionWrongRound)
+    ));
+    const revisionRoundTwo = managerOverrideEvent({
+      status: '修正稿提出済み', toStage: 'director_review', round: 2,
+      evidenceUrl: 'https://example.com/revision-manual',
+    });
+    await expectAllowed('manual revision submission normalizes to at least round two', updateDoc(
+      doc(dir1, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-revision'),
+      managerOverrideUpdate(revisionRoundTwo)
+    ));
+    const initialWrongRound = managerOverrideEvent({
+      fromStatus: '修正中', status: '初稿提出済み', toStage: 'director_review', round: 2,
+      evidenceUrl: 'https://example.com/initial-manual',
+    });
+    await expectDenied('manual initial submission cannot retain a later revision round', updateDoc(
+      doc(dir1, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-initial-round-two'),
+      managerOverrideUpdate(initialWrongRound)
+    ));
+    const initialRoundOne = managerOverrideEvent({
+      fromStatus: '修正中', status: '初稿提出済み', toStage: 'director_review', round: 1,
+      evidenceUrl: 'https://example.com/initial-manual',
+    });
+    await expectAllowed('manual initial submission normalizes to round one', updateDoc(
+      doc(dir1, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-initial-round-two'),
+      managerOverrideUpdate(initialRoundOne)
+    ));
+    const completedDate = '2026-09-01';
+    const ownerCompletion = managerOverrideEvent({
+      byUid: 'owner', byEmail: 'mono.create.group@gmail.com', byRole: 'owner',
+      fromStatus: 'D確認OK', fromStage: 'client_submission', status: '完了',
+      toStage: 'delivered', completedDeliveryDate: completedDate,
+      evidenceUrl: 'https://example.com/final-delivery', clientApprovalConfirmed: true,
+      reason: 'クライアントOKを確認したため完了へ修正',
+    });
+    const ownerCompletionRef = doc(owner, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-owner-complete');
+    await expectDenied('manual completion requires explicit client approval confirmation', updateDoc(
+      ownerCompletionRef,
+      managerOverrideUpdate({ ...ownerCompletion, clientApprovalConfirmed: false })
+    ));
+    await expectDenied('manual completion audit date must match the job completion date', updateDoc(
+      ownerCompletionRef,
+      { ...managerOverrideUpdate(ownerCompletion), completedDeliveryDate: '2026-08-31' }
+    ));
+    await expectAllowed('owner can manually complete an edit-agency job with date, evidence, and audit reason', updateDoc(
+      ownerCompletionRef, managerOverrideUpdate(ownerCompletion)
+    ));
+    const reopenEvent = managerOverrideEvent({
+      byUid: 'owner', byEmail: 'mono.create.group@gmail.com', byRole: 'owner',
+      fromStatus: '完了', fromStage: 'delivered', status: '進行中', toStage: 'editing',
+      reason: '完了後の再開を試行',
+    });
+    await expectDenied('completed progress cannot be reopened through the free selector', updateDoc(
+      ownerCompletionRef, managerOverrideUpdate(reopenEvent, [ownerCompletion])
+    ));
+    const dispatchCompletion = managerOverrideEvent({
+      fromStatus: '先方確認中', fromStage: 'client_review', status: '完了',
+      toStage: 'delivered', completedDeliveryDate: completedDate,
+      evidenceUrl: 'https://example.com/dispatch-delivery', clientApprovalConfirmed: true,
+      reason: '管理者から派遣案件を完了へ変更',
+    });
+    await expectDenied('manager cannot take the assigned editors final-delivery action', updateDoc(
+      doc(dir1, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-dispatch-complete'),
+      managerOverrideUpdate(dispatchCompletion)
+    ));
+
     await expectAllowed('editor changes only own Chatwork display name', updateDoc(doc(direct1, 'access', 'direct1'), { name: 'Direct Chatwork', updatedAt: 2 }));
     await expectDenied('editor cannot change own roles while renaming', updateDoc(doc(direct1, 'access', 'direct1'), { name: 'Direct Chatwork', roles: ['動画編集者', '営業'], updatedAt: 3 }));
     await expectDenied('editor cannot rename another account', updateDoc(doc(direct1, 'access', 'direct2'), { name: 'Wrong', updatedAt: 2 }));

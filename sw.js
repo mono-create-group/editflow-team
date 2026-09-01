@@ -1,5 +1,5 @@
 // mono.create 社内連絡アプリ SW
-const CACHE='mcshanai-20260902-04';
+const CACHE='mcshanai-20260902-05';
 const URLS=['./','./index.html','./editor.html','./billing-terms.js','./editor-features.js','./editor-push.js','./bulletin.js','./direct-messages.js','./feedback-workflow.js','./manager-features.js','./owner-video-performance.js','./sales-video-leads.js','./app-ui.css','./owner-yellow-ui.css','./editor-yellow-ui.css','./editflow-logo.svg','./manifest.json','./editor-manifest.json','./icon-192.png','./icon-512.png','./icon-512-maskable.png','./apple-touch-icon.png','./ai-bridge-client.js'];
 const REQUIRED_URLS=['./','./index.html','./editor.html','./billing-terms.js','./editor-features.js','./editor-push.js','./bulletin.js','./direct-messages.js','./feedback-workflow.js','./manager-features.js','./owner-video-performance.js','./sales-video-leads.js','./app-ui.css','./owner-yellow-ui.css','./editor-yellow-ui.css','./ai-bridge-client.js'];
 const OPTIONAL_URLS=URLS.filter(url=>!REQUIRED_URLS.includes(url));

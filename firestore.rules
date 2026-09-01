@@ -1021,6 +1021,89 @@ service cloud.firestore {
       return owner() ? 'owner' : 'director';
     }
 
+    function managerSelectableStatus(status) {
+      return status in [
+        'アサイン済み','進行中','編集者進行中','初稿提出済み','修正中',
+        '修正稿提出済み','D確認OK','先方確認中','完了'
+      ];
+    }
+
+    function managerWorkflowStageForStatus(status) {
+      return status in ['初稿提出済み','修正稿提出済み'] ? 'director_review'
+        : status == 'D確認OK' ? 'client_submission'
+        : status == '先方確認中' ? 'client_review'
+        : status == '完了' ? 'delivered'
+        : 'editing';
+    }
+
+    function managerOverrideCurrentStage() {
+      return hasReviewWorkflow(resource.data) ? reviewStage(resource.data)
+        : resource.data.status == '完了' ? 'delivered'
+        : resource.data.status == 'D確認OK' ? 'client_submission'
+        : resource.data.status in ['先方確認中','確認待ち'] ? 'client_review'
+        : resource.data.status in ['初稿提出済み','修正稿提出済み','FB待ち'] ? 'director_review'
+        : 'editing';
+    }
+
+    function managerOverrideBaseRound() {
+      return hasReviewWorkflow(resource.data)
+        ? (reviewRound(resource.data) > 0 ? reviewRound(resource.data) : 1)
+        : (resource.data.status == '修正中' ? 2 : 1);
+    }
+
+    function managerOverrideExpectedRound(status) {
+      let base = managerOverrideBaseRound();
+      return status == '初稿提出済み' ? 1
+        : status == '修正稿提出済み' ? (base < 2 ? 2 : base)
+        : status == '修正中' && resource.data.status != '修正中' ? base + 1
+        : base;
+    }
+
+    function managerOverrideNeedsEvidence(status) {
+      return status in ['初稿提出済み', '修正稿提出済み', '完了'];
+    }
+
+    function managerStatusOverrideRequested() {
+      let events = reviewEvents(request.resource.data);
+      return events is list
+        && events.size() > 0
+        && events[events.size() - 1].get('type', '') == 'manager_status_changed';
+    }
+
+    function validManagerStatusOverride() {
+      let events = reviewEvents(request.resource.data);
+      let event = events[events.size() - 1];
+      let status = request.resource.data.status;
+      let round = reviewRound(request.resource.data);
+      return managerStatusOverrideRequested()
+        && status != resource.data.status
+        && managerSelectableStatus(status)
+        && hasReviewWorkflow(request.resource.data)
+        && validReviewWorkflow(request.resource.data)
+        && validProgressEvents(request.resource.data)
+        && reviewStage(request.resource.data) == managerWorkflowStageForStatus(status)
+        && round == managerOverrideExpectedRound(status)
+        && appendsOneReviewEvent()
+        && lastReviewEventMatches(
+          'manager_status_changed', managerOverrideCurrentStage(),
+          managerWorkflowStageForStatus(status), round, status, managerEventRole()
+        )
+        && event.get('fromStatus', '') == resource.data.status
+        && event.get('reason', '') is string
+        && event.get('reason', '').size() > 0
+        && event.get('reason', '').size() <= 2000
+        && (!managerOverrideNeedsEvidence(status)
+          || (request.resource.data.get('evidenceUrl', '') is string
+            && request.resource.data.get('evidenceUrl', '').matches('^https?://.+')
+            && event.get('evidenceUrl', '') == request.resource.data.get('evidenceUrl', '')))
+        && (status != '完了'
+          || (managerMayCompleteJob()
+            && request.resource.data.get('completedDeliveryDate', '') is string
+            && request.resource.data.get('completedDeliveryDate', '') != ''
+            && event.get('completedDeliveryDate', '') == request.resource.data.get('completedDeliveryDate', '')
+            && event.get('clientApprovalConfirmed', false) == true));
+    }
+
     function validManagerProgressEvent(type, fromStage, toStage, round, status) {
       let events = reviewEvents(request.resource.data);
       let event = events[events.size() - 1];
@@ -1289,7 +1372,8 @@ service cloud.firestore {
     // Director/owner actions: approve a submitted draft, record actual client
     // submission, receive a client correction, or finish after client approval.
     function validManagerReviewTransition() {
-      return validCurrentManagerReviewTransition()
+      return validManagerStatusOverride()
+        || validCurrentManagerReviewTransition()
         || validLegacyManagerReviewTransition();
     }
 
@@ -1732,6 +1816,22 @@ service cloud.firestore {
           && validSubtaskIndex(request.resource.data)
           && request.resource.data.history is list
           && request.resource.data.history.size() == 1;
+        // A free progress selection has a narrow, audited write shape. Evaluate
+        // it before the general editor/manager branches so completion changes
+        // stay below Firestore Rules' per-request expression budget.
+        allow update: if managerStatusOverrideRequested()
+          && resource.data.status != request.resource.data.status
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status','completedDeliveryDate','correctionReason','evidenceUrl','updatedAt','updatedBy',
+            'history','workflow','progressEvents'
+          ])
+          && request.resource.data.get('history', []) is list
+          && (owner() || scopedVideoDirectorFor(uid))
+          && validJobStatus(request.resource.data.status)
+          && validCompletedJobEvidence()
+          && validCompletedDeliveryDate()
+          && validManagerStatusOverride()
+          && preservesFinalJob();
         // One-time owner migration before (or after) a contract-kind change.
         // Keep this branch deliberately small so it stays below the Firestore
         // Rules expression limit while allowing only removal of settlement
