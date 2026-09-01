@@ -51,6 +51,19 @@ test('mobile navigation is a five-item bottom bar in editor and main app', () =>
   assert.match(index, /#mob-nav\{\s*display:none;position:fixed;bottom:0/);
 });
 
+test('main-app mobile navigation overrides its base display rule and drawer control is accessible', () => {
+  const base = index.indexOf('#mob-nav{\n  display:none;');
+  const mobile = index.indexOf('@media(max-width:700px){#mob-nav{display:flex}}');
+  assert.ok(base >= 0 && mobile > base, 'the mobile display override must follow the base display rule');
+  assert.match(index, /<button type="button" id="mob-hamburger" aria-label="メニューを開く" aria-controls="mob-drawer" aria-expanded="false" onclick="toggleDrawer\(\)">/);
+  assert.match(index, /<div id="mob-drawer" aria-hidden="true" inert>/);
+  assert.match(index, /<button type="button" id="mob-drawer-close" aria-label="メニューを閉じる"/);
+  assert.match(index, /drawer\.toggleAttribute\('inert',!isOpen\)/);
+  assert.match(index, /hamburger\.setAttribute\('aria-expanded',isOpen\?'true':'false'\)/);
+  assert.match(index, /hamburger\.setAttribute\('aria-expanded','false'\)/);
+  assert.match(index, /if\(e\.key==='Escape'\)\{closeModal\(\);closeDrawer\(\);\}/);
+});
+
 test('secondary editor navigation opens as a bounded readable menu', () => {
   assert.match(features, /\.editor-nav-desktop\{position:relative;overflow:visible;flex-wrap:wrap\}/);
   assert.match(features, /\.editor-nav-more-menu\{position:absolute;[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);

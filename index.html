@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260902-03"></script>
+<script src="./billing-terms.js?v=20260902-04"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -687,7 +687,6 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
   #main .card,#main .ph,#main .stat-grid,#main .grid,#main .two-col,#main .form-grid,#main .split{min-width:0;max-width:100%}
   #main input,#main textarea,#main select,#main button,#main a{max-width:100%}
   #main .btn{min-width:0!important;white-space:normal}
-  #mob-nav{display:flex}
   #mob-hamburger{display:flex}
 }
 #mob-nav{
@@ -696,6 +695,8 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
   /* ホームインジケーター分の余白 */
   padding-bottom:env(safe-area-inset-bottom);
 }
+/* This must follow the base rule: both selectors have equal specificity. */
+@media(max-width:700px){#mob-nav{display:flex}}
 .mnav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 4px 10px;font-size:10px;color:var(--t2);cursor:pointer;gap:3px}
 .mnav-item.active{color:var(--pl)}
 .mnav-item .nav-icon{font-size:18px}
@@ -998,7 +999,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260902-03">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260902-04">
 </head>
 <body class="owner-yellow-ui">
 
@@ -1029,14 +1030,14 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 <main id="main"><div id="view"></div></main>
 
-<div id="mob-hamburger" onclick="toggleDrawer()">
+<button type="button" id="mob-hamburger" aria-label="メニューを開く" aria-controls="mob-drawer" aria-expanded="false" onclick="toggleDrawer()">
   <span></span><span></span><span></span>
-</div>
-<div id="mob-overlay" onclick="closeDrawer()"></div>
-<div id="mob-drawer">
+</button>
+<div id="mob-overlay" aria-hidden="true" onclick="closeDrawer()"></div>
+<div id="mob-drawer" aria-hidden="true" inert>
   <div style="display:flex;align-items:center;justify-content:space-between;padding:0 14px 16px">
     <div class="logo" style="margin:0;padding:0"><img class="app-brand-logo" src="./editflow-logo.svg" alt="EditFlow"></div>
-    <button onclick="closeDrawer()" style="background:none;border:none;font-size:20px;color:var(--t2);cursor:pointer;line-height:1;padding:4px 6px">✕</button>
+    <button type="button" id="mob-drawer-close" aria-label="メニューを閉じる" onclick="closeDrawer()" style="background:none;border:none;font-size:20px;color:var(--t2);cursor:pointer;line-height:1;padding:4px 6px">✕</button>
   </div>
   <div id="mob-drawer-nav"></div>
   <div class="nav-sep"></div>
@@ -1058,8 +1059,8 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="./ai-bridge-client.js"></script>
-<script src="./owner-video-performance.js?v=20260902-03"></script>
-<script src="./feedback-workflow.js?v=20260902-03"></script>
+<script src="./owner-video-performance.js?v=20260902-04"></script>
+<script src="./feedback-workflow.js?v=20260902-04"></script>
 <script>/* lz-string 1.5.0 (MIT) — CDN非依存でオフライン/圧縮チーム同期を保証するためインライン化 */
 var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",e={};function t(r,o){if(!e[r]){e[r]={};for(var n=0;n<r.length;n++)e[r][r.charAt(n)]=n}return e[r][o]}var i={compressToBase64:function(r){if(null==r)return"";var n=i._compress(r,6,function(r){return o.charAt(r)});switch(n.length%4){default:case 0:return n;case 1:return n+"===";case 2:return n+"==";case 3:return n+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(n){return t(o,r.charAt(n))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(r){return null==r?"":""==r?null:i._decompress(r.length,16384,function(o){return r.charCodeAt(o)-32})},compressToUint8Array:function(r){for(var o=i.compress(r),n=new Uint8Array(2*o.length),e=0,t=o.length;e<t;e++){var s=o.charCodeAt(e);n[2*e]=s>>>8,n[2*e+1]=s%256}return n},decompressFromUint8Array:function(o){if(null==o)return i.decompress(o);for(var n=new Array(o.length/2),e=0,t=n.length;e<t;e++)n[e]=256*o[2*e]+o[2*e+1];var s=[];return n.forEach(function(o){s.push(r(o))}),i.decompress(s.join(""))},compressToEncodedURIComponent:function(r){return null==r?"":i._compress(r,6,function(r){return n.charAt(r)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),i._decompress(r.length,32,function(o){return t(n,r.charAt(o))}))},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(r,o,n){if(null==r)return"";var e,t,i,s={},u={},a="",p="",c="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<r.length;i+=1)if(a=r.charAt(i),Object.prototype.hasOwnProperty.call(s,a)||(s[a]=f++,u[a]=!0),p=c+a,Object.prototype.hasOwnProperty.call(s,p))c=p;else{if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++),s[p]=f++,c=String(a)}if(""!==c){if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++)}for(t=2,e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;for(;;){if(m<<=1,v==o-1){d.push(n(m));break}v++}return d.join("")},decompress:function(r){return null==r?"":""==r?null:i._decompress(r.length,32768,function(o){return r.charCodeAt(o)})},_decompress:function(o,n,e){var t,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:e(0),position:n,index:1};for(t=0;t<3;t+=1)l[t]=t;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return i}();"function"==typeof define&&define.amd?define(function(){return LZString}):"undefined"!=typeof module&&null!=module?module.exports=LZString:"undefined"!=typeof angular&&null!=angular&&angular.module("LZString",[]).factory("LZString",function(){return LZString});
 </script>
@@ -3344,7 +3345,7 @@ document.addEventListener('click',e=>{
     render();
   }
 });
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeDrawer();}});
 // モーダル内の入力で dirty フラグを立てる
 document.addEventListener('input',e=>{
   if(document.getElementById('modal-overlay')?.contains(e.target))_modalDirty=true;
@@ -15453,14 +15454,25 @@ function toggleDrawer(){
   const drawer=document.getElementById('mob-drawer');
   const hamburger=document.getElementById('mob-hamburger');
   drawer.classList.toggle('open');
+  const isOpen=drawer.classList.contains('open');
+  drawer.setAttribute('aria-hidden',isOpen?'false':'true');
+  drawer.toggleAttribute('inert',!isOpen);
   document.getElementById('mob-overlay').classList.toggle('open');
-  if(hamburger)hamburger.style.display=drawer.classList.contains('open')?'none':'';
+  if(hamburger)hamburger.setAttribute('aria-expanded',isOpen?'true':'false');
+  if(hamburger)hamburger.style.display=isOpen?'none':'';
+  if(isOpen)requestAnimationFrame(()=>document.getElementById('mob-drawer-close')?.focus());
 }
 function closeDrawer(){
-  document.getElementById('mob-drawer').classList.remove('open');
+  const drawer=document.getElementById('mob-drawer');
+  const wasOpen=drawer.classList.contains('open');
+  drawer.classList.remove('open');
+  drawer.setAttribute('aria-hidden','true');
+  drawer.setAttribute('inert','');
   document.getElementById('mob-overlay').classList.remove('open');
   const hamburger=document.getElementById('mob-hamburger');
+  if(hamburger)hamburger.setAttribute('aria-expanded','false');
   if(hamburger)hamburger.style.display='';
+  if(wasOpen&&hamburger)hamburger.focus();
 }
 function toggleNavItem(id,e){
   e&&e.stopPropagation();
@@ -18005,7 +18017,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260902-03';
+const APP_VERSION='20260902-04';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -18082,13 +18094,13 @@ window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});  
 checkServerVersion();                                                              // 初回表示でも旧版を即時検出
   </script>
 <script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
-<script src="./editor-push.js?v=20260902-03"></script>
-<script src="./bulletin.js?v=20260902-03"></script>
-<script src="./direct-messages.js?v=20260902-03"></script>
+<script src="./editor-push.js?v=20260902-04"></script>
+<script src="./bulletin.js?v=20260902-04"></script>
+<script src="./direct-messages.js?v=20260902-04"></script>
 <script>
   try{if(V==='directmessages')render();else renderNav();}catch(error){console.warn('owner dm init',error);}
 </script>
-<script src="./manager-features.js?v=20260902-03"></script>
-<script src="./sales-video-leads.js?v=20260902-03"></script>
+<script src="./manager-features.js?v=20260902-04"></script>
+<script src="./sales-video-leads.js?v=20260902-04"></script>
 </body>
 </html>
