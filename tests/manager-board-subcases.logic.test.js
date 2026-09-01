@@ -87,3 +87,35 @@ test('single-job publishing remains supported through the default child row',()=
   assert.match(manager,/\$\{boardSubcaseRowHtml\(safeId\(\),\{_manualTarget:initialTarget,_openAll:initialTarget===DIRECT_ALL_ID\}\)\}/);
   assert.match(manager,/if\(subcases\.items\.length>1&&!caseName\)/);
 });
+
+test('publish action opens the overview form when invoked from the process board',()=>{
+  const source=manager.match(/function openBoardForm\(\)\{[\s\S]*?\n  \}/)?.[0];
+  assert.ok(source,'openBoardForm source');
+  let form=null,selectedTab='',toastMessage='',scrolled=false;
+  const document={getElementById:id=>id==='manager-board-publish'?form:null};
+  const openBoardForm=Function('document','setVideoTab','toast','setTimeout',`${source};return openBoardForm;`)(
+    document,
+    tab=>{selectedTab=tab;form={open:false,scrollIntoView:()=>{scrolled=true;}}},
+    message=>{toastMessage=message},
+    callback=>callback()
+  );
+  assert.equal(openBoardForm(),true);
+  assert.equal(selectedTab,'overview');
+  assert.equal(form.open,true);
+  assert.equal(scrolled,true);
+  assert.equal(toastMessage,'');
+});
+
+test('publish action reports a real load failure instead of leaving a loading notice',()=>{
+  const source=manager.match(/function openBoardForm\(\)\{[\s\S]*?\n  \}/)?.[0];
+  let toastArgs=[];
+  const openBoardForm=Function('document','setVideoTab','toast','setTimeout',`${source};return openBoardForm;`)(
+    {getElementById:()=>null},
+    ()=>{},
+    (...args)=>{toastArgs=args},
+    ()=>{}
+  );
+  assert.equal(openBoardForm(),false);
+  assert.deepEqual(toastArgs,['掲載フォームを読み込めませんでした。画面を再読み込みしてください','err']);
+  assert.doesNotMatch(source,/掲載フォームを読み込んでいます/);
+});

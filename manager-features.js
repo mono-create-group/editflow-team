@@ -470,7 +470,18 @@
   function invoicesPage(){let clientInvoices='';if(_isOwner()){PWORK='video';if(!['edit','haken'].includes(PBIZ))PBIZ='edit';clientInvoices=block('クライアントへ提出する請求書',`<div style="display:flex;gap:6px;margin-bottom:10px"><button class="btn btn-g btn-sm ${PBIZ==='edit'?'btn-p':''}" onclick="PBIZ='edit';render()">編集代行</button><button class="btn btn-g btn-sm ${PBIZ==='haken'?'btn-p':''}" onclick="PBIZ='haken';render()">編集者派遣</button></div>${rProjInvoice()}`)}const directorView=isDirector(),description=directorView?'配下編集者分を含む、自分への精算額と自分が提出した請求書を確認します。承認・差戻しはオーナーが行います。':'直接契約編集者の請求書と、ディレクター本人からのまとめ請求を確認します。外部編集者の金額はこのアプリで管理しません。';return page('請求書',description,`${clientInvoices}${externalBillingBoundaryHtml()}${directorAuthorizationHtml()}${invoiceHtml(state.invoices.slice())}`)}
   function suggestionsPage(){if(!_isOwner())return page('匿名目安箱','投稿者を特定せず、オーナーだけが内容を確認します。',empty('このページはオーナーのみ閲覧できます。'));return page('匿名目安箱','編集者から届いた匿名の意見を確認し、返信コードを通じて匿名で返答できます。',suggestionsHtml())}
 
-  function openBoardForm(){const el=document.getElementById('manager-board-publish');if(!el)return toast('掲載フォームを読み込んでいます','warn');el.open=true;el.scrollIntoView({behavior:'smooth',block:'start'});setTimeout(()=>document.getElementById('mb-editor')?.focus(),250)}
+  function openBoardForm(){
+    let el=document.getElementById('manager-board-publish');
+    if(!el&&typeof setVideoTab==='function'){
+      setVideoTab('overview');
+      el=document.getElementById('manager-board-publish');
+    }
+    if(!el){toast('掲載フォームを読み込めませんでした。画面を再読み込みしてください','err');return false}
+    el.open=true;
+    el.scrollIntoView({behavior:'smooth',block:'start'});
+    setTimeout(()=>document.getElementById('mb-editor')?.focus(),250);
+    return true;
+  }
   rVideoOperations=function(...args){const base=originalVideoOperations(...args);if(!canManage())return base;const biz=['edit','haken'].includes(PBIZ)?PBIZ:'edit',jobs=managedJobs().filter(j=>portalJobBiz(j)===biz),sections=[];if(biz==='edit')sections.push(`<details id="manager-board-publish" class="manager-operation-disclosure"><summary class="btn btn-g">新しい編集代行案件を掲載する</summary><div class="manager-operation-body">${boardFormHtml(managedEditors())}</div></details>`);sections.push(`<details class="manager-operation-disclosure"><summary class="btn btn-g">案件内チャットを開く</summary><div class="manager-operation-body">${threadHtml(jobs)}</div></details>`);if(VIDEO_TAB==='overview'){const actions=`<section class="ref-manager-panel"><div class="ref-rail-heading"><b>案件の操作</b><span>管理</span></div>${sections.join('')}</section>`;return base.replace('<div id="manager-overview-actions"></div>',`<div id="manager-overview-actions">${actions}</div>`)}return base};
   rWorkers=editorPage;
   window.managerVideoEditorsPage=editorPage;
