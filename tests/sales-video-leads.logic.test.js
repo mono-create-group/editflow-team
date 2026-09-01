@@ -110,8 +110,8 @@ test('Lancers card includes instant payout estimate, aggregate eligibility, and 
 test('owner shell and service worker load the video-lead extension on the same release',()=>{
   const index=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
   const sw=fs.readFileSync(path.join(__dirname,'..','sw.js'),'utf8');
-  assert.match(index,/const APP_VERSION='20260901-05';/);
-  assert.match(index,/<script src="\.\/sales-video-leads\.js\?v=20260901-05"><\/script>/);
-  assert.match(sw,/const CACHE='mcshanai-20260901-05';/);
+  assert.match(index,/const APP_VERSION='20260901-06';/);
+  assert.match(index,/<script src="\.\/sales-video-leads\.js\?v=20260901-06"><\/script>/);
+  assert.match(sw,/const CACHE='mcshanai-20260901-06';/);
   assert.match(sw,/'\.\/sales-video-leads\.js'/);
 });

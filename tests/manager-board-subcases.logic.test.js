@@ -93,29 +93,39 @@ test('publish action opens the overview form when invoked from the process board
   assert.ok(source,'openBoardForm source');
   let form=null,selectedTab='',toastMessage='',scrolled=false;
   const document={getElementById:id=>id==='manager-board-publish'?form:null};
-  const openBoardForm=Function('document','setVideoTab','toast','setTimeout',`${source};return openBoardForm;`)(
+  const state={boardFormOpen:false};
+  const openBoardForm=Function('document','setVideoTab','toast','setTimeout','state','boardFormToggled',`${source};return openBoardForm;`)(
     document,
     tab=>{selectedTab=tab;form={open:false,scrollIntoView:()=>{scrolled=true;}}},
     message=>{toastMessage=message},
-    callback=>callback()
+    callback=>callback(),
+    state,
+    el=>{state.boardFormOpen=!!el?.open}
   );
   assert.equal(openBoardForm(),true);
   assert.equal(selectedTab,'overview');
   assert.equal(form.open,true);
   assert.equal(scrolled,true);
+  assert.equal(state.boardFormOpen,true);
   assert.equal(toastMessage,'');
+  assert.match(manager,/\$\{state\.boardFormOpen\?'open':''\} ontoggle="managerBoardFormToggled\(this\)"/);
+  assert.match(manager,/window\.managerBoardFormToggled=boardFormToggled/);
 });
 
 test('publish action reports a real load failure instead of leaving a loading notice',()=>{
   const source=manager.match(/function openBoardForm\(\)\{[\s\S]*?\n  \}/)?.[0];
   let toastArgs=[];
-  const openBoardForm=Function('document','setVideoTab','toast','setTimeout',`${source};return openBoardForm;`)(
+  const state={boardFormOpen:false};
+  const openBoardForm=Function('document','setVideoTab','toast','setTimeout','state','boardFormToggled',`${source};return openBoardForm;`)(
     {getElementById:()=>null},
     ()=>{},
     (...args)=>{toastArgs=args},
-    ()=>{}
+    ()=>{},
+    state,
+    el=>{state.boardFormOpen=!!el?.open}
   );
   assert.equal(openBoardForm(),false);
   assert.deepEqual(toastArgs,['掲載フォームを読み込めませんでした。画面を再読み込みしてください','err']);
+  assert.equal(state.boardFormOpen,false);
   assert.doesNotMatch(source,/掲載フォームを読み込んでいます/);
 });
