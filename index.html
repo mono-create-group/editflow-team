@@ -8218,15 +8218,17 @@ function rProjDeadline(){
 }
 
 // ===請求書ページ===
-// 請求は親案件ではなく、単価が設定されたサブタスクを最小単位にする。
-// 親案件の unitPrice / profit は集計に使わず、親案件とサブタスクの二重計上を防ぐ。
+// サブ案件がある場合は、単価が設定されたサブタスクを請求の最小単位にする。
+// サブ案件が1件もない場合だけ親案件の単価を採用し、親子の二重計上を防ぐ。
 function _invoiceSubtasks(j){
-  const rows=(j.subtasks||[]).map((sub,index)=>({sub,index})).filter(x=>Number(x.sub.unitPrice)>0);
+  const subtasks=Array.isArray(j.subtasks)?j.subtasks:[];
+  const rows=subtasks.map((sub,index)=>({sub,index})).filter(x=>Number(x.sub.unitPrice)>0);
   if(rows.length)return rows;
-  if(j._ownerFinance&&Number(j.unitPrice)>0)return[{sub:{...j,title:j.title||'案件',unitPrice:Number(j.unitPrice),invoicedAt:j.invoicedAt||null},index:-1}];
+  if((!subtasks.length||j._ownerFinance)&&Number(j.unitPrice)>0)return[{sub:{...j,title:j.title||'案件',unitPrice:Number(j.unitPrice),invoicedAt:j.invoicedAt||null},index:-1}];
   return[];
 }
 function _invAmt(j){return _invoiceSubtasks(j).reduce((sum,x)=>sum+Number(x.sub.unitPrice||0),0);}
+function _invoiceLineName(j,sub,index){return index===-1?(j.title||sub.title||'案件'):(j.title||'親案件')+'（'+(sub.title||`サブタスク${index+1}`)+'）';}
 function _subInvoiceDate(j,sub){return sub.invoiceDate||j.invoiceDate||sub.completedDeliveryDate||j.completedDeliveryDate||sub.deliveryDate||j.deliveryDate||'';}
 function _subInvoicedAt(j,sub){return sub.invoicedAt||j.invoicedAt||null;}
 function _jobInvDate(j){
@@ -8268,8 +8270,8 @@ function rProjInvoice(){
   <span style="font-size:13px;color:var(--t2)">対象 ¥${grand.toLocaleString()}・${Object.keys(byClient).length}社</span>
 </div>
 ${!iss.name?`<div class="card" style="background:#fff7ed;border:2px solid #c2410c;color:#7c2d12;margin-bottom:10px;font-size:12px;font-weight:700">⚠️ まず「✏️ 請求元情報」に屋号・振込先などを設定してください（請求書に自動で差し込まれます）。</div>`:''}
-<div style="font-size:11px;color:var(--t3);margin-bottom:12px">請求書提出日が <b>${mLabel}</b> のサブタスクを表示中。単価を設定したサブタスクだけを ☑ で選び「請求書を作成」→ 編集 → PDF保存します。親案件の金額は請求額に含めません。</div>
-${!Object.keys(byClient).length?`<div class="empty"><div class="empty-icon">🧾</div><div class="empty-title">${mLabel} に請求予定のサブタスクはありません</div><div style="color:var(--t2);font-size:12px;margin-top:4px">案件に「請求書提出日」を設定し、サブタスクごとに単価を入力すると表示されます</div></div>`:Object.entries(byClient).map(([cid,js])=>{
+<div style="font-size:11px;color:var(--t3);margin-bottom:12px">請求書提出日が <b>${mLabel}</b> の請求明細を表示中。サブ案件がある場合は単価を設定したサブ案件を、サブ案件がない場合は親案件の単価を採用します。☑ で選び「請求書を作成」→ 編集 → PDF保存します。</div>
+${!Object.keys(byClient).length?`<div class="empty"><div class="empty-icon">🧾</div><div class="empty-title">${mLabel} に請求予定の明細はありません</div><div style="color:var(--t2);font-size:12px;margin-top:4px">案件に「請求書提出日」と単価を設定すると表示されます。サブ案件がある場合はサブ案件の単価を使用します</div></div>`:Object.entries(byClient).map(([cid,js])=>{
   const sub=js.reduce((s,j)=>s+_invAmt(j),0);
   const invoiceRows=js.flatMap(j=>_invoiceSubtasks(j).map(x=>({j,...x})));
   const allInvoiced=invoiceRows.length&&invoiceRows.every(x=>_subInvoicedAt(x.j,x.sub));
@@ -8278,13 +8280,13 @@ ${!Object.keys(byClient).length?`<div class="empty"><div class="empty-icon">🧾
       <div style="font-weight:700;font-size:15px">${esc(clientName(cid))} <span style="font-size:11px;font-weight:500;color:var(--t2)">御中</span></div>
       ${allInvoiced?`<span class="badge bg" style="font-size:10px">🧾 請求済</span>`:`<span class="badge ba" style="font-size:10px">⏳ 未請求</span>`}
     </div>
-    ${js.map(j=>{const rows=_invoiceSubtasks(j);return`<details style="border-bottom:1px solid var(--border);padding:5px 0"><summary class="video-subcase-head"><span>${esc(j.title||'親案件')}</span><span>サブ案件 ${rows.length}件</span></summary><div>${rows.map(({sub,index})=>`<label style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:7px 0;border-top:1px solid var(--border);cursor:pointer;gap:10px">
+    ${js.map(j=>{const rows=_invoiceSubtasks(j),parentOnly=rows.length===1&&rows[0].index===-1;return`<details style="border-bottom:1px solid var(--border);padding:5px 0"><summary class="video-subcase-head"><span>${esc(j.title||'親案件')}</span><span>${parentOnly?'親案件':'サブ案件'} ${rows.length}件</span></summary><div>${rows.map(({sub,index})=>`<label style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:7px 0;border-top:1px solid var(--border);cursor:pointer;gap:10px">
       <span style="display:flex;align-items:center;gap:8px;min-width:0"><input type="checkbox" class="inv-sel" data-cid="${cid}" data-jid="${j.id}" data-sidx="${index}" checked><span><b>${esc(sub.title||`サブタスク${index+1}`)}</b> <span style="font-size:10px;color:var(--t3)">🧾${_subInvoiceDate(j,sub)||'-'}</span>${_subInvoicedAt(j,sub)?` <span style="font-size:10px;color:var(--green)">✅請求済 ${_subInvoicedAt(j,sub)}</span>`:''}</span></span>
       <span style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span style="font-weight:600">¥${Number(sub.unitPrice||0).toLocaleString()}</span><button class="btn btn-g btn-xs" onclick="event.preventDefault();event.stopPropagation();openJobModal('${j.id}')">詳細</button></span>
     </label>`).join('')}</div></details>`;}).join('')}
-    <div style="text-align:right;margin-top:8px;font-size:13px">サブタスク ${invoiceRows.length}件・合計 <span style="font-weight:800;font-size:16px;color:var(--green)">¥${sub.toLocaleString()}</span></div>
+    <div style="text-align:right;margin-top:8px;font-size:13px">請求明細 ${invoiceRows.length}件・合計 <span style="font-weight:800;font-size:16px;color:var(--green)">¥${sub.toLocaleString()}</span></div>
     <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
-      <button class="btn btn-p btn-sm" onclick="openInvoiceEditorFromSelection('${cid}','${curM}')">🧾 選択したサブタスクで請求書を作成</button>
+      <button class="btn btn-p btn-sm" onclick="openInvoiceEditorFromSelection('${cid}','${curM}')">🧾 選択した明細で請求書を作成</button>
       <button class="btn btn-g btn-sm" onclick="copyInvoiceText('${cid}','${curM}')">📋 テキストでコピー</button>
       ${allInvoiced?`<button class="btn btn-g btn-sm" onclick="markClientInvoiced('${cid}','${curM}',false)">請求済を取消</button>`:`<button class="btn btn-g btn-sm" onclick="markClientInvoiced('${cid}','${curM}',true)">✅ 全サブタスクを請求済みに</button>`}
     </div>
@@ -8294,7 +8296,7 @@ function openInvoiceEditor(cid,m,subtaskRefs){
   let js=_invoiceJobs(cid,m);
   const selected=Array.isArray(subtaskRefs)&&subtaskRefs.length?subtaskRefs:null;
   if(selected)js=js.filter(j=>selected.some(x=>x.jobId===j.id));
-  if(!js.length){toast('対象のサブタスクがありません','warn');return;}
+  if(!js.length){toast('対象の請求明細がありません','warn');return;}
   const i=_issuer();
   const cname=cid?(S.clients.find(c=>c.id===cid)?.name||'クライアント'):'クライアント';
   const issue=today();
@@ -8304,24 +8306,24 @@ function openInvoiceEditor(cid,m,subtaskRefs){
   js.forEach(j=>{
     _invoiceSubtasks(j).forEach(({sub,index})=>{
       if(selected&&!selected.some(x=>x.jobId===j.id&&Number(x.subtaskIndex)===index))return;
-      items.push({name:j.title+'（'+(sub.title||`サブタスク${index+1}`)+'）',qty:1,unit:Number(sub.unitPrice),amount:Number(sub.unitPrice)});
+      items.push({name:_invoiceLineName(j,sub,index),qty:1,unit:Number(sub.unitPrice),amount:Number(sub.unitPrice)});
       refs.push({jobId:j.id,subtaskIndex:index});
     });
   });
-  if(!items.length){toast('単価が設定されたサブタスクを選んでください','warn');return;}
+  if(!items.length){toast('単価が設定された請求明細を選んでください','warn');return;}
   const jobIds=[...new Set(refs.map(x=>x.jobId))];
   window._invDraft={cid,m,jobIds,subtaskRefs:refs,recipient:cname,issue,no:'INV-'+issue.replace(/-/g,''),due,subject:items.length===1?items[0].name:'動画制作費 ほか',items,taxMode:i.defaultTax?'ex':'none',whOn:i.defaultWithholding,notes:i.notesDefault};
   _renderInvoiceEditor();
 }
 function openInvoiceEditorFromSelection(cid,m){
   const refs=[...document.querySelectorAll('.inv-sel[data-cid="'+cid+'"]:checked')].map(cb=>({jobId:cb.dataset.jid,subtaskIndex:Number(cb.dataset.sidx)}));
-  if(!refs.length){toast('請求するサブタスクを1件以上選んでください','warn');return;}
+  if(!refs.length){toast('請求する明細を1件以上選んでください','warn');return;}
   openInvoiceEditor(cid,m,refs);
 }
 function markDraftInvoiced(){
   const d=window._invDraft;if(!d)return;
   const at=today();
-  (d.subtaskRefs||[]).forEach(ref=>{const j=S.jobs.find(x=>x.id===ref.jobId),index=Number(ref.subtaskIndex),sub=j?.subtasks?.[index];if(!j)return;if(index===-1&&_ownerFinanceForLegacyJob(j)){j.invoicedAt=at;j.updatedAt=Date.now();return;}if(sub){sub.invoicedAt=at;j.updatedAt=Date.now();if(_invoiceSubtasks(_withOwnerJobFinance(j)).every(x=>_subInvoicedAt(j,x.sub)))j.invoicedAt=at;}});
+  (d.subtaskRefs||[]).forEach(ref=>{const j=S.jobs.find(x=>x.id===ref.jobId),index=Number(ref.subtaskIndex),sub=j?.subtasks?.[index];if(!j)return;if(index===-1&&_invoiceSubtasks(_withOwnerJobFinance(j)).some(x=>x.index===-1)){j.invoicedAt=at;j.updatedAt=Date.now();return;}if(sub){sub.invoicedAt=at;j.updatedAt=Date.now();if(_invoiceSubtasks(_withOwnerJobFinance(j)).every(x=>_subInvoicedAt(j,x.sub)))j.invoicedAt=at;}});
   save();closeInvoiceEditor();render();toast('🧾 請求済みにしました');
 }
 function _invItemRow(it){
@@ -8472,7 +8474,7 @@ function genInvoiceText(cid,m){
   const wh=i.defaultWithholding?_calcWithholding(sub):0;
   const total=sub+tax-wh;
   let t=`請求書\n\n${name} 御中\n\nご請求日：${today()}\n下記の通りご請求申し上げます。\n\n────────────────\n`;
-  js.forEach(j=>_invoiceSubtasks(j).forEach(({sub,index})=>{t+=`${j.title}（${sub.title||`サブタスク${index+1}`}）　¥${Number(sub.unitPrice||0).toLocaleString()}\n`;}));
+  js.forEach(j=>_invoiceSubtasks(j).forEach(({sub,index})=>{t+=`${_invoiceLineName(j,sub,index)}　¥${Number(sub.unitPrice||0).toLocaleString()}\n`;}));
   t+=`────────────────\n小計　¥${sub.toLocaleString()}\n`;
   if(tax)t+=`消費税(10%)　¥${tax.toLocaleString()}\n`;
   if(wh)t+=`源泉徴収税　-¥${wh.toLocaleString()}\n`;
@@ -17953,7 +17955,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260901-08';
+const APP_VERSION='20260901-09';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
