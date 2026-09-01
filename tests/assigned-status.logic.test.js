@@ -23,7 +23,7 @@ test('assigned is a first-class video job status in both edit and dispatch board
 });
 
 test('assigned remains visible through the video board and legacy portal mapping', () => {
-  assert.match(index, /\{id:'assigned',label:'アサイン済み',statuses:\['編集者決定','アサイン済み','受注済み'\]\}/);
+  assert.match(index, /\{id:'assigned',label:'アサイン済み',hint:'担当を決める',statuses:\['編集者決定','アサイン済み','受注済み'\]\}/);
   const mapper = index.slice(index.indexOf('function _legacyPortalStatus'), index.indexOf('\nfunction _legacyPortalAccessForWorker'));
   assert.match(mapper, /value==='確認待ち'\)return'先方確認中'/);
   assert.match(mapper, /\['編集者決定','受注済み','未着手'\]\.includes\(value\)\)return'アサイン済み'/);

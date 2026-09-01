@@ -24,7 +24,16 @@ test('theme covers desktop navigation, shared workspace surfaces, and financial 
 });
 
 test('kanban stage count stays beside its own stage label', () => {
-  assert.match(css, /\.app-kanban-column>summary\{justify-content:flex-start;/);
+  assert.match(css, /\.app-kanban-column>summary\{[^}]*grid-template-columns:32px minmax\(0,1fr\) auto/);
+  assert.match(css, /\.kanban-stage-heading\{[^}]*display:grid/);
+  assert.match(css, /\.kanban-stage-count\{[^}]*display:flex/);
+});
+
+test('kanban uses a numbered semantic stage rail and compact action-first cards', () => {
+  for (const phase of ['assigned', 'editing', 'review', 'done']) assert.ok(css.includes(`data-phase="${phase}"`), phase);
+  for (const selector of ['.kanban-stage-marker', '.video-card-status', '.video-card-next', '.video-card-deadline', '.app-kanban-empty']) assert.ok(css.includes(selector), selector);
+  assert.match(css, /\.app-kanban\{[^}]*scroll-snap-type:x proximity/);
+  assert.match(css, /\.app-kanban-column\{[^}]*scroll-snap-align:start/);
 });
 
 test('reference-style owner shell is white and uses yellow only as an accent', () => {

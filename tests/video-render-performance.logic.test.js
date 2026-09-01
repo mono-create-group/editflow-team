@@ -33,10 +33,18 @@ test('large case lists render in bounded batches and search waits for typing to 
 
 test('each kanban phase receives visible rows when its header count is non-zero', () => {
   assert.match(html, /const filtered=_videoFiltered\(biz,all\),\{byPhase,phaseCounts,perPhaseLimit,renderedCount,totalCount\}=_videoPhaseBuckets\(filtered,VIDEO_RENDER_LIMIT,VIDEO_STATUS\)/);
-  assert.match(html, /<span class="badge bk">\$\{phaseCounts\.get\(p\.id\)\|\|0\}<\/span>/);
+  assert.match(html, /<span class="kanban-stage-count"><b>\$\{count\}<\/b><small>件<\/small><\/span>/);
   assert.match(html, /shown\.map\(_videoCard\)\.join\(''\)/);
-  assert.match(html, /この工程の案件はありません/);
+  assert.match(html, /この工程に案件はありません/);
   assert.doesNotMatch(html, /visible\.forEach\(j=>byPhase\.get\(_videoPhase\(j\.status\)\.id\)/);
+});
+
+test('kanban cards put current state, next owner, and deadline before secondary details', () => {
+  assert.match(html, /class="video-card-status"/);
+  assert.match(html, /class="video-card-next"/);
+  assert.match(html, /class="video-card-deadline"/);
+  assert.match(html, /const isParent=!!\(j\._aggregateParent\|\|j\._phaseSlice\)/);
+  assert.doesNotMatch(html, /\$\{_videoCaseSummary\(j\)\}\$\{_videoDraftDateSummary\(j\)\}/);
 });
 
 test('phase batching keeps a review case visible even when earlier rows fill other phases', () => {

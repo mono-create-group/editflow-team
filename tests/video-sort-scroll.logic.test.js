@@ -45,5 +45,6 @@ test('desktop board scrolls horizontally while mobile remains a vertical list', 
   assert.match(css, /\.app-kanban\{[^}]*overflow-x:auto/);
   assert.match(css, /\.app-kanban\{[^}]*-webkit-overflow-scrolling:touch/);
   assert.match(css, /@media\(max-width:760px\)[\s\S]*\.app-kanban\{[^}]*grid-template-columns:1fr[^}]*overflow-x:visible/);
-  assert.match(html, /工程ボードは左右にスクロールできます/);
+  assert.match(html, /工程は左から右へ進みます/);
+  assert.match(html, /横にスクロールして確認/);
 });
