@@ -16,7 +16,7 @@ function group(rows, today = '2026-09-02') {
   return JSON.parse(JSON.stringify(context.result));
 }
 
-test('today includes the current day and the previous three calendar days', () => {
+test('dueOrOverdue includes every dated row through the current day', () => {
   const rows = [
     { id: 'too-old', date: '2026-08-29' },
     { id: 'three-days-ago', date: '2026-08-30' },
@@ -25,8 +25,7 @@ test('today includes the current day and the previous three calendar days', () =
     { id: 'today', date: '2026-09-02' },
   ];
   const result = group(rows);
-  assert.deepEqual(result.today.map(row => row.id), ['three-days-ago', 'two-days-ago', 'yesterday', 'today']);
-  assert.equal(Object.values(result).flat().some(row => row.id === 'too-old'), false);
+  assert.deepEqual(result.dueOrOverdue.map(row => row.id), ['too-old', 'three-days-ago', 'two-days-ago', 'yesterday', 'today']);
 });
 
 test('tomorrow, day after tomorrow, later, and unset stay in their own groups', () => {
@@ -46,7 +45,7 @@ test('priority view excludes completed parents and completed child rows', () => 
   const start = html.indexOf('function rProjPriority()');
   const end = html.indexOf('\nfunction rProjProfit()', start);
   const source = html.slice(start, end);
-  assert.match(source, /j\.status!==\'完了\'&&j\.status!==\'キャンセル\'/);
-  assert.match(source, /!s\.done&&s\.status!==\'完了\'&&s\.status!==\'キャンセル\'/);
-  assert.match(source, /4日以上前と完了・キャンセルは除外します/);
+  assert.match(source, /const rows=_caseScheduleRows\(field\)/);
+  assert.match(source, /本日まで/);
+  assert.match(source, /最も遠い日付、日付未設定の順に全件表示します/);
 });

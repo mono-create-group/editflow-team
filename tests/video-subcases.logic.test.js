@@ -76,13 +76,16 @@ test('video status labels keep stored legacy values while showing unambiguous la
   assert.match(html, /<option value="\$\{esc\(x\)\}"/);
 });
 
-test('legacy video operations keep child cases inside parent details in every operational list', () => {
-  for (const marker of ['function rJobItem(j)', 'function rProjWorker()', 'function rProjPriority()', 'function rProjPayment()', 'function _profitGroupedHtml(jobs,mode)']) {
+test('legacy video operations keep child cases inside parent details except the exhaustive priority list', () => {
+  for (const marker of ['function rJobItem(j)', 'function rProjWorker()', 'function rProjPayment()', 'function _profitGroupedHtml(jobs,mode)']) {
     const start = html.indexOf(marker);
     assert.ok(start >= 0, `${marker} must exist`);
     const scope = html.slice(start, start + 7000);
     assert.match(scope, /<details[^>]*(video-subcase-list|subtask-list)/, `${marker} nests child cases`);
   }
+  const priority=html.slice(html.indexOf('function rProjPriority()'),html.indexOf('// ===HABITS==='));
+  assert.match(priority,/g\.items\.map\(rowHtml\)/,'priority renders every child as a visible row');
+  assert.doesNotMatch(priority,/<details/,'priority does not hide child rows in collapsed details');
 });
 
 test('legacy board cards show each subcase assignee and both draft dates', () => {
