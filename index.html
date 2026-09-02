@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260902-06"></script>
+<script src="./billing-terms.js?v=20260902-07"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -999,7 +999,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260902-06">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260902-07">
 </head>
 <body class="owner-yellow-ui">
 
@@ -1059,8 +1059,8 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="./ai-bridge-client.js"></script>
-<script src="./owner-video-performance.js?v=20260902-06"></script>
-<script src="./feedback-workflow.js?v=20260902-06"></script>
+<script src="./owner-video-performance.js?v=20260902-07"></script>
+<script src="./feedback-workflow.js?v=20260902-07"></script>
 <script>/* lz-string 1.5.0 (MIT) — CDN非依存でオフライン/圧縮チーム同期を保証するためインライン化 */
 var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",e={};function t(r,o){if(!e[r]){e[r]={};for(var n=0;n<r.length;n++)e[r][r.charAt(n)]=n}return e[r][o]}var i={compressToBase64:function(r){if(null==r)return"";var n=i._compress(r,6,function(r){return o.charAt(r)});switch(n.length%4){default:case 0:return n;case 1:return n+"===";case 2:return n+"==";case 3:return n+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(n){return t(o,r.charAt(n))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(r){return null==r?"":""==r?null:i._decompress(r.length,16384,function(o){return r.charCodeAt(o)-32})},compressToUint8Array:function(r){for(var o=i.compress(r),n=new Uint8Array(2*o.length),e=0,t=o.length;e<t;e++){var s=o.charCodeAt(e);n[2*e]=s>>>8,n[2*e+1]=s%256}return n},decompressFromUint8Array:function(o){if(null==o)return i.decompress(o);for(var n=new Array(o.length/2),e=0,t=n.length;e<t;e++)n[e]=256*o[2*e]+o[2*e+1];var s=[];return n.forEach(function(o){s.push(r(o))}),i.decompress(s.join(""))},compressToEncodedURIComponent:function(r){return null==r?"":i._compress(r,6,function(r){return n.charAt(r)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),i._decompress(r.length,32,function(o){return t(n,r.charAt(o))}))},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(r,o,n){if(null==r)return"";var e,t,i,s={},u={},a="",p="",c="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<r.length;i+=1)if(a=r.charAt(i),Object.prototype.hasOwnProperty.call(s,a)||(s[a]=f++,u[a]=!0),p=c+a,Object.prototype.hasOwnProperty.call(s,p))c=p;else{if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++),s[p]=f++,c=String(a)}if(""!==c){if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++)}for(t=2,e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;for(;;){if(m<<=1,v==o-1){d.push(n(m));break}v++}return d.join("")},decompress:function(r){return null==r?"":""==r?null:i._decompress(r.length,32768,function(o){return r.charCodeAt(o)})},_decompress:function(o,n,e){var t,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:e(0),position:n,index:1};for(t=0;t<3;t+=1)l[t]=t;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return i}();"function"==typeof define&&define.amd?define(function(){return LZString}):"undefined"!=typeof module&&null!=module?module.exports=LZString:"undefined"!=typeof angular&&null!=angular&&angular.module("LZString",[]).factory("LZString",function(){return LZString});
 </script>
@@ -12878,7 +12878,7 @@ ${_isOwner()?`${secTitle('🔑 サインインしたメンバー・権限')}
     <span style="color:var(--t3)">動画編集者だけを設定したメンバーは専用ポータルのみを使用します。ほかの役割も設定した兼任者は、その役割の閲覧範囲と編集者ポータルを併用します。</span><br>
     <span style="color:var(--pl);font-weight:700">動画編集ディレクターには動画編集者の権限も自動で含まれます。登録後も一覧の「編集」から、Chatwork表示名・役割・担当者をいつでも変更できます。</span>
   </div>
-  ${ACCESS_REQUESTS.length?`<div style="margin:0 0 14px"><div style="font-size:12px;font-weight:800;margin-bottom:7px">承認待ち ${ACCESS_REQUESTS.length}件</div>${ACCESS_REQUESTS.map(r=>`<div style="padding:10px;background:var(--card2);border:1px solid var(--border);border-radius:9px;margin-bottom:7px"><div style="font-weight:700;font-size:13px">${esc(r.name||'名前未登録')}</div><div style="font-size:11px;color:var(--t3);margin-bottom:7px">${esc(r.email||'')}</div><div style="display:flex;gap:5px;flex-wrap:wrap">${APP_ROLES.map(role=>`<label style="font-size:10.5px"><input class="ar-role" data-uid="${esc(r.id)}" type="checkbox" value="${role}"> ${role}</label>`).join('')}</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:7px;margin-top:7px"><select id="ar-worker-${esc(r.id)}"><option value="">担当者を紐付け（編集者のみ必須）</option>${(S.workers||[]).filter(w=>!w.deleted).map(w=>`<option value="${w.id}">${esc(w.name)}</option>`).join('')}</select><select id="ar-${esc(r.id)}-kind" onchange="mrContractToggle('ar-${esc(r.id)}')"><option value="direct">mono.create直接編集者</option><option value="external">ディレクター配下の外部編集者</option></select><select id="ar-${esc(r.id)}-director" disabled><option value="">担当ディレクターを選択</option>${mrDirectorOptions()}</select></div><div style="font-size:10.5px;color:var(--t3);margin-top:5px">外部編集者を選ぶ場合は、担当ディレクターも指定してください。</div><div style="display:flex;gap:6px;margin-top:7px"><button class="btn btn-p btn-sm" onclick="mrApproveRequest('${esc(r.id)}')">承認</button><button class="btn btn-g btn-sm" onclick="mrRejectRequest('${esc(r.id)}')">却下</button></div></div>`).join('')}</div>`:''}
+  ${ACCESS_REQUESTS.length?`<div style="margin:0 0 14px"><div style="font-size:12px;font-weight:800;margin-bottom:7px">承認待ち ${ACCESS_REQUESTS.length}件</div>${ACCESS_REQUESTS.map(r=>`<div style="padding:10px;background:var(--card2);border:1px solid var(--border);border-radius:9px;margin-bottom:7px"><div style="font-weight:700;font-size:13px">${esc(r.name||'名前未登録')}</div><div style="font-size:11px;color:var(--t3);margin-bottom:7px">${esc(r.email||'')}</div><div style="display:flex;gap:5px;flex-wrap:wrap">${APP_ROLES.map(role=>`<label style="font-size:10.5px"><input class="ar-role" data-uid="${esc(r.id)}" type="checkbox" value="${role}"> ${role}</label>`).join('')}</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:7px;margin-top:7px"><label style="display:flex;flex-direction:column;gap:4px"><span style="font-size:10.5px;font-weight:700;color:var(--t2)">編集者の登録方法</span><select id="ar-worker-${esc(r.id)}">${mrApprovalWorkerOptions()}</select></label><label style="display:flex;flex-direction:column;gap:4px"><span style="font-size:10.5px;font-weight:700;color:var(--t2)">所属・契約区分</span><select id="ar-${esc(r.id)}-kind" onchange="mrContractToggle('ar-${esc(r.id)}')"><option value="direct">mono.create直接編集者</option><option value="external">ディレクター配下の外部編集者</option></select></label><label style="display:flex;flex-direction:column;gap:4px"><span style="font-size:10.5px;font-weight:700;color:var(--t2)">担当ディレクター</span><select id="ar-${esc(r.id)}-director" disabled><option value="">担当ディレクターを選択</option>${mrDirectorOptions()}</select></label></div><div style="font-size:10.5px;color:var(--t3);margin-top:5px">新規登録は申請時のChatwork表示名で編集者台帳へ追加します。引き継ぎの場合だけ既存編集者を選んでください。外部編集者は担当ディレクターも必須です。</div><div style="display:flex;gap:6px;margin-top:7px"><button class="btn btn-p btn-sm" onclick="mrApproveRequest('${esc(r.id)}')">承認</button><button class="btn btn-g btn-sm" onclick="mrRejectRequest('${esc(r.id)}')">却下</button></div></div>`).join('')}</div>`:''}
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
     <input id="mr-email" type="email" placeholder="staff@gmail.com（サインインに使うメール）" style="flex:1;min-width:200px">
     <div style="flex:2;min-width:260px;display:flex;gap:6px;flex-wrap:wrap">${APP_ROLES.map(r=>`<label style="font-size:11px;background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:4px 7px"><input class="mr-role" type="checkbox" value="${r}"> ${r}</label>`).join('')}</div>
@@ -15240,6 +15240,40 @@ async function applyOperationsRestore(){
   toast(`復元しました：案件 ${r.missing.jobs.length}件 / クライアント ${r.missing.clients.length}件 / 編集者 ${r.missing.workers.length}件`);
   window._opsRestoreCandidate=null;
 }
+const MR_NEW_WORKER_VALUE='__new_editor__';
+function mrApprovalWorkerOptions(){
+  const workers=(S.workers||[]).filter(w=>w&&!w.deleted);
+  return`<option value="${MR_NEW_WORKER_VALUE}">申請者を新しい編集者として登録（トライアル）</option>${workers.length?`<optgroup label="既存編集者へ紐付け（引き継ぎ）">${workers.map(w=>`<option value="${esc(w.id)}">${esc(w.name)}</option>`).join('')}</optgroup>`:''}`;
+}
+function mrAccessRequestWorkerId(requestUid){return`portal-${String(requestUid||'').replace(/[^A-Za-z0-9_-]/g,'_').slice(0,128)}`;}
+function mrAccessRequestWorker(workers,requestUid){
+  const id=mrAccessRequestWorkerId(requestUid);
+  return(workers||[]).find(w=>w&&!w.deleted&&String(w.portalUid||'')===String(requestUid||''))||(workers||[]).find(w=>w&&!w.deleted&&w.id===id)||null;
+}
+function mrBuildAccessRequestWorker(req,workerId,at=Date.now()){
+  const name=String(req?.name||'').trim(),email=String(req?.email||'').trim().toLowerCase();
+  return{id:workerId,name,skills:'動画編集',contact:email,affiliation:'',minFee:0,workConditions:'',employStatus:'trial',portalUid:String(req?.id||''),source:'access_request',createdAt:new Date(at).toISOString(),updatedAt:at};
+}
+async function mrCommitNewEditorApproval(req,accessData,requestData){
+  if(!_teamCloudLoaded)throw new Error('team-ledger-not-ready');
+  const teamRef=fbDb.collection('shared').doc('mcapp'),accessRef=fbDb.collection('access').doc(req.id),requestRef=fbDb.collection('accessRequests').doc(req.id);
+  let committedWorker=null;
+  await fbDb.runTransaction(async tx=>{
+    const teamSnap=await tx.get(teamRef),encoded=teamSnap.exists?(teamSnap.data()||{}).workers:null;
+    const remoteWorkers=typeof encoded==='string'?_teamDecode(encoded):(teamSnap.exists?null:[]);
+    if(!Array.isArray(remoteWorkers))throw new Error('worker-ledger-unavailable');
+    const workerId=mrAccessRequestWorkerId(req.id),existing=mrAccessRequestWorker(remoteWorkers,req.id);
+    if(existing&&existing.id===workerId&&String(existing.portalUid||'')!==String(req.id))throw new Error('worker-id-conflict');
+    const at=Date.now(),fresh=mrBuildAccessRequestWorker(req,workerId,at);
+    committedWorker=existing?{...existing,name:fresh.name,contact:existing.contact||fresh.contact,portalUid:fresh.portalUid,source:existing.source||fresh.source,updatedAt:at}:fresh;
+    const nextWorkers=existing?remoteWorkers.map(w=>w.id===existing.id?committedWorker:w):[...remoteWorkers,committedWorker];
+    const serverAt=firebase.firestore.FieldValue.serverTimestamp();
+    tx.set(teamRef,{workers:_teamEncode('workers',nextWorkers),ts:serverAt,by:FB_USER.uid},{merge:true});
+    tx.set(accessRef,{...accessData,workerId:committedWorker.id,updatedAt:serverAt},{merge:true});
+    tx.set(requestRef,{...requestData,approvedAt:serverAt},{merge:true});
+  });
+  return committedWorker;
+}
 function mrDirectorOptions(selected=''){return(ACCESS_RECORDS||[]).filter(x=>x.approved===true&&(x.roles||[]).includes('動画編集ディレクター')).map(d=>`<option value="${esc(d.id)}" ${selected===d.id?'selected':''}>${esc(d.name||d.email||d.id)}</option>`).join('')}
 function mrContractToggle(prefix){const kind=document.getElementById(prefix+'-kind')?.value||'direct',director=document.getElementById(prefix+'-director');if(director)director.disabled=kind!=='external';}
 async function mrAddMember(){
@@ -15268,25 +15302,40 @@ async function mrAddMember(){
   }else toast('役割を事前登録しました。相手が一度ログイン後、承認待ち一覧から有効化できます','ok');
   render();
 }
+const MR_APPROVAL_IN_FLIGHT=new Set();
 async function mrApproveRequest(requestUid){
   if(!_isOwner())return toast('権限がありません','err');
+  if(MR_APPROVAL_IN_FLIGHT.has(requestUid))return toast('承認処理中です','warn');
   const req=(ACCESS_REQUESTS||[]).find(x=>x.id===requestUid);if(!req)return toast('承認申請が見つかりません','warn');
   const roles=[...document.querySelectorAll('.ar-role')].filter(x=>x.dataset.uid===requestUid&&x.checked).map(x=>x.value).filter(x=>APP_ROLES.includes(x));
   const workerId=document.getElementById('ar-worker-'+requestUid)?.value||null;
   const roleError=mrValidateRoleSelection(roles,workerId);if(roleError)return toast(roleError,'warn');
-  const requestedEditorKind=document.getElementById(`ar-${requestUid}-kind`)?.value==='external'?'external':'direct',requestedDirectorUid=document.getElementById(`ar-${requestUid}-director`)?.value||'',grantsEditor=rolesGrantVideoEditor(roles),editorKind=grantsEditor?requestedEditorKind:'direct',directorUid=editorKind==='external'?requestedDirectorUid:'',director=(ACCESS_RECORDS||[]).find(x=>x.id===directorUid);
+  const requestedEditorKind=document.getElementById(`ar-${requestUid}-kind`)?.value==='external'?'external':'direct',requestedDirectorUid=document.getElementById(`ar-${requestUid}-director`)?.value||'',grantsEditor=rolesGrantVideoEditor(roles),createNewWorker=grantsEditor&&workerId===MR_NEW_WORKER_VALUE,editorKind=grantsEditor?requestedEditorKind:'direct',directorUid=editorKind==='external'?requestedDirectorUid:'',director=(ACCESS_RECORDS||[]).find(x=>x.id===directorUid);
   if(editorKind==='external'&&!directorUid)return toast('外部編集者は担当ディレクターを選択してください','warn');
-  const em=String(req.email||'').toLowerCase();
+  if(createNewWorker&&!String(req.name||'').trim())return toast('新規編集者のChatwork表示名がありません。申請者に表示名を入力して再申請してもらってください','warn');
+  if(createNewWorker&&!_teamCloudLoaded)return toast('編集者台帳を読み込み中です。表示後にもう一度承認してください','warn');
+  if(createNewWorker&&_fbQuotaBlocked)return toast('無料枠の回復まで新規編集者の承認を停止しています','warn');
+  const em=String(req.email||'').toLowerCase(),accessData={uid:requestUid,email:em,name:req.name||'',roles,workerId:grantsEditor&&!createNewWorker?workerId:null,editorKind,directorUid,invoiceRecipientName:editorKind==='external'?(director?.name||director?.email||'担当ディレクター'):'mono.create',approved:true,updatedBy:_myEmail()},requestData={status:'approved',approvedBy:_myEmail()};
+  MR_APPROVAL_IN_FLIGHT.add(requestUid);
   try{
-    const batch=fbDb.batch();
-    batch.set(fbDb.collection('access').doc(requestUid),{uid:requestUid,email:em,name:req.name||'',roles,workerId:workerId||null,editorKind,directorUid,invoiceRecipientName:editorKind==='external'?(director?.name||director?.email||'担当ディレクター'):'mono.create',approved:true,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:_myEmail()},{merge:true});
-    batch.set(fbDb.collection('accessRequests').doc(requestUid),{status:'approved',approvedAt:firebase.firestore.FieldValue.serverTimestamp(),approvedBy:_myEmail()},{merge:true});
-    await batch.commit();
+    let createdWorker=null,resolvedWorkerId=accessData.workerId;
+    if(createNewWorker){
+      createdWorker=await mrCommitNewEditorApproval(req,accessData,requestData);resolvedWorkerId=createdWorker.id;
+      S.workers=mergeTeamArr(S.workers||[],[createdWorker],'workers');
+      _teamKnownCounts.workers=Math.max(Number(_teamKnownCounts.workers||0),S.workers.length);_teamLastPayload='';_teamSnapRebase();
+    }else{
+      const batch=fbDb.batch(),serverAt=firebase.firestore.FieldValue.serverTimestamp();
+      batch.set(fbDb.collection('access').doc(requestUid),{...accessData,workerId:grantsEditor?resolvedWorkerId:null,updatedAt:serverAt},{merge:true});
+      batch.set(fbDb.collection('accessRequests').doc(requestUid),{...requestData,approvedAt:serverAt},{merge:true});
+      await batch.commit();
+    }
     if(!Array.isArray(S.memberRoles))S.memberRoles=[];
     let m=S.memberRoles.find(x=>x&&!x.deleted&&String(x.email||'').toLowerCase()===em);
     if(!m){m={id:uid(),email:em,createdAt:today(),addedBy:_myEmail()};S.memberRoles.push(m);}
-    Object.assign(m,{name:req.name||m.name||'',roles,workerId:workerId||null,editorKind,directorUid,deleted:false,updatedAt:Date.now()});save();render();toast(`${em} のアクセスを承認しました`);
-  }catch(e){console.warn('approve access failed',e);toast('アクセス承認に失敗しました','err');}
+    Object.assign(m,{name:req.name||m.name||'',roles,workerId:grantsEditor?resolvedWorkerId:null,editorKind,directorUid,deleted:false,updatedAt:Date.now()});save();render();
+    toast(createNewWorker?`${req.name} を新しい編集者として登録し、アクセスを承認しました`:`${em} のアクセスを承認しました`);
+  }catch(e){console.warn('approve access failed',e);toast('アクセス承認と編集者登録を保存できませんでした。データは変更していません','err');}
+  finally{MR_APPROVAL_IN_FLIGHT.delete(requestUid);}
 }
 async function mrRejectRequest(requestUid){
   if(!_isOwner())return;
@@ -18093,7 +18142,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260902-06';
+const APP_VERSION='20260902-07';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -18170,13 +18219,13 @@ window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});  
 checkServerVersion();                                                              // 初回表示でも旧版を即時検出
   </script>
 <script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
-<script src="./editor-push.js?v=20260902-06"></script>
-<script src="./bulletin.js?v=20260902-06"></script>
-<script src="./direct-messages.js?v=20260902-06"></script>
+<script src="./editor-push.js?v=20260902-07"></script>
+<script src="./bulletin.js?v=20260902-07"></script>
+<script src="./direct-messages.js?v=20260902-07"></script>
 <script>
   try{if(V==='directmessages')render();else renderNav();}catch(error){console.warn('owner dm init',error);}
 </script>
-<script src="./manager-features.js?v=20260902-06"></script>
-<script src="./sales-video-leads.js?v=20260902-06"></script>
+<script src="./manager-features.js?v=20260902-07"></script>
+<script src="./sales-video-leads.js?v=20260902-07"></script>
 </body>
 </html>
