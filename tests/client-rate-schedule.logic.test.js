@@ -73,6 +73,16 @@ test('schedule UI and mutations are owner-only and never rewrite confirmed job f
   assert.match(source, /既存案件の金額は変わりません/);
 });
 
+test('schedule inputs remain usable on mobile instead of shrinking to spinner width', () => {
+  assert.match(source, /\.manager-rate-form\{display:grid/);
+  assert.match(source, /@media\(max-width:700px\).*\.manager-rate-form\{grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\)/s);
+  assert.match(source, /\.manager-rate-field-date,\.manager-rate-save\{grid-column:1\/-1\}/);
+  assert.match(source, /\.manager-rate-field input\{width:100%;min-width:0\}/);
+  assert.match(source, /inputmode="numeric" placeholder="例: 3500"/);
+  assert.match(source, /inputmode="numeric" placeholder="例: 3000"/);
+  assert.match(source, /function clientsPage\(\)\{ensureManagerResponsiveStyles\(\)/);
+});
+
 test('one-shot loader coalesces concurrent calls and fails closed for quota or read errors', async () => {
   let calls = 0;
   let resolve;
