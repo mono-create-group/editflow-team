@@ -37,9 +37,10 @@ test('manager board form keeps an in-scroll sticky child-case add action',()=>{
     listId:'mb-subcase-list',
     footerClass:'manager-board-subcase-add',
     action:'managerAddBoardSubcase\\(\\)',
-    formStart:'function boardFormHtml(editors)',
+    formStart:'function baseBoardFormHtml(editors)',
     formEnd:'function manualFormHtml',
   });
-  assert.match(manager,/function boardFormHtml\(editors\)\{\s*ensureManagerResponsiveStyles\(\)/);
+  assert.match(manager,/function baseBoardFormHtml\(editors\)\{\s*ensureManagerResponsiveStyles\(\)/);
+  assert.match(manager,/function boardFormHtml\(editors\)/);
   assert.match(manager,/@media\(max-width:700px\)\{[^]*manager-board-subcase-add \.btn\{min-height:48px/);
 });

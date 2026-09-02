@@ -42,6 +42,10 @@ test('migrated finance is immutable in the legacy modal while operational fields
   assert.match(source,/ownerFinanceLocked\?' \(\u30aa\u30fc\u30ca\u30fc\u5c02\u7528\u53f0\u5e33\u3078\u79fb\u884c\u6e08\u307f\)'/);
   assert.match(source,/data-finance-locked=/);
   assert.match(source,/financeLocked\?'readonly'/);
+  assert.doesNotMatch(source,/id="j-add-subcase"[^>]*disabled/);
+  assert.match(source,/新しいサブ案件は追加できます。移行済みの金額台帳は変更しません。/);
+  assert.doesNotMatch(source,/if\(c\?\.dataset\.financeLocked==='1'\)return toast/);
+  assert.match(source,/mkSubRow\(\{\},'サブ案件',_curJobBiz\(\),-1,financeLocked\)/);
 });
 
 test('all legacy profit and payment totals restore owner-only amounts before calculation',()=>{

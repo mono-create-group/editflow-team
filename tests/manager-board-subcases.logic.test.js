@@ -88,6 +88,17 @@ test('single-job publishing remains supported through the default child row',()=
   assert.match(manager,/if\(subcases\.items\.length>1&&!caseName\)/);
 });
 
+test('owner can add a case as mono.create internal editing without publishing it to editors',()=>{
+  assert.match(manager,/<option value="internal">mono\.create 内編集<\/option>/);
+  assert.match(manager,/<option value="\$\{SELF_WID\}">mono\.create 内編集<\/option>/);
+  assert.match(manager,/window\.managerBoardTargetChanged=boardTargetChanged/);
+  assert.match(manager,/internal&&!_isOwner\(\)/);
+  assert.match(manager,/workerId:SELF_WID,workerIds:\[SELF_WID\]/);
+  assert.match(manager,/source:'internal_edit'/);
+  assert.match(manager,/if\(internal\)\{[\s\S]*?save\(\);render\(\);toast\([\s\S]*?return;/);
+  assert.match(manager,/if\(!internal&&editorDraftDateSetter==='creator'&&!editorDraftDate\)/);
+});
+
 test('publish action opens the overview form when invoked from the process board',()=>{
   const source=manager.match(/function openBoardForm\(\)\{[\s\S]*?\n  \}/)?.[0];
   assert.ok(source,'openBoardForm source');

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>mono.create 内編集・サブ案件追加 表示確認</title>
+</head>
+<body>
+  <main style="max-width:980px;margin:0 auto;padding:28px">
+    <div id="manager-fixture"></div>
+    <section class="card" style="margin-top:18px">
+      <h2 style="font-size:18px;margin:0 0 8px">金額台帳へ移行済み案件</h2>
+      <div id="j-sub-cont" data-finance-locked="1"></div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button type="button" id="j-add-subcase" class="btn btn-g btn-xs" onclick="addJobSubField()">＋ サブ案件を追加</button>
+        <span style="font-size:11px;color:var(--t3)">新しいサブ案件は追加できます。移行済みの金額台帳は変更しません。</span>
+      </div>
+    </section>
+  </main>
+  <script>
+  (async()=>{
+    const [indexSource,managerSource]=await Promise.all([fetch('../index.html').then(r=>r.text()),fetch('../manager-features.js').then(r=>r.text())]);
+    const css=indexSource.match(/<style>([^]*?)<\/style>/)?.[1]||'';
+    const style=document.createElement('style');style.textContent=css;document.head.appendChild(style);
+    const between=(source,start,end)=>source.slice(source.indexOf(start),source.indexOf(end,source.indexOf(start)));
+    window.DIRECT_ALL_ID='__direct_all__';window.SELF_WID='__self';window.state={editors:[]};window.S={jobs:[]};
+    window._isOwner=()=>true;window.isDirector=()=>false;window.ensureManagerResponsiveStyles=()=>{};
+    window.safeId=()=>`fixture-${Math.random().toString(16).slice(2)}`;
+    window.esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    window.block=(title,body)=>`<section class="card"><h2 style="font-size:18px;margin:0 0 10px">${title}</h2>${body}</section>`;
+    window.clientsForEditor=()=>[{id:'client-1',sourceClientId:'client-1',name:'確認用クライアント',accounts:[{id:'account-1',name:'確認用アカウント'}]}];
+    window.editorName=editor=>editor?.name||'';window._videoAttachmentEditorHtml=()=>'';window.boardManualOptions=()=>'';
+    window.boardSubcaseRowHtml=()=>'<section class="manager-board-subcase"><label>編集者初稿の設定者<select class="mb-subcase-draft-setter"><option value="creator">案件追加者が設定</option><option value="editor">担当編集者が設定</option></select></label><input class="mb-subcase-draft" type="date"></section>';
+    window.hydrateClients=()=>{};window.hydrateBoardManualSelectors=()=>{};
+    window.boardDraftSetterChanged=select=>{const row=select.closest('.manager-board-subcase'),input=row?.querySelector('.mb-subcase-draft');if(input)input.disabled=select.value==='editor'};
+    const base=between(managerSource,'function baseBoardFormHtml(editors)','  function boardFormHtml(editors)');
+    const wrapper=between(managerSource,'function boardFormHtml(editors)','  function manualFormHtml(editors)');
+    const mode=between(managerSource,'function requestModeChanged()','  function boardAudienceChanged()');
+    (0,eval)(`${base}\n${wrapper}\n${mode}\nwindow.managerRequestModeChanged=requestModeChanged;window.managerBoardTargetChanged=boardTargetChanged;`);
+    document.getElementById('manager-fixture').innerHTML=boardFormHtml([]);
+
+    window.JOB_MODAL_SUB_RECORDS=[];window.JOB_MODAL_SUB_ADD_BUSY=false;window._collapseOtherJobSubEditors=()=>true;
+    window._curJobBiz=()=> 'edit';window.updateJobInternalScheduleRules=()=>{};window.updSubPaymentRecipients=()=>{};window.toast=()=>{};
+    window.mkSubRow=(_s,_ph,_biz,_index,financeLocked)=>`<div class="j-sub-row"><input class="j-sub-inp" aria-label="追加したサブ案件名" placeholder="サブ案件"><input type="number" value="0" ${financeLocked?'readonly':''}></div>`;
+    const add=between(indexSource,'function addJobSubField()','function mkSubRow(');
+    (0,eval)(`${add}\nwindow.addJobSubField=addJobSubField;`);
+  })();
+  </script>
+</body>
+</html>
