@@ -58,7 +58,7 @@ test('all editor and feature snapshot errors route to the shared quota circuit',
   assert.match(features, /EditflowFirestoreQuota\?\.registerStop/);
   assert.match(features, /EditflowFirestoreQuota\?\.isOpen\?\.\(\)/);
   assert.match(features, /stopFeatures\(\)/);
-  assert.match(features, /PORTAL_APP_VERSION='20260902-09'/);
+  assert.match(features, /PORTAL_APP_VERSION='20260902-10'/);
 });
 
 test('editor quota recovery only exposes an explicit reload path and never claims cloud data was saved', () => {

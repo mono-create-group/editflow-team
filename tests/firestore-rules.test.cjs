@@ -161,8 +161,22 @@ function ownerLegacyFinance(overrides = {}) {
     recordType: 'owner_legacy_finance', legacyJobId: 'legacy-finance-1',
     sourceHash: 'a'.repeat(64),
     parentAmounts: { unitPrice: 6000, workerPay: 3000, profit: 3000, monthlyFee: 0, salesPay: 0 },
-    subtaskAmounts: [{ id: 'sub-1', unitPrice: 6000, workerPay: 3000, profit: 3000, monthlyFee: 0, salesPay: 0 }],
+    subtaskAmounts: [{ id: 'sub-1', index: 0, titleHash: 'b'.repeat(64), unitPrice: 6000, workerPay: 3000, profit: 3000, monthlyFee: 0, salesPay: 0 }],
     revision: 1, migratedAt: serverTimestamp(), migratedBy: 'owner',
+    ...overrides,
+  };
+}
+
+function ownerLegacyFinanceCorrection(overrides = {}) {
+  return {
+    recordType: 'owner_legacy_finance_correction', legacyFinanceId: 'legacy-finance-1',
+    legacyJobId: 'legacy-finance-1', subtaskId: 'sub-1', subtaskIndex: 0,
+    originalTitleHash: 'b'.repeat(64), originalWorkerPay: 3000,
+    deltaWorkerPay: -500, correctedWorkerPay: 2500,
+    reason: '請求書の確認済み単価へ訂正', evidenceRef: 'drive-file-1',
+    approvedBy: 'mono.create.group@gmail.com', approvedAt: serverTimestamp(),
+    revision: 1, supersedesCorrectionId: '', createdAt: serverTimestamp(),
+    createdBy: 'mono.create.group@gmail.com',
     ...overrides,
   };
 }
@@ -382,6 +396,16 @@ async function expectAllowed(label, promise) {
     await expectDenied('director cannot read legacy finance migration records', getDoc(doc(dir1, 'owner_legacy_finance', 'legacy-finance-1')));
     await expectDenied('legacy finance migration rejects malformed parent amounts', setDoc(doc(owner, 'owner_legacy_finance', 'legacy-finance-malformed'), ownerLegacyFinance({ legacyJobId: 'legacy-finance-malformed', parentAmounts: { unitPrice: 6000, workerPay: 3000, profit: 3000, monthlyFee: 0 } })));
     await expectDenied('legacy finance migration records are immutable', updateDoc(doc(owner, 'owner_legacy_finance', 'legacy-finance-1'), { revision: 2 }));
+    await expectAllowed('owner appends an evidence-backed correction tied to the immutable legacy row', setDoc(doc(owner, 'owner_legacy_finance_corrections', 'legacy-finance-1__0__r1'), ownerLegacyFinanceCorrection()));
+    await expectAllowed('owner reads a private legacy finance correction', getDoc(doc(owner, 'owner_legacy_finance_corrections', 'legacy-finance-1__0__r1')));
+    await expectDenied('direct editor cannot read a private legacy finance correction', getDoc(doc(direct1, 'owner_legacy_finance_corrections', 'legacy-finance-1__0__r1')));
+    await expectDenied('legacy correction cannot claim a base amount different from the immutable ledger', setDoc(doc(owner, 'owner_legacy_finance_corrections', 'bad-base'), ownerLegacyFinanceCorrection({ originalWorkerPay: 3500, correctedWorkerPay: 3000 })));
+    await expectDenied('legacy correction cannot use a different source title hash', setDoc(doc(owner, 'owner_legacy_finance_corrections', 'bad-title'), ownerLegacyFinanceCorrection({ originalTitleHash: 'c'.repeat(64) })));
+    await expectDenied('legacy correction approver must match the authenticated owner', setDoc(doc(owner, 'owner_legacy_finance_corrections', 'bad-approver'), ownerLegacyFinanceCorrection({ approvedBy: 'someone@example.com' })));
+    await expectDenied('legacy finance corrections are immutable', updateDoc(doc(owner, 'owner_legacy_finance_corrections', 'legacy-finance-1__0__r1'), { correctedWorkerPay: 2600 }));
+    await expectDenied('legacy finance corrections cannot be deleted', deleteDoc(doc(owner, 'owner_legacy_finance_corrections', 'legacy-finance-1__0__r1')));
+    await expectAllowed('owner appends a second revision that supersedes the first correction', setDoc(doc(owner, 'owner_legacy_finance_corrections', 'legacy-finance-1__0__r2'), ownerLegacyFinanceCorrection({ deltaWorkerPay: -400, correctedWorkerPay: 2600, revision: 2, supersedesCorrectionId: 'legacy-finance-1__0__r1' })));
+    await expectDenied('correction revision cannot skip its immutable predecessor', setDoc(doc(owner, 'owner_legacy_finance_corrections', 'legacy-finance-1__0__r3-bad'), ownerLegacyFinanceCorrection({ deltaWorkerPay: -300, correctedWorkerPay: 2700, revision: 3, supersedesCorrectionId: 'legacy-finance-1__0__r1' })));
     await expectDenied('owner cannot approve a dispatch portal job with an amount different from its immutable case ledger', updateDoc(doc(owner, 'editor_portals', 'direct1', 'editor_jobs', 'done1'), { ownPay: 9999, payableApproved: true, payableApprovedAt: 2, payableMonth: '2026-09', updatedAt: 2, updatedBy: 'owner' }));
     await expectAllowed('owner can approve a dispatch portal job only when ownPay mirrors immutable case ledger', updateDoc(doc(owner, 'editor_portals', 'direct1', 'editor_jobs', 'done1'), { ownPay: 3000, payableApproved: true, payableApprovedAt: 2, payableMonth: '2026-09', updatedAt: 2, updatedBy: 'owner' }));
     const integrationBatch = writeBatch(owner);

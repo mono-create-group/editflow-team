@@ -109,11 +109,11 @@ test('restore reads every ledger before writes and restores only amounts while r
   const cleared=tool.cleanupJobs(original,migration).map((job,index)=>({...job,status:index===0?'修正中':'完了',deliveryDate:`2026-09-0${index+1}`,notes:'restore must keep this'}));
   const events=[],sharedRef={kind:'shared'},writes=[];
   const db={
-    collection(name){return{doc(id){return{kind:name,id};}}},
+    collection(name){return{doc(id){return{kind:name,id};},where(field,op,value){return{kind:'correction-query',field,op,value,limit(){return this;}}}}},
     async runTransaction(callback){
       let readAll=false;
       return callback({
-        async get(ref){events.push(`get:${ref.kind}`);return{exists:true,data:()=>source(cleared)};},
+        async get(ref){events.push(`get:${ref.kind}`);if(ref.kind==='correction-query')return{empty:true};return{exists:true,data:()=>source(cleared)};},
         async getAll(...refs){events.push(`getAll:${refs.length}`);readAll=true;return snapshots.map(snapshot=>({exists:true,data:()=>({...snapshot,migratedAt:1,migratedBy:'owner'})}));},
         update(ref,data){assert.equal(readAll,true);events.push('update');writes.push(data);},
         delete(ref){assert.equal(readAll,true);events.push(`delete:${ref.id}`);}
@@ -123,7 +123,7 @@ test('restore reads every ledger before writes and restores only amounts while r
   const admin={firestore:{FieldValue:{serverTimestamp:()=>({server:true})}}};
   await tool.applyRestoreLive(admin,{db,sharedRef,source:source(cleared)},snapshots,{restoredBy:'test'});
   await tool.applyRestoreLive(admin,{db,sharedRef,source:source(cleared)},snapshots,{restoredBy:'test'});
-  assert.deepEqual(events,['get:shared','getAll:2','update','delete:legacy-1','delete:legacy-2','get:shared','getAll:2','update','delete:legacy-1','delete:legacy-2']);
+  assert.deepEqual(events,['get:shared','getAll:2','get:correction-query','get:correction-query','update','delete:legacy-1','delete:legacy-2','get:shared','getAll:2','get:correction-query','get:correction-query','update','delete:legacy-1','delete:legacy-2']);
   const restored=JSON.parse(writes[0].jobs);
   assert.equal(restored[0].status,'修正中');
   assert.equal(restored[0].deliveryDate,'2026-09-01');
@@ -143,6 +143,20 @@ test('restore fails closed when current amount keys or owner ledger links are no
   assert.throws(()=>tool.restoreJobs([{...cleared,id:'different'}],[snapshot]),/missing_current_legacy_job_id/);
 });
 
+test('restore fails closed while an append-only finance correction exists',async()=>{
+  const original=[{...parent,id:'legacy-1'}],migration=tool.buildPlan(source(original)),snapshots=migration.candidates.map(row=>row.snapshot),cleared=tool.cleanupJobs(original,migration);
+  const sharedRef={kind:'shared'},db={
+    collection(name){return{doc(id){return{kind:name,id};},where(){return{kind:'correction-query',limit(){return this;}}}}},
+    async runTransaction(callback){return callback({
+      async get(ref){if(ref.kind==='correction-query')return{empty:false};return{exists:true,data:()=>source(cleared)};},
+      async getAll(){return snapshots.map(snapshot=>({exists:true,data:()=>snapshot}));},
+      update(){throw new Error('restore must stop before update');},delete(){throw new Error('restore must stop before delete');}
+    });}
+  };
+  const admin={firestore:{FieldValue:{serverTimestamp:()=>({server:true})}}};
+  await assert.rejects(()=>tool.applyRestoreLive(admin,{db,sharedRef,source:source(cleared)},snapshots,{restoredBy:'test'}),/ledger_correction_present:legacy-1/);
+});
+
 test('migration tool keeps dry-run, 0600 backup, two-stage clear, ADC and read-only OAuth safeguards',()=>{
   const text=fs.readFileSync(path.join(__dirname,'..','scripts','migrate-owner-job-finance.cjs'),'utf8');
   assert.match(text,/mode:0o600/);
@@ -151,6 +165,8 @@ test('migration tool keeps dry-run, 0600 backup, two-stage clear, ADC and read-o
   assert.match(text,/--adc（gcloud application-default login）/);
   assert.match(text,/--access-token 経路は読み取り専用dry-run/);
   assert.match(text,/owner_legacy_finance/);
+  assert.match(text,/owner_legacy_finance_corrections/);
+  assert.match(text,/ledger_correction_present/);
   assert.match(text,/ledgerRestoreToken/);
   assert.match(text,/ledgerRestoreAt:admin\.firestore\.FieldValue\.serverTimestamp\(\)/);
   const reads=text.indexOf('await tx.getAll(...candidateRefs)');
@@ -158,6 +174,7 @@ test('migration tool keeps dry-run, 0600 backup, two-stage clear, ADC and read-o
   assert.ok(reads>=0&&creates>reads,'candidate ledger reads must be complete before the create loop');
   assert.match(text,/--confirm-restore-owner-legacy-finance/);
   const restoreReads=text.indexOf('await tx.getAll(...refs)');
+  const correctionReads=text.indexOf("where('legacyFinanceId','==',id)",restoreReads);
   const restoreWrites=text.indexOf('tx.update(live.sharedRef',restoreReads);
-  assert.ok(restoreReads>=0&&restoreWrites>restoreReads,'restore must read all ledgers before shared writes');
+  assert.ok(restoreReads>=0&&correctionReads>restoreReads&&restoreWrites>correctionReads,'restore must read ledgers and correction guards before shared writes');
 });

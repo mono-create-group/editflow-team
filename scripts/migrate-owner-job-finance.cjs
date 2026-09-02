@@ -16,6 +16,7 @@ const path=require('node:path');
 const AMOUNT_KEYS=['unitPrice','workerPay','profit','monthlyFee','salesPay'];
 const MAX_AMOUNT=100000000;
 const LEGACY_COLLECTION='owner_legacy_finance';
+const CORRECTION_COLLECTION='owner_legacy_finance_corrections';
 const hash=value=>crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const argValue=(args,name)=>{const i=args.indexOf(name);return i>=0?args[i+1]:''};
 const hasArg=(args,name)=>args.includes(name);
@@ -163,6 +164,13 @@ async function applyRestoreLive(admin,live,snapshots,{restoredBy}){
       const current=ledgerSnapshots[index];if(!current.exists)throw new Error(`ledger_missing:${ids[index]}`);
       if(!sameSnapshot(current.data(),snapshots[index]))throw new Error(`ledger_backup_mismatch:${ids[index]}`);
     }
+    // A restored shared amount would silently drop the effect of append-only
+    // corrections. Refuse restore until a dedicated materialization workflow
+    // can preserve those audit events.
+    for(const id of ids){
+      const corrections=await tx.get(live.db.collection(CORRECTION_COLLECTION).where('legacyFinanceId','==',id).limit(1));
+      if(!corrections.empty)throw new Error(`ledger_correction_present:${id}`);
+    }
     const restored=restoreJobs(freshJobs,snapshots);
     tx.update(live.sharedRef,{jobs:JSON.stringify(restored),ownerLegacyFinanceRestoreAt:admin.firestore.FieldValue.serverTimestamp(),ownerLegacyFinanceRestoreBy:restoredBy,ledgerRestoreToken,ledgerRestoreAt:admin.firestore.FieldValue.serverTimestamp()});
     for(const ref of refs)tx.delete(ref);
@@ -198,5 +206,5 @@ async function main(){
   if(!apply)return;
   console.log(JSON.stringify({applied:true,...await applyLive(admin,live,plan,{clearSharedFinance,migratedBy})},null,2));
 }
-module.exports={AMOUNT_KEYS,LEGACY_COLLECTION,decodeJobs,amounts,snapshotForJob,buildPlan,cleanupJobs,sameSnapshot,stripAmounts,restoreSnapshotsFromBackup,restoreJobs,applyLive,applyRestoreLive};
+module.exports={AMOUNT_KEYS,LEGACY_COLLECTION,CORRECTION_COLLECTION,decodeJobs,amounts,snapshotForJob,buildPlan,cleanupJobs,sameSnapshot,stripAmounts,restoreSnapshotsFromBackup,restoreJobs,applyLive,applyRestoreLive};
 if(require.main===module)main().catch(error=>{console.error(`MIGRATION BLOCKED: ${error.message}`);process.exitCode=1});

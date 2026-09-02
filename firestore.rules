@@ -732,6 +732,65 @@ service cloud.firestore {
         && request.resource.data.migratedBy.size() <= 320;
     }
 
+    // A correction is a new, immutable evidence-backed delta against one
+    // migrated legacy subtask. Rules bind every correction to the immutable
+    // source row; later revisions must point to the preceding append-only row.
+    function validOwnerLegacyFinanceCorrectionDocument(correctionId) {
+      let ledgerPath = /databases/$(database)/documents/owner_legacy_finance/$(request.resource.data.legacyFinanceId);
+      let previousPath = /databases/$(database)/documents/owner_legacy_finance_corrections/$(request.resource.data.supersedesCorrectionId);
+      let ledger = get(ledgerPath).data;
+      let lines = ledger.get('subtaskAmounts', []);
+      let index = request.resource.data.subtaskIndex;
+      return request.resource.data.keys().hasOnly([
+          'recordType','legacyFinanceId','legacyJobId','subtaskId','subtaskIndex',
+          'originalTitleHash','originalWorkerPay','deltaWorkerPay','correctedWorkerPay',
+          'reason','evidenceRef','approvedBy','approvedAt','revision','supersedesCorrectionId',
+          'createdAt','createdBy'
+        ])
+        && request.resource.data.recordType == 'owner_legacy_finance_correction'
+        && request.resource.data.legacyFinanceId is string && request.resource.data.legacyFinanceId.size() > 0 && request.resource.data.legacyFinanceId.size() <= 220
+        && request.resource.data.legacyJobId is string && request.resource.data.legacyJobId.size() > 0 && request.resource.data.legacyJobId.size() <= 220
+        && request.resource.data.legacyFinanceId == request.resource.data.legacyJobId
+        && request.resource.data.subtaskId is string && request.resource.data.subtaskId.size() <= 220
+        && request.resource.data.subtaskIndex is int && request.resource.data.subtaskIndex >= 0 && request.resource.data.subtaskIndex < 500
+        && request.resource.data.originalTitleHash is string && request.resource.data.originalTitleHash.matches('^[0-9a-fA-F]{64}$')
+        && request.resource.data.originalWorkerPay is int && request.resource.data.originalWorkerPay >= 0 && request.resource.data.originalWorkerPay <= 100000000
+        && request.resource.data.deltaWorkerPay is int && request.resource.data.deltaWorkerPay >= -100000000 && request.resource.data.deltaWorkerPay <= 100000000
+        && request.resource.data.correctedWorkerPay is int && request.resource.data.correctedWorkerPay >= 0 && request.resource.data.correctedWorkerPay <= 100000000
+        && request.resource.data.correctedWorkerPay == request.resource.data.originalWorkerPay + request.resource.data.deltaWorkerPay
+        && request.resource.data.reason is string && request.resource.data.reason.size() > 0 && request.resource.data.reason.size() <= 2000
+        && request.resource.data.evidenceRef is string && request.resource.data.evidenceRef.size() > 0 && request.resource.data.evidenceRef.size() <= 1000
+        && request.resource.data.approvedBy is string && request.resource.data.approvedBy.size() > 0 && request.resource.data.approvedBy.size() <= 320
+        && request.resource.data.approvedBy == request.auth.token.email
+        && request.resource.data.approvedAt is timestamp
+        && request.resource.data.revision is int && request.resource.data.revision >= 1 && request.resource.data.revision <= 100000
+        && request.resource.data.supersedesCorrectionId is string && request.resource.data.supersedesCorrectionId.size() <= 300
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.createdBy is string && request.resource.data.createdBy.size() > 0 && request.resource.data.createdBy.size() <= 320
+        && request.resource.data.createdBy == request.auth.token.email
+        && request.resource.data.approvedAt == request.time
+        && request.resource.data.createdAt == request.time
+        && exists(ledgerPath)
+        && ledger.recordType == 'owner_legacy_finance'
+        && ledger.legacyJobId == request.resource.data.legacyJobId
+        && lines is list && index < lines.size()
+        && lines[index].get('titleHash', '') == request.resource.data.originalTitleHash
+        && lines[index].get('workerPay', -1) == request.resource.data.originalWorkerPay
+        && (request.resource.data.subtaskId == '' || lines[index].get('id', '') == request.resource.data.subtaskId)
+        && ((request.resource.data.revision == 1 && request.resource.data.supersedesCorrectionId == '')
+          || (request.resource.data.revision > 1
+            && request.resource.data.supersedesCorrectionId != correctionId
+            && exists(previousPath)
+            && get(previousPath).data.recordType == 'owner_legacy_finance_correction'
+            && get(previousPath).data.legacyFinanceId == request.resource.data.legacyFinanceId
+            && get(previousPath).data.legacyJobId == request.resource.data.legacyJobId
+            && get(previousPath).data.subtaskIndex == request.resource.data.subtaskIndex
+            && get(previousPath).data.originalTitleHash == request.resource.data.originalTitleHash
+            && get(previousPath).data.originalWorkerPay == request.resource.data.originalWorkerPay
+            && get(previousPath).data.revision == request.resource.data.revision - 1
+            && get(previousPath).data.correctedWorkerPay != request.resource.data.correctedWorkerPay));
+    }
+
     // A dispatch job's readable `ownPay` is only a legacy UI mirror. The
     // immutable owner-only ledger is the source of truth and must exist
     // before the job can be marked payable.
@@ -1691,6 +1750,12 @@ service cloud.firestore {
     match /owner_legacy_finance/{financeId} {
       allow read: if owner();
       allow create: if owner() && validOwnerLegacyFinanceDocument(financeId);
+      allow update, delete: if false;
+    }
+
+    match /owner_legacy_finance_corrections/{correctionId} {
+      allow read: if owner();
+      allow create: if owner() && validOwnerLegacyFinanceCorrectionDocument(correctionId);
       allow update, delete: if false;
     }
 

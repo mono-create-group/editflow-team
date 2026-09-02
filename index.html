@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260902-09"></script>
+<script src="./billing-terms.js?v=20260902-10"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -999,7 +999,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260902-09">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260902-10">
 </head>
 <body class="owner-yellow-ui">
 
@@ -1059,8 +1059,8 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="./ai-bridge-client.js"></script>
-<script src="./owner-video-performance.js?v=20260902-09"></script>
-<script src="./feedback-workflow.js?v=20260902-09"></script>
+<script src="./owner-video-performance.js?v=20260902-10"></script>
+<script src="./feedback-workflow.js?v=20260902-10"></script>
 <script>/* lz-string 1.5.0 (MIT) — CDN非依存でオフライン/圧縮チーム同期を保証するためインライン化 */
 var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",e={};function t(r,o){if(!e[r]){e[r]={};for(var n=0;n<r.length;n++)e[r][r.charAt(n)]=n}return e[r][o]}var i={compressToBase64:function(r){if(null==r)return"";var n=i._compress(r,6,function(r){return o.charAt(r)});switch(n.length%4){default:case 0:return n;case 1:return n+"===";case 2:return n+"==";case 3:return n+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(n){return t(o,r.charAt(n))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(r){return null==r?"":""==r?null:i._decompress(r.length,16384,function(o){return r.charCodeAt(o)-32})},compressToUint8Array:function(r){for(var o=i.compress(r),n=new Uint8Array(2*o.length),e=0,t=o.length;e<t;e++){var s=o.charCodeAt(e);n[2*e]=s>>>8,n[2*e+1]=s%256}return n},decompressFromUint8Array:function(o){if(null==o)return i.decompress(o);for(var n=new Array(o.length/2),e=0,t=n.length;e<t;e++)n[e]=256*o[2*e]+o[2*e+1];var s=[];return n.forEach(function(o){s.push(r(o))}),i.decompress(s.join(""))},compressToEncodedURIComponent:function(r){return null==r?"":i._compress(r,6,function(r){return n.charAt(r)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),i._decompress(r.length,32,function(o){return t(n,r.charAt(o))}))},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(r,o,n){if(null==r)return"";var e,t,i,s={},u={},a="",p="",c="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<r.length;i+=1)if(a=r.charAt(i),Object.prototype.hasOwnProperty.call(s,a)||(s[a]=f++,u[a]=!0),p=c+a,Object.prototype.hasOwnProperty.call(s,p))c=p;else{if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++),s[p]=f++,c=String(a)}if(""!==c){if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++)}for(t=2,e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;for(;;){if(m<<=1,v==o-1){d.push(n(m));break}v++}return d.join("")},decompress:function(r){return null==r?"":""==r?null:i._decompress(r.length,32768,function(o){return r.charCodeAt(o)})},_decompress:function(o,n,e){var t,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:e(0),position:n,index:1};for(t=0;t<3;t+=1)l[t]=t;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return i}();"function"==typeof define&&define.amd?define(function(){return LZString}):"undefined"!=typeof module&&null!=module?module.exports=LZString:"undefined"!=typeof angular&&null!=angular&&angular.module("LZString",[]).factory("LZString",function(){return LZString});
 </script>
@@ -1183,6 +1183,31 @@ function _ownerFinanceForLegacyJob(job){
     ||(OWNER_LEGACY_FINANCE||[]).find(row=>(financeId&&String(row.id)===financeId)||String(row.legacyJobId||'')===legacyId)
     ||null;
 }
+// Corrections never rewrite the migration ledger. They are owner-only,
+// append-only documents for one immutable legacy line; bad rows fail closed.
+function _legacyCorrectionTime(value){return Number(value?.toMillis?.()||value?.seconds*1000||value||0)||0;}
+function _legacyCorrectionIssue(message){const text=String(message||'金額訂正を検証できません');if(!LEGACY_FINANCE_CORRECTION_WARNINGS.includes(text))LEGACY_FINANCE_CORRECTION_WARNINGS.push(text);return null;}
+function _legacyCorrectionForLine(finance,job,sub,index,line){
+  const all=(OWNER_LEGACY_FINANCE_CORRECTIONS||[]).filter(row=>String(row?.legacyFinanceId||'')===String(finance?.id||'')&&String(row?.legacyJobId||'')===String(job?.id||'')&&Number(row?.subtaskIndex)===Number(index));
+  if(!all.length)return null;
+  if(!OWNER_LEGACY_FINANCE_CORRECTIONS_READY)return _legacyCorrectionIssue(`金額訂正台帳を読み込めません: ${job?.title||finance?.id||''}`);
+  const basePay=Number(line?.workerPay||0),lineHash=String(line?.titleHash||'');
+  const valid=all.filter(row=>{
+    const hasId=String(row?.subtaskId||'')===String(sub?.id||'');
+    const identity=(sub?.id?hasId:true)&&Number(row?.subtaskIndex)===Number(index);
+    const arithmetic=Number.isInteger(Number(row?.originalWorkerPay))&&Number.isInteger(Number(row?.deltaWorkerPay))&&Number.isInteger(Number(row?.correctedWorkerPay))&&Number(row.originalWorkerPay)+Number(row.deltaWorkerPay)===Number(row.correctedWorkerPay)&&Number(row.correctedWorkerPay)>=0;
+    return row?.recordType==='owner_legacy_finance_correction'&&identity&&lineHash&&String(row?.originalTitleHash||'')===lineHash&&Number(row?.originalWorkerPay)===basePay&&arithmetic&&Number(row.correctedWorkerPay)<=100000000&&String(row?.reason||'').trim()&&String(row?.evidenceRef||'').trim()&&String(row?.approvedBy||'').trim()&&_legacyCorrectionTime(row?.approvedAt)>0&&Number.isInteger(Number(row?.revision))&&Number(row.revision)>=1&&String(row?.supersedesCorrectionId||'').length<=300;
+  });
+  if(valid.length!==all.length)return _legacyCorrectionIssue(`金額訂正を無効化しました（原本不一致）: ${job?.title||finance?.id||''} / ${sub?.title||index+1}`);
+  valid.sort((a,b)=>Number(a.revision)-Number(b.revision)||_legacyCorrectionTime(a.approvedAt)-_legacyCorrectionTime(b.approvedAt)||String(a.id||'').localeCompare(String(b.id||'')));
+  for(let i=0;i<valid.length;i++){
+    const previous=i?valid[i-1]:null,expectedRevision=i+1,expectedPrevious=previous?String(previous.id||''):'';
+    if(Number(valid[i].revision)!==expectedRevision||String(valid[i].supersedesCorrectionId||'')!==expectedPrevious)return _legacyCorrectionIssue(`金額訂正を無効化しました（revision連鎖不一致）: ${job?.title||finance?.id||''} / ${sub?.title||index+1}`);
+  }
+  return valid[valid.length-1];
+}
+function _ownerFinanceLedgersReady(){return !_isOwner()||(OWNER_JOB_FINANCE_READY&&OWNER_LEGACY_FINANCE_READY&&OWNER_LEGACY_FINANCE_CORRECTIONS_READY);}
+function _ownerFinanceLedgerStop(title,details){return`${secTitle(title)}<div class="card notice warn"><b>金額台帳の確認が完了していないため、集計と支払い操作を停止しています。</b><div style="font-size:13px;line-height:1.65;color:var(--t2);margin-top:5px">${esc(details||'画面を再読み込みし、金額台帳が揃ってからもう一度確認してください。')}</div></div>`;}
 function _ownerFinanceForPortalJob(job){
   if(!_isOwner()||!job)return null;
   return(OWNER_JOB_FINANCE||[]).find(row=>String(row.portalUid||'')===String(job._portalUid||'')&&String(row.portalJobId||'')===String(job.id||''))||null;
@@ -1202,7 +1227,8 @@ function _withOwnerJobFinance(job){
       const id=String(sub?.id||''),line=lines.find(row=>(id&&String(row.id||'')===id)||(!row.id&&Number(row.index)===index));
       if(!line)return sub;
       const unitPrice=Math.max(0,Number(line.unitPrice)||0),workerPay=Math.max(0,Number(line.workerPay)||0);
-      return{...sub,unitPrice,workerPay,profit:Number.isFinite(Number(line.profit))?Number(line.profit):unitPrice-workerPay,salesPay:Math.max(0,Number(line.salesPay)||0)};
+      const correction=_legacyCorrectionForLine(finance,job,sub,index,line),effectivePay=correction?Number(correction.correctedWorkerPay):workerPay;
+      return{...sub,unitPrice,workerPay:effectivePay,profit:unitPrice-effectivePay,salesPay:Math.max(0,Number(line.salesPay)||0),_financeCorrection:correction?{id:String(correction.id||''),revision:Number(correction.revision),originalWorkerPay:workerPay,deltaWorkerPay:Number(correction.deltaWorkerPay),correctedWorkerPay:effectivePay,reason:String(correction.reason||''),evidenceRef:String(correction.evidenceRef||'')}:null};
     });
     const unitPrice=Math.max(0,Number(parent.unitPrice)||0),workerPay=Math.max(0,Number(parent.workerPay)||0);
     return{...job,unitPrice,workerPay,profit:Number.isFinite(Number(parent.profit))?Number(parent.profit):unitPrice-workerPay,monthlyFee:Math.max(0,Number(parent.monthlyFee)||0),salesPay:Math.max(0,Number(parent.salesPay)||0),subtasks,_ownerFinance:finance};
@@ -1903,9 +1929,9 @@ function renderAuthUI(){
 fbAuth.getRedirectResult().catch(e=>{console.warn('getRedirectResult:',e&&e.code||e);});
 
 function _stopRoleSubscriptions(){
-  [_fbUnsubscribe,_teamUnsub,_accessReqUnsub,_accessRecordsUnsub,_accessControlUnsub,_portalJobsUnsub,_portalInvoicesUnsub,_portalProfilesUnsub,_portalAuthorizationsUnsub,_ownerJobFinanceUnsub,_ownerLegacyFinanceUnsub].forEach(u=>{try{if(u)u();}catch(_){}});
+  [_fbUnsubscribe,_teamUnsub,_accessReqUnsub,_accessRecordsUnsub,_accessControlUnsub,_portalJobsUnsub,_portalInvoicesUnsub,_portalProfilesUnsub,_portalAuthorizationsUnsub,_ownerJobFinanceUnsub,_ownerLegacyFinanceUnsub,_ownerLegacyFinanceCorrectionsUnsub].forEach(u=>{try{if(u)u();}catch(_){}});
   (_slShardUnsubs||[]).forEach(u=>{try{if(u)u();}catch(_){}});_slShardUnsubs=[];
-  _fbUnsubscribe=_teamUnsub=_accessReqUnsub=_accessRecordsUnsub=_accessControlUnsub=_portalJobsUnsub=_portalInvoicesUnsub=_portalProfilesUnsub=_portalAuthorizationsUnsub=_ownerJobFinanceUnsub=_ownerLegacyFinanceUnsub=null;
+  _fbUnsubscribe=_teamUnsub=_accessReqUnsub=_accessRecordsUnsub=_accessControlUnsub=_portalJobsUnsub=_portalInvoicesUnsub=_portalProfilesUnsub=_portalAuthorizationsUnsub=_ownerJobFinanceUnsub=_ownerLegacyFinanceUnsub=_ownerLegacyFinanceCorrectionsUnsub=null;
   clearTimeout(_portalLegacySyncTimer);_portalLegacySyncTimer=null;
   _teamCloudLoaded=false;_teamKnownCounts={};
   _resetOwnerPortalBridge();
@@ -2065,6 +2091,9 @@ function fbSetupPortalOpsSync(){
   if(_isOwner())_ownerLegacyFinanceUnsub=fbDb.collection('owner_legacy_finance').onSnapshot(q=>{
     OWNER_LEGACY_FINANCE=q.docs.map(d=>({id:d.id,...d.data()}));OWNER_LEGACY_FINANCE_READY=true;renderSyncSafe();
   },e=>_fbHandleSnapshotError(e,'owner legacy finance sync',err=>{OWNER_LEGACY_FINANCE=[];OWNER_LEGACY_FINANCE_READY=false;console.warn('owner legacy finance sync',err&&err.code||err);renderSyncSafe();}));
+  if(_isOwner())_ownerLegacyFinanceCorrectionsUnsub=fbDb.collection('owner_legacy_finance_corrections').onSnapshot(q=>{
+    OWNER_LEGACY_FINANCE_CORRECTIONS=q.docs.map(d=>({id:d.id,...d.data()}));OWNER_LEGACY_FINANCE_CORRECTIONS_READY=true;LEGACY_FINANCE_CORRECTION_WARNINGS=[];renderSyncSafe();
+  },e=>_fbHandleSnapshotError(e,'owner legacy finance correction sync',err=>{OWNER_LEGACY_FINANCE_CORRECTIONS=[];OWNER_LEGACY_FINANCE_CORRECTIONS_READY=false;console.warn('owner legacy finance correction sync',err&&err.code||err);renderSyncSafe();}));
 }
 fbAuth.onAuthStateChanged(async user=>{
   _stopRoleSubscriptions();
@@ -2074,7 +2103,7 @@ fbAuth.onAuthStateChanged(async user=>{
   try{window.EditflowUnread?.reset?.();window.EditorPush?.syncBadge?.(0);}catch(_){}
   FB_USER=user;
   _authSettled=true;
-  APP_ACCESS=null;ACCESS_RESOLVED=!user;ACCESS_REQUESTS=[];ACCESS_RECORDS=[];PORTAL_JOBS=[];PORTAL_INVOICES=[];PORTAL_PROFILES=[];PORTAL_AUTHORIZATIONS=[];OWNER_JOB_FINANCE=[];OWNER_LEGACY_FINANCE=[];OWNER_JOB_FINANCE_READY=false;OWNER_LEGACY_FINANCE_READY=false;window.EditflowOwnerPerformance?.stop?.();window.EditflowFeedback?.stop?.();_resetOwnerPortalBridge();
+  APP_ACCESS=null;ACCESS_RESOLVED=!user;ACCESS_REQUESTS=[];ACCESS_RECORDS=[];PORTAL_JOBS=[];PORTAL_INVOICES=[];PORTAL_PROFILES=[];PORTAL_AUTHORIZATIONS=[];OWNER_JOB_FINANCE=[];OWNER_LEGACY_FINANCE=[];OWNER_LEGACY_FINANCE_CORRECTIONS=[];LEGACY_FINANCE_CORRECTION_WARNINGS=[];OWNER_JOB_FINANCE_READY=false;OWNER_LEGACY_FINANCE_READY=false;OWNER_LEGACY_FINANCE_CORRECTIONS_READY=false;window.EditflowOwnerPerformance?.stop?.();window.EditflowFeedback?.stop?.();_resetOwnerPortalBridge();
   if(user){
     await resolveAppAccess();
     if(_appAccessAllowed()){
@@ -8367,6 +8396,8 @@ function _invoiceJobs(cid,m){
 }
 function rProjInvoice(){
   if(!_canViewFinancials())return _financialAccessDenied('請求書');
+  if(!_ownerFinanceLedgersReady())return _ownerFinanceLedgerStop('🧾 請求書');
+  LEGACY_FINANCE_CORRECTION_WARNINGS=[];
   const now=new Date();
   const nowM=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const months=[...new Set(BJOBS().filter(j=>!j.deleted&&_invAmt(j)>0).map(j=>_jobInvDate(j)).filter(Boolean).map(d=>d.slice(0,7)))].sort().reverse();
@@ -8379,6 +8410,7 @@ function rProjInvoice(){
   const clientName=cid=>cid?(S.clients.find(c=>c.id===cid)?.name||'不明'):'クライアント未設定';
   const iss=_issuer();
   const grand=jobs.reduce((s,j)=>s+_invAmt(j),0);
+  if(LEGACY_FINANCE_CORRECTION_WARNINGS.length)return _ownerFinanceLedgerStop('🧾 請求書',LEGACY_FINANCE_CORRECTION_WARNINGS.slice(0,3).join(' / '));
   return`${secTitle('🧾 請求書')}
 <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap">
   <select style="width:190px" onchange="window._invMonth=this.value;render()"><option value="" ${curM===''?'selected':''}>すべての期間</option>${months.map(m=>`<option value="${m}" ${m===curM?'selected':''}>${m} 提出予定</option>`).join('')}</select>
@@ -8841,6 +8873,8 @@ function _profitGroupedHtml(jobs,mode){
 
 function rProjProfit(){
   if(!_canViewFinancials())return _financialAccessDenied('利益');
+  if(!_ownerFinanceLedgersReady())return _ownerFinanceLedgerStop('💰 売上（入金予定月・回収予定）');
+  LEGACY_FINANCE_CORRECTION_WARNINGS=[];
   // 【2026-07-23改定】利益タブ=「入金予定日(paymentDate)」の月でグルーピング。
   // 入金予定日を入れても入金済みにはならない。入金済み(paidAt=ボタンで確定)の案件はこのタブに表示しない。
   // 対象=「完了案件」または「入金予定日が入っている案件」（＝回収予定）。キャンセルは除外。
@@ -8858,6 +8892,7 @@ function rProjProfit(){
   const totalPay=jobs.reduce((s,j)=>s+jobMainOut(j),0);
   const totalProfit=totalIn-totalPay;
   const groupMode=['job','worker','client'].includes(window._profitGroup)?window._profitGroup:'job';
+  if(LEGACY_FINANCE_CORRECTION_WARNINGS.length)return _ownerFinanceLedgerStop('💰 売上（入金予定月・回収予定）',LEGACY_FINANCE_CORRECTION_WARNINGS.slice(0,3).join(' / '));
   return`${secTitle('💰 売上（入金予定月・回収予定）')}
 <div style="font-size:11px;color:var(--t3);margin:-6px 0 12px"><b>入金予定日</b>の月で集計します（入金予定日を入れても入金済みにはなりません）。<b>「入金済みにする」を押した案件はこの一覧から消えます</b>。入金済みを含む累計はダッシュボードで確認できます。</div>
 <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
@@ -8906,7 +8941,7 @@ function getPayEntries(month){
         const pd=s.payoutDate||j.payoutDate;
         if(!pd?.startsWith(month))return;
         const recipient=_paymentRecipientForRecord(s,s.workerId);
-        entries.push({jobId:j.id,subtaskId:String(s.id||''),subtaskIndex,jobTitle:j.title,label:s.title||'サブ案件',assigneeWorkerId:s.workerId||'__none',payeeWorkerId:recipient.ok?recipient.payeeWorkerId:'__unresolved',payeeUid:recipient.payeeUid||'',billingRoute:recipient.route,blocked:!recipient.ok,blockReason:recipient.reason||'',workerPay:s.workerPay,payoutDate:pd,workerPaidAt:s.workerPaidAt||null});
+        entries.push({jobId:j.id,subtaskId:String(s.id||''),subtaskIndex,jobTitle:j.title,label:s.title||'サブ案件',assigneeWorkerId:s.workerId||'__none',payeeWorkerId:recipient.ok?recipient.payeeWorkerId:'__unresolved',payeeUid:recipient.payeeUid||'',billingRoute:recipient.route,blocked:!recipient.ok,blockReason:recipient.reason||'',workerPay:s.workerPay,payoutDate:pd,workerPaidAt:s.workerPaidAt||null,legacyFinanceId:String(j._ownerFinance?.id||''),financeCorrection:s._financeCorrection||null});
       });
     }else{
       const wids=getJobWorkerIds(j);if(!j.workerPay||(!wids.length||wids.every(id=>id===SELF_WID)))return;
@@ -8937,8 +8972,51 @@ function toggleWorkerPaymentPaid(jobId,subtaskId='',subtaskIndex=-1){
   save();render();toast(target.workerPaidAt?'編集者への支払いを支払済みにしました':'編集者への支払いを未払いに戻しました');
   return true;
 }
+function openLegacyFinanceCorrection(jobId,subtaskIndex){
+  if(!_isOwner()||!_canViewFinancials())return toast('財務操作の権限がありません','err');
+  if(!_ownerFinanceLedgersReady())return toast('金額台帳の読み込み完了後にもう一度お試しください','warn');
+  const raw=(S.jobs||[]).find(job=>String(job.id)===String(jobId));const hydrated=raw?_withOwnerJobFinance(raw):null,finance=hydrated?._ownerFinance;
+  const index=Number(subtaskIndex),sub=hydrated?.subtasks?.[index],line=(finance?.subtaskAmounts||[]).find(row=>(sub?.id&&String(row?.id||'')===String(sub.id))||(!row?.id&&Number(row?.index)===index));
+  if(!raw||!finance||finance.recordType!=='owner_legacy_finance'||!sub||!line)return toast('原本の金額台帳を確認できないため訂正を中止しました','warn');
+  if(sub.workerPaidAt)return toast('支払済みの明細は訂正できません。逆仕訳を登録してください','warn');
+  if(!String(line.titleHash||'').match(/^[0-9a-f]{64}$/i))return toast('原本タイトル照合値がないため訂正を中止しました','warn');
+  const current=sub._financeCorrection||null,revision=Number(current?.revision||0)+1,supersedesCorrectionId=String(current?.id||''),currentWorkerPay=Number(sub.workerPay);
+  openModal(`<div class="mhdr"><div class="mtitle">金額訂正を追記</div><button class="mclose" onclick="closeModal()">✕</button></div><div class="notice warn" style="line-height:1.65">原本台帳は変更しません。訂正は監査用の追記として保存され、支払・利益集計には確定額だけが反映されます。</div><div class="fg"><div class="fl">対象</div><div>${esc(raw.title)} / ${esc(sub.title||`サブ案件 ${index+1}`)}</div></div><div class="frow"><div class="fg"><div class="fl">原本支払額（変更不可）</div><input value="${Number(line.workerPay)}" disabled></div><div class="fg"><div class="fl">現在の確定額</div><input value="${currentWorkerPay}" disabled></div></div><div class="fg"><div class="fl">訂正後支払額（円）</div><input id="legacy-correction-pay" type="number" min="0" step="1" value="${currentWorkerPay}"></div><div class="fg"><div class="fl">訂正理由 *</div><textarea id="legacy-correction-reason" maxlength="2000" placeholder="例：戸田智_7月請求書の台本61は3,000円"></textarea></div><div class="fg"><div class="fl">証跡ファイルIDまたは参照 *</div><input id="legacy-correction-evidence" maxlength="1000" placeholder="Drive file ID または証跡URL"></div><label style="display:flex;gap:8px;margin:12px 0"><input id="legacy-correction-confirm" type="checkbox"> 原本は変更せず、この訂正追記を保存することを確認しました</label><div class="mfooter"><button class="btn btn-g" onclick="closeModal()">キャンセル</button><button class="btn btn-p" onclick="saveLegacyFinanceCorrection(${JSON.stringify(String(raw.id))},${index},${JSON.stringify(String(finance.id))},${JSON.stringify(String(line.titleHash))},${Number(line.workerPay)},${currentWorkerPay},${revision},${JSON.stringify(supersedesCorrectionId)})">訂正を追記</button></div>`);
+}
+async function saveLegacyFinanceCorrection(jobId,subtaskIndex,legacyFinanceId,originalTitleHash,originalWorkerPay,expectedCurrentWorkerPay,revision,supersedesCorrectionId){
+  const correctedWorkerPay=Number(document.getElementById('legacy-correction-pay')?.value),reason=String(document.getElementById('legacy-correction-reason')?.value||'').trim(),evidenceRef=String(document.getElementById('legacy-correction-evidence')?.value||'').trim();
+  if(!document.getElementById('legacy-correction-confirm')?.checked)return toast('確認チェックを入れてください','warn');
+  if(!Number.isInteger(correctedWorkerPay)||correctedWorkerPay<0||!reason||!evidenceRef)return toast('訂正後金額・理由・証跡を確認してください','warn');
+  if(correctedWorkerPay===Number(expectedCurrentWorkerPay))return toast('現在の確定額と異なる金額を入力してください','warn');
+  if(!_ownerFinanceLedgersReady())return toast('金額台帳の読み込み完了後にもう一度お試しください','warn');
+  const raw=(S.jobs||[]).find(job=>String(job.id)===String(jobId)),hydrated=raw?_withOwnerJobFinance(raw):null,sub=hydrated?.subtasks?.[Number(subtaskIndex)],finance=hydrated?._ownerFinance;
+  const sourceLine=(finance?.subtaskAmounts||[]).find(row=>(sub?.id&&String(row?.id||'')===String(sub.id))||(!row?.id&&Number(row?.index)===Number(subtaskIndex)));
+  if(!raw||!sub||sub.workerPaidAt||!finance||String(finance.id)!==String(legacyFinanceId)||Number(sub.workerPay)!==Number(expectedCurrentWorkerPay)||!sourceLine||Number(sourceLine.workerPay)!==Number(originalWorkerPay)||String(sourceLine.titleHash||'')!==String(originalTitleHash))return toast('原本・確定額・支払状態のいずれかが変わったため訂正を中止しました','warn');
+  const index=Number(subtaskIndex),id=`${legacyFinanceId}__${index}__r${revision}`,ref=fbDb.collection('owner_legacy_finance_corrections').doc(id),ledgerRef=fbDb.collection('owner_legacy_finance').doc(String(legacyFinanceId)),sharedRef=fbDb.collection('shared').doc('mcapp'),now=firebase.firestore.FieldValue.serverTimestamp();
+  try{
+    await fbDb.runTransaction(async tx=>{
+      const old=await tx.get(ref),ledgerSnap=await tx.get(ledgerRef),sharedSnap=await tx.get(sharedRef);
+      if(old.exists)throw new Error('revision_conflict');
+      if(!ledgerSnap.exists||!sharedSnap.exists)throw new Error('source_changed');
+      const ledger=ledgerSnap.data()||{},ledgerLine=Array.isArray(ledger.subtaskAmounts)?ledger.subtaskAmounts[index]:null;
+      let liveJobs=[];try{const value=sharedSnap.data()?.jobs;liveJobs=Array.isArray(value)?value:JSON.parse(value||'[]');}catch{throw new Error('source_changed');}
+      const liveJob=liveJobs.find(job=>String(job?.id||'')===String(jobId)),liveSub=liveJob?.subtasks?.[index];
+      const sourceMatches=ledger.recordType==='owner_legacy_finance'&&String(ledger.legacyJobId||'')===String(jobId)&&ledgerLine&&String(ledgerLine.titleHash||'')===String(originalTitleHash)&&Number(ledgerLine.workerPay)===Number(originalWorkerPay)&&(String(sub.id||'')===''||String(ledgerLine.id||'')===String(sub.id||''));
+      const unpaidMatches=liveJob&&!liveJob.deleted&&String(liveJob.ownerFinanceId||'')===String(legacyFinanceId)&&liveSub&&!liveSub.workerPaidAt&&String(liveSub.id||'')===String(sub.id||'');
+      if(!sourceMatches||!unpaidMatches)throw new Error('source_changed');
+      if(Number(revision)>1){
+        const previousRef=fbDb.collection('owner_legacy_finance_corrections').doc(String(supersedesCorrectionId||'')),previous=await tx.get(previousRef),previousData=previous.data()||{};
+        if(!previous.exists||Number(previousData.revision)!==Number(revision)-1||Number(previousData.correctedWorkerPay)!==Number(expectedCurrentWorkerPay))throw new Error('source_changed');
+      }
+      tx.set(ref,{recordType:'owner_legacy_finance_correction',legacyFinanceId,legacyJobId:String(jobId),subtaskId:String(sub.id||''),subtaskIndex:index,originalTitleHash,originalWorkerPay:Number(originalWorkerPay),deltaWorkerPay:correctedWorkerPay-Number(originalWorkerPay),correctedWorkerPay,reason,evidenceRef,approvedBy:_myEmail(),approvedAt:now,revision:Number(revision),supersedesCorrectionId:String(supersedesCorrectionId||''),createdAt:now,createdBy:_myEmail()});
+    });
+    closeModal();toast('金額訂正を追記しました。台帳反映を確認しています…');
+  }catch(error){console.warn('legacy finance correction create',error);toast(error?.message==='revision_conflict'?'同じ訂正revisionが既にあります。再読み込みしてください':error?.message==='source_changed'?'原本・支払状態が変わったため訂正を中止しました':'訂正を保存できませんでした','warn');}
+}
 function rProjPayment(){
   if(!_canViewFinancials())return _financialAccessDenied('支払い');
+  if(!_ownerFinanceLedgersReady())return _ownerFinanceLedgerStop('💳 編集費用の支払い');
+  LEGACY_FINANCE_CORRECTION_WARNINGS=[];
   const now=new Date();
   const selM=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const allDates=[
@@ -8949,6 +9027,7 @@ function rProjPayment(){
   if(!months.includes(selM))months.unshift(selM);
   const curM=window._payMonth||selM;
   const entries=getPayEntries(curM);
+  if(LEGACY_FINANCE_CORRECTION_WARNINGS.length)return _ownerFinanceLedgerStop('💳 編集費用の支払い',LEGACY_FINANCE_CORRECTION_WARNINGS.slice(0,3).join(' / '));
   const total=entries.reduce((s,e)=>s+e.workerPay,0);
   const blockedEntries=entries.filter(e=>e.blocked),blockedTotal=blockedEntries.reduce((s,e)=>s+e.workerPay,0);
   const paidEntries=entries.filter(e=>e.workerPaidAt),unpaidEntries=entries.filter(e=>!e.workerPaidAt);
@@ -9006,6 +9085,7 @@ ${Object.entries(byWorker).length?Object.entries(byWorker).map(([wid,es])=>{
           ?`<span class="badge bg" style="font-size:10px">✅ 支払済み ${e.workerPaidAt}</span>`
           :`<span class="badge ba" style="font-size:10px">⏳ 未払い</span>`
         }
+        ${e.financeCorrection?`<span class="badge ba" style="font-size:10px" title="${esc(e.financeCorrection.reason)}">訂正 ${e.financeCorrection.originalWorkerPay.toLocaleString()}→${e.financeCorrection.correctedWorkerPay.toLocaleString()}（r${e.financeCorrection.revision}）</span>`:''}
         ${isClientPaid
           ?`<span class="badge bg" style="font-size:10px">💰 入金済</span>`
           :`<span class="badge ba" style="font-size:10px">⏳ 入金待ち</span>`
@@ -9016,6 +9096,7 @@ ${Object.entries(byWorker).length?Object.entries(byWorker).map(([wid,es])=>{
             :`<button class="btn btn-g btn-xs" style="color:${e.workerPaidAt?'var(--t2)':'var(--green)'}" aria-label="${esc(e.label)}を${e.workerPaidAt?'未払いに戻す':'支払済みにする'}" onclick="${esc(`toggleWorkerPaymentPaid(${JSON.stringify(String(e.jobId))},${JSON.stringify(String(e.subtaskId||''))},${e.subtaskIndex})`)}">${e.workerPaidAt?'未払いに戻す':'支払済み'}</button>`
           }
           ${!isClientPaid?`<button class="btn btn-g btn-xs" style="color:var(--green)" onclick="markJobPaid('${e.jobId}')">💰 入金済みにする</button>`:''}
+          ${_isOwner()&&!e.workerPaidAt&&e.legacyFinanceId?`<button class="btn btn-g btn-xs" onclick="openLegacyFinanceCorrection(${JSON.stringify(String(e.jobId))},${e.subtaskIndex})">金額訂正</button>`:''}
           <button class="btn btn-g btn-xs" onclick="openJobModal('${e.jobId}')">詳細</button>
         </div>
       </div>`;
@@ -15039,8 +15120,11 @@ let PORTAL_PROFILES=[];
 let PORTAL_AUTHORIZATIONS=[];
 let OWNER_JOB_FINANCE=[];
 let OWNER_LEGACY_FINANCE=[];
+let OWNER_LEGACY_FINANCE_CORRECTIONS=[];
+let LEGACY_FINANCE_CORRECTION_WARNINGS=[];
 let OWNER_JOB_FINANCE_READY=false;
 let OWNER_LEGACY_FINANCE_READY=false;
+let OWNER_LEGACY_FINANCE_CORRECTIONS_READY=false;
 // オーナー画面の manager-features は下記の5つを再購読せず、この橋渡しから
 // 既存の owner 同期結果を受け取る。空の配列と未読込を区別するため、各値の
 // ready は onSnapshot が一度でも届いた時だけ true になる。
@@ -15076,6 +15160,7 @@ let _portalProfilesUnsub=null;
 let _portalAuthorizationsUnsub=null;
 let _ownerJobFinanceUnsub=null;
 let _ownerLegacyFinanceUnsub=null;
+let _ownerLegacyFinanceCorrectionsUnsub=null;
 function memberRolesOf(m){
   if(!m)return[];
   if(Array.isArray(m.roles)&&m.roles.length)return m.roles.filter(x=>APP_ROLES.includes(x));
@@ -18157,7 +18242,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260902-09';
+const APP_VERSION='20260902-10';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -18234,13 +18319,13 @@ window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});  
 checkServerVersion();                                                              // 初回表示でも旧版を即時検出
   </script>
 <script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
-<script src="./editor-push.js?v=20260902-09"></script>
-<script src="./bulletin.js?v=20260902-09"></script>
-<script src="./direct-messages.js?v=20260902-09"></script>
+<script src="./editor-push.js?v=20260902-10"></script>
+<script src="./bulletin.js?v=20260902-10"></script>
+<script src="./direct-messages.js?v=20260902-10"></script>
 <script>
   try{if(V==='directmessages')render();else renderNav();}catch(error){console.warn('owner dm init',error);}
 </script>
-<script src="./manager-features.js?v=20260902-09"></script>
-<script src="./sales-video-leads.js?v=20260902-09"></script>
+<script src="./manager-features.js?v=20260902-10"></script>
+<script src="./sales-video-leads.js?v=20260902-10"></script>
 </body>
 </html>
