@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const PORTAL_APP_VERSION='20260902-05';
+  const PORTAL_APP_VERSION='20260902-06';
   const feature={
     board:[],boardSelectedId:'',boardSearch:'',catalog:[],manuals:[],schedules:[],release:null,
     messages:new Map(),messageUnsubs:new Map(),messageLoading:new Set(),openMessageJobIds:new Set(),groupDraftSaving:new Set(),unsubs:[],startedFor:'',serverVersion:'',jobsListMode:'active',jobsTypeFilter:'all',lastSuggestionCode:'',
@@ -632,8 +632,9 @@
 
   function submitEditorJobAction(jid,status){
     const requiresEvidence=['初稿提出済み','修正稿提出済み'].includes(status),quick=$('#quick-evidence-'+jid),detail=$('#job-evidence-'+jid),value=quick?.value.trim()||'';
-    if(requiresEvidence&&!value)return toast('提出した内容のURLを入力してください');
-    if(requiresEvidence&&!safeUrl(value))return toast('URLを確認してください');
+    if(requiresEvidence&&!value)return setJobInlineError(jid,'初稿・修正稿を提出する前に、提出した内容のURLを入力してください。入力内容は保持されています。');
+    if(requiresEvidence&&!safeUrl(value))return setJobInlineError(jid,'提出した内容のURLは https:// または http:// で入力してください。入力内容は保持されています。');
+    if(requiresEvidence)clearJobInlineError(jid);
     if(requiresEvidence&&detail)detail.value=value;
     quickJobStatus(jid,status);
   }
@@ -901,6 +902,8 @@
   window.setEditorJobsTypeFilter=setEditorJobsTypeFilter;
   window.selectBoardJob=selectBoardJob;
   window.filterEditorBoardSearch=filterEditorBoardSearch;
+  window.updateEditorProgressChoice=updateEditorProgressChoice;
+  window.submitEditorProgressChoice=submitEditorProgressChoice;
   window.submitEditorJobAction=submitEditorJobAction;
   window.enableEditorDeviceNotifications=enableEditorDeviceNotifications;
   window.enableEditorPushNotifications=enableEditorPushNotifications;

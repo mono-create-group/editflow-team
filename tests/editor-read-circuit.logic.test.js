@@ -58,7 +58,7 @@ test('all editor and feature snapshot errors route to the shared quota circuit',
   assert.match(features, /EditflowFirestoreQuota\?\.registerStop/);
   assert.match(features, /EditflowFirestoreQuota\?\.isOpen\?\.\(\)/);
   assert.match(features, /stopFeatures\(\)/);
-  assert.match(features, /PORTAL_APP_VERSION='20260902-05'/);
+  assert.match(features, /PORTAL_APP_VERSION='20260902-06'/);
 });
 
 test('editor quota recovery only exposes an explicit reload path and never claims cloud data was saved', () => {
@@ -69,6 +69,14 @@ test('editor quota recovery only exposes an explicit reload path and never claim
   assert.match(notice, /案件・進捗・DMの保存状況は確認できません/);
   assert.match(notice, /再読み込みして再接続/);
   assert.doesNotMatch(notice, /保存済み/);
+});
+
+test('unchanged access snapshots do not attach a second set of portal listeners', () => {
+  const start = functionSource(editor, 'startPortal');
+  assert.match(start, /const nextSubscriptionKey=`\$\{portalUid\(\)\}\|\$\{directBillingEnabled\(\)\}\|\$\{ADMIN_PREVIEW\}`/);
+  assert.match(start, /if\(portalSubscriptionKey===nextSubscriptionKey&&portalUnsubs\.length\)\{scheduleSnapshotRender\(\);return;\}/);
+  assert.match(start, /portalSubscriptionKey=nextSubscriptionKey;portalUnsubs=next/);
+  assert.match(editor, /portalSubscriptionKey='';profile=\{\}/);
 });
 
 test('quota-open editor writes are blocked before Firestore or Drive work can start', () => {

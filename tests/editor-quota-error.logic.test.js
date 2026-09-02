@@ -38,4 +38,30 @@ test('the required progress save reports the classified failure and clears draft
   assert.match(source, /saveJobDraft\(jid\)/);
   assert.match(source, /提出は記録されていません。入力内容は保持しました。/);
   assert.match(source, /finally\{progressSavingIds\.delete\(jid\)\}/);
+  assert.match(source, /portalWriteFailure\(e,'進捗の保存'\)/);
+});
+
+test('write rejections immediately open the quota circuit and classify permission and retryable failures', () => {
+  const context = {
+    portalEnterQuotaCircuit: error => error.code === 'resource-exhausted',
+    portalSaveErrorMessage: error => `classified:${error.code}`,
+  };
+  vm.createContext(context);
+  vm.runInContext(`${functionSource('portalWriteFailure')}\nthis.failure=portalWriteFailure;`, context);
+  assert.deepEqual({...context.failure({code:'resource-exhausted'}, '進捗の保存')}, {quota:true,message:'classified:resource-exhausted'});
+  assert.deepEqual({...context.failure({code:'permission-denied'}, '請求書の提出')}, {quota:false,message:'classified:permission-denied'});
+  assert.match(editor, /toast\(portalWriteFailure\(e,'請求書の提出'\)\.message\)/);
+});
+
+test('an unclassified invoice rejection never uses the progress-specific fallback', () => {
+  const context = {
+    portalEnterQuotaCircuit: () => false,
+    portalSaveErrorMessage: () => '進捗を保存できませんでした。入力内容は送信されていません',
+  };
+  vm.createContext(context);
+  vm.runInContext(`${functionSource('portalWriteFailure')}\nthis.failure=portalWriteFailure;`, context);
+  assert.deepEqual({...context.failure({code:'unknown'}, '請求書の提出')}, {
+    quota: false,
+    message: '請求書を提出できませんでした。下書きのままで、送信されていません',
+  });
 });

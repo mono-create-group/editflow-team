@@ -90,18 +90,23 @@ test('submission selections keep using the existing progress save route and evid
   const context = {
     $: selector => controls[selector] || null,
     safeUrl: value => /^https?:\/\//.test(value),
-    toast: message => calls.push(['toast', message]),
+    toast: message => calls.push(['toast', message]), setJobInlineError: (jid, message) => calls.push(['inline', jid, message]), clearJobInlineError: jid => calls.push(['clear', jid]),
     quickJobStatus: (jid, status) => calls.push(['save', jid, status]),
   };
   vm.createContext(context);
   vm.runInContext(`${functionSource(features, 'submitEditorJobAction')}\nthis.submit=submitEditorJobAction;`, context);
 
   context.submit('job-1', '初稿提出済み');
-  assert.deepEqual(calls, [['toast', '提出した内容のURLを入力してください']]);
+  assert.deepEqual(calls, [['inline', 'job-1', '初稿・修正稿を提出する前に、提出した内容のURLを入力してください。入力内容は保持されています。']]);
   controls['#quick-evidence-job-1'].value = 'https://example.com/initial';
   context.submit('job-1', '初稿提出済み');
   assert.equal(controls['#job-evidence-job-1'].value, 'https://example.com/initial');
   assert.deepEqual(calls.at(-1), ['save', 'job-1', '初稿提出済み']);
+});
+
+test('quick progress inline handlers are exported to the browser window', () => {
+  assert.match(features, /window\.updateEditorProgressChoice=updateEditorProgressChoice/);
+  assert.match(features, /window\.submitEditorProgressChoice=submitEditorProgressChoice/);
 });
 
 test('editor save validation permits assigned to editor work but keeps mono.create internal progress unavailable', () => {
