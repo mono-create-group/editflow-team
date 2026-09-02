@@ -32,7 +32,7 @@ test('review workflow keeps editor submissions and manager decisions separate', 
   assert.match(allManagerBodies, /client_approved_completed/);
   assert.match(allManagerBodies, /request\.resource\.data\.status == '完了'/);
   assert.match(allManagerBodies, /request\.resource\.data\.get\('completedDeliveryDate', ''\) != ''/);
-  const editorAllow = rules.match(/allow update: if editor\(uid\)[\s\S]*?;\n\s*allow update: if directorFor/)?.[0] || '';
+  const editorAllow = rules.match(/function validEditorSubmissionPortalUpdate\(uid, jobId\) \{([\s\S]*?)\n    \}/)?.[1] || '';
   assert.doesNotMatch(editorAllow, /validEditorDeliveryCompletion\(\)/);
   assert.match(allManagerBodies, /reviewRound\(request\.resource\.data\) == reviewRound\(resource\.data\) \+ 1/);
 });
@@ -146,12 +146,8 @@ test('manager workflow evaluation separates current and legacy paths to stay wit
   assert.match(rules, /function scopedVideoDirectorFor\(uid\)/);
   assert.match(rules, /get\(accessPath\(request\.auth\.uid\)\)\.data\.roles\.hasAny\(\['動画編集ディレクター'\]\)/);
   assert.match(rules, /get\(accessPath\(uid\)\)\.data\.get\('directorUid', ''\) == request\.auth\.uid/);
-  const jobsStart = rules.indexOf('match /editor_jobs/{jobId}');
-  const directorStart = rules.indexOf('allow update: if directorFor(uid)', jobsStart);
-  const ownerStart = rules.indexOf('allow update: if owner()', directorStart);
-  const deleteStart = rules.indexOf('// Legacy-synchronised portal rows', ownerStart);
-  const directorAllow = rules.slice(directorStart, ownerStart);
-  const ownerAllow = rules.slice(ownerStart, deleteStart);
+  const directorAllow = rules.match(/function validDirectorPortalUpdate\(uid\) \{([\s\S]*?)\n    \}/)?.[1] || '';
+  const ownerAllow = rules.match(/function validOwnerPortalUpdate\(uid, jobId\) \{([\s\S]*?)\n    \}/)?.[1] || '';
   assert.equal((directorAllow.match(/validManagerReviewTransition\(\)/g) || []).length, 1);
   assert.equal((ownerAllow.match(/validManagerReviewTransition\(\)/g) || []).length, 1);
 });

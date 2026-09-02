@@ -283,7 +283,9 @@ def static_contract_checks() -> None:
     director_editor_markers = [
         "rolesGrantVideoEditor", "role==='動画編集者'&&rolesGrantVideoEditor(roles)",
         "hasVideoEditorPermission", "roles.includes('動画編集ディレクター')",
-        "hasRole(uid, '動画編集ディレクター')", "editor(request.auth.uid)",
+        "hasRole(uid, '動画編集ディレクター')",
+        "get(accessPath(uid)).data.get('roles', []).hasAny([",
+        "'動画編集者','動画編集ディレクター'",
     ]
     combined = index + editor + rules
     absent = [marker for marker in director_editor_markers if marker not in combined]

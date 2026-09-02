@@ -84,15 +84,19 @@ test('published work keeps materials after an editor accepts it', () => {
 test('Firestore limits attachment writes to portal managers while editors remain read-only', () => {
   assert.match(rules, /function validAttachments\(data\)/);
   assert.match(rules, /data\.attachments is list && data\.attachments\.size\(\) <= 20/);
-  const editorBlock = rules.slice(rules.indexOf('allow update: if editor(uid)'), rules.indexOf('allow update: if directorFor(uid)'));
+  const editorBlock = rules.match(/function validOrdinaryEditorPortalUpdate\(uid, jobId\) \{([\s\S]*?)\n    \}/)?.[1] || '';
   assert.doesNotMatch(editorBlock, /'attachments'/);
-  const managerBlock = rules.slice(rules.indexOf('allow update: if directorFor(uid)'), rules.indexOf('allow delete: if false', rules.indexOf('allow update: if directorFor(uid)')));
-  assert.match(managerBlock, /'workflow','progressEvents','attachments'/);
-  assert.match(managerBlock, /validManagerJobShapeUpdate\(request\.resource\.data\)/);
+  const directorBlock = rules.match(/function validDirectorPortalUpdate\(uid\) \{([\s\S]*?)\n    \}/)?.[1] || '';
+  const ownerBlock = rules.match(/function validOwnerPortalUpdate\(uid, jobId\) \{([\s\S]*?)\n    \}/)?.[1] || '';
+  for (const managerBlock of [directorBlock, ownerBlock]) {
+    assert.match(managerBlock, /'workflow','progressEvents','attachments'/);
+    assert.match(managerBlock, /validManagerJobShapeUpdate\(request\.resource\.data\)/);
+  }
   const managerShape=rules.match(/function validManagerJobShapeUpdate\(data\) \{([\s\S]*?)\n    \}/)?.[1]||'';
   assert.match(managerShape,/'attachments'/);
   assert.match(managerShape,/validAttachments\(data\)/);
-  const createBlock = rules.slice(rules.indexOf('allow create: if editor(uid)'), rules.indexOf('// One-time owner migration'));
+  const createBlock = rules.match(/allow create: if request\.resource\.data\.get\('source', ''\) == 'legacy_sync'[\s\S]*?request\.resource\.data\.history\.size\(\) == 1\);/)?.[0] || '';
+  assert.match(createBlock, /&& editor\(uid\)/);
   assert.match(createBlock, /'parentJobId','parentJobTitle','attachments'/);
   assert.match(createBlock, /validAttachments\(request\.resource\.data\)/);
   const boardBlock = rules.slice(rules.indexOf('match \/editor_job_board\/\{jobId\}'), rules.indexOf('match \/editor_schedules\/\{uid\}'));

@@ -85,8 +85,8 @@ test('Firestore treats only editor-only accounts as isolated', () => {
 
 test('Firestore grants a director the editor self-service boundary', () => {
   const body = rules.match(/function editor\(uid\) \{([\s\S]*?)\n\s*\}/)?.[1] || '';
-  assert.match(body, /hasRole\(uid, '動画編集者'\)/);
-  assert.match(body, /hasRole\(uid, '動画編集ディレクター'\)/);
+  assert.match(body, /roles', \[\]\)\.hasAny\(\[\s*'動画編集者','動画編集ディレクター'\s*\]\)/);
   const board = rules.match(/function canSeeBoard\(data\) \{([\s\S]*?)\n\s*\}/)?.[1] || '';
-  assert.match(board, /editor\(request\.auth\.uid\)/);
+  assert.match(board, /get\(accessPath\(request\.auth\.uid\)\)\.data\.get\('approved', false\) == true/);
+  assert.match(board, /roles', \[\]\)\.hasAny\(\['動画編集者','動画編集ディレクター'\]\)/);
 });

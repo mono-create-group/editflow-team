@@ -7,7 +7,7 @@
     "test": "npm run test:unit && npm run test:rules && npm run test:release",
     "test:unit": "node scripts/run-unit-tests.cjs",
     "test:dm-backend": "node scripts/run-unit-tests.cjs --only-dm-backend",
-    "test:rules": "firebase emulators:exec --only firestore --project demo-editflow \"node tests/firestore-rules.test.cjs\"",
+    "test:rules": "node scripts/run-firestore-rules-tests.cjs",
     "test:release": "python3 scripts/operational-qa.py --release && scripts/firestore-rules-dry-run.sh --check"
   },
   "devDependencies": {

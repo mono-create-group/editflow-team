@@ -40,7 +40,7 @@ test('rules cap manual references and caution text on board and portal cases',()
   assert.match(rules,/data\.get\('caution', ''\)\.size\(\) <= 2000/);
   assert.match(rules,/data\.get\('parentCaution', ''\)\.size\(\) <= 2000/);
   assert.match(rules,/validCaseManualLinks\(request\.resource\.data\)/);
-  const ownerUpdate=rules.slice(rules.indexOf('allow update: if owner()',rules.indexOf('match /editor_jobs/{jobId}')),rules.indexOf('allow delete: if false',rules.indexOf('match /editor_jobs/{jobId}')));
+  const ownerUpdate=rules.match(/function validOwnerPortalUpdate\(uid, jobId\) \{([\s\S]*?)\n    \}/)?.[1]||'';
   assert.match(ownerUpdate,/'manualIds','parentManualIds','caution','parentCaution'/);
   assert.match(ownerUpdate,/validManagerJobShapeUpdate\(request\.resource\.data\)/);
   const managerShape=rules.match(/function validManagerJobShapeUpdate\(data\) \{([\s\S]*?)\n    \}/)?.[1]||'';

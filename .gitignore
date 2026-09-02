@@ -1,4 +1,5 @@
 firestore-debug.log
+work-*.log
 .firebase/
 .release-backups/
 node_modules/

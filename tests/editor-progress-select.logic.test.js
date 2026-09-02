@@ -148,6 +148,7 @@ test('Firestore enforces the same initial and revision submission predecessors a
 });
 
 test('Firestore requires editor-created portal jobs to begin assigned', () => {
-  const editorCreate = rules.match(/allow create: if editor\(uid\)[\s\S]*?request\.resource\.data\.history\.size\(\) == 1;/)?.[0] || '';
+  const editorCreate = rules.match(/allow create: if request\.resource\.data\.get\('source', ''\) == 'legacy_sync'[\s\S]*?request\.resource\.data\.history\.size\(\) == 1\);/)?.[0] || '';
+  assert.match(editorCreate, /&& editor\(uid\)/);
   assert.match(editorCreate, /request\.resource\.data\.status == 'アサイン済み'/);
 });

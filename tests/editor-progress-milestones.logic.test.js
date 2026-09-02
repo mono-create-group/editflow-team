@@ -50,10 +50,8 @@ test('Firestore accepts editor milestones and protects manager-owned review stat
   for (const status of ['初稿提出済み', '修正稿提出済み', 'D確認OK', '先方確認中', '完了']) {
     assert.match(controlled, new RegExp(`'${status}'`));
   }
-  const jobsStart = rules.indexOf('match /editor_jobs/{jobId}');
-  const directorStart = rules.indexOf('allow update: if directorFor(uid)', jobsStart);
-  const ownerStart = rules.indexOf('allow update: if owner()', directorStart);
-  const deleteStart = rules.indexOf('// Legacy-synchronised portal rows', ownerStart);
-  assert.equal((rules.slice(directorStart, ownerStart).match(/validManagerReviewTransition\(\)/g) || []).length, 1);
-  assert.equal((rules.slice(ownerStart, deleteStart).match(/validManagerReviewTransition\(\)/g) || []).length, 1);
+  const directorUpdate = rules.match(/function validDirectorPortalUpdate\(uid\) \{([\s\S]*?)\n    \}/)?.[1] || '';
+  const ownerUpdate = rules.match(/function validOwnerPortalUpdate\(uid, jobId\) \{([\s\S]*?)\n    \}/)?.[1] || '';
+  assert.equal((directorUpdate.match(/validManagerReviewTransition\(\)/g) || []).length, 1);
+  assert.equal((ownerUpdate.match(/validManagerReviewTransition\(\)/g) || []).length, 1);
 });

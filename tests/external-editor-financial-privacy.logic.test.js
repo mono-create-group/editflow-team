@@ -28,7 +28,10 @@ test('legacy external portal jobs containing settlement fields fail closed for t
   for (const field of ['ownPay', 'payableApproved', 'payableApprovedAt', 'payableMonth']) {
     assert.match(rules, new RegExp(`'${field}' in data`));
   }
-  assert.match(jobs, /!externalEditor\(uid\) \|\| !containsExternalSettlement\(request\.resource\.data\)/);
+  const directorUpdate = blockAfter('function validDirectorPortalUpdate(uid)', 'function validOwnerPortalUpdate(uid, jobId)');
+  const ownerUpdate = blockAfter('function validOwnerPortalUpdate(uid, jobId)', 'function validPortalJobUpdate(uid, jobId)');
+  assert.match(directorUpdate, /!containsExternalSettlement\(request\.resource\.data\)/);
+  assert.match(ownerUpdate, /!externalEditor\(uid\) \|\| !containsExternalSettlement\(request\.resource\.data\)/);
 });
 
 test('external editors cannot access mono.create invoice records or invoice events', () => {

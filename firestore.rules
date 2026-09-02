@@ -221,8 +221,15 @@ service cloud.firestore {
     }
 
     function editor(uid) {
-      return self(uid) && (hasRole(uid, '動画編集者')
-        || hasRole(uid, '動画編集ディレクター'));
+      // Read the access row once. Calling hasRole twice repeated approved(),
+      // exists(), and get() for the hottest portal/board paths.
+      return self(uid)
+        && exists(accessPath(uid))
+        && get(accessPath(uid)).data.get('approved', false) == true
+        && get(accessPath(uid)).data.get('roles', []) is list
+        && get(accessPath(uid)).data.get('roles', []).hasAny([
+          '動画編集者','動画編集ディレクター'
+        ]);
     }
 
     // Push subscriptions are an account-private device capability, rather
@@ -478,6 +485,10 @@ service cloud.firestore {
 
     function validOwnerJobFinanceDocument() {
       let masterPrice = request.resource.data.get('masterClientUnitPrice', null);
+      let assigneePath = accessPath(request.resource.data.portalUid);
+      let payeePath = accessPath(request.resource.data.payeeUid);
+      let assignee = get(assigneePath).data;
+      let payee = get(payeePath).data;
       return request.resource.data.keys().hasOnly([
           'recordType','portalUid','portalJobId','legacyJobId','parentCaseId',
           'sourceClientId','accountId','clientUnitPrice','masterClientUnitPrice',
@@ -487,6 +498,34 @@ service cloud.firestore {
           'approvedAt','updatedAt'
         ])
         && request.resource.data.recordType == 'owner_job_finance'
+        // Reject pricing-source and payee-routing violations before validating
+        // descriptive fields. These are the authorization boundary and were
+        // previously late enough that a bad row could hit 1,000 expressions
+        // before returning false.
+        && request.resource.data.pricingSource in ['master','account_master','client_schedule','account_schedule','case_override']
+        && request.resource.data.overrideReason is string
+        && request.resource.data.overrideReason.size() <= 500
+        && (request.resource.data.pricingSource != 'case_override'
+          || request.resource.data.overrideReason.size() > 0)
+        && (!(request.resource.data.pricingSource in ['client_schedule','account_schedule'])
+          || (request.resource.data.get('pricingRateId', '').size() > 0
+            && request.resource.data.get('pricingEffectiveFrom', '').size() > 0))
+        && exists(assigneePath)
+        && assignee.get('approved', false) == true
+        && assignee.get('roles', []) is list
+        && assignee.get('roles', []).hasAny(['動画編集者','動画編集ディレクター'])
+        && ((assignee.get('editorKind', 'direct') == 'external'
+            && request.resource.data.payRoute == 'director_team'
+            && request.resource.data.payeeUid == assignee.get('directorUid', '')
+            && exists(payeePath)
+            && payee.get('approved', false) == true
+            && payee.get('roles', []) is list
+            && payee.get('roles', []).hasAny(['動画編集ディレクター'])
+            && payee.get('workerId', '') == request.resource.data.get('payeeWorkerId', ''))
+          || (assignee.get('editorKind', 'direct') != 'external'
+            && request.resource.data.payRoute == 'direct'
+            && request.resource.data.payeeUid == request.resource.data.portalUid
+            && request.resource.data.get('payeeWorkerId', '') == request.resource.data.get('assigneeWorkerId', '')))
         && request.resource.data.portalUid is string
         && request.resource.data.portalUid.size() > 0
         && request.resource.data.portalUid.size() <= 160
@@ -508,7 +547,6 @@ service cloud.firestore {
         && request.resource.data.clientUnitPrice <= 100000000
         && (masterPrice == null
           || (masterPrice is int && masterPrice >= 0 && masterPrice <= 100000000))
-        && request.resource.data.pricingSource in ['master','account_master','client_schedule','account_schedule','case_override']
         && request.resource.data.pricingRevision is int
         && request.resource.data.pricingRevision >= 0
         && (request.resource.data.get('pricingUpdatedAt', null) == null
@@ -518,13 +556,6 @@ service cloud.firestore {
         && request.resource.data.get('pricingEffectiveFrom', '') is string
         && (request.resource.data.get('pricingEffectiveFrom', '') == ''
           || request.resource.data.get('pricingEffectiveFrom', '').matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$'))
-        && request.resource.data.overrideReason is string
-        && request.resource.data.overrideReason.size() <= 500
-        && (request.resource.data.pricingSource != 'case_override'
-          || request.resource.data.overrideReason.size() > 0)
-        && (!(request.resource.data.pricingSource in ['client_schedule','account_schedule'])
-          || (request.resource.data.get('pricingRateId', '').size() > 0
-            && request.resource.data.get('pricingEffectiveFrom', '').size() > 0))
         && request.resource.data.editorPayReference is int
         && request.resource.data.editorPayReference > 0
         && request.resource.data.editorPayReference <= 100000000
@@ -543,22 +574,7 @@ service cloud.firestore {
         && request.resource.data.assigneeUid == request.resource.data.portalUid
         && request.resource.data.get('assigneeWorkerId', '') is string
         && request.resource.data.get('assigneeWorkerId', '').size() <= 160
-        && exists(accessPath(request.resource.data.portalUid))
-        && approved(request.resource.data.portalUid)
-        && (hasRole(request.resource.data.portalUid, '動画編集者')
-          || hasRole(request.resource.data.portalUid, '動画編集ディレクター'))
-        && get(accessPath(request.resource.data.portalUid)).data.get('workerId', '') == request.resource.data.get('assigneeWorkerId', '')
-        && ((editorKind(request.resource.data.portalUid) == 'external'
-            && request.resource.data.payRoute == 'director_team'
-            && request.resource.data.payeeUid == get(accessPath(request.resource.data.portalUid)).data.get('directorUid', '')
-            && exists(accessPath(request.resource.data.payeeUid))
-            && approved(request.resource.data.payeeUid)
-            && hasRole(request.resource.data.payeeUid, '動画編集ディレクター')
-            && get(accessPath(request.resource.data.payeeUid)).data.get('workerId', '') == request.resource.data.get('payeeWorkerId', ''))
-          || (editorKind(request.resource.data.portalUid) != 'external'
-            && request.resource.data.payRoute == 'direct'
-            && request.resource.data.payeeUid == request.resource.data.portalUid
-            && request.resource.data.get('payeeWorkerId', '') == request.resource.data.get('assigneeWorkerId', '')))
+        && assignee.get('workerId', '') == request.resource.data.get('assigneeWorkerId', '')
         && request.resource.data.approvedBy is string
         && request.resource.data.approvedBy.size() > 0
         && request.resource.data.approvedBy.size() <= 320
@@ -810,20 +826,288 @@ service cloud.firestore {
           && request.resource.data.ownPay > 0);
     }
 
+    // Route every portal-job update through exactly one intent. Firestore adds
+    // the work of every matching `allow update` expression to the same
+    // 1,000-expression request budget, even when the request must ultimately be
+    // denied. Keeping nine overlapping update rules made malformed or stale UI
+    // writes fail because the evaluator ran out of budget instead of because a
+    // specific authorization check returned false.
+    function portalUpdateEventType() {
+      let events = reviewEvents(request.resource.data);
+      return events is list && events.size() > 0
+        ? events[events.size() - 1].get('type', '')
+        : '';
+    }
+
+    function portalSettlementChanged() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'ownPay','payableApproved','payableApprovedAt','payableMonth'
+      ]);
+    }
+
+    function validGuidedPortalUpdate(uid) {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return !self(uid)
+        && changed.hasOnly([
+          'status','completedDeliveryDate','correctionReason','updatedAt','updatedBy',
+          'history','workflow','progressEvents'
+        ])
+        && resource.data.status != request.resource.data.status
+        && request.resource.data.get('history', []) is list
+        && (owner() || scopedVideoDirectorFor(uid))
+        && validJobStatus(request.resource.data.status)
+        && validCompletedJobEvidence()
+        && validCompletedDeliveryDate()
+        && (hasReviewWorkflow(resource.data)
+          ? validCurrentManagerReviewTransition()
+          : validLegacyManagerReviewTransition())
+        && preservesFinalJob();
+    }
+
+    function validManagerOverridePortalUpdate(uid) {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return !self(uid)
+        && changed.hasOnly([
+          'status','completedDeliveryDate','correctionReason','evidenceUrl','updatedAt','updatedBy',
+          'history','workflow','progressEvents'
+        ])
+        && resource.data.status != request.resource.data.status
+        && request.resource.data.get('history', []) is list
+        && (owner() || scopedVideoDirectorFor(uid))
+        && validJobStatus(request.resource.data.status)
+        && validCompletedJobEvidence()
+        && validCompletedDeliveryDate()
+        && validManagerStatusOverride()
+        && preservesFinalJob();
+    }
+
+    function validOwnerSettlementCleanup() {
+      return owner()
+        && containsExternalSettlement(resource.data)
+        && !containsExternalSettlement(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'ownPay','payableApproved','payableApprovedAt','payableMonth',
+          'updatedAt','updatedBy'
+        ]);
+    }
+
+    function validOwnerSettlementPortalUpdate(uid, jobId) {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return owner()
+        && changed.hasOnly([
+          'title','clientDisplay','deadline','sharedDate','editorDraftDate','editorDraftDateSetter',
+          'clientDraftDate','thumbnailDate','deliveryDate','completedDeliveryDate','instructions','urgent','status',
+          'correctionReason','updatedAt','updatedBy','history','ownPay',
+          'payableApproved','payableApprovedAt','payableMonth',
+          'linkedLegacyJobId','integratedAt','integratedBy',
+          'workflow','progressEvents','attachments','requestUrl','sourceUrl','subtaskIndex',
+          'manualIds','parentManualIds','caution','parentCaution'
+        ])
+        && request.resource.data.status == resource.data.status
+        && reviewEventsUnchanged()
+        && validJobStatus(request.resource.data.status)
+        && validManagerJobShapeUpdate(request.resource.data)
+        && validCompletedJobEvidence()
+        && preservesFinalJob()
+        && (!externalEditor(uid) || !containsExternalSettlement(request.resource.data))
+        && (!('ownPay' in request.resource.data) || request.resource.data.ownPay >= 0)
+        && (!('payableApproved' in request.resource.data) || request.resource.data.payableApproved != true
+          || (request.resource.data.status == '完了'
+            && request.resource.data.ownPay > 0
+            && request.resource.data.payableMonth is string
+            && validCompletedJobEvidence()))
+        && validDispatchPayableMirror(uid, jobId);
+    }
+
+    function validEditorSubmissionPortalUpdate(uid, jobId) {
+      return editor(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status','deadline','sharedDate','editorDraftDate','clientDraftDate',
+          'thumbnailDate','deliveryDate','progress','evidenceUrl','blocker',
+          'workDate','startTime','endTime','progressMilestones',
+          'lastProgressChangedByUid','lastProgressChangedByEmail',
+          'lastProgressChangedByRole','updatedAt','history','workflow','progressEvents'
+        ])
+        && request.resource.data.get('lastProgressChangedByUid', '') == uid
+        && request.resource.data.get('lastProgressChangedByRole', '') == '担当編集者'
+        && request.resource.data.get('progressMilestones', []) is list
+        && request.resource.data.get('history', []) is list
+        && editorDraftDateChangeAllowed()
+        && validEditorReviewTransition(uid, jobId)
+        && preservesFinalJob()
+        && validJobSchedule();
+    }
+
+    function validEditorDeliveryPortalUpdate(uid, jobId) {
+      return editor(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status','completedDeliveryDate','evidenceUrl','blocker','workflow',
+          'progressEvents','lastProgressChangedByUid','lastProgressChangedByEmail',
+          'lastProgressChangedByRole','updatedAt','history'
+        ])
+        && request.resource.data.get('lastProgressChangedByUid', '') == uid
+        && request.resource.data.get('lastProgressChangedByRole', '') == '担当編集者'
+        && validEditorDeliveryCompletion(uid, jobId)
+        && preservesFinalJob();
+    }
+
+    function validOrdinaryEditorPortalUpdate(uid, jobId) {
+      return editor(uid)
+        && validJobStatus(request.resource.data.status)
+        && validCompletedJobEvidence()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status','deadline','sharedDate','editorDraftDate','clientDraftDate',
+          'thumbnailDate','deliveryDate','completedDeliveryDate','progress','evidenceUrl','blocker',
+          'workDate','startTime','endTime','progressMilestones',
+          'lastProgressChangedByUid','lastProgressChangedByEmail',
+          'lastProgressChangedByRole','updatedAt','history','workflow','progressEvents'
+        ])
+        && request.resource.data.get('lastProgressChangedByUid', uid) == uid
+        && request.resource.data.get('lastProgressChangedByRole', '担当編集者') == '担当編集者'
+        && request.resource.data.get('progressMilestones', []) is list
+        && request.resource.data.get('history', []) is list
+        && editorDraftDateChangeAllowed()
+        && validEditorReviewTransition(uid, jobId)
+        && validEditorWorkflowStatus()
+        && preservesFinalJob()
+        && validJobSchedule();
+    }
+
+    function validDirectorPortalUpdate(uid) {
+      return scopedVideoDirectorFor(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'title','clientDisplay','deadline','sharedDate','editorDraftDate','editorDraftDateSetter',
+          'clientDraftDate','thumbnailDate','deliveryDate','completedDeliveryDate','instructions','urgent','status',
+          'correctionReason','updatedAt','updatedBy','history',
+          'workflow','progressEvents','attachments','requestUrl','sourceUrl',
+          'manualIds','parentManualIds','caution','parentCaution'
+        ])
+        && validJobStatus(request.resource.data.status)
+        && validManagerJobShapeUpdate(request.resource.data)
+        && validCompletedJobEvidence()
+        && validManagerReviewTransition()
+        && preservesFinalJob()
+        && !containsExternalSettlement(request.resource.data);
+    }
+
+    function validOwnerPortalUpdate(uid, jobId) {
+      return owner()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'title','clientDisplay','deadline','sharedDate','editorDraftDate','editorDraftDateSetter',
+          'clientDraftDate','thumbnailDate','deliveryDate','completedDeliveryDate','instructions','urgent','status',
+          'correctionReason','updatedAt','updatedBy','history','ownPay',
+          'payableApproved','payableApprovedAt','payableMonth',
+          'linkedLegacyJobId','integratedAt','integratedBy',
+          'workflow','progressEvents','attachments','requestUrl','sourceUrl','subtaskIndex',
+          'manualIds','parentManualIds','caution','parentCaution'
+        ])
+        && validJobStatus(request.resource.data.status)
+        && validManagerJobShapeUpdate(request.resource.data)
+        && validCompletedJobEvidence()
+        && validManagerReviewTransition()
+        && preservesFinalJob()
+        && (!externalEditor(uid) || !containsExternalSettlement(request.resource.data))
+        && (!('ownPay' in request.resource.data) || request.resource.data.ownPay >= 0)
+        && (!('payableApproved' in request.resource.data) || request.resource.data.payableApproved != true
+          || (request.resource.data.status == '完了'
+            && request.resource.data.ownPay > 0
+            && request.resource.data.payableMonth is string
+            && validCompletedJobEvidence()))
+        && validDispatchPayableMirror(uid, jobId);
+    }
+
+    function validPortalJobUpdate(uid, jobId) {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let eventType = changed.hasAny(['progressEvents']) ? portalUpdateEventType() : '';
+      return eventType in [
+          'director_approved','director_revision_requested','client_submitted',
+          'client_revision_requested','client_approved_completed'
+        ] ? validGuidedPortalUpdate(uid)
+        : eventType == 'manager_status_changed' ? validManagerOverridePortalUpdate(uid)
+        : portalSettlementChanged() ? (
+            containsExternalSettlement(resource.data)
+              && !containsExternalSettlement(request.resource.data)
+              ? validOwnerSettlementCleanup()
+              : validOwnerSettlementPortalUpdate(uid, jobId)
+          )
+        : resource.data.status != request.resource.data.status
+          && request.resource.data.status in ['初稿提出済み','修正稿提出済み']
+          ? validEditorSubmissionPortalUpdate(uid, jobId)
+        : resource.data.status != '完了' && request.resource.data.status == '完了'
+          ? validEditorDeliveryPortalUpdate(uid, jobId)
+        : self(uid) ? validOrdinaryEditorPortalUpdate(uid, jobId)
+        : owner() ? validOwnerPortalUpdate(uid, jobId)
+        : validDirectorPortalUpdate(uid);
+    }
+
+    function validOwnerLegacyPortalJobCreate(uid) {
+      return owner()
+        && exists(accessPath(uid))
+        && get(accessPath(uid)).data.get('approved', false) == true
+        && get(accessPath(uid)).data.get('roles', []) is list
+        && get(accessPath(uid)).data.get('roles', []).hasAny([
+          '動画編集者','動画編集ディレクター'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'recordType','businessType','title','caseName','parentCaseId','parentCaseName',
+          'clientId','clientDisplay','accountId','accountDisplay','deadline','requestUrl','sourceUrl',
+          'sharedDate','editorDraftDate','editorDraftDateSetter','clientDraftDate','thumbnailDate','deliveryDate',
+          'instructions','urgent','status','progress','evidenceUrl','blocker',
+          'workDate','startTime','endTime','submittedByUid','editorUid',
+          'editorEmail','editorName','directorUid','source','createdAt','updatedAt','history',
+          'attachments','legacyParentId','legacySubtaskId','subtaskIndex',
+          'manualIds','parentManualIds','caution','parentCaution'
+        ])
+        && request.resource.data.recordType == 'editor_portal_job'
+        && request.resource.data.get('source', '') == 'legacy_sync'
+        && request.resource.data.submittedByUid == uid
+        && request.resource.data.editorUid == uid
+        && request.resource.data.editorEmail == get(accessPath(uid)).data.get('email', '')
+        && request.resource.data.get('businessType', '') in ['dispatch','edit_agency']
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.get('parentCaseId', '') is string
+        && request.resource.data.get('parentCaseId', '').size() > 0
+        && request.resource.data.get('parentCaseId', '').size() <= 160
+        && request.resource.data.get('parentCaseName', '') is string
+        && request.resource.data.get('parentCaseName', '').size() > 0
+        && request.resource.data.get('parentCaseName', '').size() <= 120
+        && request.resource.data.get('legacyParentId', '') is string
+        && request.resource.data.get('legacyParentId', '').size() > 0
+        && request.resource.data.get('legacySubtaskId', '') is string
+        && request.resource.data.get('legacySubtaskId', '').size() > 0
+        && request.resource.data.clientDisplay is string
+        && request.resource.data.clientDisplay.size() > 0
+        && request.resource.data.instructions is string
+        && request.resource.data.instructions.size() <= 3000
+        && validJobSchedule()
+        && validEditorDraftDateAssignment(request.resource.data)
+        && validCaseManualLinks(request.resource.data)
+        && validCompletedJobEvidence()
+        && validAttachments(request.resource.data)
+        && validSubtaskIndex(request.resource.data)
+        && request.resource.data.history is list
+        && request.resource.data.history.size() == 1;
+    }
+
     function approvedMember() {
       return signedIn() && approved(request.auth.uid);
     }
 
     function canSeeBoard(data) {
-      return approvedMember()
-        && editor(request.auth.uid)
+      return signedIn()
+        && exists(accessPath(request.auth.uid))
+        && get(accessPath(request.auth.uid)).data.get('approved', false) == true
+        && get(accessPath(request.auth.uid)).data.get('roles', []) is list
+        && get(accessPath(request.auth.uid)).data.get('roles', []).hasAny(['動画編集者','動画編集ディレクター'])
         && data.status == 'open'
         && (
           (data.get('audience', '') == 'direct'
-            && editorKind(request.auth.uid) != 'external')
+            && get(accessPath(request.auth.uid)).data.get('editorKind', 'direct') != 'external')
           || (data.get('eligibleUids', []) is list
             && request.auth.uid in data.get('eligibleUids', []))
-          || (editorKind(request.auth.uid) == 'external'
+          || (get(accessPath(request.auth.uid)).data.get('editorKind', 'direct') == 'external'
             && data.get('directorUid', '') != ''
             && data.get('directorUid', '') == get(accessPath(request.auth.uid)).data.get('directorUid', ''))
         );
@@ -881,8 +1165,11 @@ service cloud.firestore {
     // records from one accepted board job or change its team/client routing.
     function validClaimedBoardProjection(jobId) {
       let boardPath = /databases/$(database)/documents/editor_job_board/$(jobId);
+      let before = get(boardPath).data;
       let board = getAfter(boardPath).data;
-      return request.resource.data.get('boardJobId', '') == jobId
+      return before.get('status', '') == 'open'
+        && before.get('assignedUid', '') == ''
+        && request.resource.data.get('boardJobId', '') == jobId
         && request.resource.data.get('businessType', '') == board.get('businessType', '')
         && request.resource.data.get('title', '') == board.get('title', '')
         && request.resource.data.get('caseName', '') == board.get('caseName', '')
@@ -1127,16 +1414,6 @@ service cloud.firestore {
       return events is list
         && events.size() > 0
         && events[events.size() - 1].get('type', '') == 'manager_status_changed';
-    }
-
-    function managerGuidedProgressRequested() {
-      let events = reviewEvents(request.resource.data);
-      return events is list
-        && events.size() > 0
-        && events[events.size() - 1].get('type', '') in [
-          'director_approved','director_revision_requested','client_submitted',
-          'client_revision_requested','client_approved_completed'
-        ];
     }
 
     function validManagerStatusOverride() {
@@ -1613,7 +1890,11 @@ service cloud.firestore {
     match /direct_threads/{threadId} {
       allow get: if dmParticipant(resource.data);
       allow list: if dmListableOwnerConversation(resource.data);
-      allow create: if dmParticipant(request.resource.data)
+      // Creation already validates the complete relationship below. Calling
+      // dmParticipant() here repeated the same access-directory walk and could
+      // exhaust the expression budget for an invalid pair.
+      allow create: if signedIn()
+        && request.auth.uid in request.resource.data.get('participants', [])
         && validDmThread(request.resource.data)
         && (
           // The owner may bootstrap an owner/editor conversation even before
@@ -1793,7 +2074,17 @@ service cloud.firestore {
           || (directorFor(uid) && !containsExternalSettlement(resource.data))
           || (editor(uid)
             && (!externalEditor(uid) || !containsExternalSettlement(resource.data)));
-        allow create: if editor(uid)
+        // For a board claim, reject a stale/already-assigned board before the
+        // large portal schema validation. This keeps a losing transaction from
+        // exhausting the shared batch expression budget.
+        allow create: if request.resource.data.get('source', '') == 'legacy_sync'
+          ? validOwnerLegacyPortalJobCreate(uid)
+          : (request.resource.data.get('source', '') in ['direct_client','job_board']
+          && (request.resource.data.get('source', '') != 'job_board'
+            || (request.resource.data.get('boardJobId', '') is string
+              && request.resource.data.boardJobId == jobId
+              && validClaimedBoardProjection(jobId)))
+          && editor(uid)
           && request.resource.data.keys().hasOnly([
             'recordType','businessType','boardJobId','title','caseName','parentCaseId','parentCaseName',
             'clientId','sourceClientId','clientDisplay','accountId','accountDisplay','deadline','requestUrl','sourceUrl',
@@ -1809,12 +2100,6 @@ service cloud.firestore {
           && request.resource.data.editorUid == uid
           && request.resource.data.editorEmail == request.auth.token.email
           && request.resource.data.get('businessType', '') in ['dispatch','edit_agency']
-          && request.resource.data.get('source', '') in ['direct_client','job_board']
-          && (request.resource.data.get('source', '') != 'job_board'
-            || (request.resource.data.get('boardJobId', '') is string
-              && request.resource.data.boardJobId == jobId
-              && exists(/databases/$(database)/documents/editor_job_board/$(jobId))
-              && validClaimedBoardProjection(jobId)))
           && request.resource.data.title is string
           && request.resource.data.title.size() > 0
           && request.resource.data.title.size() <= 120
@@ -1841,218 +2126,10 @@ service cloud.firestore {
           && validAttachments(request.resource.data)
           && validSubtaskIndex(request.resource.data)
           && request.resource.data.history is list
-          && request.resource.data.history.size() == 1;
-        // Only the owner can expose an already assigned legacy child case to
-        // the assigned editor. Directors receive the resulting scoped portal
-        // records, but cannot rerun legacy-ledger synchronization.
-        // The payload is deliberately free of every price, invoice, and
-        // settlement field; those remain in the private ledger.
-        allow create: if owner()
-          && approved(uid)
-          && (hasRole(uid, '動画編集者') || hasRole(uid, '動画編集ディレクター'))
-          && request.resource.data.keys().hasOnly([
-            'recordType','businessType','title','caseName','parentCaseId','parentCaseName',
-            'clientId','clientDisplay','accountId','accountDisplay','deadline','requestUrl','sourceUrl',
-            'sharedDate','editorDraftDate','editorDraftDateSetter','clientDraftDate','thumbnailDate','deliveryDate',
-            'instructions','urgent','status','progress','evidenceUrl','blocker',
-            'workDate','startTime','endTime','submittedByUid','editorUid',
-            'editorEmail','editorName','directorUid','source','createdAt','updatedAt','history',
-            'attachments','legacyParentId','legacySubtaskId','subtaskIndex',
-            'manualIds','parentManualIds','caution','parentCaution'
-          ])
-          && request.resource.data.recordType == 'editor_portal_job'
-          && request.resource.data.get('source', '') == 'legacy_sync'
-          && request.resource.data.submittedByUid == uid
-          && request.resource.data.editorUid == uid
-          && request.resource.data.editorEmail == get(accessPath(uid)).data.get('email', '')
-          && request.resource.data.get('businessType', '') in ['dispatch','edit_agency']
-          && request.resource.data.title is string
-          && request.resource.data.title.size() > 0
-          && request.resource.data.title.size() <= 120
-          && request.resource.data.get('parentCaseId', '') is string
-          && request.resource.data.get('parentCaseId', '').size() > 0
-          && request.resource.data.get('parentCaseId', '').size() <= 160
-          && request.resource.data.get('parentCaseName', '') is string
-          && request.resource.data.get('parentCaseName', '').size() > 0
-          && request.resource.data.get('parentCaseName', '').size() <= 120
-          && request.resource.data.get('legacyParentId', '') is string
-          && request.resource.data.get('legacyParentId', '').size() > 0
-          && request.resource.data.get('legacySubtaskId', '') is string
-          && request.resource.data.get('legacySubtaskId', '').size() > 0
-          && request.resource.data.clientDisplay is string
-          && request.resource.data.clientDisplay.size() > 0
-          && request.resource.data.instructions is string
-          && request.resource.data.instructions.size() <= 3000
-          && validJobSchedule()
-          && validEditorDraftDateAssignment(request.resource.data)
-          && validCaseManualLinks(request.resource.data)
-          && validCompletedJobEvidence()
-          && validAttachments(request.resource.data)
-          && validSubtaskIndex(request.resource.data)
-          && request.resource.data.history is list
-          && request.resource.data.history.size() == 1;
-        // Guided manager progress is also committed with an immutable child
-        // event. Evaluate current and legacy workflows on narrow paths before
-        // the general manager branches; otherwise a production-shaped job plus
-        // the child event can exceed Firestore Rules' expression budget.
-        allow update: if !self(uid)
-          && managerGuidedProgressRequested()
-          && hasReviewWorkflow(resource.data)
-          && resource.data.status != request.resource.data.status
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'status','completedDeliveryDate','correctionReason','updatedAt','updatedBy',
-            'history','workflow','progressEvents'
-          ])
-          && request.resource.data.get('history', []) is list
-          && (owner() || scopedVideoDirectorFor(uid))
-          && validJobStatus(request.resource.data.status)
-          && validCompletedJobEvidence()
-          && validCompletedDeliveryDate()
-          && validCurrentManagerReviewTransition()
-          && preservesFinalJob();
-        allow update: if !self(uid)
-          && managerGuidedProgressRequested()
-          && !hasReviewWorkflow(resource.data)
-          && resource.data.status != request.resource.data.status
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'status','completedDeliveryDate','correctionReason','updatedAt','updatedBy',
-            'history','workflow','progressEvents'
-          ])
-          && request.resource.data.get('history', []) is list
-          && (owner() || scopedVideoDirectorFor(uid))
-          && validJobStatus(request.resource.data.status)
-          && validCompletedJobEvidence()
-          && validCompletedDeliveryDate()
-          && validLegacyManagerReviewTransition()
-          && preservesFinalJob();
-        // A free progress selection has a narrow, audited write shape. Evaluate
-        // it before the general editor/manager branches so completion changes
-        // stay below Firestore Rules' per-request expression budget.
-        allow update: if managerStatusOverrideRequested()
-          && resource.data.status != request.resource.data.status
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'status','completedDeliveryDate','correctionReason','evidenceUrl','updatedAt','updatedBy',
-            'history','workflow','progressEvents'
-          ])
-          && request.resource.data.get('history', []) is list
-          && (owner() || scopedVideoDirectorFor(uid))
-          && validJobStatus(request.resource.data.status)
-          && validCompletedJobEvidence()
-          && validCompletedDeliveryDate()
-          && validManagerStatusOverride()
-          && preservesFinalJob();
-        // One-time owner migration before (or after) a contract-kind change.
-        // Keep this branch deliberately small so it stays below the Firestore
-        // Rules expression limit while allowing only removal of settlement
-        // fields. The target can still be a direct editor at this point.
-        allow update: if owner()
-          && containsExternalSettlement(resource.data)
-          && !containsExternalSettlement(request.resource.data)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'ownPay','payableApproved','payableApprovedAt','payableMonth',
-            'updatedAt','updatedBy'
-          ]);
-        // Initial and revision submissions append a role-owned workflow event.
-        // Keep this path separate from ordinary metadata saves so Firestore
-        // does not evaluate the event contract together with every unrelated
-        // general-save validator and exceed the expression budget.
-        allow update: if resource.data.status != request.resource.data.status
-          && request.resource.data.status in ['初稿提出済み','修正稿提出済み']
-          && editor(uid)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'status','deadline','sharedDate','editorDraftDate','clientDraftDate',
-            'thumbnailDate','deliveryDate','progress','evidenceUrl','blocker',
-            'workDate','startTime','endTime','progressMilestones',
-            'lastProgressChangedByUid','lastProgressChangedByEmail',
-            'lastProgressChangedByRole','updatedAt','history','workflow','progressEvents'
-          ])
-          && request.resource.data.get('lastProgressChangedByUid', '') == uid
-          && request.resource.data.get('lastProgressChangedByRole', '') == '担当編集者'
-          && request.resource.data.get('progressMilestones', []) is list
-          && request.resource.data.get('history', []) is list
-          && editorDraftDateChangeAllowed()
-          && validEditorReviewTransition(uid, jobId)
-          && preservesFinalJob()
-          && validJobSchedule();
-        // Final editor delivery has a larger immutable-event contract than an
-        // ordinary progress save. Evaluate it on a narrow write shape before
-        // the general editor branch so the same request does not exhaust the
-        // Firestore Rules expression budget while rechecking unrelated fields.
-        allow update: if resource.data.status != '完了'
-          && request.resource.data.status == '完了'
-          && editor(uid)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'status','completedDeliveryDate','evidenceUrl','blocker','workflow',
-            'progressEvents','lastProgressChangedByUid','lastProgressChangedByEmail',
-            'lastProgressChangedByRole','updatedAt','history'
-          ])
-          && request.resource.data.get('lastProgressChangedByUid', '') == uid
-          && request.resource.data.get('lastProgressChangedByRole', '') == '担当編集者'
-          && validEditorDeliveryCompletion(uid, jobId)
-          && preservesFinalJob();
-        allow update: if !(resource.data.status != request.resource.data.status
-            && request.resource.data.status in ['初稿提出済み','修正稿提出済み'])
-          && !(resource.data.status != '完了' && request.resource.data.status == '完了')
-          && editor(uid)
-          && validJobStatus(request.resource.data.status)
-          && validCompletedJobEvidence()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'status','deadline','sharedDate','editorDraftDate','clientDraftDate',
-            'thumbnailDate','deliveryDate','completedDeliveryDate','progress','evidenceUrl','blocker',
-            'workDate','startTime','endTime','progressMilestones',
-            'lastProgressChangedByUid','lastProgressChangedByEmail',
-            'lastProgressChangedByRole','updatedAt','history','workflow','progressEvents'
-          ])
-          && request.resource.data.get('lastProgressChangedByUid', uid) == uid
-          && request.resource.data.get('lastProgressChangedByRole', '担当編集者') == '担当編集者'
-          && request.resource.data.get('progressMilestones', []) is list
-          && request.resource.data.get('history', []) is list
-          && editorDraftDateChangeAllowed()
-          && validEditorReviewTransition(uid, jobId)
-          && validEditorWorkflowStatus()
-          && preservesFinalJob()
-          && validJobSchedule();
-        allow update: if directorFor(uid)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'title','clientDisplay','deadline','sharedDate','editorDraftDate','editorDraftDateSetter',
-            'clientDraftDate','thumbnailDate','deliveryDate','completedDeliveryDate','instructions','urgent','status',
-            'correctionReason','updatedAt','updatedBy','history',
-            'workflow','progressEvents','attachments','requestUrl','sourceUrl',
-            'manualIds','parentManualIds','caution','parentCaution'
-          ])
-          && validJobStatus(request.resource.data.status)
-          && validManagerJobShapeUpdate(request.resource.data)
-          && validCompletedJobEvidence()
-          && validManagerReviewTransition()
-          && preservesFinalJob()
-          // Director-managed external editors are settled privately. Never
-          // write a mono.create settlement field into their readable job.
-          && !containsExternalSettlement(request.resource.data);
-        allow update: if owner()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'title','clientDisplay','deadline','sharedDate','editorDraftDate','editorDraftDateSetter',
-            'clientDraftDate','thumbnailDate','deliveryDate','completedDeliveryDate','instructions','urgent','status',
-            'correctionReason','updatedAt','updatedBy','history','ownPay',
-            'payableApproved','payableApprovedAt','payableMonth',
-            'linkedLegacyJobId','integratedAt','integratedBy',
-            'workflow','progressEvents','attachments','requestUrl','sourceUrl','subtaskIndex',
-            'manualIds','parentManualIds','caution','parentCaution'
-          ])
-          && validJobStatus(request.resource.data.status)
-          && validManagerJobShapeUpdate(request.resource.data)
-          && validCompletedJobEvidence()
-          && validManagerReviewTransition()
-          && preservesFinalJob()
-          // Allows an owner to remove legacy amount fields, but blocks new
-          // amount fields on every external editor portal job.
-          && (!externalEditor(uid) || !containsExternalSettlement(request.resource.data))
-          && (!('ownPay' in request.resource.data) || request.resource.data.ownPay >= 0)
-          && (!('payableApproved' in request.resource.data) || request.resource.data.payableApproved != true
-            || (request.resource.data.status == '完了'
-              && request.resource.data.ownPay > 0
-              && request.resource.data.payableMonth is string
-              && validCompletedJobEvidence()))
-          && validDispatchPayableMirror(uid, jobId);
+          && request.resource.data.history.size() == 1);
+        // Exactly one update intent is evaluated. This is both stricter and
+        // measurably cheaper than independent overlapping `allow update` rules.
+        allow update: if resource != null && validPortalJobUpdate(uid, jobId);
         // Legacy-synchronised portal rows are recoverable projections of the
         // owner ledger. On reassignment, the owner atomically creates the new
         // assignee projection and removes only the former one.
@@ -2351,24 +2428,26 @@ service cloud.firestore {
         && request.resource.data.eligibleUids is list
         && request.resource.data.get('assignedUid', '') == ''
         && (owner() || validDirectorBoardAudience(request.resource.data));
+      // Owner edits, director edits, and editor claims are mutually exclusive
+      // intents. A single dispatcher prevents an invalid director edit from
+      // also paying the full cost of the claim rule.
       allow update: if owner()
-        && validAttachments(request.resource.data)
-        && validEditorDraftDateAssignment(request.resource.data)
-        && validCaseManualLinks(request.resource.data);
-      allow update: if !owner()
-        && videoManager()
-        && validDirectorBoardUpdate()
-        && validAttachments(request.resource.data)
-        && validEditorDraftDateAssignment(request.resource.data)
-        && validCaseManualLinks(request.resource.data);
-      allow update: if canSeeBoard(resource.data)
-        && resource.data.status == 'open'
-        && resource.data.get('assignedUid', '') == ''
-        && request.resource.data.status == 'assigned'
-        && request.resource.data.assignedUid == request.auth.uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'status','assignedUid','assignedName','assignedAt','updatedAt'
-        ]);
+        ? (validAttachments(request.resource.data)
+          && validEditorDraftDateAssignment(request.resource.data)
+          && validCaseManualLinks(request.resource.data))
+        : (resource.data.status == 'open'
+            && resource.data.get('assignedUid', '') == ''
+            && request.resource.data.status == 'assigned'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','assignedUid','assignedName','assignedAt','updatedAt'
+            ]))
+          ? (canSeeBoard(resource.data)
+            && request.resource.data.assignedUid == request.auth.uid)
+          : (videoManager()
+            && validDirectorBoardUpdate()
+            && validAttachments(request.resource.data)
+            && validEditorDraftDateAssignment(request.resource.data)
+            && validCaseManualLinks(request.resource.data));
       allow delete: if false;
     }
 
