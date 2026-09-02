@@ -32,7 +32,7 @@ test('reference workspace preserves existing edit and financial destinations',()
 });
 
 test('case action strings are HTML-escaped before becoming inline handlers',()=>{
-  assert.match(html,/click=j\._source==='portal'\?`openPortalJobModal\(\$\{JSON\.stringify\(j\._portalUid\)\},\$\{JSON\.stringify\(j\.id\)\}\)`/);
+  assert.match(html,/click=j\._source==='portal'\?`openPortalJobModal\(\$\{JSON\.stringify\(j\._portalUid\)\},\$\{JSON\.stringify\(sourceJobId\)\}\)`/);
   assert.match(html,/class="video-job-main" onclick="\$\{esc\(click\)\}"/);
   assert.match(html,/video-material-card-action" onclick="\$\{esc\(openMaterials\(-1\)\)\}"/);
 });

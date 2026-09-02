@@ -32,7 +32,7 @@ test('subcase cards open their own native button detail target', () => {
   assert.match(index, /window\.openLegacySubcaseDetail\s*=\s*openLegacySubcaseDetail/);
   assert.match(index, /window\.openPortalSubcaseDetail\s*=\s*openPortalSubcaseDetail/);
   assert.match(index, /button\.video-subcase-row/);
-  assert.match(index, /openLegacySubcaseDetail\(\$\{JSON\.stringify\(j\.id\)/);
+  assert.match(index, /openLegacySubcaseDetail\(\$\{JSON\.stringify\(sourceJobId\)/);
   assert.match(index, /aria-label="\$\{esc\(s\.title\).*詳細を開く/);
   assert.doesNotMatch(index, /args=value=>esc\(JSON\.stringify/);
 });
@@ -59,6 +59,16 @@ test('portal child documents are grouped under a display-only parent and keep a 
   const card = sourceBetween('_videoCard', 'openVideoLegacySafeModal');
   assert.match(card, /s\._portalChildJobId\?`openPortalJobModal\(\$\{JSON\.stringify\(s\._portalChildPortalUid\)/);
   assert.match(card, /親案件・集計/);
+});
+
+test('phase-sliced parent and subcase cards keep the real parent id as their detail target', () => {
+  const slice = sourceBetween('_videoPhaseSlices', '_videoPhaseBuckets');
+  assert.match(slice, /_sourceJobId:job\._sourceJobId\|\|job\.id/);
+  const card = sourceBetween('_videoCard', 'openVideoLegacySafeModal');
+  assert.match(card, /sourceJobId=String\(j\._sourceJobId\|\|j\.id\|\|''\)/);
+  assert.match(card, /class="video-job-main video-job-parent-main" onclick="\$\{esc\(click\)\}"/);
+  assert.match(card, /openLegacySubcaseDetail\(\$\{JSON\.stringify\(sourceJobId\)/);
+  assert.match(card, /openPortalSubcaseDetail\(\$\{JSON\.stringify\(j\._portalUid\)\},\$\{JSON\.stringify\(sourceJobId\)/);
 });
 
 test('a portal child already projected into a visible legacy parent is not displayed twice', () => {
