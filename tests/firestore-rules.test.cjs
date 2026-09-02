@@ -264,6 +264,25 @@ async function expectAllowed(label, promise) {
         title: '手動進捗変更-派遣完了', businessType: 'dispatch', status: '先方確認中',
         evidenceUrl: 'https://example.com/dispatch-delivery', blocker: '', workflow: { round: 1, stage: 'client_review' },
       }));
+      await setDoc(doc(db, 'editor_portals', 'direct1', 'editor_jobs', 'workflow-live-legacy-complete'), externalWorkflowJob({
+        submittedByUid: 'direct1', editorUid: 'direct1', editorEmail: 'direct1@example.com', editorName: 'Direct 1',
+        directorUid: '', title: '台本101', caseName: '8月分', parentCaseId: 'legacy:parent-august',
+        parentCaseName: '8月分', legacyParentId: 'parent-august', legacySubtaskId: 'script-101',
+        status: '先方確認中', evidenceUrl: 'https://example.com/initial-delivery', blocker: '',
+        workflow: { round: 1, stage: 'client_review' },
+        progressEvents: [
+          { at: 1, type: 'editor_submitted', round: 1, byUid: 'direct1', byEmail: 'direct1@example.com', byRole: '担当編集者', fromStage: 'editing', toStage: 'director_review', status: '初稿提出済み', evidenceUrl: 'https://example.com/initial-delivery' },
+          { at: 2, type: 'director_approved', action: 'directorApprove', round: 1, byUid: 'owner', byEmail: 'mono.create.group@gmail.com', byRole: 'owner', fromStage: 'director_review', toStage: 'client_submission', workflow: { round: 1, stage: 'client_submission' }, status: 'D確認OK' },
+          { at: 3, type: 'client_submitted', action: 'clientSubmitted', round: 1, byUid: 'owner', byEmail: 'mono.create.group@gmail.com', byRole: 'owner', fromStage: 'client_submission', toStage: 'client_review', workflow: { round: 1, stage: 'client_review' }, status: '先方確認中' },
+        ],
+        history: [
+          { at: 0, type: 'synced', by: 'owner', status: '進行中' },
+          { at: 1, type: 'editor_submitted', by: 'direct1', status: '初稿提出済み' },
+          { at: 2, type: 'director_approved', by: 'owner', status: 'D確認OK' },
+          { at: 3, type: 'client_submitted', by: 'owner', status: '先方確認中' },
+          { at: 3, type: 'sync_projection', by: 'owner', status: '先方確認中' },
+        ],
+      }));
       await setDoc(doc(db, 'editor_portals', 'external1', 'editor_jobs', 'workflow-revision-save'), externalWorkflowJob({
         title: 'WD-S087', status: '修正中', evidenceUrl: 'https://example.com/initial',
         workflow: { round: 2, stage: 'editing' },
@@ -520,6 +539,40 @@ async function expectAllowed(label, promise) {
     await expectAllowed('owner can manually complete an edit-agency job with date, evidence, and audit reason', updateDoc(
       ownerCompletionRef, managerOverrideUpdate(ownerCompletion)
     ));
+    const liveLegacyCompletionEvent = {
+      at: 4, byUid: 'owner', byEmail: 'mono.create.group@gmail.com', byRole: 'owner',
+      type: 'client_approved_completed', action: 'clientApproved', fromStage: 'client_review',
+      toStage: 'delivered', round: 1, workflow: { round: 1, stage: 'delivered' },
+      status: '完了', completedDeliveryDate: completedDate,
+    };
+    const liveLegacyCompletionBatch = writeBatch(owner);
+    liveLegacyCompletionBatch.update(
+      doc(owner, 'editor_portals', 'direct1', 'editor_jobs', 'workflow-live-legacy-complete'),
+      {
+        workflow: { round: 1, stage: 'delivered' },
+        progressEvents: [
+          { at: 1, type: 'editor_submitted', round: 1, byUid: 'direct1', byEmail: 'direct1@example.com', byRole: '担当編集者', fromStage: 'editing', toStage: 'director_review', status: '初稿提出済み', evidenceUrl: 'https://example.com/initial-delivery' },
+          { at: 2, type: 'director_approved', action: 'directorApprove', round: 1, byUid: 'owner', byEmail: 'mono.create.group@gmail.com', byRole: 'owner', fromStage: 'director_review', toStage: 'client_submission', workflow: { round: 1, stage: 'client_submission' }, status: 'D確認OK' },
+          { at: 3, type: 'client_submitted', action: 'clientSubmitted', round: 1, byUid: 'owner', byEmail: 'mono.create.group@gmail.com', byRole: 'owner', fromStage: 'client_submission', toStage: 'client_review', workflow: { round: 1, stage: 'client_review' }, status: '先方確認中' },
+          liveLegacyCompletionEvent,
+        ],
+        status: '完了', completedDeliveryDate: completedDate, correctionReason: '',
+        updatedAt: 4, updatedBy: 'mono.create.group@gmail.com',
+        history: [
+          { at: 0, type: 'synced', by: 'owner', status: '進行中' },
+          { at: 1, type: 'editor_submitted', by: 'direct1', status: '初稿提出済み' },
+          { at: 2, type: 'director_approved', by: 'owner', status: 'D確認OK' },
+          { at: 3, type: 'client_submitted', by: 'owner', status: '先方確認中' },
+          { at: 3, type: 'sync_projection', by: 'owner', status: '先方確認中' },
+          liveLegacyCompletionEvent,
+        ],
+      }
+    );
+    liveLegacyCompletionBatch.set(
+      doc(owner, 'editor_portals', 'direct1', 'editor_jobs', 'workflow-live-legacy-complete', 'events', 'client-approved'),
+      { ...liveLegacyCompletionEvent, at: serverTimestamp() }
+    );
+    await expectAllowed('owner can complete a production-shaped legacy-sync job from the inline subcase control', liveLegacyCompletionBatch.commit());
     const reopenEvent = managerOverrideEvent({
       byUid: 'owner', byEmail: 'mono.create.group@gmail.com', byRole: 'owner',
       fromStatus: '完了', fromStage: 'delivered', status: '進行中', toStage: 'editing',

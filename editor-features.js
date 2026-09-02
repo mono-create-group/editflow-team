@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const PORTAL_APP_VERSION='20260902-07';
+  const PORTAL_APP_VERSION='20260902-08';
   const feature={
     board:[],boardSelectedId:'',boardSearch:'',catalog:[],manuals:[],schedules:[],release:null,
     messages:new Map(),messageUnsubs:new Map(),messageLoading:new Set(),openMessageJobIds:new Set(),groupDraftSaving:new Set(),unsubs:[],startedFor:'',serverVersion:'',jobsListMode:'active',jobsTypeFilter:'all',lastSuggestionCode:'',

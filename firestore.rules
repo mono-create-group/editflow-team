@@ -1070,6 +1070,16 @@ service cloud.firestore {
         && events[events.size() - 1].get('type', '') == 'manager_status_changed';
     }
 
+    function managerGuidedProgressRequested() {
+      let events = reviewEvents(request.resource.data);
+      return events is list
+        && events.size() > 0
+        && events[events.size() - 1].get('type', '') in [
+          'director_approved','director_revision_requested','client_submitted',
+          'client_revision_requested','client_approved_completed'
+        ];
+    }
+
     function validManagerStatusOverride() {
       let events = reviewEvents(request.resource.data);
       let event = events[events.size() - 1];
@@ -1816,6 +1826,40 @@ service cloud.firestore {
           && validSubtaskIndex(request.resource.data)
           && request.resource.data.history is list
           && request.resource.data.history.size() == 1;
+        // Guided manager progress is also committed with an immutable child
+        // event. Evaluate current and legacy workflows on narrow paths before
+        // the general manager branches; otherwise a production-shaped job plus
+        // the child event can exceed Firestore Rules' expression budget.
+        allow update: if !self(uid)
+          && managerGuidedProgressRequested()
+          && hasReviewWorkflow(resource.data)
+          && resource.data.status != request.resource.data.status
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status','completedDeliveryDate','correctionReason','updatedAt','updatedBy',
+            'history','workflow','progressEvents'
+          ])
+          && request.resource.data.get('history', []) is list
+          && (owner() || scopedVideoDirectorFor(uid))
+          && validJobStatus(request.resource.data.status)
+          && validCompletedJobEvidence()
+          && validCompletedDeliveryDate()
+          && validCurrentManagerReviewTransition()
+          && preservesFinalJob();
+        allow update: if !self(uid)
+          && managerGuidedProgressRequested()
+          && !hasReviewWorkflow(resource.data)
+          && resource.data.status != request.resource.data.status
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status','completedDeliveryDate','correctionReason','updatedAt','updatedBy',
+            'history','workflow','progressEvents'
+          ])
+          && request.resource.data.get('history', []) is list
+          && (owner() || scopedVideoDirectorFor(uid))
+          && validJobStatus(request.resource.data.status)
+          && validCompletedJobEvidence()
+          && validCompletedDeliveryDate()
+          && validLegacyManagerReviewTransition()
+          && preservesFinalJob();
         // A free progress selection has a narrow, audited write shape. Evaluate
         // it before the general editor/manager branches so completion changes
         // stay below Firestore Rules' per-request expression budget.
