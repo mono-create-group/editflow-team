@@ -41,4 +41,7 @@ test('Drive 403 errors distinguish permission, API setup, and quota instead of m
   assert.match(message, /dailylimitexceeded\|userratelimitexceeded\|ratelimitexceeded\|quota/);
   assert.match(message, /accessnotconfigured\|drive api has not been used\|service disabled/);
   assert.match(message, /insufficientpermissions\|insufficientfilepermissions\|forbidden\|permission/);
+  assert.match(message, /社内アプリ側のGoogle Drive連携設定に問題があります/);
+  assert.match(message, /ログアウトは不要です/);
+  assert.doesNotMatch(message, /管理者に連絡してください/);
 });
