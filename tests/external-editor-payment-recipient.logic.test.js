@@ -123,8 +123,8 @@ test('director invoice lines aggregate the external editor work under the direct
 
 test('director team invoice validation accepts only the current team lines', () => {
   const teamLine = { jobId: 'team:wako-sept:su-17', title: '和光市 9月分 / SU-S017', serviceDescription: '和光市 9月分 / SU-S017（作業担当 みゆう）', transactionDate: '2026-09-10', amount: 3000, taxRate: 10 };
-  const authorization = { id: '2026-09', _portalUid: 'miura-uid', active: true, revision: 1, invoiceDocumentId: '2026-09-r1-v1', invoiceVersion: 1, month: '2026-09', invoiceAvailableOn: '2026-09-25', paymentDueDate: '2026-09-30', jobIds: [teamLine.jobId], lines: [teamLine], subtotal: 3000, taxByRate: { 10: 300 }, tax: 300, total: 3300 };
-  const invoice = { id: '2026-09-r1-v1', _portalUid: 'miura-uid', authorizationId: '2026-09', authorizationRevision: 1, version: 1, month: '2026-09', invoiceAvailableOn: '2026-09-25', paymentDueDate: '2026-09-30', issueDate: '2026-09-25', dueDate: '2026-09-30', jobIds: [teamLine.jobId], lines: [teamLine], subtotal: 3000, taxByRate: { 10: 300 }, tax: 300, total: 3300, file: { provider: 'google-drive', id: 'drive-file', sha256: 'hash', webViewLink: 'https://drive.google.com/file/d/drive-file', sharedWith: ['owner@example.test'] }, ownerShareStatus: 'shared' };
+  const authorization = { id: '2026-09', _portalUid: 'miura-uid', taxInclusive: true, active: true, revision: 1, invoiceDocumentId: '2026-09-r1-v1', invoiceVersion: 1, month: '2026-09', invoiceAvailableOn: '2026-09-25', paymentDueDate: '2026-09-30', jobIds: [teamLine.jobId], lines: [teamLine], subtotal: 2727, taxByRate: { 10: 273 }, tax: 273, total: 3000 };
+  const invoice = { id: '2026-09-r1-v1', _portalUid: 'miura-uid', taxInclusive: true, authorizationId: '2026-09', authorizationRevision: 1, version: 1, month: '2026-09', invoiceAvailableOn: '2026-09-25', paymentDueDate: '2026-09-30', issueDate: '2026-09-25', dueDate: '2026-09-30', jobIds: [teamLine.jobId], lines: [teamLine], subtotal: 2727, taxByRate: { 10: 273 }, tax: 273, total: 3000, file: { provider: 'google-drive', id: 'drive-file', sha256: 'hash', webViewLink: 'https://drive.google.com/file/d/drive-file', sharedWith: ['owner@example.test'] }, ownerShareStatus: 'shared' };
   const context = {
     PORTAL_AUTHORIZATIONS: [authorization], PORTAL_INVOICES: [], PORTAL_JOBS: [],
     PORTAL_PROFILES: [{ _portalUid: 'miura-uid', taxRate: 10 }], ADMIN_EMAILS: ['owner@example.test'],
@@ -134,8 +134,11 @@ test('director team invoice validation accepts only the current team lines', () 
   vm.createContext(context);
   const invoiceCheckStart = index.indexOf('function _portalInvoiceCheck');
   const invoiceCheckEnd = index.indexOf('async function portalRegistrationReview', invoiceCheckStart);
+  const totalsStart = index.indexOf('function _portalIncludedTaxAmount');
+  const totalsEnd = index.indexOf('function _directorTeamInvoiceLines', totalsStart);
   assert.ok(invoiceCheckStart >= 0 && invoiceCheckEnd > invoiceCheckStart);
-  vm.runInContext(`${index.slice(invoiceCheckStart, invoiceCheckEnd)}this.checkInvoice = _portalInvoiceCheck;`, context);
+  assert.ok(totalsStart >= 0 && totalsEnd > totalsStart);
+  vm.runInContext(`${index.slice(totalsStart, totalsEnd)}${index.slice(invoiceCheckStart, invoiceCheckEnd)}this.checkInvoice = _portalInvoiceCheck;`, context);
   assert.equal(context.checkInvoice(invoice).ok, true);
   context._directorTeamInvoiceLines = () => [];
   assert.match(context.checkInvoice(invoice).reason, /外部編集者分の明細/);

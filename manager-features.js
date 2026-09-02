@@ -22,6 +22,8 @@
   const catalogsFor=uid=>state.catalog.get(uid)||[];
   const editorOptions=()=>state.editors.filter(x=>rolesGrantVideoEditor(x.roles||[])).map(x=>`<option value="${esc(x.id)}">${esc(editorName(x))} / ${x.editorKind==='external'?'外部':'直接'}</option>`).join('');
   const timestamp=v=>v&&typeof v.toMillis==='function'?v.toMillis():Number(v||0);
+  const invoiceIncludedTax=(gross,rate)=>{const amount=Math.round(Number(gross)||0),percent=Number(rate)||0;return percent>0?Math.round(amount*percent/(100+percent)):0};
+  const invoiceTaxInclusiveTotals=(lines=[])=>{const grossByRate={};let total=0;(lines||[]).forEach(line=>{const amount=Math.round(Number(line?.amount)||0),rate=Number(line?.taxRate)||0;total+=amount;grossByRate[rate]=(grossByRate[rate]||0)+amount});const taxByRate=Object.fromEntries(Object.entries(grossByRate).map(([rate,gross])=>[rate,invoiceIncludedTax(gross,Number(rate))])),tax=Object.values(taxByRate).reduce((sum,value)=>sum+Number(value||0),0);return{subtotal:total-tax,taxByRate,tax,total}};
   const weekdayLabels=['月','火','水','木','金','土','日'];
   function dateAtNoon(value){const d=new Date(`${value}T12:00:00`);return Number.isNaN(d.getTime())?new Date():d}
   function localYmd(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
@@ -398,7 +400,7 @@
     const rebuild=owner?'<button class="btn btn-g btn-sm" style="margin-top:8px" onclick="window.rebuildAllDirectorInvoiceAuthorizations&&window.rebuildAllDirectorInvoiceAuthorizations()">全ディレクターの精算額を再計算</button>':'';
     return block('金額の表示範囲',`${copy}${count?`<div class="card notice warn" style="box-shadow:none;margin-top:10px"><b>過去の案件に金額情報が ${count}件残っています</b><div style="font-size:11px;color:var(--t2);margin:4px 0 8px">案件の内容・進み具合・履歴は変えず、金額だけをオーナー専用の保管先へ移します。</div><button class="btn btn-p btn-sm" onclick="managerMigrateExternalSettlement()">金額をオーナー専用の保管先へ移す</button></div>`:''}${rebuild}<div style="margin-top:10px"><a class="btn btn-g btn-sm" href="./editor.html" target="_blank" rel="noopener">${owner?'ディレクター用の請求書画面を開く':'自分の請求書画面を開く'}</a></div>`);
   }
-  function invoiceHtml(list){const owner=_isOwner();return block(owner?'編集者からの請求書':'自分が提出した請求書',list.length?list.sort((a,b)=>timestamp(b.updatedAt||b.submittedAt)-timestamp(a.updatedAt||a.submittedAt)).map(x=>`<div style="display:flex;align-items:center;gap:7px;padding:8px;background:var(--card2);border-radius:8px;margin-bottom:6px"><div style="flex:1"><b>${esc(owner?(x.editorName||x.issuer?.name||x._portalUid):'自分の請求書')}</b><div style="font-size:10px;color:var(--t3)">${esc(x.month||'')} ・ ¥${Number(x.total||0).toLocaleString()} ・ ${esc(x.status||'下書き')}</div></div>${x.file?.webViewLink?`<a class="btn btn-g btn-sm" target="_blank" rel="noopener" href="${esc(x.file.webViewLink)}">原本</a>`:''}${owner&&['提出済み','再提出'].includes(x.status)?`<button class="btn btn-g btn-sm" onclick="managerInvoiceAction('${x._portalUid}','${x.id}','差戻し')">差戻し</button><button class="btn btn-p btn-sm" onclick="managerInvoiceAction('${x._portalUid}','${x.id}','承認済み')">承認</button>`:''}</div>`).join(''):empty(owner?'提出された請求書はありません。':'自分が提出した請求書はありません。'))}
+  function invoiceHtml(list){const owner=_isOwner();return block(owner?'編集者からの請求書':'自分が提出した請求書',list.length?list.sort((a,b)=>timestamp(b.updatedAt||b.submittedAt)-timestamp(a.updatedAt||a.submittedAt)).map(x=>{const inclusive=x.taxInclusive===true;return`<div style="padding:8px;background:var(--card2);border-radius:8px;margin-bottom:6px"><div style="display:flex;align-items:center;gap:7px"><div style="flex:1"><b>${esc(owner?(x.editorName||x.issuer?.name||x._portalUid):'自分の請求書')}</b><div style="font-size:10px;color:var(--t3)">${esc(x.month||'')} ・ ¥${Number(x.total||0).toLocaleString()}${inclusive?'（税込）':'（旧・税別）'} ・ ${esc(x.status||'下書き')}</div></div>${x.file?.webViewLink?`<a class="btn btn-g btn-sm" target="_blank" rel="noopener" href="${esc(x.file.webViewLink)}">原本</a>`:''}${owner&&['提出済み','再提出'].includes(x.status)?`<button class="btn btn-g btn-sm" onclick="managerInvoiceAction('${x._portalUid}','${x.id}','差戻し')">差戻し</button><button class="btn btn-p btn-sm" ${inclusive?'':'disabled'} onclick="managerInvoiceAction('${x._portalUid}','${x.id}','承認済み')">承認</button>`:''}</div>${inclusive?'':'<div style="font-size:11px;color:var(--red);margin-top:7px">旧方式の税別請求書です。差戻して、税込金額で修正版を作成してください。</div>'}</div>`}).join(''):empty(owner?'提出された請求書はありません。':'自分が提出した請求書はありません。'))}
   function directorAuthorizationHtml(){
     if(!isDirector())return'';
     const rows=state.authorizations.slice().sort((a,b)=>String(b.month||'').localeCompare(String(a.month||'')));
@@ -726,6 +728,7 @@
   async function invoiceAction(portalUid,id,next){
     if(!_isOwner())return toast('請求書の承認・差戻しはオーナーのみ行えます','warn');
     const x=state.invoices.find(v=>v._portalUid===portalUid&&v.id===id);if(!x)return;
+    if(next==='承認済み'&&x.taxInclusive!==true)return toast('旧方式の税別請求書は承認できません。差戻して税込金額で再作成してください','warn');
     const actionKey=`${portalUid}:${id}`;if(state.invoiceActionPending.has(actionKey))return toast('請求書を更新中です。完了までお待ちください','warn');
     state.invoiceActionPending.add(actionKey);
     try{
@@ -740,7 +743,8 @@
       batch.set(ref,{status:next,reviewReason:reason||null,updatedAt:at,updatedBy:_myEmail(),history:[...(x.history||[]).slice(-99),{at,by:_myEmail(),status:next,reason}]},{merge:true});
       if(next==='差戻し'&&x.authorizationId&&x.authorizationId!=='manual'){
         const nextVersion=Number(x.version||1)+1,nextInvoiceId=`${x.authorizationId}-v${nextVersion}-${at}`;
-        batch.update(portal.collection('invoice_authorizations').doc(x.authorizationId),{invoiceVersion:nextVersion,invoiceDocumentId:nextInvoiceId,updatedAt:at,updatedBy:_myEmail()});
+        const authorization=state.authorizations.find(a=>a._portalUid===portalUid&&a.id===x.authorizationId),totals=invoiceTaxInclusiveTotals(authorization?.lines||x.lines||[]);
+        batch.update(portal.collection('invoice_authorizations').doc(x.authorizationId),{taxInclusive:true,...totals,invoiceVersion:nextVersion,invoiceDocumentId:nextInvoiceId,updatedAt:at,updatedBy:_myEmail()});
       }
       batch.set(ref.collection('events').doc(),{at:firebase.firestore.FieldValue.serverTimestamp(),byUid:FB_USER.uid,status:next,reason,invoiceId:id});
       await batch.commit();toast(`請求書を「${next}」に更新しました`);

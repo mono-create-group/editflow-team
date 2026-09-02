@@ -69,7 +69,7 @@ function externalWorkflowJob(overrides = {}) {
 
 function manualInvoice(uid, overrides = {}) {
   return {
-    recordType: 'editor_invoice', editorUid: uid, editorEmail: `${uid}@example.com`, editorName: uid,
+    recordType: 'editor_invoice', taxInclusive: true, editorUid: uid, editorEmail: `${uid}@example.com`, editorName: uid,
     month: '2026-09', jobIds: ['done1'], lines: [{ jobId: 'done1', title: '案件1', amount: 5000, taxRate: 0 }],
     issuer: { name: uid }, recipientName: 'mono.create', documentType: 'invoice',
     subtotal: 5000, taxByRate: { 0: 0 }, tax: 0, withholding: 0, withholdingStatus: 'none', total: 5000,
@@ -335,9 +335,9 @@ async function expectAllowed(label, promise) {
       await setDoc(doc(db, 'editor_portals', 'external1', 'editor_invoices', 'inv1'), manualInvoice('external1', { status: '提出済み' }));
       await setDoc(doc(db, 'editor_portals', 'direct1', 'editor_invoices', 'inv1'), manualInvoice('direct1'));
       await setDoc(doc(db, 'editor_portals', 'dir1', 'editor_invoices', 'inv1'), manualInvoice('dir1'));
-      await setDoc(doc(db, 'editor_portals', 'external1', 'invoice_authorizations', 'auth1'), { recordType: 'invoice_authorization', editorUid: 'external1', month: '2026-09', invoiceAvailableOn: '2026-09-25', paymentDueDate: '2026-10-31', jobIds: ['done1'], lines: [{ title: '案件1', amount: 5000 }], subtotal: 5000, tax: 0, total: 5000, revision: 1, invoiceVersion: 1, invoiceDocumentId: 'inv1', active: true });
-      await setDoc(doc(db, 'editor_portals', 'direct1', 'invoice_authorizations', 'auth1'), { recordType: 'invoice_authorization', editorUid: 'direct1', month: '2026-09', invoiceAvailableOn: '2026-09-25', paymentDueDate: '2026-10-31', jobIds: ['done1'], lines: [{ title: '案件1', amount: 5000 }], subtotal: 5000, tax: 0, total: 5000, revision: 1, invoiceVersion: 1, invoiceDocumentId: 'inv1', active: true });
-      await setDoc(doc(db, 'editor_portals', 'dir1', 'invoice_authorizations', 'auth1'), { recordType: 'invoice_authorization', editorUid: 'dir1', month: '2026-09', invoiceAvailableOn: '2026-09-25', paymentDueDate: '2026-10-31', jobIds: ['done1'], lines: [{ title: '案件1', amount: 5000 }], subtotal: 5000, tax: 0, total: 5000, revision: 1, invoiceVersion: 1, invoiceDocumentId: 'inv1', active: true });
+      await setDoc(doc(db, 'editor_portals', 'external1', 'invoice_authorizations', 'auth1'), { recordType: 'invoice_authorization', taxInclusive: true, editorUid: 'external1', month: '2026-09', invoiceAvailableOn: '2026-09-25', paymentDueDate: '2026-10-31', jobIds: ['done1'], lines: [{ title: '案件1', amount: 5000 }], subtotal: 5000, tax: 0, total: 5000, revision: 1, invoiceVersion: 1, invoiceDocumentId: 'inv1', active: true });
+      await setDoc(doc(db, 'editor_portals', 'direct1', 'invoice_authorizations', 'auth1'), { recordType: 'invoice_authorization', taxInclusive: true, editorUid: 'direct1', month: '2026-09', invoiceAvailableOn: '2026-09-25', paymentDueDate: '2026-10-31', jobIds: ['done1'], lines: [{ title: '案件1', amount: 5000 }], subtotal: 5000, tax: 0, total: 5000, revision: 1, invoiceVersion: 1, invoiceDocumentId: 'inv1', active: true });
+      await setDoc(doc(db, 'editor_portals', 'dir1', 'invoice_authorizations', 'auth1'), { recordType: 'invoice_authorization', taxInclusive: true, editorUid: 'dir1', month: '2026-09', invoiceAvailableOn: '2026-09-25', paymentDueDate: '2026-10-31', jobIds: ['done1'], lines: [{ title: '案件1', amount: 5000 }], subtotal: 5000, tax: 0, total: 5000, revision: 1, invoiceVersion: 1, invoiceDocumentId: 'inv1', active: true });
       await setDoc(doc(db, 'editor_portals', 'external1', 'editor_invoices', 'inv1', 'events', 'e1'), { type: 'created', byUid: 'external1' });
       await setDoc(doc(db, 'editor_portals', 'external1', 'invoice_authorizations', 'auth1', 'events', 'e1'), { type: 'approved', byUid: 'dir1' });
       await setDoc(doc(db, 'shared', 'mcapp'), { clientPrice: 999999, profit: 999999 });
@@ -913,6 +913,8 @@ async function expectAllowed(label, promise) {
     await expectDenied('external editor cannot read own mono.create invoice authorization events', getDoc(doc(external1, 'editor_portals', 'external1', 'invoice_authorizations', 'auth1', 'events', 'e1')));
     await expectDenied('external editor cannot create a mono.create invoice', setDoc(doc(external1, 'editor_portals', 'external1', 'editor_invoices', 'external-create'), manualInvoice('external1', { idempotencyKey: 'manual-external-create' })));
     await expectAllowed('direct editor creates a manual invoice only with scheduled billing dates', setDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_invoices', 'manual-scheduled'), manualInvoice('direct1', { idempotencyKey: 'manual-direct-scheduled' })));
+    await expectDenied('direct editor cannot create a legacy tax-exclusive invoice', setDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_invoices', 'manual-tax-exclusive'), manualInvoice('direct1', { taxInclusive: false, idempotencyKey: 'manual-direct-tax-exclusive' })));
+    await expectDenied('direct editor cannot add tax on top of a tax-inclusive amount', setDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_invoices', 'manual-tax-added'), manualInvoice('direct1', { subtotal: 5000, taxByRate: { 10: 500 }, tax: 500, total: 5500, lines: [{ jobId: 'done1', title: '案件1', amount: 5000, taxRate: 10 }], idempotencyKey: 'manual-direct-tax-added' })));
     await expectDenied('direct editor cannot change the payment date independently of the calculated schedule', setDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_invoices', 'manual-tampered'), manualInvoice('direct1', { idempotencyKey: 'manual-direct-tampered', dueDate: '2026-09-30' })));
     await expectAllowed('direct editor keeps own mono.create invoice access', getDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_invoices', 'inv1')));
     await expectAllowed('direct editor keeps own invoice authorization access', getDoc(doc(direct1, 'editor_portals', 'direct1', 'invoice_authorizations', 'auth1')));

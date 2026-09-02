@@ -34,6 +34,8 @@ service cloud.firestore {
       let path = invoiceAuthorizationPath(uid, request.resource.data.authorizationId);
       return exists(path)
         && get(path).data.active == true
+        && get(path).data.taxInclusive == true
+        && request.resource.data.taxInclusive == true
         && get(path).data.editorUid == uid
         && get(path).data.revision == request.resource.data.authorizationRevision
         && get(path).data.invoiceVersion == request.resource.data.version
@@ -53,6 +55,7 @@ service cloud.firestore {
 
     function validManualInvoice(uid) {
       return request.resource.data.authorizationId == 'manual'
+        && request.resource.data.taxInclusive == true
         && request.resource.data.authorizationRevision == 0
         && request.resource.data.version is int
         && request.resource.data.version >= 1
@@ -62,7 +65,7 @@ service cloud.firestore {
         && request.resource.data.lines is list
         && request.resource.data.lines.size() == 1
         && request.resource.data.lines[0].jobId == request.resource.data.jobIds[0]
-        && request.resource.data.lines[0].amount == request.resource.data.subtotal
+        && request.resource.data.lines[0].amount == request.resource.data.total
         && request.resource.data.lines[0].taxRate in [0, 10]
         && request.resource.data.invoiceAvailableOn is string
         && request.resource.data.invoiceAvailableOn.matches('^[0-9]{4}-[0-9]{2}-25$')
@@ -73,7 +76,10 @@ service cloud.firestore {
         && request.resource.data.subtotal > 0
         && request.resource.data.tax >= 0
         && request.resource.data.total == request.resource.data.subtotal + request.resource.data.tax
-        && request.resource.data.tax == int((request.resource.data.subtotal * request.resource.data.lines[0].taxRate + 50) / 100)
+        && request.resource.data.subtotal == request.resource.data.lines[0].amount - request.resource.data.tax
+        && ((request.resource.data.lines[0].taxRate == 0 && request.resource.data.tax == 0)
+          || (request.resource.data.lines[0].taxRate == 10
+            && request.resource.data.tax == int((request.resource.data.lines[0].amount * 10 + 55) / 110)))
         && request.resource.data.taxByRate is map
         && request.resource.data.taxByRate.size() == 1
         && ((request.resource.data.lines[0].taxRate == 0 && request.resource.data.taxByRate.get('0', -1) == request.resource.data.tax)
@@ -2203,6 +2209,7 @@ service cloud.firestore {
         allow read: if owner() || (editor(uid) && !externalEditor(uid));
         allow create, update: if owner()
           && request.resource.data.recordType == 'invoice_authorization'
+          && request.resource.data.taxInclusive == true
           && request.resource.data.editorUid == uid
           && request.resource.data.month is string
           && request.resource.data.invoiceAvailableOn is string
@@ -2233,7 +2240,7 @@ service cloud.firestore {
         allow read: if owner() || (editor(uid) && !externalEditor(uid));
         allow create: if editor(uid) && !externalEditor(uid)
           && request.resource.data.keys().hasOnly([
-            'recordType','editorUid','editorEmail','editorName','month','jobIds',
+            'recordType','taxInclusive','editorUid','editorEmail','editorName','month','jobIds',
             'lines','issuer','recipientName','documentType','subtotal','taxByRate',
             'tax','withholding','withholdingStatus','total','status','invoiceNumber',
             'issueDate','dueDate','invoiceAvailableOn','paymentDueDate',
@@ -2243,6 +2250,7 @@ service cloud.firestore {
             'authorizationId','authorizationRevision'
           ])
           && request.resource.data.recordType == 'editor_invoice'
+          && request.resource.data.taxInclusive == true
           && request.resource.data.editorUid == uid
           && request.resource.data.editorEmail == request.auth.token.email
           && request.resource.data.status == '下書き'
@@ -2267,7 +2275,7 @@ service cloud.firestore {
           && request.resource.data.status in ['下書き','提出済み']
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'file','ownerShareStatus','status','submittedAt','updatedAt',
-            'recipientName','issuer','jobIds','lines','subtotal','taxByRate','tax','total'
+            'recipientName','issuer','taxInclusive','jobIds','lines','subtotal','taxByRate','tax','total'
           ])
           && (request.resource.data.status == '下書き'
             || (request.resource.data.file.provider == 'google-drive'
@@ -2276,6 +2284,8 @@ service cloud.firestore {
               && request.resource.data.ownerShareStatus == 'shared'));
         allow update: if owner()
           && validInvoiceStatus(request.resource.data.status)
+          && (request.resource.data.status != '承認済み'
+            || request.resource.data.get('taxInclusive', false) == true)
           && validOwnerInvoiceTransition(resource.data.status, request.resource.data.status)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status','reviewReason','updatedAt','updatedBy','history',

@@ -170,18 +170,46 @@ test('invoice revision creation has a stable manual document id and an in-flight
   assert.match(revision, /finally\{invoiceRevisionIds\.delete\(iid\)\}/);
 });
 
+test('editor invoice amounts are tax-inclusive and 17,000 yen stays 17,000 yen', () => {
+  const start = editor.indexOf('function includedTaxAmount');
+  const end = editor.indexOf('  const id=', start);
+  assert.ok(start >= 0 && end > start);
+  const context = {};
+  vm.createContext(context);
+  vm.runInContext(`${editor.slice(start, end)}this.totals=taxInclusiveTotals;`, context);
+  assert.deepEqual(JSON.parse(JSON.stringify(context.totals([{ amount: 17000, taxRate: 10 }]))), {
+    subtotal: 15455,
+    taxByRate: { 10: 1545 },
+    tax: 1545,
+    total: 17000,
+  });
+  assert.match(editor, /<label for="manual-invoice-amount">税込金額 \*<\/label>/);
+  assert.match(editor, /入力する金額はすべて税込です/);
+});
+
+test('legacy tax-exclusive invoices cannot be submitted or approved', () => {
+  const submitted = sourceOf('submitInvoice', 'async function createRevision');
+  const manager = fs.readFileSync(path.join(__dirname, '..', 'manager-features.js'), 'utf8');
+  assert.match(submitted, /x\.taxInclusive!==true/);
+  assert.match(manager, /旧方式の税別請求書は承認できません/);
+  assert.match(manager, /旧方式の税別請求書です。差戻して、税込金額で修正版を作成してください/);
+  assert.match(manager, /taxInclusive:true,\.\.\.totals/);
+});
+
 test('manual invoice rules bind the only line, tax rate, and totals before allowing a revision', () => {
   const rules = fs.readFileSync(path.join(__dirname, '..', 'firestore.rules'), 'utf8');
   const start = rules.indexOf('function validManualInvoice');
   const end = rules.indexOf('function validCompletedJobEvidence', start);
   const source = rules.slice(start, end);
   for (const required of [
+    'request.resource.data.taxInclusive == true',
     'lines[0].jobId == request.resource.data.jobIds[0]',
-    'lines[0].amount == request.resource.data.subtotal',
+    'lines[0].amount == request.resource.data.total',
     "lines[0].taxRate in [0, 10]",
     "taxByRate.get('0', -1)",
     "taxByRate.get('10', -1)",
-    'int((request.resource.data.subtotal * request.resource.data.lines[0].taxRate + 50) / 100)',
+    'request.resource.data.subtotal == request.resource.data.lines[0].amount - request.resource.data.tax',
+    'int((request.resource.data.lines[0].amount * 10 + 55) / 110)',
     'supersedesInvoiceId is string'
   ]) assert.match(source, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
 });
