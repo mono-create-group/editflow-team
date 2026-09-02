@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260903-01"></script>
+<script src="./billing-terms.js?v=20260903-02"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -999,7 +999,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260903-01">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260903-02">
 </head>
 <body class="owner-yellow-ui">
 
@@ -1059,8 +1059,8 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="./ai-bridge-client.js"></script>
-<script src="./owner-video-performance.js?v=20260903-01"></script>
-<script src="./feedback-workflow.js?v=20260903-01"></script>
+<script src="./owner-video-performance.js?v=20260903-02"></script>
+<script src="./feedback-workflow.js?v=20260903-02"></script>
 <script>/* lz-string 1.5.0 (MIT) — CDN非依存でオフライン/圧縮チーム同期を保証するためインライン化 */
 var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",e={};function t(r,o){if(!e[r]){e[r]={};for(var n=0;n<r.length;n++)e[r][r.charAt(n)]=n}return e[r][o]}var i={compressToBase64:function(r){if(null==r)return"";var n=i._compress(r,6,function(r){return o.charAt(r)});switch(n.length%4){default:case 0:return n;case 1:return n+"===";case 2:return n+"==";case 3:return n+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(n){return t(o,r.charAt(n))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(r){return null==r?"":""==r?null:i._decompress(r.length,16384,function(o){return r.charCodeAt(o)-32})},compressToUint8Array:function(r){for(var o=i.compress(r),n=new Uint8Array(2*o.length),e=0,t=o.length;e<t;e++){var s=o.charCodeAt(e);n[2*e]=s>>>8,n[2*e+1]=s%256}return n},decompressFromUint8Array:function(o){if(null==o)return i.decompress(o);for(var n=new Array(o.length/2),e=0,t=n.length;e<t;e++)n[e]=256*o[2*e]+o[2*e+1];var s=[];return n.forEach(function(o){s.push(r(o))}),i.decompress(s.join(""))},compressToEncodedURIComponent:function(r){return null==r?"":i._compress(r,6,function(r){return n.charAt(r)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),i._decompress(r.length,32,function(o){return t(n,r.charAt(o))}))},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(r,o,n){if(null==r)return"";var e,t,i,s={},u={},a="",p="",c="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<r.length;i+=1)if(a=r.charAt(i),Object.prototype.hasOwnProperty.call(s,a)||(s[a]=f++,u[a]=!0),p=c+a,Object.prototype.hasOwnProperty.call(s,p))c=p;else{if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++),s[p]=f++,c=String(a)}if(""!==c){if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++)}for(t=2,e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;for(;;){if(m<<=1,v==o-1){d.push(n(m));break}v++}return d.join("")},decompress:function(r){return null==r?"":""==r?null:i._decompress(r.length,32768,function(o){return r.charCodeAt(o)})},_decompress:function(o,n,e){var t,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:e(0),position:n,index:1};for(t=0;t<3;t+=1)l[t]=t;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return i}();"function"==typeof define&&define.amd?define(function(){return LZString}):"undefined"!=typeof module&&null!=module?module.exports=LZString:"undefined"!=typeof angular&&null!=angular&&angular.module("LZString",[]).factory("LZString",function(){return LZString});
 </script>
@@ -1226,19 +1226,58 @@ function _portalApprovedPayAmount(job){
 function _withOwnerJobFinance(job){
   const finance=_ownerFinanceForLegacyJob(job);if(!finance)return job;
   if(finance.recordType==='owner_legacy_finance'){
-    const parent=finance.parentAmounts||{},lines=Array.isArray(finance.subtaskAmounts)?finance.subtaskAmounts:[];
+    const hasCurrent=Array.isArray(finance.currentSubtaskAmounts),parent=finance.currentParentAmounts||finance.parentAmounts||{},lines=hasCurrent?finance.currentSubtaskAmounts:(Array.isArray(finance.subtaskAmounts)?finance.subtaskAmounts:[]);
     const subtasks=(job.subtasks||[]).map((sub,index)=>{
       const id=String(sub?.id||''),line=lines.find(row=>(id&&String(row.id||'')===id)||(!row.id&&Number(row.index)===index));
       if(!line)return sub;
       const unitPrice=Math.max(0,Number(line.unitPrice)||0),workerPay=Math.max(0,Number(line.workerPay)||0);
-      const correction=_legacyCorrectionForLine(finance,job,sub,index,line),effectivePay=correction?Number(correction.correctedWorkerPay):workerPay;
+      const correction=hasCurrent?null:_legacyCorrectionForLine(finance,job,sub,index,line),effectivePay=correction?Number(correction.correctedWorkerPay):workerPay;
       return{...sub,unitPrice,workerPay:effectivePay,profit:unitPrice-effectivePay,salesPay:Math.max(0,Number(line.salesPay)||0),_financeCorrection:correction?{id:String(correction.id||''),revision:Number(correction.revision),originalWorkerPay:workerPay,deltaWorkerPay:Number(correction.deltaWorkerPay),correctedWorkerPay:effectivePay,reason:String(correction.reason||''),evidenceRef:String(correction.evidenceRef||'')}:null};
     });
     const unitPrice=Math.max(0,Number(parent.unitPrice)||0),workerPay=Math.max(0,Number(parent.workerPay)||0);
     return{...job,unitPrice,workerPay,profit:Number.isFinite(Number(parent.profit))?Number(parent.profit):unitPrice-workerPay,monthlyFee:Math.max(0,Number(parent.monthlyFee)||0),salesPay:Math.max(0,Number(parent.salesPay)||0),subtasks,_ownerFinance:finance};
   }
-  const unitPrice=Number(finance.clientUnitPrice)||0,workerPay=Number(finance.approvedPayAmount)||0;
+  const unitPrice=Number(finance.currentClientUnitPrice??finance.clientUnitPrice)||0,workerPay=Number(finance.currentApprovedPayAmount??finance.approvedPayAmount)||0;
   return{...job,unitPrice,workerPay,profit:unitPrice-workerPay,_ownerFinance:finance};
+}
+function _ownerFinanceAmount(value){const amount=Number(value);return Number.isInteger(amount)&&amount>=0&&amount<=100000000?amount:0;}
+function _ownerFinanceSignature(job){
+  const view=job||{};
+  return JSON.stringify({
+    unitPrice:_ownerFinanceAmount(view.unitPrice),workerPay:_ownerFinanceAmount(view.workerPay),monthlyFee:_ownerFinanceAmount(view.monthlyFee),salesPay:_ownerFinanceAmount(view.salesPay),
+    subtasks:(view.subtasks||[]).map((sub,index)=>({id:String(sub?.id||''),index,unitPrice:_ownerFinanceAmount(sub?.unitPrice),workerPay:_ownerFinanceAmount(sub?.workerPay),salesPay:_ownerFinanceAmount(sub?.salesPay)}))
+  });
+}
+async function _saveOwnerFinanceSnapshot(finance,currentJob,nextJob){
+  if(!_isOwner()||!finance||!currentJob)return false;
+  const currentView=_withOwnerJobFinance(currentJob);
+  if(_ownerFinanceSignature(currentView)===_ownerFinanceSignature(nextJob))return false;
+  const now=firebase.firestore.FieldValue.serverTimestamp(),updatedBy=_myEmail(),revision=Number(finance.revision||0)+1;
+  if(finance.recordType==='owner_legacy_finance'){
+    const sourceLines=Array.isArray(finance.currentSubtaskAmounts)?finance.currentSubtaskAmounts:(Array.isArray(finance.subtaskAmounts)?finance.subtaskAmounts:[]);
+    const currentSubtaskAmounts=await Promise.all((nextJob.subtasks||[]).map(async(sub,index)=>{
+      const subId=String(sub?.id||''),source=sourceLines.find(row=>(subId&&String(row?.id||'')===subId)||(!row?.id&&Number(row?.index)===index));
+      const titleHash=String(source?.titleHash||await _legacyCorrectionTitleHash(sub?.title||''));
+      return{...(subId?{id:subId}:{}),index,titleHash,unitPrice:_ownerFinanceAmount(sub?.unitPrice),workerPay:_ownerFinanceAmount(sub?.workerPay),profit:_ownerFinanceAmount(sub?.unitPrice)-_ownerFinanceAmount(sub?.workerPay),monthlyFee:0,salesPay:_ownerFinanceAmount(sub?.salesPay)};
+    }));
+    const currentParentAmounts={unitPrice:_ownerFinanceAmount(nextJob.unitPrice),workerPay:_ownerFinanceAmount(nextJob.workerPay),profit:_ownerFinanceAmount(nextJob.unitPrice)-_ownerFinanceAmount(nextJob.workerPay),monthlyFee:_ownerFinanceAmount(nextJob.monthlyFee),salesPay:_ownerFinanceAmount(nextJob.salesPay)};
+    const update={currentParentAmounts,currentSubtaskAmounts,revision,updatedAt:now,updatedBy};
+    await fbDb.collection('owner_legacy_finance').doc(String(finance.id||finance.legacyJobId)).update(update);
+    Object.assign(finance,{currentParentAmounts,currentSubtaskAmounts,revision,updatedBy});
+    return true;
+  }
+  if(finance.recordType==='owner_job_finance'){
+    const currentClientUnitPrice=_ownerFinanceAmount(nextJob.unitPrice),currentApprovedPayAmount=_ownerFinanceAmount(nextJob.workerPay),batch=fbDb.batch();
+    batch.update(fbDb.collection('owner_job_finance').doc(String(finance.id||finance.legacyJobId)),{currentClientUnitPrice,currentApprovedPayAmount,revision,updatedAt:now,updatedBy});
+    const portalJob=(PORTAL_JOBS||[]).find(job=>String(job._portalUid||'')===String(finance.portalUid||'')&&String(job.id||'')===String(finance.portalJobId||''));
+    if(portalJob?.payableApproved===true){
+      batch.update(fbDb.collection('editor_portals').doc(String(finance.portalUid)).collection('editor_jobs').doc(String(finance.portalJobId)),{ownPay:currentApprovedPayAmount,updatedAt:Date.now(),updatedBy});
+    }
+    await batch.commit();
+    Object.assign(finance,{currentClientUnitPrice,currentApprovedPayAmount,revision,updatedBy});
+    return true;
+  }
+  return false;
 }
 const OWNER_LEGACY_AMOUNT_KEYS=['unitPrice','workerPay','profit','monthlyFee','salesPay'];
 function _legacyAmount(value){const n=Number(value);return Number.isInteger(n)&&n>=0&&n<=100000000?n:0;}
@@ -14151,8 +14190,8 @@ function openJobModal(id,preStatus,preClientId){
 	${materialSection}
 	${_isOwner()?`<div style="font-size:12px;font-weight:700;color:var(--t2);margin:10px 0 6px">💰 報酬</div>
 <div class="frow">
-  <div class="fg"><div class="fl" id="jl-unit">クライアント単価（円）<span id="j-unit-hint" style="font-size:10px;color:var(--t3);font-weight:400">${ownerFinanceLocked?' (オーナー専用台帳へ移行済み)':subs.some(s=>s.unitPrice>0)?' (サブ案件から自動計算)':!j&&suggestedUnitPrice!==null?' (クライアント一覧から自動入力)':''}</span></div><input type="number" id="j-unit" min="0" step="1" value="${j?jobTotalIn(j)||'':up||''}" placeholder="0" data-client-price-auto="${!j&&suggestedUnitPrice!==null?'1':'0'}" oninput="this.dataset.clientPriceAuto='0';updJobProfit()" ${ownerFinanceLocked||subs.some(s=>s.unitPrice>0)?'readonly style="opacity:.6"':''}><div style="font-size:10px;color:var(--t3);margin-top:3px">${ownerFinanceLocked?'確定済みの金額はオーナー専用台帳に固定されています。進行・日付などは引き続き変更できます。':'今回だけ金額が違う場合は、この案件の金額だけ変更できます。クライアント一覧の標準単価は変わりません。'}</div></div>
-  <div class="fg" id="jf-wpay"><div class="fl" id="jl-wpay">ワーカー支払額（円）<span id="j-wpay-hint" style="font-size:10px;color:var(--t3);font-weight:400">${ownerFinanceLocked?' (オーナー専用台帳へ移行済み)':subs.some(s=>s.workerPay>0)?' (自動計算)':''}</span></div><input type="number" id="j-wpay" value="${j?jobTotalOut(j)||'':''}" placeholder="0" oninput="updJobProfit()" ${ownerFinanceLocked||subs.some(s=>s.workerPay>0)?'readonly style="opacity:.6"':''}></div>
+  <div class="fg"><div class="fl" id="jl-unit">クライアント単価（円）<span id="j-unit-hint" style="font-size:10px;color:var(--t3);font-weight:400">${ownerFinanceLocked?' (オーナー専用台帳に保存)':subs.some(s=>s.unitPrice>0)?' (サブ案件から自動計算)':!j&&suggestedUnitPrice!==null?' (クライアント一覧から自動入力)':''}</span></div><input type="number" id="j-unit" min="0" step="1" value="${j?jobTotalIn(j)||'':up||''}" placeholder="0" data-client-price-auto="${!j&&suggestedUnitPrice!==null?'1':'0'}" oninput="this.dataset.clientPriceAuto='0';updJobProfit()" ${subs.some(s=>s.unitPrice>0)?'readonly style="opacity:.6"':''}><div style="font-size:10px;color:var(--t3);margin-top:3px">${ownerFinanceLocked?'オーナーはこの案件の金額を変更できます。変更内容はオーナー専用台帳へ保存され、編集者には表示されません。':'今回だけ金額が違う場合は、この案件の金額だけ変更できます。クライアント一覧の標準単価は変わりません。'}</div></div>
+  <div class="fg" id="jf-wpay"><div class="fl" id="jl-wpay">ワーカー支払額（円）<span id="j-wpay-hint" style="font-size:10px;color:var(--t3);font-weight:400">${ownerFinanceLocked?' (オーナー専用台帳に保存)':subs.some(s=>s.workerPay>0)?' (自動計算)':''}</span></div><input type="number" id="j-wpay" value="${j?jobTotalOut(j)||'':''}" placeholder="0" oninput="updJobProfit()" ${subs.some(s=>s.workerPay>0)?'readonly style="opacity:.6"':''}></div>
 </div>
 <div class="fg" id="jf-profit"><div class="fl" id="jl-profit">利益（自動計算）</div>
   <div id="j-profit-disp" style="padding:8px 12px;background:var(--card2);border-radius:var(--rs);font-weight:700;color:${pr>=0?'var(--green)':'var(--red)'}">¥${pr.toLocaleString()}</div>
@@ -14197,7 +14236,7 @@ function openJobModal(id,preStatus,preClientId){
 <div id="j-sub-cont" data-finance-locked="${ownerFinanceLocked?'1':'0'}">${subs.map((s,i)=>_jobModalSubCompactHtml(s,i,jbiz,ownerFinanceLocked)).join('')}</div>
 <div style="display:flex;gap:6px;align-items:center;margin-bottom:5px">
   <button type="button" id="j-add-subcase" class="btn btn-g btn-xs" onclick="addJobSubField()">＋ サブ案件を追加</button>
-  <span style="font-size:11px;color:var(--t3)">${ownerFinanceLocked?'新しいサブ案件は追加できます。移行済みの金額台帳は変更しません。':'単価・支払を入力すると案件全体が自動計算'}</span>
+  <span style="font-size:11px;color:var(--t3)">${ownerFinanceLocked?'単価・支払はオーナーが変更でき、専用台帳へ保存されます。':'単価・支払を入力すると案件全体が自動計算'}</span>
 </div>
 </div>
 `:''}<div id="j-ops-checklist">${opsChecklistHtml(jbiz,j)}</div><div class="fg"><div class="fl">メモ</div><textarea id="j-notes" rows="2">${esc(j?.notes||'')}</textarea></div>
@@ -14397,10 +14436,10 @@ function mkSubRow(s,ph,bk,originalIndex=-1,financeLocked=false){
       </div>
     </div>
     <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">単価（円）</div>
-      <input class="j-sub-price" type="number" min="0" step="1" value="${subPrice}" data-price-auto="${isNew?'1':'0'}" placeholder="0" style="font-size:12px;padding:4px 6px${financeLocked?';opacity:.6':''}" oninput="this.dataset.priceAuto='0';updSubPrices()" ${financeLocked?'readonly':''}>
+      <input class="j-sub-price" type="number" min="0" step="1" value="${subPrice}" data-price-auto="${isNew?'1':'0'}" placeholder="0" style="font-size:12px;padding:4px 6px" oninput="this.dataset.priceAuto='0';updSubPrices()">
     </div>
     <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">支払（円）</div>
-      <input class="j-sub-pay" type="number" value="${s.workerPay||''}" placeholder="0" style="font-size:12px;padding:4px 6px${financeLocked?';opacity:.6':''}" oninput="updSubPrices()" ${financeLocked?'readonly':''}>
+      <input class="j-sub-pay" type="number" min="0" step="1" value="${s.workerPay||''}" placeholder="0" style="font-size:12px;padding:4px 6px" oninput="updSubPrices()">
       <div class="j-sub-payment-recipient" style="font-size:10px;line-height:1.45;margin-top:3px;color:${_paymentRecipientForRecord(s,s.workerId).ok?'var(--t2)':'var(--red)'}">${esc(_paymentRecipientHint(s.workerId,s))}</div>
     </div>
   </div>
@@ -14483,7 +14522,7 @@ function _appendWorkerOpt(w){
     sel.appendChild(opt);
   });
 }
-function saveJob(){
+async function saveJob(){
   const title=document.getElementById('j-ttl')?.value.trim();
   if(!title){toast('タイトルを入力してください','err');return;}
   if(_isOwner()&&!document.getElementById('j-invoice')?.value){toast('請求書提出日を入力してください（請求書ページで使います）','warn');return;}
@@ -14568,6 +14607,10 @@ function saveJob(){
   const primaryWorkerId=selWorkerIds[0]||null,billingSnapshot=_paymentRecipientSnapshot(primaryWorkerId,current||{});
   const accountSelect=document.getElementById('j-account'),accountId=accountSelect?.value||null,accountName=accountId?(accountSelect?.selectedOptions?.[0]?.textContent||current?.accountName||''):null;
   const data={title,biz:document.getElementById('j-biz')?.value||'edit',monthlyFee:_isOwner()?(parseInt(document.getElementById('j-monthly')?.value)||0):(Number(current?.monthlyFee)||0),jobType:document.getElementById('j-type')?.value||'edit',clientId:document.getElementById('j-cl').value||null,accountId,accountName,workerIds:selWorkerIds,workerId:primaryWorkerId,...billingSnapshot,scope:document.getElementById('j-scope').value||null,status:requestedStatus,isTrial,unitPrice,profit:_isOwner()?unitPrice:(Number(current?.profit)||unitPrice),workerPay,sharedDate:document.getElementById('j-shared').value||null,editorDraftDateSetter:aggregateDraftSetter,editorDraftDate:aggregateDraftDate,clientDraftDate:document.getElementById('j-client-draft').value||null,thumbnailDate:document.getElementById('j-thumbnail')?.value||null,deliveryDate:document.getElementById('j-deliver').value||null,completedDeliveryDate:!hasSubtasks&&parentInternalOnly?(document.getElementById('j-completed-delivery')?.value||null):(current?.completedDeliveryDate||null),manualIds:canManageMaterials?_selectedJobCaseManualIds(document.getElementById('j-manuals')):_caseManualIds(current?.manualIds),caution:canManageMaterials?String(document.getElementById('j-caution')?.value||'').trim().slice(0,2000):String(current?.caution||''),requestUrl:canManageMaterials?parentRequestUrl:(current?.requestUrl||''),sourceUrl:canManageMaterials?parentSourceUrl:(current?.sourceUrl||''),invoiceDate:_isOwner()?(document.getElementById('j-invoice')?.value||null):(current?.invoiceDate||null),dueDate:_isOwner()?(document.getElementById('j-due')?.value||null):(current?.dueDate||null),paymentDate:_isOwner()?(document.getElementById('j-payin')?.value||null):(current?.paymentDate||null),paidAt:_isOwner()?(document.getElementById('j-paid-val')?.value||null):(current?.paidAt||null),payoutDate:_isOwner()?(document.getElementById('j-payout')?.value||null):(current?.payoutDate||null),salesRep:_isOwner()?(document.getElementById('j-sales-rep')?.value||null):(current?.salesRep||null),salesPay:_isOwner()?(parseInt(document.getElementById('j-sales-pay')?.value)||0):(Number(current?.salesPay)||0),notes:document.getElementById('j-notes').value.trim(),opsChecklist:readOpsChecklist(),subtasks,attachments:canManageMaterials?parentAttachmentRead.items:_videoAttachments(current?.attachments),updatedAt:Date.now(),updatedBy:_myEmail()};
+  if(financeProtected){
+    try{await _saveOwnerFinanceSnapshot(currentFinance,current,data)}
+    catch(error){console.warn('owner finance save failed',error);toast('単価・支払をオーナー専用台帳へ保存できなかったため、案件の保存を中止しました','warn');return;}
+  }
   // Once finance is moved to an owner-only ledger, shared/mcapp must never
   // receive those amounts again. Dates and operational fields remain editable.
   const sharedData=financeProtected
@@ -18279,7 +18322,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260903-01';
+const APP_VERSION='20260903-02';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -18356,13 +18399,13 @@ window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});  
 checkServerVersion();                                                              // 初回表示でも旧版を即時検出
   </script>
 <script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
-<script src="./editor-push.js?v=20260903-01"></script>
-<script src="./bulletin.js?v=20260903-01"></script>
-<script src="./direct-messages.js?v=20260903-01"></script>
+<script src="./editor-push.js?v=20260903-02"></script>
+<script src="./bulletin.js?v=20260903-02"></script>
+<script src="./direct-messages.js?v=20260903-02"></script>
 <script>
   try{if(V==='directmessages')render();else renderNav();}catch(error){console.warn('owner dm init',error);}
 </script>
-<script src="./manager-features.js?v=20260903-01"></script>
-<script src="./sales-video-leads.js?v=20260903-01"></script>
+<script src="./manager-features.js?v=20260903-02"></script>
+<script src="./sales-video-leads.js?v=20260903-02"></script>
 </body>
 </html>

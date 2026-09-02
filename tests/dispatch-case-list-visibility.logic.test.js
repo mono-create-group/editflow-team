@@ -13,7 +13,7 @@ test('案件一覧 uses the unified board that includes direct editor dispatch j
 });
 
 test('legacy-only manage-board is not exposed as the main 案件 tab', () => {
-  assert.match(source, /\?\['board','manage-profit','manage-payment','manage-completed','manager-editors','manager-clients'\]/);
+  assert.match(source, /\?\['board','manage-calendar','manage-priority','manage-profit','manage-payment','manage-completed','manager-editors','manager-clients'\]/);
   assert.match(source, /BIZ_CFG\[biz\]\.tabs\.filter\(k=>k!=='board'/);
   assert.doesNotMatch(source, /title="案件一覧" onclick="setVideoTab\('manage-board'\)"/);
 });

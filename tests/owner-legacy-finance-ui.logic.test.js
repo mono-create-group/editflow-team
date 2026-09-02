@@ -37,13 +37,16 @@ test('a verified migration can replace stale shared finance without weakening or
   assert.ok(persist>=0&&remember>persist,'sanitized state must persist before the restore token is remembered');
 });
 
-test('migrated finance is immutable in the legacy modal while operational fields stay available',()=>{
+test('owner can edit migrated case prices while the private ledger boundary stays in place',()=>{
   assert.match(source,/const ownerFinanceLocked=!!\(j\?\._ownerFinance\|\|rawJob\?\.ownerFinanceId\)/);
-  assert.match(source,/ownerFinanceLocked\?' \(\u30aa\u30fc\u30ca\u30fc\u5c02\u7528\u53f0\u5e33\u3078\u79fb\u884c\u6e08\u307f\)'/);
+  assert.match(source,/_saveOwnerFinanceSnapshot\(currentFinance,current,data\)/);
+  assert.match(source,/currentParentAmounts/);
+  assert.match(source,/currentSubtaskAmounts/);
   assert.match(source,/data-finance-locked=/);
-  assert.match(source,/financeLocked\?'readonly'/);
+  assert.doesNotMatch(source,/class="j-sub-price"[^>]*readonly/);
+  assert.doesNotMatch(source,/class="j-sub-pay"[^>]*readonly/);
   assert.doesNotMatch(source,/id="j-add-subcase"[^>]*disabled/);
-  assert.match(source,/新しいサブ案件は追加できます。移行済みの金額台帳は変更しません。/);
+  assert.match(source,/単価・支払はオーナーが変更でき、専用台帳へ保存されます。/);
   assert.doesNotMatch(source,/if\(c\?\.dataset\.financeLocked==='1'\)return toast/);
   assert.match(source,/mkSubRow\(\{\},'サブ案件',_curJobBiz\(\),-1,financeLocked\)/);
 });

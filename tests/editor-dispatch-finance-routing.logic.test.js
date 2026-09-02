@@ -47,10 +47,11 @@ test('owner case integration auto-fills client price and routes editor payment s
   const financeRules = rules.slice(rules.indexOf('match /owner_job_finance/{financeId}'), rules.indexOf('match /editor_portals/{uid}'));
   assert.match(financeRules, /allow read: if owner\(\)/);
   assert.match(financeRules, /allow create: if owner\(\)/);
-  assert.match(financeRules, /allow update, delete: if false/);
+  assert.match(financeRules, /allow update: if owner\(\) && validOwnerJobFinanceUpdate\(\)/);
+  assert.match(financeRules, /allow delete: if false/);
 });
 
-test('dispatch invoice approval uses the immutable owner ledger instead of a portal amount', () => {
+test('dispatch invoice approval uses the owner-only current ledger instead of a portal amount', () => {
   assert.match(index, /function _portalApprovedPayAmount\(job\)/);
   const refresh = index.slice(index.indexOf('async function _refreshInvoiceAuthorization'), index.indexOf('function _videoDriveUrl'));
   const check = index.slice(index.indexOf('function _portalInvoiceCheck'), index.indexOf('async function portalRegistrationReview'));
@@ -60,7 +61,7 @@ test('dispatch invoice approval uses the immutable owner ledger instead of a por
   assert.match(check, /Number\(line\.amount\)!==approvedPay/);
   assert.match(rules, /function validDispatchPayableMirror\(uid, jobId\)/);
   assert.match(rules, /existsAfter\(financePath\)/);
-  assert.match(rules, /getAfter\(financePath\)\.data\.approvedPayAmount/);
+  assert.match(rules, /finance\.get\('currentApprovedPayAmount', finance\.approvedPayAmount\)/);
 });
 
 test('client price never enters editor-readable portal records', () => {

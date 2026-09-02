@@ -15,7 +15,7 @@ function effective(base,row){
 test('legacy correction applies the approved 3500 minus 500 delta without rewriting the source amount',()=>{
   const result=effective(3500,{originalWorkerPay:3500,deltaWorkerPay:-500,correctedWorkerPay:3000,originalTitleHash:'a'.repeat(64)});
   assert.deepEqual(result,{amount:3000,warning:false});
-  assert.match(source,/const correction=_legacyCorrectionForLine/);
+  assert.match(source,/const correction=hasCurrent\?null:_legacyCorrectionForLine/);
   assert.match(source,/effectivePay=correction\?Number\(correction\.correctedWorkerPay\):workerPay/);
 });
 

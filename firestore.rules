@@ -588,6 +588,27 @@ service cloud.firestore {
         && request.resource.data.updatedAt is timestamp;
     }
 
+    // The confirmed source record remains unchanged. Owners may keep a current
+    // amount snapshot on the same private document so a case price can be
+    // corrected from the normal case editor without exposing it to editors.
+    function validOwnerJobFinanceUpdate() {
+      return request.resource.data.currentClientUnitPrice is int
+        && request.resource.data.currentClientUnitPrice >= 0
+        && request.resource.data.currentClientUnitPrice <= 100000000
+        && request.resource.data.currentApprovedPayAmount is int
+        && request.resource.data.currentApprovedPayAmount >= 0
+        && request.resource.data.currentApprovedPayAmount <= 100000000
+        && request.resource.data.revision is int
+        && request.resource.data.revision == resource.data.get('revision', 0) + 1
+        && request.resource.data.updatedAt is timestamp
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy is string
+        && request.resource.data.updatedBy == request.auth.token.email
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'currentClientUnitPrice','currentApprovedPayAmount','revision','updatedAt','updatedBy'
+        ]);
+    }
+
     function validOwnerDeliveryGoalBreakdown() {
       return request.resource.data.keys().hasAll([
           'internalTargetCount','internalTargetAmount',
@@ -754,6 +775,48 @@ service cloud.firestore {
         && request.resource.data.migratedBy.size() <= 320;
     }
 
+    function validOwnerLegacyCurrentParentAmounts() {
+      let amounts = request.resource.data.currentParentAmounts;
+      return amounts is map
+        && amounts.keys().hasOnly(['unitPrice','workerPay','profit','monthlyFee','salesPay'])
+        && amounts.keys().hasAll(['unitPrice','workerPay','profit','monthlyFee','salesPay'])
+        && amounts.unitPrice is int && amounts.unitPrice >= 0 && amounts.unitPrice <= 100000000
+        && amounts.workerPay is int && amounts.workerPay >= 0 && amounts.workerPay <= 100000000
+        && amounts.profit is int && amounts.profit >= -100000000 && amounts.profit <= 100000000
+        && amounts.monthlyFee is int && amounts.monthlyFee >= 0 && amounts.monthlyFee <= 100000000
+        && amounts.salesPay is int && amounts.salesPay >= 0 && amounts.salesPay <= 100000000;
+    }
+
+    // Migration originals stay immutable. Only the owner-editable current
+    // snapshot and its revision metadata may advance.
+    function validOwnerLegacyFinanceUpdate(financeId) {
+      return request.resource.data.keys().hasOnly([
+          'recordType','legacyJobId','sourceHash','parentAmounts','subtaskAmounts',
+          'currentParentAmounts','currentSubtaskAmounts','revision','migratedAt','migratedBy',
+          'updatedAt','updatedBy'
+        ])
+        && request.resource.data.recordType == resource.data.recordType
+        && request.resource.data.legacyJobId == financeId
+        && request.resource.data.legacyJobId == resource.data.legacyJobId
+        && request.resource.data.sourceHash == resource.data.sourceHash
+        && request.resource.data.parentAmounts == resource.data.parentAmounts
+        && request.resource.data.subtaskAmounts == resource.data.subtaskAmounts
+        && request.resource.data.migratedAt == resource.data.migratedAt
+        && request.resource.data.migratedBy == resource.data.migratedBy
+        && validOwnerLegacyCurrentParentAmounts()
+        && request.resource.data.currentSubtaskAmounts is list
+        && request.resource.data.currentSubtaskAmounts.size() <= 500
+        && request.resource.data.revision is int
+        && request.resource.data.revision == resource.data.revision + 1
+        && request.resource.data.updatedAt is timestamp
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy is string
+        && request.resource.data.updatedBy == request.auth.token.email
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'currentParentAmounts','currentSubtaskAmounts','revision','updatedAt','updatedBy'
+        ]);
+    }
+
     // A correction is a new, immutable evidence-backed delta against one
     // migrated legacy subtask. Rules bind every correction to the immutable
     // source row; later revisions must point to the preceding append-only row.
@@ -819,6 +882,7 @@ service cloud.firestore {
     function validDispatchPayableMirror(uid, jobId) {
       let legacyId = request.resource.data.get('linkedLegacyJobId', '');
       let financePath = /databases/$(database)/documents/owner_job_finance/$(legacyId);
+      let finance = getAfter(financePath).data;
       return request.resource.data.get('businessType', '') != 'dispatch'
         || (!('ownPay' in request.resource.data)
           && request.resource.data.get('payableApproved', false) != true)
@@ -828,7 +892,7 @@ service cloud.firestore {
           && getAfter(financePath).data.portalUid == uid
           && getAfter(financePath).data.portalJobId == jobId
           && getAfter(financePath).data.legacyJobId == legacyId
-          && request.resource.data.ownPay == getAfter(financePath).data.approvedPayAmount
+          && request.resource.data.ownPay == finance.get('currentApprovedPayAmount', finance.approvedPayAmount)
           && request.resource.data.ownPay > 0);
     }
 
@@ -1997,7 +2061,8 @@ service cloud.firestore {
     match /owner_job_finance/{financeId} {
       allow read: if owner();
       allow create: if owner() && validOwnerJobFinanceDocument();
-      allow update, delete: if false;
+      allow update: if owner() && validOwnerJobFinanceUpdate();
+      allow delete: if false;
     }
 
     // Owner-only monthly targets and immutable daily acknowledgement records.
@@ -2037,7 +2102,8 @@ service cloud.firestore {
     match /owner_legacy_finance/{financeId} {
       allow read: if owner();
       allow create: if owner() && validOwnerLegacyFinanceDocument(financeId);
-      allow update, delete: if false;
+      allow update: if owner() && validOwnerLegacyFinanceUpdate(financeId);
+      allow delete: if false;
     }
 
     match /owner_legacy_finance_corrections/{correctionId} {

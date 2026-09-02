@@ -389,13 +389,23 @@ async function expectAllowed(label, promise) {
     await expectDenied('owner cannot route an external editors settlement to the external editor', setDoc(doc(owner, 'owner_job_finance', 'bad-external-route'), ownerJobFinance({ legacyJobId: 'bad-external-route', payRoute: 'direct', payeeUid: 'external1', payeeWorkerId: 'worker-external1' })));
     await expectAllowed('owner routes a direct editors confirmed payment to that editor', setDoc(doc(owner, 'owner_job_finance', 'legacy-direct1-done1'), ownerJobFinance({ portalUid: 'direct1', portalJobId: 'done1', legacyJobId: 'legacy-direct1-done1', payRoute: 'direct', payeeUid: 'direct1', payeeWorkerId: 'worker-direct1', assigneeUid: 'direct1', assigneeWorkerId: 'worker-direct1', approvedPayAmount: 3000 })));
     await expectDenied('case price override requires an audit reason', setDoc(doc(owner, 'owner_job_finance', 'missing-override-reason'), ownerJobFinance({ legacyJobId: 'missing-override-reason', pricingSource: 'case_override', clientUnitPrice: 6500, overrideReason: '' })));
-    await expectDenied('confirmed case finance cannot be silently rewritten', updateDoc(doc(owner, 'owner_job_finance', 'legacy-external1-done1'), { approvedPayAmount: 9999, updatedAt: serverTimestamp() }));
+    await expectDenied('confirmed source amount cannot be silently rewritten', updateDoc(doc(owner, 'owner_job_finance', 'legacy-external1-done1'), { approvedPayAmount: 9999, updatedAt: serverTimestamp() }));
+    await expectAllowed('owner saves editable current case amounts without changing the confirmed source', updateDoc(doc(owner, 'owner_job_finance', 'legacy-external1-done1'), { currentClientUnitPrice: 6500, currentApprovedPayAmount: 3600, revision: 1, updatedAt: serverTimestamp(), updatedBy: 'mono.create.group@gmail.com' }));
+    await expectDenied('editor cannot update owner current case amounts', updateDoc(doc(direct1, 'owner_job_finance', 'legacy-external1-done1'), { currentClientUnitPrice: 1, currentApprovedPayAmount: 1, revision: 2, updatedAt: serverTimestamp(), updatedBy: 'direct1@example.com' }));
     await expectAllowed('owner creates an immutable legacy finance migration record', setDoc(doc(owner, 'owner_legacy_finance', 'legacy-finance-1'), ownerLegacyFinance()));
     await expectAllowed('owner reads an immutable legacy finance migration record', getDoc(doc(owner, 'owner_legacy_finance', 'legacy-finance-1')));
     await expectDenied('direct editor cannot read legacy finance migration records', getDoc(doc(direct1, 'owner_legacy_finance', 'legacy-finance-1')));
     await expectDenied('director cannot read legacy finance migration records', getDoc(doc(dir1, 'owner_legacy_finance', 'legacy-finance-1')));
     await expectDenied('legacy finance migration rejects malformed parent amounts', setDoc(doc(owner, 'owner_legacy_finance', 'legacy-finance-malformed'), ownerLegacyFinance({ legacyJobId: 'legacy-finance-malformed', parentAmounts: { unitPrice: 6000, workerPay: 3000, profit: 3000, monthlyFee: 0 } })));
-    await expectDenied('legacy finance migration records are immutable', updateDoc(doc(owner, 'owner_legacy_finance', 'legacy-finance-1'), { revision: 2 }));
+    await expectDenied('legacy finance source cannot be replaced by a revision-only update', updateDoc(doc(owner, 'owner_legacy_finance', 'legacy-finance-1'), { revision: 2 }));
+    await expectAllowed('owner saves editable current parent and subcase amounts beside the immutable migration source', updateDoc(doc(owner, 'owner_legacy_finance', 'legacy-finance-1'), {
+      currentParentAmounts: { unitPrice: 6500, workerPay: 3200, profit: 3300, monthlyFee: 0, salesPay: 0 },
+      currentSubtaskAmounts: [{ id: 'sub-1', index: 0, titleHash: 'b'.repeat(64), unitPrice: 6500, workerPay: 3200, profit: 3300, monthlyFee: 0, salesPay: 0 }],
+      revision: 2, updatedAt: serverTimestamp(), updatedBy: 'mono.create.group@gmail.com',
+    }));
+    await expectDenied('editor cannot update private legacy current amounts', updateDoc(doc(direct1, 'owner_legacy_finance', 'legacy-finance-1'), {
+      currentParentAmounts: { unitPrice: 1, workerPay: 1, profit: 0, monthlyFee: 0, salesPay: 0 }, currentSubtaskAmounts: [], revision: 3, updatedAt: serverTimestamp(), updatedBy: 'direct1@example.com',
+    }));
     await expectAllowed('owner appends an evidence-backed correction tied to the immutable legacy row', setDoc(doc(owner, 'owner_legacy_finance_corrections', 'legacy-finance-1__0__r1'), ownerLegacyFinanceCorrection()));
     await expectAllowed('owner reads a private legacy finance correction', getDoc(doc(owner, 'owner_legacy_finance_corrections', 'legacy-finance-1__0__r1')));
     await expectDenied('direct editor cannot read a private legacy finance correction', getDoc(doc(direct1, 'owner_legacy_finance_corrections', 'legacy-finance-1__0__r1')));
