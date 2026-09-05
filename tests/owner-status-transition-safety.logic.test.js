@@ -21,7 +21,7 @@ test('video owner options keep pre-assignment flow and expose the nine official 
 
 test('linked subcases change progress from the visible status field without bypassing the portal workflow', () => {
   assert.match(index, /function _legacyPortalStatusLocked\(record\)\{return !!\(record&&String\(record\.portalUid\|\|''\)\.trim\(\)&&String\(record\.portalJobId\|\|''\)\.trim\(\)\);\}/);
-  assert.match(index, /id="j-stat" \$\{linkedPortalParent\?'disabled':''\}/);
+  assert.match(index, /id="j-stat" onchange="jobStatusChanged\(this\)" \$\{linkedPortalParent\?'disabled':''\}/);
   assert.match(index, /class="j-sub-status"[^>]*onchange="jobSubStatusChanged\(this\)"/);
   assert.match(index, /portalStatusLocked&&!portalJob\?'disabled':''/);
   assert.match(index, /function _portalSubcaseStatusOptions\(job\)/);

@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const PORTAL_APP_VERSION='20260903-02';
+  const PORTAL_APP_VERSION='20260905-01';
   const feature={
     board:[],boardSelectedId:'',boardSearch:'',catalog:[],manuals:[],schedules:[],release:null,
     messages:new Map(),messageUnsubs:new Map(),messageLoading:new Set(),openMessageJobIds:new Set(),groupDraftSaving:new Set(),unsubs:[],startedFor:'',serverVersion:'',jobsListMode:'active',jobsTypeFilter:'all',lastSuggestionCode:'',
@@ -611,16 +611,20 @@
 
   function editorActionHtml(job,action,evidence){
     if(!action)return job.status==='FB待ち'?'<div class="job-waiting"><b>次にすること：</b>ディレクターからの確認・修正指示を待ちます（操作不要）</div>':'';
-    const jid=esc(job.id),statuses=editorAllowedStatuses(job);
-    return`<div class="job-next-action"><b>次にすること：</b>${esc(action[1])}</div><div class="job-submit-panel editor-progress-picker"><div class="field"><label for="quick-status-${jid}">進捗を選択</label><select id="quick-status-${jid}" onchange="updateEditorProgressChoice('${jid}')"><option value="" selected>進捗を選択してください</option>${statuses.map(status=>`<option value="${esc(status)}">${esc(editorProgressOptionLabel(job,status))}</option>`).join('')}</select></div><div id="quick-evidence-field-${jid}" class="field" hidden><label id="quick-evidence-label-${jid}" for="quick-evidence-${jid}">提出した内容のURL *</label><input id="quick-evidence-${jid}" type="url" value="${esc(evidence||'')}" placeholder="https://"></div><button id="quick-progress-save-${jid}" class="btn primary job-primary" type="button" onclick="submitEditorProgressChoice('${jid}')" disabled>選択した進捗を保存</button></div>`;
+    // 次の工程は確定しているため初期選択し、URL欄と提出ボタンを最初から使える状態にする。
+    const jid=esc(job.id),statuses=editorAllowedStatuses(job),preset=statuses.includes(action[0])?action[0]:'',presetEvidence=editorProgressNeedsEvidence(preset);
+    return`<div class="job-next-action"><b>次にすること：</b>${esc(action[1])}</div><div class="job-submit-panel editor-progress-picker"><div class="field"><label for="quick-status-${jid}">進捗を選択</label><select id="quick-status-${jid}" onchange="updateEditorProgressChoice('${jid}')"><option value=""${preset?'':' selected'}>進捗を選択してください</option>${statuses.map(status=>`<option value="${esc(status)}"${status===preset?' selected':''}>${esc(editorProgressOptionLabel(job,status))}</option>`).join('')}</select></div><div id="quick-evidence-field-${jid}" class="field"${presetEvidence?'':' hidden'}><label id="quick-evidence-label-${jid}" for="quick-evidence-${jid}">${editorProgressEvidenceLabel(preset)}</label><input id="quick-evidence-${jid}" type="url" value="${esc(evidence||'')}" placeholder="https://"></div><button id="quick-progress-save-${jid}" class="btn primary job-primary" type="button" onclick="submitEditorProgressChoice('${jid}')"${preset?'':' disabled'}>${esc(editorProgressButtonLabel(preset))}</button></div>`;
   }
+  function editorProgressNeedsEvidence(status){return['初稿提出済み','修正稿提出済み'].includes(String(status||''))}
+  function editorProgressEvidenceLabel(status){return status==='修正稿提出済み'?'修正稿URL *':status==='初稿提出済み'?'初稿URL *':'提出した内容のURL *'}
+  function editorProgressButtonLabel(status){return status==='初稿提出済み'?'初稿を提出':status==='修正稿提出済み'?'修正稿を提出':status==='編集者進行中'?'編集を開始':'選択した進捗を保存'}
 
   function updateEditorProgressChoice(jid){
-    const job=jobs.find(item=>item.id===jid),select=$('#quick-status-'+jid),status=String(select?.value||''),allowed=job?editorAllowedStatuses(job):[],requiresEvidence=['初稿提出済み','修正稿提出済み'].includes(status),field=$('#quick-evidence-field-'+jid),label=$('#quick-evidence-label-'+jid),button=$('#quick-progress-save-'+jid);
+    const job=jobs.find(item=>item.id===jid),select=$('#quick-status-'+jid),status=String(select?.value||''),allowed=job?editorAllowedStatuses(job):[],requiresEvidence=editorProgressNeedsEvidence(status),field=$('#quick-evidence-field-'+jid),label=$('#quick-evidence-label-'+jid),button=$('#quick-progress-save-'+jid);
     if(status&&!allowed.includes(status)){select.value='';return toast('この工程はディレクターまたは管理者が更新します')}
     if(field)field.hidden=!requiresEvidence;
-    if(label)label.textContent=status==='修正稿提出済み'?'修正稿URL *':'初稿URL *';
-    if(button){button.disabled=!status;button.textContent=status==='初稿提出済み'?'初稿を提出':status==='修正稿提出済み'?'修正稿を提出':status==='編集者進行中'?'編集を開始':'選択した進捗を保存';}
+    if(label)label.textContent=editorProgressEvidenceLabel(status);
+    if(button){button.disabled=!status;button.textContent=editorProgressButtonLabel(status);}
   }
 
   function submitEditorProgressChoice(jid){

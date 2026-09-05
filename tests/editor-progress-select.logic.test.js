@@ -23,9 +23,43 @@ function functionSource(source, name) {
 test('assigned job cards expose a visible progress selector instead of a one-action button', () => {
   assert.match(features, /<label for="quick-status-\$\{jid\}">進捗を選択<\/label>/);
   assert.match(features, /id="quick-status-\$\{jid\}" onchange="updateEditorProgressChoice\('\$\{jid\}'\)"/);
-  assert.match(features, /id="quick-progress-save-\$\{jid\}"[^>]+onclick="submitEditorProgressChoice\('\$\{jid\}'\)" disabled/);
+  assert.match(features, /id="quick-progress-save-\$\{jid\}"[^>]+onclick="submitEditorProgressChoice\('\$\{jid\}'\)"\$\{preset\?'':' disabled'\}/);
   assert.match(features, /進捗を選択してください/);
   assert.match(features, /job-submit-panel editor-progress-picker/);
+});
+
+test('the next workflow step is preselected so a revision can be submitted without touching the picker', () => {
+  const html = [];
+  const context = {
+    esc: value => String(value ?? ''),
+    videoStatusLabel: value => value,
+    toast: () => {},
+  };
+  vm.createContext(context);
+  vm.runInContext([
+    functionSource(features, 'editorWorkflow'),
+    functionSource(features, 'editorAllowedStatuses'),
+    functionSource(features, 'editorProgressOptionLabel'),
+    functionSource(features, 'editorProgressNeedsEvidence'),
+    functionSource(features, 'editorProgressEvidenceLabel'),
+    functionSource(features, 'editorProgressButtonLabel'),
+    functionSource(features, 'nextEditorJobAction'),
+    functionSource(features, 'editorActionHtml'),
+    'this.render=(job)=>editorActionHtml(job,nextEditorJobAction(job),job.evidenceUrl||"");',
+  ].join('\n'), context);
+
+  const revision = context.render({ id: 'job-1', status: '修正中', workflow: { round: 2, stage: 'editing' }, evidenceUrl: 'https://example.com/v1' });
+  assert.match(revision, /<option value="修正稿提出済み" selected>/);
+  assert.doesNotMatch(revision, /<option value="" selected>/);
+  assert.match(revision, /id="quick-evidence-field-job-1" class="field">/, 'the URL field is visible immediately');
+  assert.match(revision, /修正稿URL \*/);
+  assert.match(revision, /id="quick-progress-save-job-1"[^>]+onclick="submitEditorProgressChoice\('job-1'\)">修正稿を提出</);
+  assert.doesNotMatch(revision, /quick-progress-save-job-1"[^>]*disabled/);
+
+  const start = context.render({ id: 'job-2', status: 'アサイン済み', workflow: { round: 1, stage: 'editing' } });
+  assert.match(start, /<option value="編集者進行中" selected>/);
+  assert.match(start, /id="quick-evidence-field-job-2" class="field" hidden>/);
+  assert.match(start, /onclick="submitEditorProgressChoice\('job-2'\)">編集を開始</);
 });
 
 test('editor choices follow the current workflow and never expose manager-owned review states', () => {
@@ -64,6 +98,9 @@ test('selecting a submission reveals its evidence input while an ordinary start 
   vm.runInContext([
     functionSource(features, 'editorWorkflow'),
     functionSource(features, 'editorAllowedStatuses'),
+    functionSource(features, 'editorProgressNeedsEvidence'),
+    functionSource(features, 'editorProgressEvidenceLabel'),
+    functionSource(features, 'editorProgressButtonLabel'),
     functionSource(features, 'updateEditorProgressChoice'),
     'this.update=updateEditorProgressChoice;',
   ].join('\n'), context);
