@@ -22,8 +22,8 @@ test('calendar tab is available for both video businesses and uses the shared dr
   assert.match(html,/\['board','manage-calendar','manage-priority','manage-profit'/);
   assert.match(html,/'manage-calendar':'<path/);
   assert.match(html,/function _caseScheduleToggle\([\s\S]*aria-label="表示する初稿日"/);
-  assert.match(html,/function rProjCalendar\(\)[\s\S]*_caseScheduleRows\(field\)/);
-  assert.match(html,/function rProjPriority\(\)[\s\S]*_caseScheduleRows\(field\)/);
+  assert.match(html,/function rProjCalendar\(\)[\s\S]*?_caseScheduleScopedRows\(field\)/);
+  assert.match(html,/function rProjPriority\(\)[\s\S]*?_caseScheduleScopedRows\(field\)/);
 });
 
 test('calendar grid covers a complete month including leap day',()=>{

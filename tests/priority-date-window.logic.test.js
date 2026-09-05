@@ -45,7 +45,7 @@ test('priority view excludes completed parents and completed child rows', () => 
   const start = html.indexOf('function rProjPriority()');
   const end = html.indexOf('\nfunction rProjProfit()', start);
   const source = html.slice(start, end);
-  assert.match(source, /const rows=_caseScheduleRows\(field\)/);
+  assert.match(source, /const rows=_caseScheduleScopedRows\(field\)/);
   assert.match(source, /本日まで/);
   assert.match(source, /最も遠い日付、日付未設定の順に全件表示します/);
 });

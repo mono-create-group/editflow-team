@@ -127,3 +127,23 @@ test('saving a job or subcase as 完了 without a delivery date falls back to to
   assert.match(html,/completedDeliveryDate:!hasSubtasks&&parentInternalOnly\?\(document\.getElementById\('j-completed-delivery'\)\?\.value\|\|\(requestedStatus==='完了'\?today\(\):null\)\)/);
   assert.match(html,/requestedCompletionDate=completionEditable\?\(el\.querySelector\('\.j-sub-completed-delivery'\)\?\.value\|\|\(requestedSubStatus==='完了'\?today\(\):null\)\)/);
 });
+
+test('the calendar and priority views can be limited to mono.create internal editing',()=>{
+  assert.match(html,/let CASE_CAL_SCOPE=/);
+  assert.match(functionSource('_caseScheduleToggle'),/aria-label="表示する担当"[\s\S]*setCaseCalendarScope\('internal'\)[\s\S]*社内対応のみ/);
+  assert.match(functionSource('rProjCalendar'),/rows=_caseScheduleScopedRows\(field\)/);
+  assert.match(functionSource('rProjPriority'),/rows=_caseScheduleScopedRows\(field\)/);
+  const context={SELF_WID:'self',CASE_CAL_SCOPE:'internal',_videoWorkerAssignmentIds:job=>Array.isArray(job.workerIds)?job.workerIds:[],_caseScheduleRows:()=>[
+    {type:'job',job:{id:'a',workerIds:['self'],assignee:'mono.create社内対応'}},
+    {type:'job',job:{id:'b',workerIds:['w1'],assignee:'みゆう'}},
+    {type:'job',job:{id:'c',workerIds:['self','w1'],assignee:'2名'}},
+    {type:'sub',job:{id:'d',workerIds:[]},sub:{id:'d1',workerId:'self',assignee:'mono.create社内対応'}},
+    {type:'sub',job:{id:'d',workerIds:[]},sub:{id:'d2',workerId:'w2',assignee:'みゆう'}},
+    {type:'job',job:{id:'e',workerIds:[],assignee:'mono.create社内対応'}},
+  ]};
+  vm.createContext(context);
+  vm.runInContext(`${functionSource('_caseScheduleRowInternal')}\n${functionSource('_caseScheduleScopedRows')}\nthis.scoped=_caseScheduleScopedRows;`,context);
+  assert.deepEqual(context.scoped('editorDraftDate').map(r=>r.sub?r.sub.id:r.job.id),['a','d1','e']);
+  context.CASE_CAL_SCOPE='all';
+  assert.equal(context.scoped('editorDraftDate').length,6);
+});
