@@ -85,7 +85,7 @@ test('past dates in review or revision states are labelled as exempt rather than
 test('assigned jobs retain collapsible parent details while the application board uses selectable rows', () => {
   assert.match(features, /function editorJobParent\(job\)/);
   assert.match(features, /function editorGroupJobs\(list\)/);
-  assert.match(features, /<details[^>]+class="card editor-case-group">/);
+  assert.match(features, /<details[^>]+class="card editor-case-group"/);
   assert.match(features, /親案件を開くと、担当している子案件を確認・更新できます。/);
   assert.match(features, /editorGroupJobs\(ordered\)\.map\(group=>editorGroupHtml\(group\)\)/);
   assert.match(features, /group\.jobs\.map\(jobCard\)/);

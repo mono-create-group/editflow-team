@@ -36,7 +36,7 @@ test('the required progress save reports the classified failure and clears draft
   assert.match(source, /round:workflow\.round/);
   assert.match(source, /if\(select\)select\.value=previousStatus/);
   assert.match(source, /saveJobDraft\(jid\)/);
-  assert.match(source, /提出は記録されていません。入力内容は保持しました。/);
+  assert.match(functionSource('portalProgressFailureMessage'), /提出は記録されていません。[\s\S]*入力内容は保持しました。/);
   assert.match(source, /finally\{progressSavingIds\.delete\(jid\)\}/);
   assert.match(source, /portalWriteFailure\(e,'進捗の保存'\)/);
 });

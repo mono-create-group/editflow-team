@@ -1,10 +1,10 @@
 (function(){
   'use strict';
 
-  const PORTAL_APP_VERSION='20260905-02';
+  const PORTAL_APP_VERSION='20260905-03';
   const feature={
     board:[],boardSelectedId:'',boardSearch:'',catalog:[],manuals:[],schedules:[],release:null,
-    messages:new Map(),messageUnsubs:new Map(),messageLoading:new Set(),openMessageJobIds:new Set(),groupDraftSaving:new Set(),unsubs:[],startedFor:'',serverVersion:'',jobsListMode:'active',jobsTypeFilter:'all',lastSuggestionCode:'',
+    messages:new Map(),messageUnsubs:new Map(),messageLoading:new Set(),openMessageJobIds:new Set(),openCaseGroupKeys:new Set(),groupDraftSaving:new Set(),unsubs:[],startedFor:'',serverVersion:'',jobsListMode:'active',jobsTypeFilter:'all',lastSuggestionCode:'',
     dmPeers:[],dmThreads:[],dmMessages:[],dmActivePeerUid:'',dmActiveThreadId:'',dmThreadUnsub:null,dmMessageUnsub:null,dmLoading:false,dmError:'',dmStartedFor:'',dmInitialSnapshot:false,dmSeenMessages:new Map(),dmReadPending:new Map(),
     pushStatus:null,pushStatusFor:'',pushStatusLoading:false,
     weeklyRanking:null,weeklyRankingWeek:'',weeklyRankingUnsub:null,weeklyRankingLoading:false,weeklyRankingError:''
@@ -342,8 +342,10 @@
   }
   function editorGroupHtml(group,kind='jobs'){
     const workflow=editorWorkflow(editorJobSortByDeadline(group.jobs)[0]||group.jobs[0]),meta=[group.client,group.account].filter(Boolean).join(' / '),summary=editorGroupSummary(group);
-    return`<details id="editor-case-${esc(group.key)}" data-case-key="${esc(group.key)}" class="card editor-case-group"><summary aria-label="親案件 ${esc(group.title)} を開く"><span><b>${esc(group.title)}</b><small>${esc(meta||'クライアント・アカウント未設定')}</small><span class="editor-next-child">次：${esc(editorGroupNext(group))}</span></span><span class="editor-case-group-count">${esc(summary)}</span></summary>${kind==='jobs'?groupDraftPanel(group):''}<div class="editor-case-group-body">${group.jobs.map(jobCard).join('')}</div><div class="editor-workflow-hint">現在の進捗：${esc(editorWorkflowLabel(workflow.stage,group.jobs[0]?.status))} / ${workflow.round}回目</div></details>`;
+    // 再描画（Firestore更新のたびに画面全体を作り直す）で開いた親案件が閉じないよう、開閉状態を保持する。
+    return`<details id="editor-case-${esc(group.key)}" data-case-key="${esc(group.key)}" class="card editor-case-group"${feature.openCaseGroupKeys.has(group.key)?' open':''} ontoggle="setEditorCaseGroupOpen('${esc(group.key)}',this.open)"><summary aria-label="親案件 ${esc(group.title)} を開く"><span><b>${esc(group.title)}</b><small>${esc(meta||'クライアント・アカウント未設定')}</small><span class="editor-next-child">次：${esc(editorGroupNext(group))}</span></span><span class="editor-case-group-count">${esc(summary)}</span></summary>${kind==='jobs'?groupDraftPanel(group):''}<div class="editor-case-group-body">${group.jobs.map(jobCard).join('')}</div><div class="editor-workflow-hint">現在の進捗：${esc(editorWorkflowLabel(workflow.stage,group.jobs[0]?.status))} / ${workflow.round}回目</div></details>`;
   }
+  function setEditorCaseGroupOpen(key,open){const k=String(key||'');if(!k)return;if(open)feature.openCaseGroupKeys.add(k);else feature.openCaseGroupKeys.delete(k)}
   function setEditorJobsListMode(mode){feature.jobsListMode=mode==='completed'?'completed':'active';render()}
   function setEditorJobsTypeFilter(type){feature.jobsTypeFilter=['all','agency','dispatch'].includes(type)?type:'all';render()}
   function selectBoardJob(jid){
@@ -404,13 +406,34 @@
     return`${pageHead('匿名目安箱','氏名・メールアドレスを記録せずに、意見を送れます')}<div class="split"><div><div class="card"><div class="field"><label for="sg-category">種類</label><select id="sg-category"><option>業務改善</option><option>人間関係・ハラスメント</option><option>報酬・契約</option><option>アプリの不具合</option><option>その他</option></select></div><div class="field" style="margin-top:10px"><label for="sg-message">内容 *</label><textarea id="sg-message" maxlength="2000" placeholder="困っていることや、改善してほしいことを入力"></textarea></div><label class="check" style="margin-top:10px"><input id="sg-reply" type="checkbox" checked> 匿名で返信を受け取るためのコードを発行する</label><div class="actions"><button class="btn primary" onclick="submitSuggestion()">匿名で送信</button></div></div>${issued}</div><div><div class="card privacy-note"><b>匿名で送れます</b><span>ログインは不正利用を防ぐためだけに使います。投稿の内容には、あなたを特定する情報を保存しません。</span></div><div class="card" style="margin-top:10px"><b>管理者からの返信を確認</b><div class="field" style="margin-top:8px"><input id="sg-code" maxlength="32" placeholder="返信コード"></div><div class="actions"><button class="btn small" onclick="checkSuggestionReply()">返信を確認</button></div><div id="sg-reply-result" class="muted"></div></div></div></div>`;
   }
 
+  // Firestore の Timestamp・数値・ISO文字列のどれで来てもミリ秒に揃える。
+  function portalMillis(value){
+    if(!value)return 0;
+    if(typeof value==='number')return Number.isFinite(value)?value:0;
+    if(typeof value.toMillis==='function'){try{return value.toMillis()}catch(_){return 0}}
+    if(typeof value.seconds==='number')return value.seconds*1000;
+    const parsed=Date.parse(value);return Number.isFinite(parsed)?parsed:0;
+  }
+  // 案件内チャットの新着は、案件ドキュメントに控えた lastMessageAt で判定する。
+  // feature.messages は案件を開いた時だけ読み込むため、詳細を閉じると通知が消えていた。
+  function jobChatNotificationId(job){
+    const at=portalMillis(job?.lastMessageAt);
+    return at?`jobchat:${job.id}:${at}`:'';
+  }
+  function jobChatUnreadItem(job,read){
+    const id=jobChatNotificationId(job);
+    if(!id||read.has(id))return null;
+    if(String(job.lastMessageSenderUid||'')===String(user?.uid||''))return null;
+    const preview=String(job.lastMessagePreview||'').slice(0,90);
+    return{id,kind:'message',target:'jobs',jobId:job.id,icon:'💬',title:editorNotificationTitle(job),detail:preview||'案件内チャットに新しい連絡があります',timing:'未読',persistent:true,order:-1};
+  }
   function notificationItems(){
     const read=notificationReadIds(),items=[];
     feature.board.filter(x=>x.status==='open').forEach(x=>{const id=`board:${x.id}`;if(!read.has(id)){const requested=x.audience==='designated'||Array.isArray(x.eligibleUids)&&x.eligibleUids.length===1;items.push({id,kind:'board',target:'board',jobId:x.id,icon:requested?'🎯':'📣',title:x.title||'新しい募集案件',detail:`${requested?'あなたへの編集リクエスト ・ ':''}${x.clientName||''} ${x.editorDraftDate?`・初稿 ${x.editorDraftDate}`:''}`,timing:requested?'リクエスト':'新着',persistent:false})}});
     jobs.filter(activeJob).forEach(j=>{
       if(!j.editorDraftDate)items.push({id:`draft-missing:${j.id}`,kind:'required',target:'jobs',jobId:j.id,icon:'✏️',title:editorNotificationTitle(j),detail:'編集者初稿日を設定してください',timing:'要設定',persistent:true});
       [['editorDraftDate','編集者初稿','✏️'],['clientDraftDate','クライアント初稿','📋'],['deliveryDate','納期','📅']].forEach(([key,label,icon])=>{const value=j[key]||(key==='deliveryDate'?j.deadline:'');const days=daysFromToday(value);if(days===null||days>3||(days<0&&editorDeadlineExemptStatus(j.status)))return;items.push({id:`due:${j.id}:${key}:${value}`,kind:'due',target:'jobs',jobId:j.id,icon,title:editorNotificationTitle(j),detail:`${label} ${value}`,timing:days<0?`${Math.abs(days)}日超過`:days===0?'今日':days===1?'明日':`あと${days}日`,persistent:true,order:days})});
-      (feature.messages.get(j.id)||[]).forEach(m=>{const id=`message:${j.id}:${m.id}`;if(m.byUid!==user?.uid&&!read.has(id))items.push({id,kind:'message',target:'jobs',jobId:j.id,icon:'💬',title:editorNotificationTitle(j),detail:`${m.byName||'担当者'}：${String(m.body||'').slice(0,90)}`,timing:'未読',persistent:false,order:-1})});
+      const chat=jobChatUnreadItem(j,read);if(chat)items.push(chat);
     });
     return items.sort((a,b)=>(a.order??0)-(b.order??0)||String(a.title).localeCompare(String(b.title)));
   }
@@ -428,6 +451,7 @@
     const job=jobs.find(x=>x.id===jobId);if(!job)return;
     if(view!=='jobs'){view='jobs';render();return setTimeout(()=>openEditorJob(jobId),50)}
     ensureJobMessages(jobId);
+    feature.openCaseGroupKeys.add(String(editorJobParent(job).key||''));
     const group=document.querySelector(`[data-case-key="${CSS.escape(editorJobParent(job).key)}"]`);if(group)group.open=true;
     const card=document.querySelector(`#editor-job-${CSS.escape(jobId)}`)||document.getElementById(`job-editor-draft-${jobId}`)?.closest('article');
     card?.scrollIntoView({behavior:'smooth',block:'start'});
@@ -438,7 +462,7 @@
   function pushClient(){return window.EditorPush||null}
   function pushStatusCopy(status){
     if(status?.ready)return 'この端末は、アプリを閉じていてもDMの通知を受け取れる状態です。';
-    return status?.reason||'端末通知の状態を確認しています。';
+    return status?.message||status?.reason||'端末通知の状態を確認しています。';
   }
   async function refreshEditorPushStatus(shouldRender=false){
     if(window.EditflowFirestoreQuota?.isOpen?.()){if(shouldRender)toast('クラウド接続停止中。再読み込み後に操作してください');return}
@@ -566,7 +590,7 @@
   async function sendDirectMessage(event){
     event?.preventDefault?.();if(ADMIN_PREVIEW)return;const body=$('#dm-compose-body')?.value.trim()||'',peerUid=feature.dmActivePeerUid,api=dmApi();if(!body)return toast('メッセージを入力してください');if(!api||!peerUid)return toast('DMの相手を確認できません');
     const button=event?.submitter;if(button)button.disabled=true;
-    try{if(DEMO){feature.dmMessages.push({id:id(),senderUid:user.uid,senderName:editorDisplayName(),body,createdAt:now()});$('#dm-compose-body').value='';render();setTimeout(scrollDirectMessages,0);return toast('DMを送信しました')};const result=await api.send(peerUid,body);const input=$('#dm-compose-body');if(input)input.value='';await openDirectMessage(peerUid,result.threadId);toast('DMを送信しました');const push=pushClient();if(push&&result?.threadId&&user?.getIdToken){user.getIdToken().then(idToken=>push.dispatchDirectThread({threadId:result.threadId,idToken})).catch(error=>console.warn('dm push dispatch',error))}}catch(error){console.warn(error);toast('DMを送信できませんでした')}finally{if(button?.isConnected)button.disabled=false}
+    try{if(DEMO){feature.dmMessages.push({id:id(),senderUid:user.uid,senderName:editorDisplayName(),body,createdAt:now()});$('#dm-compose-body').value='';render();setTimeout(scrollDirectMessages,0);return toast('DMを送信しました')};const result=await api.send(peerUid,body);const input=$('#dm-compose-body');if(input)input.value='';await openDirectMessage(peerUid,result.threadId);toast('DMを送信しました');const push=pushClient();if(push&&result?.threadId&&user?.getIdToken){user.getIdToken().then(idToken=>push.dispatchDirectThread({threadId:result.threadId,idToken})).catch(error=>{console.warn('dm push dispatch',error);toast('メッセージは保存しましたが、相手への通知は届かなかった可能性があります')})}}catch(error){console.warn(error);toast('DMを送信できませんでした')}finally{if(button?.isConnected)button.disabled=false}
   }
   async function markAllDirectMessagesRead(){const api=dmApi(),threads=feature.dmThreads.filter(x=>x.unread&&x.lastSenderUid!==user?.uid);if(!api||!threads.length)return;try{await api.markAllRead(threads);feature.dmThreads=feature.dmThreads.map(x=>({...x,unread:false}));syncEditorAppBadge();render();toast('すべてのDMを既読にしました')}catch(error){console.warn(error);toast('DMを既読にできませんでした')}}
   function retryDirectMessages(){feature.dmStartedFor='';startDmFeatures(true);render()}
@@ -783,7 +807,18 @@
     const body=$('#msg-body-'+jid)?.value.trim()||'',url=$('#msg-url-'+jid)?.value.trim()||'',kind=$('#msg-kind-'+jid)?.value||'連絡';if(!validText(body,2000))return toast('メッセージを入力してください');if(url&&!safeUrl(url))return toast('URLを確認してください');
     const data={body,kind,url:url?safeUrl(url):'',byUid:user.uid,byName:editorDisplayName(),byRole:isExternal()?'外部編集者':'編集者',createdAt:DEMO?now():firebase.firestore.FieldValue.serverTimestamp()};
     if(DEMO){feature.messages.set(jid,[...(feature.messages.get(jid)||[]),{id:id(),...data}]);render();return toast('メッセージを送信しました')}
-    try{await db.collection('editor_portals').doc(user.uid).collection('editor_jobs').doc(jid).collection('messages').add(data);toast('メッセージを送信しました')}catch(e){console.warn(e);toast('メッセージを送信できませんでした')}
+    try{
+      const jobRef=db.collection('editor_portals').doc(user.uid).collection('editor_jobs').doc(jid);
+      await jobRef.collection('messages').add(data);
+      toast('メッセージを送信しました');
+      // 相手の端末へPush通知。失敗しても送信自体は成立しているので、警告だけ出す。
+      try{const push=pushClient();if(push?.dispatchNotify&&user?.getIdToken){user.getIdToken().then(idToken=>push.dispatchNotify({kind:'case_message',portalUid:user.uid,jobId:jid,idToken})).then(result=>{if(result&&result.ok===false)toast('メッセージは保存しましたが、相手への通知は届かなかった可能性があります')}).catch(error=>console.warn('case message push',error))}}catch(error){console.warn('case message push',error)}
+      // 相手が案件を開いていなくても新着に気づけるよう、案件側へ直近1件だけ控える。
+      // ここが失敗しても送信自体は成立しているので、本文は保持したままにする。
+      const at=now();
+      try{await jobRef.update({lastMessageAt:at,lastMessageSenderUid:user.uid,lastMessagePreview:String(body).replace(/\s+/g,' ').trim().slice(0,80),updatedAt:at})}
+      catch(error){console.warn('job chat stamp',error&&error.code||error)}
+    }catch(e){console.warn(e);toast('メッセージを送信できませんでした')}
   }
 
   function toggleAllAvailabilityDays(checked){document.querySelectorAll('.av-bulk-day').forEach(x=>{x.checked=checked})}
@@ -913,6 +948,7 @@
   window.updateEditorProgressChoice=updateEditorProgressChoice;
   window.submitEditorProgressChoice=submitEditorProgressChoice;
   window.submitEditorJobAction=submitEditorJobAction;
+  window.setEditorCaseGroupOpen=setEditorCaseGroupOpen;
   window.enableEditorDeviceNotifications=enableEditorDeviceNotifications;
   window.enableEditorPushNotifications=enableEditorPushNotifications;
   window.disableEditorPushNotifications=disableEditorPushNotifications;

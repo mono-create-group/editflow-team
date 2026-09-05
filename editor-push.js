@@ -10,7 +10,27 @@
   'use strict';
 
   const STORAGE_PREFIX = 'mc_editor_push_device_';
+  const INSTALL_SEEN_KEY = 'mc_editor_push_install_seen';
   const SCHEMA_VERSION = 1;
+  const NOTIFY_KINDS = ['invoice_submitted', 'invoice_returned', 'feedback', 'case_message'];
+
+  /*
+   * `reason` is a stable machine code and `message` is the sentence to show.
+   * Splitting them lets the UI branch on the cause (for example: offer the
+   * iPhone install steps only when installation is actually what is missing)
+   * without matching on Japanese prose.
+   */
+  const REASON_MESSAGES = Object.freeze({
+    unsupported: 'この端末・ブラウザでは通知を利用できません。',
+    ios_not_installed: 'iPhoneは、共有メニューから「ホーム画面に追加」してから通知を設定してください。',
+    ios_open_from_home: 'ホーム画面に追加済みです。追加したアイコンからアプリを開き直すと通知を設定できます。',
+    permission_denied: '通知が拒否されています。端末の設定から通知を許可してください。',
+    permission_default: '通知を許可してください。',
+    server_not_ready: '通知サーバーの準備中です。設定が完了するまで通知は有効になりません。',
+    not_subscribed: 'この端末はまだ通知に登録されていません。「通知を有効にする」を押してください。',
+    unknown: '通知の状態を確認できませんでした。通信を確認して、もう一度お試しください。',
+    ok: 'この端末で通知を受け取れます。',
+  });
 
   function string(value, max) {
     return String(value || '').trim().slice(0, max);
@@ -52,6 +72,20 @@
     return /\/editor\.html$/i.test(String(global.location?.pathname || ''))
       ? './editor.html?notification=1'
       : './?notification=1';
+  }
+
+  // An iPhone that is opened from Safari and one that was never added to the
+  // Home Screen look identical to the page.  Remembering that this browser has
+  // run in standalone mode at least once separates the two, so the user is
+  // told to re-open the installed app instead of installing it again.
+  function rememberInstalled() {
+    if (!isInstalled()) return false;
+    try { global.localStorage?.setItem(INSTALL_SEEN_KEY, '1'); } catch (_) {}
+    return true;
+  }
+
+  function everInstalled() {
+    try { return global.localStorage?.getItem(INSTALL_SEEN_KEY) === '1'; } catch (_) { return false; }
   }
 
   function supported() {
@@ -130,8 +164,15 @@
     return global.navigator.serviceWorker.ready;
   }
 
+  function withReason(result, reason) {
+    result.reason = reason;
+    result.message = REASON_MESSAGES[reason] || REASON_MESSAGES.unknown;
+    return result;
+  }
+
   async function status(options) {
     const uid = string(options?.uid, 128);
+    rememberInstalled();
     const result = {
       supported: supported(),
       secure: isSecure(),
@@ -143,33 +184,28 @@
       stored: false,
       ready: false,
       reason: '',
+      message: '',
     };
-    if (!result.supported) {
-      result.reason = 'この端末・ブラウザでは通知を利用できません。';
-      return result;
-    }
+    // The iPhone check runs first on purpose: Safari hides parts of the push
+    // API outside a Home Screen app, so "unsupported" would otherwise hide the
+    // one instruction that actually fixes it.
     if (requiresInstalledApp() && !result.installed) {
-      result.reason = 'iPhoneではホーム画面に追加してから通知を設定してください。';
-      return result;
+      return withReason(result, everInstalled() ? 'ios_open_from_home' : 'ios_not_installed');
     }
+    if (!result.supported) return withReason(result, 'unsupported');
     if (result.permission !== 'granted') {
-      result.reason = result.permission === 'denied' ? '通知が拒否されています。端末の設定から許可してください。' : '通知を許可してください。';
-      return result;
+      return withReason(result, result.permission === 'denied' ? 'permission_denied' : 'permission_default');
     }
-    if (!result.configured) {
-      result.reason = '通知サーバーの準備中です。設定が完了するまで通知は有効になりません。';
-      return result;
-    }
+    if (!result.configured) return withReason(result, 'server_not_ready');
     try {
       const reg = await registration();
       result.subscribed = Boolean(await reg.pushManager.getSubscription());
       if (options?.db && uid) result.stored = Boolean((await deviceRef(options.db, uid).get()).exists);
       result.ready = result.subscribed && result.stored;
-      result.reason = result.ready ? 'この端末で通知を受け取れます。' : '通知の登録を完了してください。';
+      return withReason(result, result.ready ? 'ok' : 'not_subscribed');
     } catch (_) {
-      result.reason = '通知の状態を確認できませんでした。通信を確認して、もう一度お試しください。';
+      return withReason(result, 'unknown');
     }
-    return result;
   }
 
   async function subscribe(options) {
@@ -197,6 +233,26 @@
     // upgraded with appPath without rewriting their original creation time.
     await ref.set(existing.exists ? data : { ...data, createdAt: Date.now() }, { merge: true });
     return status({ db, uid });
+  }
+
+  /*
+   * A push endpoint can be dropped by the browser or expired by the push
+   * service, and the worker deletes the device row when it sees 404/410.  This
+   * re-registers the device on the next app start so the user does not have to
+   * notice the silence and re-enable notifications by hand.  It never prompts:
+   * without an already-granted permission it just reports the current status.
+   */
+  async function ensureSubscribed(options) {
+    rememberInstalled();
+    const current = await status(options);
+    if (current.ready) return current;
+    if (current.permission !== 'granted' || !current.configured || !current.supported) return current;
+    if (requiresInstalledApp() && !current.installed) return current;
+    try {
+      return await subscribe(options);
+    } catch (_) {
+      return current;
+    }
   }
 
   async function unsubscribe(options) {
@@ -268,9 +324,50 @@
     return response.json();
   }
 
+  /*
+   * Like dispatchDirectThread, this names a record — never a recipient.  The
+   * worker re-checks the caller's Firestore access to that record and derives
+   * who should be told.  A `targetUid` is not accepted here and is ignored by
+   * the server.
+   *
+   * Unlike dispatchDirectThread this resolves instead of throwing, because the
+   * caller has already committed the underlying write: a failed notification
+   * is a warning to show, not a reason to unwind a saved invoice or feedback.
+   */
+  async function dispatchNotify(options) {
+    const active = config();
+    const kind = string(options?.kind, 40);
+    const token = string(options?.idToken, 4096);
+    if (!active.enabled) return { ok: false, reason: 'push_server_not_ready' };
+    if (!NOTIFY_KINDS.includes(kind)) return { ok: false, reason: 'push_kind_invalid' };
+    if (!token) return { ok: false, reason: 'push_dispatch_input_invalid' };
+    const payload = { kind };
+    ['portalUid', 'jobId', 'invoiceId', 'threadId'].forEach((key) => {
+      const value = string(options?.[key], 300);
+      if (value) payload[key] = value;
+    });
+    try {
+      const response = await global.fetch(`${active.endpoint.replace(/\/$/, '')}/v1/push/notify`, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+        credentials: 'omit',
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result?.ok !== true) {
+        return { ok: false, reason: string(result?.error, 120) || `push_dispatch_rejected_${response.status}` };
+      }
+      return { ok: true, ...result };
+    } catch (_) {
+      return { ok: false, reason: 'push_dispatch_unreachable' };
+    }
+  }
+
+  rememberInstalled();
+
   global.EditorPush = Object.freeze({
     config, supported, isInstalled, requiresInstalledApp, appPath, permission, status, subscribe, unsubscribe,
-    enable: subscribe, disable: unsubscribe, dispatchDirectThread, stableDeviceId,
-    syncBadge, pendingBadgeCount,
+    enable: subscribe, disable: unsubscribe, ensureSubscribed, dispatchDirectThread, dispatchNotify, stableDeviceId,
+    syncBadge, pendingBadgeCount, reasonMessages: REASON_MESSAGES, notifyKinds: Object.freeze(NOTIFY_KINDS.slice()),
   });
 }(window));

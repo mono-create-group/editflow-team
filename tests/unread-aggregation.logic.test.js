@@ -193,7 +193,7 @@ test('an owner approval or rejection clears the invoice notification without a s
 test('the 請求書 sidebar entry shows a red count for invoices waiting on the owner', () => {
   assert.match(owner, /const invoicesPending=c\.id==='videoinvoices'\?ownerInvoiceUnreadItems\(\)\.length:0;/);
   assert.match(owner, /invoicesPending\?`<span class="video-submission-nav-badge" aria-label="未確認の請求書 \$\{invoicesPending\}件">/);
-  assert.match(owner, /_ownerPortalBridgeReady\.invoices=true;_notifyOwnerPortalBridge\(\);\s*ownerSyncAppBadge\(\);/);
+  assert.match(owner, /_ownerPortalBridgeReady\.invoices=true;_ownerPortalInvoiceSyncFailed=false;_notifyOwnerPortalBridge\(\);\s*ownerSyncAppBadge\(\);/);
 });
 
 test('authentication changes clear stale unread registry and device badge before rebuilding', () => {

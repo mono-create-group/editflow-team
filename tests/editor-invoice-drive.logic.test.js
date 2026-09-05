@@ -196,7 +196,7 @@ test('legacy tax-exclusive invoices cannot be submitted or approved', () => {
   assert.match(manager, /taxInclusive:true,\.\.\.totals/);
 });
 
-test('manual invoice rules bind the only line, tax rate, and totals before allowing a revision', () => {
+test('manual invoice rules bind the lines, tax rate, and totals before allowing a revision', () => {
   const rules = fs.readFileSync(path.join(__dirname, '..', 'firestore.rules'), 'utf8');
   const start = rules.indexOf('function validManualInvoice');
   const end = rules.indexOf('function validCompletedJobEvidence', start);
@@ -204,12 +204,16 @@ test('manual invoice rules bind the only line, tax rate, and totals before allow
   for (const required of [
     'request.resource.data.taxInclusive == true',
     'lines[0].jobId == request.resource.data.jobIds[0]',
-    'lines[0].amount == request.resource.data.total',
     "lines[0].taxRate in [0, 10]",
     "taxByRate.get('0', -1)",
     "taxByRate.get('10', -1)",
-    'request.resource.data.subtotal == request.resource.data.lines[0].amount - request.resource.data.tax',
-    'int((request.resource.data.lines[0].amount * 10 + 55) / 110)',
+    'request.resource.data.total == request.resource.data.subtotal + request.resource.data.tax',
+    'int((request.resource.data.total * 10 + 55) / 110)',
     'supersedesInvoiceId is string'
   ]) assert.match(source, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  // 完了案件を選んで組む明細は複数行になる。行数は jobIds と一致し、50件までに限る。
+  assert.match(source, /lines\.size\(\) == request\.resource\.data\.jobIds\.size\(\)/);
+  assert.match(source, /jobIds\.size\(\) <= 50/);
+  // 1明細のときは、従来どおり明細金額と税込合計の一致まで確かめる。
+  assert.match(source, /lines\.size\(\) != 1\s*\|\| request\.resource\.data\.lines\[0\]\.amount == request\.resource\.data\.total/);
 });

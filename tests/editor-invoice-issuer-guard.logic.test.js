@@ -27,6 +27,28 @@ function overrideOf(name) {
   return editor.slice(start, editor.indexOf('\n', start));
 }
 
+// 上書きは何段か重なるので、最後に代入された関数式が実際に動く定義になる。
+function effectiveOf(name) {
+  let start = -1;
+  for (const shape of [`\n  ${name}=function`, `\n  ${name}=async function`]) {
+    const at = editor.lastIndexOf(shape);
+    if (at > start) start = at;
+  }
+  if (start >= 0) start += 1; else start = editor.indexOf(`function ${name}(`);
+  assert.ok(start >= 0, `${name} must be defined`);
+  let paren = 0, body = -1;
+  for (let i = editor.indexOf('(', start); i < editor.length; i += 1) {
+    if (editor[i] === '(') paren += 1;
+    if (editor[i] === ')' && --paren === 0) { body = editor.indexOf('{', i); break; }
+  }
+  let depth = 0;
+  for (let i = body; i < editor.length; i += 1) {
+    if (editor[i] === '{') depth += 1;
+    if (editor[i] === '}' && --depth === 0) return editor.slice(start, i + 1);
+  }
+  assert.fail(`${name} must close`);
+}
+
 function issuerContext() {
   const context = vm.createContext({ profile: {}, String, Array, RegExp });
   vm.runInContext(`${editor.match(/const INVOICE_ISSUER_FIELDS=\[[\s\S]*?\];/)[0]}
@@ -51,7 +73,7 @@ test('the invoice page always shows how many issuer fields are filled and a way 
   assert.match(card, /onclick="setView\('settings'\)">請求者情報を開く<\/button>/);
   assert.match(card, /未入力：\$\{esc\(missing\.join\('・'\)\)\}/);
   // The card is rendered by the effective (overridden) create panel, not the legacy one.
-  assert.match(overrideOf('invoiceCreatePanel'), /return`\$\{invoiceIssuerStatusCard\(\)\}<div class="card">/);
+  assert.match(effectiveOf('invoiceCreatePanel'), /\$\{invoiceStepsHtml\(state\)\}\$\{invoiceIssuerStatusCard\(\)\}/);
 });
 
 test('the editor menu names the settings page after the invoice information it holds', () => {
@@ -67,18 +89,20 @@ test('the editor menu names the settings page after the invoice information it h
 });
 
 test('draft creation stops before writing when any issuer field is missing', () => {
-  const guard = /const issuerMissing=invoiceIssuerMissingFields\(profile\);if\(issuerMissing\.length\)return toast\(`請求者情報が未入力です（\$\{issuerMissing\.join\('・'\)\}）。「請求者情報・登録」で入力してください`\);/;
-  assert.match(overrideOf('draftInvoice'), guard);
-  assert.match(overrideOf('draftManualInvoice'), guard);
+  const guard = /const issuerMissing=invoiceIssuerMissingFields\(profile\);\s*if\(issuerMissing\.length\)return toast\(`請求者情報が未入力です（\$\{issuerMissing\.join\('・'\)\}）。「請求者情報・登録」で入力してください`\);/;
+  assert.match(effectiveOf('draftInvoice'), guard);
+  assert.match(effectiveOf('draftManualInvoice'), guard);
   // The guard runs before the form is read, so no Firestore batch can start.
-  assert.ok(overrideOf('draftManualInvoice').indexOf('issuerMissing') < overrideOf('draftManualInvoice').indexOf('db.batch()'));
+  assert.ok(effectiveOf('draftManualInvoice').indexOf('issuerMissing') < effectiveOf('draftManualInvoice').indexOf('db.batch()'));
 });
 
 test('submitting re-checks the issuer details stored on the invoice itself', () => {
-  const submit = sourceOf('submitInvoice');
+  const submit = effectiveOf('submitInvoice');
   assert.match(submit, /const issuerMissing=invoiceIssuerMissingFields\(invoiceIssuerFromDocument\(x\)\);/);
   assert.match(submit, /「請求者情報を開く」から入力し、請求書を作り直してください/);
-  assert.ok(submit.indexOf('issuerMissing') < submit.indexOf('confirm('), 'the check must stop the submit before the confirm dialog');
+  // 確定はネイティブの confirm() ではなく確認ブロックのチェックで行う。
+  assert.doesNotMatch(submit, /confirm\(/);
+  assert.ok(submit.indexOf('issuerMissing') < submit.indexOf('invoiceConfirmedIds.has(iid)'), 'the check must stop the submit before the confirmation gate');
   const { missing, fromDocument } = issuerContext();
   assert.deepEqual(Array.from(missing(fromDocument({ issuer: { name: '山田 美咲', bankName: '北海道銀行', bankBranch: '旭川支店', bankNumber: '1234567', bankHolder: 'ヤマダ ミサキ' } }))), []);
   assert.deepEqual(Array.from(missing(fromDocument({ issuer: { name: '山田 美咲', bankName: '北海道銀行', bankNumber: '1234567' } }))), ['支店名', '口座名義（カナ）']);
@@ -99,14 +123,18 @@ this.lump=isMonthlyLumpInvoiceDescription;`, context);
   });
 });
 
-test('the manual invoice form asks for one case name at a time and blocks lump descriptions', () => {
-  const draft = overrideOf('draftManualInvoice');
-  assert.match(draft, /if\(isMonthlyLumpInvoiceDescription\(description\)\)return toast\('案件名を1件ずつ入力してください（例：ショート動画 003）'\);/);
-  assert.ok(draft.indexOf('isMonthlyLumpInvoiceDescription') < draft.indexOf('db.batch()'));
-  const panel = overrideOf('invoiceCreatePanel');
-  assert.match(panel, /id="manual-invoice-description" maxlength="200" placeholder="例：ショート動画 003"/);
-  assert.match(panel, /案件名を1件ずつ入力します。「8月分」のようなまとめ書きは受け付けません。/);
-  assert.doesNotMatch(panel, /placeholder="例：ショート動画編集 5本"/);
+test('line items come from completed cases, so a lump "8月分" description cannot be typed at all', () => {
+  const panel = effectiveOf('invoiceCreatePanel');
+  // 自由入力の請求内容そのものを廃止したので、まとめ書きの入り口がない。
+  assert.doesNotMatch(panel, /id="manual-invoice-description"/);
+  assert.match(panel, /2 明細 ・ 請求する完了案件を選ぶ/);
+  assert.match(panel, /明細の案件名には使いません/);
+  const draft = effectiveOf('draftManualInvoice');
+  // 明細は選択した完了案件から組み立てる。案件名は案件ドキュメントの title。
+  assert.match(draft, /const selection=invoiceSelectionResult\(\);/);
+  assert.ok(draft.indexOf('invoiceSelectionResult') < draft.indexOf('db.batch()'));
+  const rows = effectiveOf('invoiceSelectionResult');
+  assert.match(rows, /title:x\.title,serviceDescription:x\.title,transactionDate:x\.deliveryDate/);
 });
 
 test('a cancelled Drive reconnect during retry no longer flags every failure as a reconnect', () => {

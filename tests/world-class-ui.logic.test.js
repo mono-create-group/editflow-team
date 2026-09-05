@@ -83,7 +83,7 @@ test('notifications contain stable deep-link data and open the target context', 
 });
 
 test('assigned parent cases keep details while board child cases use a selected table row', () => {
-  assert.match(features, /<details[^>]+class="card editor-case-group">/);
+  assert.match(features, /<details[^>]+class="card editor-case-group"/);
   assert.match(features, /editor-case-group>summary/);
   assert.match(features, /group\.jobs\.map\(jobCard\)/);
   assert.match(features, /class="application-subcase-table" role="table" aria-label="子案件一覧"/);

@@ -8,7 +8,7 @@ const editor = fs.readFileSync(path.join(root, 'editor.html'), 'utf8');
 const features = fs.readFileSync(path.join(root, 'editor-features.js'), 'utf8');
 
 test('Firestore snapshot bursts are coalesced to one animation frame while direct render remains available', () => {
-  assert.match(editor, /function scheduleSnapshotRender\(\)\{if\(snapshotRenderFrame!==null\)return/);
+  assert.match(editor, /function scheduleSnapshotRender\(\)\{\s*if\(editorIsTypingInApp\(\)\)[\s\S]*?if\(snapshotRenderFrame!==null\)return/);
   assert.match(editor, /window\.requestAnimationFrame\|\|\(\(fn\)=>setTimeout\(fn,16\)\)/);
   assert.match(editor, /snapshotRenderFrame=enqueue\(\(\)=>\{snapshotRenderFrame=null;render\(\)\}\)/);
   for (const collection of ['editor_profile', 'editor_jobs', 'editor_invoices', 'invoice_authorizations']) {

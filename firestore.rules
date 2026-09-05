@@ -53,6 +53,12 @@ service cloud.firestore {
         && request.resource.data.dueDate == request.resource.data.paymentDueDate;
     }
 
+    // 請求書の発行者欄に印字する任意の住所。必須にはしない。
+    function validIssuerAddress() {
+      return request.resource.data.get('address', '') is string
+        && request.resource.data.get('address', '').size() <= 120;
+    }
+
     function validManualInvoice(uid) {
       return request.resource.data.authorizationId == 'manual'
         && request.resource.data.taxInclusive == true
@@ -61,12 +67,17 @@ service cloud.firestore {
         && request.resource.data.version >= 1
         && request.resource.data.editorUid == uid
         && request.resource.data.jobIds is list
-        && request.resource.data.jobIds.size() == 1
+        && request.resource.data.jobIds.size() >= 1
+        && request.resource.data.jobIds.size() <= 50
         && request.resource.data.lines is list
-        && request.resource.data.lines.size() == 1
+        && request.resource.data.lines.size() == request.resource.data.jobIds.size()
         && request.resource.data.lines[0].jobId == request.resource.data.jobIds[0]
-        && request.resource.data.lines[0].amount == request.resource.data.total
         && request.resource.data.lines[0].taxRate in [0, 10]
+        // 1明細のときは従来どおり明細金額と合計の一致まで見る。複数明細は合計から
+        // 内税を検算する（Rules はリストを合算できないため、明細ごとの合算は
+        // オーナー承認時の _portalInvoiceCheck が再計算して確かめる）。
+        && (request.resource.data.lines.size() != 1
+          || request.resource.data.lines[0].amount == request.resource.data.total)
         && request.resource.data.invoiceAvailableOn is string
         && request.resource.data.invoiceAvailableOn.matches('^[0-9]{4}-[0-9]{2}-25$')
         && request.resource.data.paymentDueDate is string
@@ -76,10 +87,9 @@ service cloud.firestore {
         && request.resource.data.subtotal > 0
         && request.resource.data.tax >= 0
         && request.resource.data.total == request.resource.data.subtotal + request.resource.data.tax
-        && request.resource.data.subtotal == request.resource.data.lines[0].amount - request.resource.data.tax
         && ((request.resource.data.lines[0].taxRate == 0 && request.resource.data.tax == 0)
           || (request.resource.data.lines[0].taxRate == 10
-            && request.resource.data.tax == int((request.resource.data.lines[0].amount * 10 + 55) / 110)))
+            && request.resource.data.tax == int((request.resource.data.total * 10 + 55) / 110)))
         && request.resource.data.taxByRate is map
         && request.resource.data.taxByRate.size() == 1
         && ((request.resource.data.lines[0].taxRate == 0 && request.resource.data.taxByRate.get('0', -1) == request.resource.data.tax)
@@ -1086,10 +1096,24 @@ service cloud.firestore {
         && validDispatchPayableMirror(uid, jobId);
     }
 
+    // 案件内チャットの新着控え。案件を開いていない相手にも新着を見せるため、送信者が
+    // 自分の直近1件だけを案件ドキュメントへ書く。他の項目は従来どおり触れない。
+    function validJobChatStamp(uid) {
+      return (directorFor(uid) || editor(uid))
+        && request.resource.data.get('lastMessageSenderUid', '') == request.auth.uid
+        && request.resource.data.get('lastMessageAt', 0) is number
+        && request.resource.data.get('lastMessageAt', 0) > 0
+        && request.resource.data.get('lastMessagePreview', '') is string
+        && request.resource.data.get('lastMessagePreview', '').size() <= 80;
+    }
+
     function validPortalJobUpdate(uid, jobId) {
       let changed = request.resource.data.diff(resource.data).affectedKeys();
       let eventType = changed.hasAny(['progressEvents']) ? portalUpdateEventType() : '';
-      return eventType in [
+      return changed.hasOnly([
+          'lastMessageAt','lastMessageSenderUid','lastMessagePreview','updatedAt'
+        ]) ? validJobChatStamp(uid)
+        : eventType in [
           'director_approved','director_revision_requested','client_submitted',
           'client_revision_requested','client_approved_completed'
         ] ? validGuidedPortalUpdate(uid)
@@ -2313,8 +2337,10 @@ service cloud.firestore {
             'retentionUntil','version','idempotencyKey','file',
             'ownerShareStatus','createdAt','updatedAt','history',
             'submittedAt','reviewReason','supersedesInvoiceId',
-            'authorizationId','authorizationRevision'
+            'authorizationId','authorizationRevision','note'
           ])
+          && request.resource.data.get('note', '') is string
+          && request.resource.data.get('note', '').size() <= 500
           && request.resource.data.recordType == 'editor_invoice'
           && request.resource.data.taxInclusive == true
           && request.resource.data.editorUid == uid
@@ -2341,8 +2367,10 @@ service cloud.firestore {
           && request.resource.data.status in ['下書き','提出済み']
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'file','ownerShareStatus','status','submittedAt','updatedAt',
-            'recipientName','issuer','taxInclusive','jobIds','lines','subtotal','taxByRate','tax','total'
+            'recipientName','issuer','taxInclusive','jobIds','lines','subtotal','taxByRate','tax','total','note'
           ])
+          && request.resource.data.get('note', '') is string
+          && request.resource.data.get('note', '').size() <= 500
           && (request.resource.data.status == '下書き'
             || (request.resource.data.file.provider == 'google-drive'
               && request.resource.data.file.id is string
@@ -2380,15 +2408,17 @@ service cloud.firestore {
         allow read: if portalManager(uid) || editor(uid);
         allow create: if owner() || (editor(uid)
           && request.resource.data.keys().hasOnly([
-            'issuerName','registrationNumber','registrationVerified','taxRate',
+            'issuerName','address','registrationNumber','registrationVerified','taxRate',
             'bankName','bankBranch','bankType','bankNumber','bankHolder','updatedAt'
           ])
+          && validIssuerAddress()
           && request.resource.data.registrationVerified == false);
         allow update: if owner() || (editor(uid)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'issuerName','registrationNumber','registrationVerified','taxRate',
+            'issuerName','address','registrationNumber','registrationVerified','taxRate',
             'bankName','bankBranch','bankType','bankNumber','bankHolder','updatedAt'
           ])
+          && validIssuerAddress()
           && (request.resource.data.registrationVerified == false
             || request.resource.data.registrationVerified == resource.data.registrationVerified));
         allow delete: if false;

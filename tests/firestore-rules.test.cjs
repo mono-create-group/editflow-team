@@ -926,12 +926,47 @@ async function expectAllowed(label, promise) {
     await expectDenied('direct editor cannot create a legacy tax-exclusive invoice', setDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_invoices', 'manual-tax-exclusive'), manualInvoice('direct1', { taxInclusive: false, idempotencyKey: 'manual-direct-tax-exclusive' })));
     await expectDenied('direct editor cannot add tax on top of a tax-inclusive amount', setDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_invoices', 'manual-tax-added'), manualInvoice('direct1', { subtotal: 5000, taxByRate: { 10: 500 }, tax: 500, total: 5500, lines: [{ jobId: 'done1', title: '案件1', amount: 5000, taxRate: 10 }], idempotencyKey: 'manual-direct-tax-added' })));
     await expectDenied('direct editor cannot change the payment date independently of the calculated schedule', setDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_invoices', 'manual-tampered'), manualInvoice('direct1', { idempotencyKey: 'manual-direct-tampered', dueDate: '2026-09-30' })));
+    // 完了案件を選んで組む明細は複数行になる。行数は jobIds と一致していなければならない。
+    await expectAllowed('direct editor creates a manual invoice from several completed cases', setDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_invoices', 'manual-multi'), manualInvoice('direct1', {
+      idempotencyKey: 'manual-direct-multi', jobIds: ['done1', 'done-batch'],
+      lines: [
+        { jobId: 'done1', title: '案件1', serviceDescription: '案件1', transactionDate: '2026-09-10', amount: 3000, taxRate: 0 },
+        { jobId: 'done-batch', title: '案件2', serviceDescription: '案件2', transactionDate: '2026-09-11', amount: 2000, taxRate: 0 },
+      ],
+    })));
+    await expectDenied('manual invoice cannot carry more lines than billed cases', setDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_invoices', 'manual-line-mismatch'), manualInvoice('direct1', {
+      idempotencyKey: 'manual-direct-line-mismatch', jobIds: ['done1'],
+      lines: [
+        { jobId: 'done1', title: '案件1', amount: 3000, taxRate: 0 },
+        { jobId: 'done-batch', title: '案件2', amount: 2000, taxRate: 0 },
+      ],
+    })));
+    await expectAllowed('manual invoice may carry an optional free-text note', setDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_invoices', 'manual-note'), manualInvoice('direct1', { idempotencyKey: 'manual-direct-note', note: '9月の追加作業分をまとめています' })));
+    await expectDenied('manual invoice note is capped', setDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_invoices', 'manual-note-long'), manualInvoice('direct1', { idempotencyKey: 'manual-direct-note-long', note: 'あ'.repeat(501) })));
     await expectAllowed('direct editor keeps own mono.create invoice access', getDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_invoices', 'inv1')));
     await expectAllowed('direct editor keeps own invoice authorization access', getDoc(doc(direct1, 'editor_portals', 'direct1', 'invoice_authorizations', 'auth1')));
     await expectAllowed('video director keeps own direct-editor invoice access', getDoc(doc(dir1, 'editor_portals', 'dir1', 'editor_invoices', 'inv1')));
     await expectAllowed('video director keeps own direct-editor invoice authorization access', getDoc(doc(dir1, 'editor_portals', 'dir1', 'invoice_authorizations', 'auth1')));
     await expectDenied('director cannot read an external editor invoice', getDoc(doc(dir1, 'editor_portals', 'external1', 'editor_invoices', 'inv1')));
     await expectDenied('other director cannot see invoice', getDoc(doc(dir2, 'editor_portals', 'external1', 'editor_invoices', 'inv1')));
+
+    // 請求書の発行者欄に印字する任意の住所。必須ではないが、長さは制限する。
+    const issuerProfile = {
+      issuerName: '山田 美咲', address: '北海道旭川市1条通1丁目1-1', registrationNumber: '', registrationVerified: false,
+      taxRate: 10, bankName: '北海道銀行', bankBranch: '旭川支店', bankType: '普通', bankNumber: '1234567', bankHolder: 'ヤマダ ミサキ', updatedAt: 1,
+    };
+    await expectAllowed('direct editor saves an optional issuer address', setDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_profile', 'self'), issuerProfile));
+    await expectDenied('issuer address is capped', setDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_profile', 'self2'), { ...issuerProfile, address: 'あ'.repeat(121) }));
+    await expectDenied('editor cannot smuggle an unlisted profile field beside the address', setDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_profile', 'self3'), { ...issuerProfile, payoutOverride: 9999 }));
+
+    // 案件内チャットの新着控え。送信者本人だけが、この3項目＋updatedAt を書ける。
+    const chatStamp = { lastMessageAt: 1757030400000, lastMessageSenderUid: 'direct1', lastMessagePreview: '初稿を提出しました', updatedAt: 3 };
+    await expectAllowed('editor stamps the last chat message on own case', updateDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_jobs', 'draft-editor'), chatStamp));
+    await expectAllowed('owner stamps the last chat message on an editor case', updateDoc(doc(owner, 'editor_portals', 'direct1', 'editor_jobs', 'draft-editor'), { ...chatStamp, lastMessageSenderUid: 'owner', updatedAt: 4 }));
+    await expectDenied('editor cannot claim someone else sent the last chat message', updateDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_jobs', 'draft-editor'), { ...chatStamp, lastMessageSenderUid: 'owner', updatedAt: 5 }));
+    await expectDenied('chat preview is capped at 80 characters', updateDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_jobs', 'draft-editor'), { ...chatStamp, lastMessagePreview: 'あ'.repeat(81), updatedAt: 6 }));
+    await expectDenied('an unrelated editor cannot stamp another portal case', updateDoc(doc(external1, 'editor_portals', 'direct1', 'editor_jobs', 'draft-editor'), { ...chatStamp, lastMessageSenderUid: 'external1', updatedAt: 7 }));
+    await expectDenied('the chat stamp cannot smuggle another field through', updateDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_jobs', 'draft-editor'), { ...chatStamp, ownPay: 9999, updatedAt: 8 }));
 
     await expectAllowed('first editor atomically claims board', runTransaction(direct1, async (tx) => {
       const boardRef = doc(direct1, 'editor_job_board', 'direct-open');

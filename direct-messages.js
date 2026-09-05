@@ -345,10 +345,12 @@
     });
     const threads = [...byId.values()];
     const enriched = await Promise.all(threads.map(async thread => {
-      let receipt = {};
-      try { const snap = await me.state.db.collection('direct_threads').doc(thread.id).collection('reads').doc(me.uid).get(); receipt = snap.exists ? readData(snap.data()) : {}; } catch (_) {}
+      let receipt = {}, receiptPending = false;
+      // 既読レシートが読めないときは「未読」に倒さない。readAt=0 として扱うと、
+      // 既に読んだスレッドのバッジが消えなくなるため、判定そのものを保留する。
+      try { const snap = await me.state.db.collection('direct_threads').doc(thread.id).collection('reads').doc(me.uid).get(); receipt = snap.exists ? readData(snap.data()) : {}; } catch (_) { receiptPending = true; }
       const lastAt = millis(thread.lastMessageAt), readAt = millis(receipt.lastReadAt);
-      const unread = thread.lastSenderUid !== me.uid && lastAt > readAt;
+      const unread = receiptPending ? false : (thread.lastSenderUid !== me.uid && lastAt > readAt);
       const counterpartUid = otherParticipant(thread, me.uid);
       let counterpart = member(counterpartUid);
       // An owner can safely start the first conversation before their optional
@@ -358,7 +360,7 @@
         counterpart = { id: counterpartUid, name: 'オーナー', email: '', approved: true, owner: true, roles: ['動画編集ディレクター'], editorKind: 'direct' };
         peerCache = [...peerCache.filter(item => item.id !== counterpartUid), counterpart];
       }
-      return { ...thread, counterpartUid: otherParticipant(thread, me.uid), counterpartName: trim(counterpart?.name || counterpart?.email || 'メンバー'), lastReadAt: receipt.lastReadAt || null, unread };
+      return { ...thread, counterpartUid: otherParticipant(thread, me.uid), counterpartName: trim(counterpart?.name || counterpart?.email || 'メンバー'), lastReadAt: receipt.lastReadAt || null, unread, readReceiptPending: receiptPending };
     }));
     return enriched.sort((a, b) => millis(b.lastMessageAt || b.updatedAt) - millis(a.lastMessageAt || a.updatedAt));
   }

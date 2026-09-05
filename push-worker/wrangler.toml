@@ -12,3 +12,7 @@ FIREBASE_PROJECT_ID = "editflow-mono-create"
 FIRESTORE_DATABASE_ID = "(default)"
 EDITOR_PUSH_ALLOWED_ORIGINS = "https://mono-create-group.github.io,https://editflow-mono-create.firebaseapp.com,https://editflow-mono-create.web.app"
 WEB_PUSH_VAPID_SUBJECT = "mailto:mono.create.group@gmail.com"
+# Owner recipients for /v1/push/notify are resolved from these addresses (and
+# from an explicit `owner: true` access row), never from the request body.
+# Keep this in step with owner() in firestore.rules.
+OWNER_NOTIFY_EMAILS = "nakamurakouta512@gmail.com,mono.create.group@gmail.com"

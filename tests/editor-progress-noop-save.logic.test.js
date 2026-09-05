@@ -52,7 +52,7 @@ function makeHarness({ job = baseJob, changes, commitError } = {}) {
     db: { collection: () => ({ doc: () => ({ collection: () => ({ doc: () => ({ collection: () => ({ doc: () => ({}) }) }) }) }) }), batch: () => ({ update: () => { calls.update += 1; }, set: () => { calls.set += 1; }, commit: async () => { calls.commit += 1; if (commitError) throw new Error('offline'); } }) }
   };
   vm.createContext(context);
-  vm.runInContext(`${functionSource('jobProgressInputsUnchanged')}\n${functionSource('saveJobProgressRequired')}\nthis.save = saveJobProgressRequired;`, context);
+  vm.runInContext(`${functionSource('jobProgressInputsUnchanged')}\n${functionSource('portalProgressFailureMessage')}\n${functionSource('saveJobProgressRequired')}\nthis.save = saveJobProgressRequired;`, context);
   return { context, calls };
 }
 

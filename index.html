@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260905-02"></script>
+<script src="./billing-terms.js?v=20260905-03"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -999,7 +999,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260905-02">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260905-03">
 </head>
 <body class="owner-yellow-ui">
 
@@ -1059,8 +1059,8 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="./ai-bridge-client.js"></script>
-<script src="./owner-video-performance.js?v=20260905-02"></script>
-<script src="./feedback-workflow.js?v=20260905-02"></script>
+<script src="./owner-video-performance.js?v=20260905-03"></script>
+<script src="./feedback-workflow.js?v=20260905-03"></script>
 <script>/* lz-string 1.5.0 (MIT) — CDN非依存でオフライン/圧縮チーム同期を保証するためインライン化 */
 var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",e={};function t(r,o){if(!e[r]){e[r]={};for(var n=0;n<r.length;n++)e[r][r.charAt(n)]=n}return e[r][o]}var i={compressToBase64:function(r){if(null==r)return"";var n=i._compress(r,6,function(r){return o.charAt(r)});switch(n.length%4){default:case 0:return n;case 1:return n+"===";case 2:return n+"==";case 3:return n+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(n){return t(o,r.charAt(n))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(r){return null==r?"":""==r?null:i._decompress(r.length,16384,function(o){return r.charCodeAt(o)-32})},compressToUint8Array:function(r){for(var o=i.compress(r),n=new Uint8Array(2*o.length),e=0,t=o.length;e<t;e++){var s=o.charCodeAt(e);n[2*e]=s>>>8,n[2*e+1]=s%256}return n},decompressFromUint8Array:function(o){if(null==o)return i.decompress(o);for(var n=new Array(o.length/2),e=0,t=n.length;e<t;e++)n[e]=256*o[2*e]+o[2*e+1];var s=[];return n.forEach(function(o){s.push(r(o))}),i.decompress(s.join(""))},compressToEncodedURIComponent:function(r){return null==r?"":i._compress(r,6,function(r){return n.charAt(r)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),i._decompress(r.length,32,function(o){return t(n,r.charAt(o))}))},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(r,o,n){if(null==r)return"";var e,t,i,s={},u={},a="",p="",c="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<r.length;i+=1)if(a=r.charAt(i),Object.prototype.hasOwnProperty.call(s,a)||(s[a]=f++,u[a]=!0),p=c+a,Object.prototype.hasOwnProperty.call(s,p))c=p;else{if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++),s[p]=f++,c=String(a)}if(""!==c){if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++)}for(t=2,e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;for(;;){if(m<<=1,v==o-1){d.push(n(m));break}v++}return d.join("")},decompress:function(r){return null==r?"":""==r?null:i._decompress(r.length,32768,function(o){return r.charCodeAt(o)})},_decompress:function(o,n,e){var t,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:e(0),position:n,index:1};for(t=0;t<3;t+=1)l[t]=t;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return i}();"function"==typeof define&&define.amd?define(function(){return LZString}):"undefined"!=typeof module&&null!=module?module.exports=LZString:"undefined"!=typeof angular&&null!=angular&&angular.module("LZString",[]).factory("LZString",function(){return LZString});
 </script>
@@ -2115,10 +2115,10 @@ function fbSetupPortalOpsSync(){
   }
   if(_isOwner())_portalInvoicesUnsub=fbDb.collectionGroup('editor_invoices').onSnapshot(q=>{
     PORTAL_INVOICES=q.docs.filter(d=>d.ref.parent.parent&&d.ref.parent.parent.parent.id==='editor_portals').map(d=>({id:d.id,_portalUid:d.ref.parent.parent.id,_path:d.ref.path,...d.data()}));
-    _ownerPortalBridgeReady.invoices=true;_notifyOwnerPortalBridge();
+    _ownerPortalBridgeReady.invoices=true;_ownerPortalInvoiceSyncFailed=false;_notifyOwnerPortalBridge();
     ownerSyncAppBadge();
     renderSyncSafe();
-  },e=>_fbHandleSnapshotError(e,'editor portal invoices sync',err=>{_ownerPortalBridgeReady.invoices=false;_notifyOwnerPortalBridge();console.warn('editor portal invoices sync',err&&err.code||err)}));
+  },e=>_fbHandleSnapshotError(e,'editor portal invoices sync',err=>{_ownerPortalBridgeReady.invoices=false;_ownerPortalInvoiceSyncFailed=true;_notifyOwnerPortalBridge();console.warn('editor portal invoices sync',err&&err.code||err)}));
   if(_isOwner())_portalProfilesUnsub=fbDb.collectionGroup('editor_profile').onSnapshot(q=>{
     PORTAL_PROFILES=q.docs.filter(d=>d.ref.parent.parent&&d.ref.parent.parent.parent.id==='editor_portals').map(d=>({id:d.id,_portalUid:d.ref.parent.parent.id,_path:d.ref.path,...d.data()}));
     _ownerPortalBridgeReady.profiles=true;_notifyOwnerPortalBridge();
@@ -7104,6 +7104,13 @@ function _invoiceTermsForMonth(month){
 }
 function _portalIncludedTaxAmount(gross,rate){const amount=Math.round(Number(gross)||0),percent=Number(rate)||0;return percent>0?Math.round(amount*percent/(100+percent)):0}
 function _portalTaxInclusiveTotals(lines=[]){const grossByRate={};let total=0;(lines||[]).forEach(line=>{const amount=Math.round(Number(line?.amount)||0),rate=Number(line?.taxRate)||0;total+=amount;grossByRate[rate]=(grossByRate[rate]||0)+amount});const taxByRate=Object.fromEntries(Object.entries(grossByRate).map(([rate,gross])=>[rate,_portalIncludedTaxAmount(gross,Number(rate))])),tax=Object.values(taxByRate).reduce((sum,value)=>sum+Number(value||0),0);return{subtotal:total-tax,taxByRate,tax,total}}
+// 税率の許容値は編集者側と同じ [0,10]。8%の旧プロフィールは 10% に読み替えず、そのまま
+// 通して請求書チェックで警告として見せる。
+function _portalProfileTaxRate(profile){
+  const rate=Number(profile?.taxRate);
+  if([0,10].includes(rate))return rate;
+  return rate===8?8:0;
+}
 function _directorTeamInvoiceLines(portalUid,month,rate){
   const lines=[];
   (BJOBS()||[]).filter(j=>j&&!j.deleted).forEach(j=>{
@@ -7153,7 +7160,7 @@ async function rebuildAllDirectorInvoiceAuthorizations(){
 async function _refreshInvoiceAuthorization(portalUid,month,overrideJob){
   if(!_isOwner()||!month||_portalIsExternal(portalUid))return;
   const all=(PORTAL_JOBS||[]).map(j=>j._portalUid===portalUid&&overrideJob&&j.id===overrideJob.id?{...j,...overrideJob}:j),jobs=all.filter(j=>{const terms=_portalBillingTerms(j.completedDeliveryDate),approvedPay=_portalApprovedPayAmount(j);return j._portalUid===portalUid&&j.status==='完了'&&terms?.invoiceMonth===month&&j.payableApproved===true&&approvedPay>0}).sort((a,b)=>String(a.id).localeCompare(String(b.id)));
-  const profile=(PORTAL_PROFILES||[]).find(p=>p._portalUid===portalUid),rate=[0,8,10].includes(Number(profile?.taxRate))?Number(profile.taxRate):0,directLines=jobs.map(j=>({jobId:j.id,title:j.title||'',serviceDescription:j.title||'',transactionDate:j.completedDeliveryDate,amount:_portalApprovedPayAmount(j),taxRate:rate})),teamLines=_directorTeamInvoiceLines(portalUid,month,rate),lines=[...directLines,...teamLines].sort((a,b)=>String(a.jobId).localeCompare(String(b.jobId))),billingTerms=_portalBillingTerms(lines[0]?.transactionDate)||_invoiceTermsForMonth(month);if(!billingTerms||billingTerms.invoiceMonth!==month)return;
+  const profile=(PORTAL_PROFILES||[]).find(p=>p._portalUid===portalUid),rate=_portalProfileTaxRate(profile),directLines=jobs.map(j=>({jobId:j.id,title:j.title||'',serviceDescription:j.title||'',transactionDate:j.completedDeliveryDate,amount:_portalApprovedPayAmount(j),taxRate:rate})),teamLines=_directorTeamInvoiceLines(portalUid,month,rate),lines=[...directLines,...teamLines].sort((a,b)=>String(a.jobId).localeCompare(String(b.jobId))),billingTerms=_portalBillingTerms(lines[0]?.transactionDate)||_invoiceTermsForMonth(month);if(!billingTerms||billingTerms.invoiceMonth!==month)return;
   const jobIds=lines.map(x=>x.jobId),totals=_portalTaxInclusiveTotals(lines),subtotal=totals.subtotal,taxByRate=totals.taxByRate,tax=totals.tax,total=totals.total,active=jobIds.length>0,authId=month,ref=fbDb.collection('editor_portals').doc(portalUid).collection('invoice_authorizations').doc(authId),event=ref.collection('events').doc();
   await fbDb.runTransaction(async tx=>{
     const snap=await tx.get(ref),existing=snap.exists?snap.data():null,unchanged=existing&&existing.taxInclusive===true&&existing.active===active&&existing.month===month&&existing.invoiceAvailableOn===billingTerms.invoiceAvailableOn&&existing.paymentDueDate===billingTerms.paymentDueDate&&JSON.stringify(existing.jobIds||[])===JSON.stringify(jobIds)&&JSON.stringify(existing.lines||[])===JSON.stringify(lines)&&Number(existing.subtotal)===subtotal&&JSON.stringify(existing.taxByRate||{})===JSON.stringify(taxByRate)&&Number(existing.tax)===tax&&Number(existing.total)===total;
@@ -7161,6 +7168,17 @@ async function _refreshInvoiceAuthorization(portalUid,month,overrideJob){
     const revision=Number(existing?.revision||0)+1,invoiceVersion=1,invoiceDocumentId=`${authId}-r${revision}-v${invoiceVersion}`;
     tx.set(ref,{recordType:'invoice_authorization',taxInclusive:true,editorUid:portalUid,month,invoiceAvailableOn:billingTerms.invoiceAvailableOn,paymentDueDate:billingTerms.paymentDueDate,jobIds,lines,subtotal,taxByRate,tax,total,active,revision,invoiceVersion,invoiceDocumentId,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:_myEmail()},{merge:true});tx.set(event,{at:firebase.firestore.FieldValue.serverTimestamp(),byUid:FB_USER.uid,type:'authorization_refreshed',revision,invoiceVersion,invoiceDocumentId,invoiceAvailableOn:billingTerms.invoiceAvailableOn,paymentDueDate:billingTerms.paymentDueDate,jobCount:jobIds.length,total});
   });
+}
+// 案件内チャットの新着を、案件を開いていない相手にも見せるための控え。案件ドキュメントへ
+// 直近1件だけを書き、本文は80字に切り詰める（全文は messages サブコレクションが正）。
+function _jobChatPreview(body){return String(body||'').replace(/\s+/g,' ').trim().slice(0,80)}
+async function _stampJobChatLastMessage(portalUid,jobId,body,senderUid){
+  if(!portalUid||!jobId||!fbDb)return;
+  try{
+    await fbDb.collection('editor_portals').doc(String(portalUid)).collection('editor_jobs').doc(String(jobId)).update({
+      lastMessageAt:Date.now(),lastMessageSenderUid:String(senderUid||''),lastMessagePreview:_jobChatPreview(body),updatedAt:Date.now()
+    });
+  }catch(error){console.warn('job chat stamp',error&&error.code||error);}
 }
 function _videoDriveUrl(v){
   try{const u=new URL(v);return u.protocol==='https:'&&u.hostname==='drive.google.com'?u.href:'';}catch(_){return'';}
@@ -7173,7 +7191,7 @@ function _portalInvoiceCheck(x){
   const ids=Array.isArray(x.jobIds)?x.jobIds:[],lines=Array.isArray(x.lines)?x.lines:[];
   if(!ids.length||new Set(ids).size!==ids.length||lines.length!==ids.length)return{ok:false,reason:'請求対象案件の明細が一致しません'};
   if(x.authorizationId==='manual'){
-    for(const line of lines){const amount=Number(line.amount),rate=Number(line.taxRate||0);if(!(amount>0))return{ok:false,reason:'請求金額を確認してください'};if(![0,8,10].includes(rate))return{ok:false,reason:'税率を確認してください'};}
+    for(const line of lines){const amount=Number(line.amount),rate=Number(line.taxRate||0);if(!(amount>0))return{ok:false,reason:'請求金額を確認してください'};if(rate===8)return{ok:false,reason:'8%の旧税率が残っています。10%で請求書を作り直してください'};if(![0,10].includes(rate))return{ok:false,reason:'税率を確認してください'};}
     const totals=_portalTaxInclusiveTotals(lines);
     if(Number(x.subtotal)!==totals.subtotal||JSON.stringify(x.taxByRate||{})!==JSON.stringify(totals.taxByRate)||Number(x.tax)!==totals.tax||Number(x.total)!==totals.total)return{ok:false,reason:'税込金額・内税・合計を再確認してください'};
     const shared=(x.file?.sharedWith||[]).map(v=>String(v).toLowerCase()),requiredOwners=ADMIN_EMAILS.map(v=>String(v).toLowerCase());
@@ -7199,7 +7217,7 @@ function _portalInvoiceCheck(x){
   const duplicate=(PORTAL_INVOICES||[]).some(v=>v._portalUid===x._portalUid&&v.id!==x.id&&!['取消','差戻し'].includes(v.status)&&(v.jobIds||[]).some(jobId=>ids.includes(jobId)));
   if(duplicate)return{ok:false,reason:'同じ案件を含む有効な請求書が既にあります'};
   const teamLines=lines.filter(line=>String(line?.jobId||'').startsWith('team:'));
-  const profile=(PORTAL_PROFILES||[]).find(profile=>profile._portalUid===x._portalUid),rate=[0,8,10].includes(Number(profile?.taxRate))?Number(profile.taxRate):0;
+  const profile=(PORTAL_PROFILES||[]).find(profile=>profile._portalUid===x._portalUid),rate=_portalProfileTaxRate(profile);
   const expectedTeamLines=_directorTeamInvoiceLines(x._portalUid,String(x.month||''),rate);
   if(JSON.stringify(teamLines)!==JSON.stringify(expectedTeamLines))return{ok:false,reason:'外部編集者分の明細が現在の作業担当・支払先と一致しません'};
   const expectedTeamById=new Map(expectedTeamLines.map(line=>[String(line.jobId),line]));
@@ -7208,7 +7226,7 @@ function _portalInvoiceCheck(x){
     if(String(jobId).startsWith('team:')){
       const expected=expectedTeamById.get(String(jobId));
       if(!expected||JSON.stringify(line)!==JSON.stringify(expected))return{ok:false,reason:'外部編集者分の明細が現在の作業担当・支払先と一致しません'};
-      const teamRate=Number(line.taxRate||0);if(![0,8,10].includes(teamRate))return{ok:false,reason:'税率を確認してください'};
+      const teamRate=Number(line.taxRate||0);if(teamRate===8)return{ok:false,reason:'8%の旧税率が残っています。10%で請求書を作り直してください'};if(![0,10].includes(teamRate))return{ok:false,reason:'税率を確認してください'};
       continue;
     }
     const j=(PORTAL_JOBS||[]).find(v=>v._portalUid===x._portalUid&&v.id===jobId);
@@ -7218,7 +7236,7 @@ function _portalInvoiceCheck(x){
     const terms=_portalBillingTerms(j.completedDeliveryDate);if(!terms||terms.invoiceMonth!==String(x.month||'')||terms.invoiceAvailableOn!==String(x.invoiceAvailableOn||'')||terms.paymentDueDate!==String(x.paymentDueDate||''))return{ok:false,reason:'納品日から計算した請求日・支払日と一致しません'};
     if(String(line.transactionDate||'')!==String(j.completedDeliveryDate||''))return{ok:false,reason:'明細の納品日が案件と一致しません'};
     if(Number(line.amount)!==approvedPay)return{ok:false,reason:'請求額が承認済み報酬と一致しません'};
-    const rate=Number(line.taxRate||0);if(![0,8,10].includes(rate))return{ok:false,reason:'税率を確認してください'};
+    const rate=Number(line.taxRate||0);if(rate===8)return{ok:false,reason:'8%の旧税率が残っています。10%で請求書を作り直してください'};if(![0,10].includes(rate))return{ok:false,reason:'税率を確認してください'};
   }
   const totals=_portalTaxInclusiveTotals(lines);
   if(Number(x.subtotal)!==totals.subtotal||JSON.stringify(x.taxByRate||{})!==JSON.stringify(totals.taxByRate)||Number(x.tax)!==totals.tax||Number(x.total)!==totals.total)return{ok:false,reason:'税込金額・内税・合計を再確認してください'};
@@ -7257,12 +7275,16 @@ async function portalInvoiceAction(portalUid,id,next){
       if(authorization){const invoiceVersion=Number(x.version||1)+1,invoiceDocumentId=`${authorization.id}-r${authorization.revision}-v${invoiceVersion}`,authRef=root.collection('invoice_authorizations').doc(authorization.id),totals=_portalTaxInclusiveTotals(authorization.lines||x.lines||[]);batch.set(authRef,{taxInclusive:true,...totals,invoiceVersion,invoiceDocumentId,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:_myEmail()},{merge:true});batch.set(authRef.collection('events').doc(),{at:firebase.firestore.FieldValue.serverTimestamp(),byUid:FB_USER.uid,type:'invoice_revision_authorized',revision:Number(authorization.revision),invoiceVersion,invoiceDocumentId,supersedesInvoiceId:id});}
     }
     await batch.commit();toast(`請求書を「${next}」に更新しました`);
+    if(next==='差戻し'){try{const push=ownerPushApi();if(push?.dispatchNotify&&FB_USER?.getIdToken){FB_USER.getIdToken().then(idToken=>push.dispatchNotify({kind:'invoice_returned',portalUid,invoiceId:id,idToken})).then(result=>{if(result&&result.ok===false)toast('差戻しは保存しましたが、編集者への通知は届かなかった可能性があります','warn')}).catch(error=>console.warn('invoice return push',error))}}catch(error){console.warn('invoice return push',error)}}
   }catch(e){console.warn('invoice action',e);toast('請求書の更新に失敗しました','err')}
   finally{PORTAL_INVOICE_ACTION_PENDING.delete(actionKey)}
 }
 function _videoInvoiceHtml(){
-	  const list=[...(PORTAL_INVOICES||[])].filter(x=>!_portalIsExternal(x._portalUid)).sort((a,b)=>(b.submittedAt||b.updatedAt||0)-(a.submittedAt||a.updatedAt||0));
-	  const registrations=_videoRegistrationHtml();
+  // 編集者の下書きは提出前なので、管理側の一覧には出さない。
+  const list=[...(PORTAL_INVOICES||[])].filter(x=>!_portalIsExternal(x._portalUid)&&x.status!=='下書き').sort((a,b)=>(b.submittedAt||b.updatedAt||0)-(a.submittedAt||a.updatedAt||0));
+  const registrations=_videoRegistrationHtml();
+  // リスナーが一度も届いていない／失敗した状態を「0件」と取り違えない。
+  if(!_ownerPortalBridgeReady.invoices)return`${registrations}<div class="empty"><div class="empty-title">${_ownerPortalInvoiceSyncFailed?'請求書を取得できませんでした':'請求書を読み込み中です'}</div><div style="font-size:11px;color:var(--t3);margin-top:6px">${_ownerPortalInvoiceSyncFailed?'通信状態を確認してから再読み込みしてください。':'数秒たっても変わらないときは再読み込みしてください。'}</div><div style="margin-top:10px"><button class="btn btn-g btn-sm" onclick="location.reload()">再読み込み</button></div></div>`;
   if(!list.length)return`${registrations}<div class="empty"><div class="empty-title">提出された請求書はありません</div></div>`;
   return registrations+list.map(x=>{const fileUrl=_videoDriveUrl(x.file?.webViewLink||''),check=_portalInvoiceCheck(x);return`<div class="card" style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:start"><div><b>${esc(x.editorName||x.issuer?.name||x.editorEmail||'編集者')}</b><div style="font-size:11px;color:var(--t3)">${esc(x.month||'')} ・ ${esc(x.invoiceNumber||'')} ・ version ${Number(x.version||1)}</div></div><span class="badge bk">${esc(x.status||'下書き')}</span></div><div style="font-size:16px;font-weight:800;margin:8px 0">¥${Number(x.total||0).toLocaleString()}</div><div style="font-size:11px;color:var(--t3)">${esc(x.documentType||'通常の請求書')} ・ 源泉徴収 ${esc(x.withholdingStatus||'未確認')}</div><div style="font-size:11px;color:${check.ok?'var(--green)':'var(--red)'};margin-top:5px">${check.ok?'✓ ': '⚠ '}${esc(check.reason)}</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${fileUrl?`<a class="btn btn-g btn-sm" href="${esc(fileUrl)}" target="_blank" rel="noopener">原本を開く</a>`:'<span style="font-size:11px;color:var(--red)">原本共有未完了</span>'}${['提出済み','再提出'].includes(x.status)?`<button class="btn btn-g btn-sm" onclick="portalInvoiceAction('${x._portalUid}','${x.id}','差戻し')">差戻し</button><button class="btn btn-p btn-sm" ${check.ok?'':'disabled'} onclick="portalInvoiceAction('${x._portalUid}','${x.id}','承認済み')">承認</button>`:''}${x.status==='承認済み'?`<button class="btn btn-p btn-sm" onclick="portalInvoiceAction('${x._portalUid}','${x.id}','支払処理中')">支払処理へ</button>`:''}${x.status==='支払処理中'?`<button class="btn btn-p btn-sm" onclick="portalInvoiceAction('${x._portalUid}','${x.id}','支払済み')">支払済み</button>`:''}</div><div style="font-size:10.5px;color:var(--t3);margin-top:8px">「承認」は社内の支払事務上の確認であり、税務上の有効性を保証するものではありません。</div></div>`;}).join('');
 }
@@ -7428,12 +7450,14 @@ function ownerVisibleNotificationCount(){
 function ownerSyncAppBadge(){const count=ownerVisibleNotificationCount();try{ownerPushApi()?.syncBadge?.(count)}catch(_){}return count;}
 function ownerPushCopy(status){
   if(status?.ready)return 'この端末はDMなどの新着通知を受け取れる状態です。';
-  return status?.reason||'端末通知の状態を確認しています。';
+  return status?.message||status?.reason||'端末通知の状態を確認しています。';
 }
 async function ownerRefreshPushStatus(shouldRender=false){
   const api=ownerPushApi(),uid=FB_USER?.uid||'';
   if(ownerDmIsDemo()||!_isOwner()||!api||!fbDb||!uid||OWNER_PUSH_STATE.loading)return;
   OWNER_PUSH_STATE.loading=true;
+  // 期限切れで配信サーバーから外れた端末を、許可済みなら確認画面なしで再登録する。
+  try{if(api.ensureSubscribed)Promise.resolve(api.ensureSubscribed({db:fbDb,uid})).catch(error=>console.warn('owner push ensureSubscribed',error))}catch(error){console.warn('owner push ensureSubscribed',error)}
   try{OWNER_PUSH_STATE.status=await api.status({db:fbDb,uid});OWNER_PUSH_STATE.forUid=uid;ownerSyncAppBadge();}
   catch(error){console.warn('owner push status',error);OWNER_PUSH_STATE.status={ready:false,reason:'通知の状態を確認できませんでした。'};OWNER_PUSH_STATE.forUid=uid;}
   finally{OWNER_PUSH_STATE.loading=false;}
@@ -7558,7 +7582,8 @@ async function ownerDmSend(){
     OWNER_DM_STATE.draft='';OWNER_DM_STATE.error='';
     if(result?.threadId)ownerDmWatchMessages(result.threadId);
     if(result?.id)OWNER_DM_STATE.messages=[...OWNER_DM_STATE.messages,{id:result.id,senderUid:FB_USER?.uid||'',senderName:OWNER_NAME,body,createdAt:Date.now()}];
-    const push=ownerPushApi();if(push&&result?.threadId&&FB_USER?.getIdToken){FB_USER.getIdToken().then(idToken=>push.dispatchDirectThread({threadId:result.threadId,idToken})).catch(error=>console.warn('owner dm push dispatch',error));}
+    // 送信自体は成功しているのでDMは残し、通知が届かなかった可能性だけ自分の画面に出す。
+    const push=ownerPushApi();if(push&&result?.threadId&&FB_USER?.getIdToken){FB_USER.getIdToken().then(idToken=>push.dispatchDirectThread({threadId:result.threadId,idToken})).catch(error=>{console.warn('owner dm push dispatch',error);toast('メッセージは保存しましたが、相手への通知は届かなかった可能性があります','warn');});}
     toast('DMを送信しました');
   }catch(error){
     OWNER_DM_STATE.error='DMを送信できませんでした';
@@ -10131,6 +10156,9 @@ const DOCLINK_SEEDS=[
   {id:'doclink_dm_staff_manual',title:'DM営業スタッフ 業務手順書（IGアカウント作成〜送付）',
    url:'https://mono-create-group.github.io/editflow-team/dm-manual.html?v=20260816-01',
    category:'マニュアル',notes:'新メンバー向け。アイコン・アカウント名の予約(早い者勝ち)・DM文章の作成・営業リストでの送付と記録まで1ページで完結',ver:3},
+  {id:'doclink_invoice_manual',title:'請求書の作り方（編集者向けマニュアル・見本つき）',
+   url:'https://mono-create-group.github.io/editflow-team/invoice-manual.html?v=20260905-03',
+   category:'マニュアル',notes:'編集者へ共有する。請求者情報の登録→完了案件を選んで明細（1案件＝1行）→確認して提出、締切と支払日、NG例/見本、FAQ',ver:1},
   {id:'doclink_dm_entry_form',title:'DM営業スタッフ 登録フォーム（応募者に送るURL）',
    url:'https://mono-create-group.github.io/editflow-team/dm-entry.html',
    category:'マニュアル',notes:'応募DMが来たらこのURLを返信。登録・業務委託条件への同意・開始手順を台帳へ記録し、案内メールを自動送付する。営業用IGのメールとパスワードは本人が作成し、手順書から完成報告する',ver:2}
@@ -15286,6 +15314,8 @@ let OWNER_LEGACY_FINANCE_CORRECTIONS_READY=false;
 // 既存の owner 同期結果を受け取る。空の配列と未読込を区別するため、各値の
 // ready は onSnapshot が一度でも届いた時だけ true になる。
 let _ownerPortalBridgeReady={access:false,jobs:false,invoices:false,profiles:false,authorizations:false};
+// 「一度も届いていない（読み込み中）」と「購読が失敗した」を請求書タブで区別するため。
+let _ownerPortalInvoiceSyncFailed=false;
 const _ownerPortalBridgeListeners=new Set();
 function _ownerPortalBridgeSnapshot(){
   if(!_isOwner())return{owner:false,ready:{access:false,jobs:false,invoices:false,profiles:false,authorizations:false},accessRecords:[],portalJobs:[],portalInvoices:[],portalProfiles:[],portalAuthorizations:[]};
@@ -15297,6 +15327,7 @@ function _notifyOwnerPortalBridge(){
 }
 function _resetOwnerPortalBridge(){
   _ownerPortalBridgeReady={access:false,jobs:false,invoices:false,profiles:false,authorizations:false};
+  _ownerPortalInvoiceSyncFailed=false;
   _notifyOwnerPortalBridge();
 }
 window.EditflowOwnerDataBridge=Object.freeze({
@@ -18400,7 +18431,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260905-02';
+const APP_VERSION='20260905-03';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -18477,13 +18508,13 @@ window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});  
 checkServerVersion();                                                              // 初回表示でも旧版を即時検出
   </script>
 <script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
-<script src="./editor-push.js?v=20260905-02"></script>
-<script src="./bulletin.js?v=20260905-02"></script>
-<script src="./direct-messages.js?v=20260905-02"></script>
+<script src="./editor-push.js?v=20260905-03"></script>
+<script src="./bulletin.js?v=20260905-03"></script>
+<script src="./direct-messages.js?v=20260905-03"></script>
 <script>
   try{if(V==='directmessages')render();else renderNav();}catch(error){console.warn('owner dm init',error);}
 </script>
-<script src="./manager-features.js?v=20260905-02"></script>
-<script src="./sales-video-leads.js?v=20260905-02"></script>
+<script src="./manager-features.js?v=20260905-03"></script>
+<script src="./sales-video-leads.js?v=20260905-03"></script>
 </body>
 </html>

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>請求書の作り方 — mono.create 編集者向け</title>
+<style>
+:root{
+  --bg:#f4f5f8;--card:#ffffff;--text:#151822;--t2:#4b5563;--t3:#8b93a1;
+  --border:#e5e7eb;--pl:#6d5efc;--pldim:#efeaff;--pldeep:#4c3fd6;
+  --green:#15803d;--greendim:#e8f7ee;--amber:#b45309;--amberdim:#fdf3e3;
+  --red:#b91c1c;--reddim:#fdecec;--ink:#111318;
+  --shadow:0 1px 3px rgba(15,23,42,.07),0 10px 28px rgba(15,23,42,.07);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic UI",sans-serif;
+  line-height:1.85;-webkit-text-size-adjust:100%;word-break:keep-all;overflow-wrap:break-word}
+.wrap{max-width:860px;margin:0 auto;padding:0 16px 90px}
+.hero{background:var(--ink);color:#fff;border-radius:0 0 22px 22px;margin:0 -16px;padding:40px 22px 34px;text-align:center}
+.hero .brand{display:inline-flex;align-items:center;gap:10px;margin-bottom:14px}
+.hero .brand img{width:40px;height:40px;border-radius:10px}
+.hero .brand b{font-size:15px;letter-spacing:.4px}
+.hero h1{font-size:clamp(22px,5.4vw,30px);font-weight:800;margin:0 0 10px;line-height:1.45}
+.hero p{font-size:13px;color:#c9cdd6;margin:0;line-height:2}
+.hero .accent{color:#b3a8ff}
+.flow{display:flex;gap:0;align-items:stretch;margin:26px 0 8px;flex-wrap:wrap}
+.flow .fstep{flex:1;min-width:150px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 14px;text-align:center;box-shadow:var(--shadow);position:relative;margin:0 14px 14px 0}
+.flow .fstep:last-child{margin-right:0}
+.flow .fstep:not(:last-child)::after{content:"";position:absolute;right:-14px;top:50%;width:14px;height:2px;background:var(--t3)}
+.fstep .fnum{display:inline-block;background:var(--pldim);color:var(--pldeep);font-weight:800;font-size:11px;border-radius:100px;padding:2px 12px;margin-bottom:8px}
+.fstep .ft{font-weight:800;font-size:14px;line-height:1.5}
+.fstep .fs{font-size:11px;color:var(--t3);margin-top:4px}
+@media(max-width:560px){
+  .flow{flex-direction:column}
+  .flow .fstep{margin:0 0 22px}
+  .flow .fstep:not(:last-child)::after{right:50%;top:auto;bottom:-14px;width:2px;height:14px;transform:translateX(1px)}
+}
+.sec{margin-top:44px}
+.sec-head{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+.sec-head .num{flex-shrink:0;width:46px;height:46px;border-radius:14px;background:var(--pl);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;line-height:1.2;text-align:center;box-shadow:0 6px 16px rgba(109,94,252,.3)}
+.sec-head h2{font-size:clamp(18px,4.6vw,22px);font-weight:800;margin:0;line-height:1.4}
+.sec-head .once{font-size:10.5px;font-weight:700;background:var(--amberdim);color:var(--amber);border-radius:100px;padding:2px 10px;white-space:nowrap}
+.sec-head .monthly{font-size:10.5px;font-weight:700;background:var(--greendim);color:var(--green);border-radius:100px;padding:2px 10px;white-space:nowrap}
+.sec-lead{font-size:13.5px;color:var(--t2);margin:0 0 16px 60px}
+@media(max-width:560px){.sec-lead{margin-left:0}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:22px 20px;margin-bottom:16px}
+.card h3{font-size:15.5px;font-weight:800;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.card h3 .mini{flex-shrink:0;width:24px;height:24px;border-radius:8px;background:var(--pldim);color:var(--pldeep);font-size:12px;font-weight:800;display:inline-flex;align-items:center;justify-content:center}
+.card p{margin:0 0 10px;font-size:14px}
+.card ul,.card ol{margin:0 0 10px;padding-left:1.4em;font-size:14px}
+.card li{margin:4px 0}
+.muted{color:var(--t3);font-size:12.5px}
+.tag{display:inline-block;font-size:11px;font-weight:800;border-radius:6px;padding:2px 8px;vertical-align:middle}
+.tag.ng{background:var(--reddim);color:var(--red)}
+.tag.ok{background:var(--greendim);color:var(--green)}
+.tag.must{background:var(--amberdim);color:var(--amber)}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:640px){.compare{grid-template-columns:1fr}}
+.compare .box{border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;font-size:13.5px}
+.compare .box.bad{border-color:#f5c2c2;background:#fff8f8}
+.compare .box.good{border-color:#b7e3c6;background:#f5fcf7}
+.compare .box b{display:block;margin-bottom:6px}
+.compare .line{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin:6px 0;white-space:pre-wrap;word-break:break-all}
+.warn{border-left:4px solid var(--red);background:var(--reddim);border-radius:10px;padding:12px 16px;font-size:13.5px;margin:12px 0}
+.note{border-left:4px solid var(--pl);background:var(--pldim);border-radius:10px;padding:12px 16px;font-size:13.5px;margin:12px 0}
+.kv{width:100%;border-collapse:collapse;font-size:13.5px;margin:8px 0}
+.kv th,.kv td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+.kv th{width:34%;color:var(--t2);font-weight:700;background:#fafafa}
+/* 見本 */
+.sample{background:#fff;border:1px solid var(--border);border-radius:12px;padding:26px 24px;margin:12px 0;box-shadow:var(--shadow);font-size:13.5px;position:relative;overflow-x:auto}
+.sample .stamp{position:absolute;top:12px;right:14px;font-size:11px;font-weight:800;color:var(--red);border:1.5px solid var(--red);border-radius:6px;padding:2px 8px;letter-spacing:.1em;background:#fff}
+.sample h4{font-size:19px;font-weight:800;margin:0 0 6px;padding-bottom:8px;border-bottom:2px solid var(--ink)}
+.sample .head{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+@media(max-width:560px){.sample .head{grid-template-columns:1fr}}
+.sample .head div{border:1px solid var(--border);border-radius:8px;padding:10px 12px;line-height:1.7}
+.sample table{width:100%;border-collapse:collapse;min-width:520px}
+.sample th,.sample td{border:1px solid var(--border);padding:8px 10px;text-align:left;font-size:13px}
+.sample th{background:#f6f6f8;font-weight:700}
+.sample td.num,.sample th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.sample .totals{text-align:right;margin-top:10px;line-height:1.9}
+.sample .totals b{font-size:17px}
+.sample .bank{border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-top:14px;line-height:1.7}
+.check{list-style:none;padding:0;margin:0}
+.check li{padding:9px 0 9px 34px;border-bottom:1px dashed var(--border);position:relative;font-size:14px}
+.check li::before{content:"";position:absolute;left:4px;top:13px;width:16px;height:16px;border:2px solid var(--pl);border-radius:4px}
+.toc{font-size:13px;color:var(--t2);margin:18px 0 0}
+.toc a{color:var(--pldeep);text-decoration:none;margin-right:14px}
+a.btn{display:inline-block;background:var(--pl);color:#fff;font-weight:800;border-radius:10px;padding:10px 18px;text-decoration:none;font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <div class="brand"><img src="icon-192.png" alt=""><b>mono.create 社内アプリ</b></div>
+  <h1>請求書の作り方</h1>
+  <p>編集者向け。毎月の請求は<span class="accent">社内アプリの「請求書」画面</span>から作ります。<br>手書きやExcelの請求書は受け付けていません。</p>
+</header>
+
+<p class="toc"><a href="#flow">全体の流れ</a><a href="#step1">1 請求者情報</a><a href="#step2">2 明細</a><a href="#sample">見本</a><a href="#step3">3 確認して提出</a><a href="#schedule">締切と支払日</a><a href="#faq">よくある質問</a></p>
+
+<section class="sec" id="flow">
+  <div class="sec-head"><div class="num" style="background:var(--ink);box-shadow:none">流れ</div><h2>3つの段階で終わります</h2></div>
+  <div class="flow">
+    <div class="fstep"><div class="fnum">1 初回のみ</div><div class="ft">請求者情報を登録</div><div class="fs">氏名・振込先・住所</div></div>
+    <div class="fstep"><div class="fnum">2 毎月</div><div class="ft">完了した案件を選ぶ</div><div class="fs">1案件＝1行で自動作成</div></div>
+    <div class="fstep"><div class="fnum">3 毎月</div><div class="ft">確認して提出</div><div class="fs">PDFをDriveに保存して提出</div></div>
+  </div>
+  <div class="note">請求書は<b>案件を選ぶだけ</b>で作れます。案件名や金額を手で打つ必要はありません。「8月分 動画編集6本」のようにまとめて書く欄はもうありません。</div>
+</section>
+
+<section class="sec" id="step1">
+  <div class="sec-head"><div class="num">手順<br>1</div><h2>請求者情報を登録する</h2><span class="once">初回のみ</span></div>
+  <p class="sec-lead">メニューの<b>「請求者情報・登録」</b>を開きます。スマホでは下の「その他」の一番上にあります。</p>
+  <div class="card">
+    <h3><span class="mini">A</span>必ず入れる5項目</h3>
+    <table class="kv">
+      <tr><th>発行者名・屋号</th><td>本名（屋号があれば屋号）。請求書の「発行者」に印字されます</td></tr>
+      <tr><th>金融機関名</th><td>例：みずほ銀行</td></tr>
+      <tr><th>支店名</th><td>例：〇一八（ゼロイチハチ）</td></tr>
+      <tr><th>口座番号</th><td>数字のみ</td></tr>
+      <tr><th>口座名義（カナ）</th><td>通帳どおりのカタカナ</td></tr>
+    </table>
+    <p class="muted">この5項目が揃うまで、請求書の「明細」へは進めません。請求書画面の先頭に「請求者情報 5/5 項目 入力済み」と出れば完了です。</p>
+  </div>
+  <div class="card">
+    <h3><span class="mini">B</span>任意の項目</h3>
+    <ul>
+      <li><b>住所</b>：適格請求書（インボイス）として扱う場合に必要です。入れておくと請求書に印字されます。</li>
+      <li><b>適格請求書発行事業者 登録番号</b>：T＋13桁。持っていない人は空欄のままで構いません（請求書の題名が「適格請求書ではありません」になります）。</li>
+      <li><b>内税の適用税率</b>：通常は10%。免税の人は0%。</li>
+    </ul>
+  </div>
+</section>
+
+<section class="sec" id="step2">
+  <div class="sec-head"><div class="num">手順<br>2</div><h2>完了した案件を選んで明細を作る</h2><span class="monthly">毎月</span></div>
+  <p class="sec-lead">メニューの<b>「請求書」</b>を開き、請求する月を選びます。</p>
+  <div class="card">
+    <h3><span class="mini">A</span>案件にチェックを入れる</h3>
+    <ol>
+      <li>「完了」になっていて納品日が入っている案件が一覧に並びます。</li>
+      <li>請求する案件にチェックを入れます。管理者が報酬を確定している月は、最初から全部にチェックが入っています。</li>
+      <li>チェックした案件が<b>1案件につき1行</b>で明細に入ります。案件名・納品日・金額は社内アプリの記録から自動で入ります。</li>
+      <li>一度請求した案件は選べません（二重請求の防止）。</li>
+    </ol>
+    <p class="muted">「補足（任意）」の欄は連絡事項用です。ここに案件名や金額を書いても明細にはなりません。</p>
+  </div>
+  <div class="card">
+    <h3><span class="mini">B</span>やってはいけない書き方 / 正しい書き方</h3>
+    <div class="compare">
+      <div class="box bad"><b><span class="tag ng">NG</span> まとめて1行</b>
+        <div class="line">8月分 動画編集6本（トライアル、マーケ_博士様、横井美和様 台本79・85・86・88）　¥22,000</div>
+        <p class="muted">どの案件がいくらか分からず、管理者が確認できないため差戻しになります。</p></div>
+      <div class="box good"><b><span class="tag ok">OK</span> 1案件＝1行</b>
+        <div class="line">2026-09-02　WD-S087 ショート動画編集　¥5,500</div>
+        <div class="line">2026-09-03　WD-S088 ショート動画編集　¥5,500</div>
+        <div class="line">2026-09-04　WD-S089 ショート動画編集　¥5,500</div>
+        <div class="line">2026-09-10　YK-T012 サムネイル制作　¥5,500</div>
+        <p class="muted">案件名は社内アプリの表記（WD-S087 など）と同じにします。案件を選べば自動でこの形になります。</p></div>
+    </div>
+  </div>
+  <div class="card">
+    <h3><span class="mini">C</span>案件が一覧に出ないとき</h3>
+    <ul>
+      <li>進捗が「完了」になっていない → 先方確認が終わった案件は管理者が完了にします。担当案件の画面で状況を確認してください。</li>
+      <li>納品日が入っていない → 管理者へ案件内チャットで連絡してください。納品日が未記録の案件は報酬の対象になりません。</li>
+      <li>納品日が26日以降 → 翌月の請求になります（下の「締切と支払日」）。</li>
+    </ul>
+  </div>
+</section>
+
+<section class="sec" id="sample">
+  <div class="sec-head"><div class="num" style="background:var(--green);box-shadow:0 6px 16px rgba(21,128,61,.3)">見本</div><h2>できあがりの請求書はこの形です</h2></div>
+  <p class="sec-lead">数字と名前は架空の例です。案件を選ぶと、社内アプリがこの形でPDFを作ります。</p>
+  <div class="sample">
+    <span class="stamp">見本</span>
+    <h4>請求書（適格請求書ではありません）</h4>
+    <div class="head">
+      <div><b>請求先</b><br>mono.create 御中</div>
+      <div><b>発行者</b><br>山田 花子<br>東京都〇〇区〇〇 1-2-3<br>請求番号 MC-202609-SAMPL-00001<br>発行日 2026-09-25<br>支払期日 2026-10-31</div>
+    </div>
+    <table>
+      <thead><tr><th>取引日</th><th>役務内容</th><th class="num">税率</th><th class="num">税込金額</th></tr></thead>
+      <tbody>
+        <tr><td>2026-09-02</td><td>WD-S087 ショート動画編集</td><td class="num">10%</td><td class="num">¥5,500</td></tr>
+        <tr><td>2026-09-03</td><td>WD-S088 ショート動画編集</td><td class="num">10%</td><td class="num">¥5,500</td></tr>
+        <tr><td>2026-09-04</td><td>WD-S089 ショート動画編集</td><td class="num">10%</td><td class="num">¥5,500</td></tr>
+        <tr><td>2026-09-10</td><td>YK-T012 サムネイル制作</td><td class="num">10%</td><td class="num">¥5,500</td></tr>
+      </tbody>
+    </table>
+    <div class="totals">税抜小計 ¥20,000<br>10%対象消費税額（内税） ¥2,000<br><b>合計（税込） ¥22,000</b></div>
+    <div class="bank"><b>振込先</b><br>みずほ銀行 〇一八（ゼロイチハチ） 普通 1234567<br>ヤマダ ハナコ</div>
+    <p class="muted" style="margin:10px 0 0">源泉徴収の要否と最終支払額は管理者・会計担当の確認後に確定します。</p>
+  </div>
+  <p class="muted">見るポイント：取引日＝納品日／役務内容＝案件名（1行1案件）／金額は税込。この3つが揃っていれば管理者はそのまま承認できます。</p>
+</section>
+
+<section class="sec" id="step3">
+  <div class="sec-head"><div class="num">手順<br>3</div><h2>確認して提出する</h2><span class="monthly">毎月</span></div>
+  <p class="sec-lead">提出ボタンの上に確認欄が出ます。ここを上から順に見ます。</p>
+  <div class="card">
+    <h3><span class="mini">A</span>確認欄で見る5つ</h3>
+    <ul class="check">
+      <li>請求先が「mono.create 御中」になっている</li>
+      <li>明細が1案件1行で、抜け・重複がない</li>
+      <li>合計（税込）が自分の想定と合っている</li>
+      <li>振込先の5項目が正しい（口座番号・名義のカナ）</li>
+      <li>Driveの原本が保存され、管理者へ共有済みになっている</li>
+    </ul>
+    <p class="muted" style="margin-top:10px">「内容を確認した」にチェックを入れると提出ボタンが押せます。</p>
+  </div>
+  <div class="card">
+    <h3><span class="mini">B</span>Driveへの保存</h3>
+    <ol>
+      <li>「PDFを作成してDriveに保存」を押します。初回はGoogleの許可画面が出るので、社内アプリで使っているGoogleアカウントで許可します。</li>
+      <li>保存すると原本が自分のDriveに入り、管理者へ自動で共有されます。「共有済み」と表示されるまで待ちます。</li>
+      <li>保存に失敗したら「再試行」を押します。何度やっても失敗する場合は管理者へDMしてください（Driveの原本が重複することがあるため、自分でファイルを作り直さないでください）。</li>
+    </ol>
+  </div>
+  <div class="warn"><b>提出後は内容を直せません。</b>間違いに気づいたら管理者へDMで連絡してください。管理者が「差戻し」にすると、修正して再提出できます。</div>
+</section>
+
+<section class="sec" id="schedule">
+  <div class="sec-head"><div class="num" style="background:var(--amber);box-shadow:0 6px 16px rgba(180,83,9,.3)">日程</div><h2>締切と支払日</h2></div>
+  <div class="card">
+    <table class="kv">
+      <tr><th>納品日が1日〜25日</th><td>その月の<b>25日から</b>請求書を作れます。支払いは<b>翌月末</b>。<br><span class="muted">例：9月2日納品 → 9月25日から作成可 → 10月31日支払い</span></td></tr>
+      <tr><th>納品日が26日〜月末</th><td><b>翌月扱い</b>になります。翌月25日から作成可、支払いは翌々月末。<br><span class="muted">例：9月28日納品 → 10月25日から作成可 → 11月30日支払い</span></td></tr>
+      <tr><th>月をまたぐ案件がある</th><td>月ごとに請求書を分けます。社内アプリが月ごとに案件を分けて表示します。</td></tr>
+    </table>
+    <p class="muted">請求日・支払日は納品日から自動で計算され、請求書に印字されます。自分で日付を入れる欄はありません。</p>
+  </div>
+</section>
+
+<section class="sec" id="faq">
+  <div class="sec-head"><div class="num" style="background:var(--ink);box-shadow:none">FAQ</div><h2>よくある質問</h2></div>
+  <div class="card">
+    <h3>案件名を自分で打ちたい</h3>
+    <p>できません。案件名は社内アプリの案件記録から入ります。表記を直したいときは管理者へ連絡してください。</p>
+  </div>
+  <div class="card">
+    <h3>金額が違う気がする</h3>
+    <p>金額は管理者が確定した報酬額です。案件内チャットで「この案件の金額を確認したい」と送ってください。請求書を先に出さず、確定してから提出します。</p>
+  </div>
+  <div class="card">
+    <h3>「請求者情報が未入力です」と出る</h3>
+    <p>手順1の5項目のどれかが空です。表示された項目名を「請求者情報・登録」で入力し、保存してから請求書画面に戻ります。</p>
+  </div>
+  <div class="card">
+    <h3>iPhoneで通知が来ない</h3>
+    <p>社内アプリをホーム画面に追加し、追加したアイコンから開いた状態で「通知」画面の「通知を有効にする」を押してください。Safariのタブから開いている間は通知が届きません。</p>
+  </div>
+  <div class="card">
+    <h3>提出したのに管理者から返事がない</h3>
+    <p>提出すると管理者の通知に件数が表示されます。3営業日たっても状態が「提出済み」のままなら、DMで一言連絡してください。</p>
+  </div>
+  <p style="margin-top:22px"><a class="btn" href="./editor.html">社内アプリを開く</a></p>
+</section>
+
+</div>
+</body>
+</html>

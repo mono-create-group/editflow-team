@@ -47,6 +47,19 @@
     const existing=draftFor(job.id),draft={nonce:existing.nonce||`${now()}-${Math.random().toString(36).slice(2,10)}`,learning:text(existing.learning),job:{id:String(job.id),title:String(job.title||job.caseName||'案件'),clientId:String(job.clientId||job.sourceClientId||''),accountId:String(job.accountId||''),clientName:String(job.clientDisplay||job.clientName||''),accountName:String(job.accountDisplay||job.accountName||''),parentCaseId:String(job.parentCaseId||''),workflow:{round:Number(job.workflow?.round||1)},correctionReason:correctionText(job)}};
     state.open=draft;saveDraft(job.id,draft);return draft;
   }
+  // The push is a courtesy on top of an already-committed Firestore write.
+  // It must never fail the submit/review it follows, and it must never claim
+  // success it cannot prove: the recipient is derived server-side, so a
+  // rejection here means the other side simply was not told.
+  async function notifyPush(kind,payload){
+    const api=root.EditorPush,user=state.user||root.FB_USER;
+    if(!api?.dispatchNotify||typeof user?.getIdToken!=='function')return{ok:false,reason:'push_unavailable'};
+    let result={ok:false,reason:'push_failed'};
+    try{result=await api.dispatchNotify({...payload,kind,idToken:await user.getIdToken()})||result}
+    catch(error){console.warn('feedback push',error)}
+    if(!result?.ok)toast('相手への通知は届かなかった可能性があります');
+    return result;
+  }
   function editorRows(){return state.editorRows.slice().sort((a,b)=>stamp(b.createdAt)-stamp(a.createdAt))}
   function renderEditorPage(){
     const current=state.open,rows=editorRows();
@@ -101,14 +114,16 @@
     const payload={recordType:'editor_feedback',portalUid:uid,jobId:open.job.id,parentCaseId:open.job.parentCaseId||'',editorUid:uid,editorName:userName(),jobTitle:open.job.title,clientId:open.job.clientId,accountId:open.job.accountId,clientName:open.job.clientName,accountName:open.job.accountName,correctionReason:open.job.correctionReason,learning:open.learning,status:'submitted',reviewNote:'',reviewedByUid:'',reviewedByName:'',manualId:'',createdAt:at(),updatedAt:at()};
     try{
       await state.db.runTransaction(async tx=>{const existing=await tx.get(ref);if(existing.exists){const row=normalize(ref.id,existing.data());if(row.status==='submitted'||row.status==='approved')return;throw new Error('feedback-already-reviewed')}tx.set(ref,payload)});
-      removeDraft(open.job.id);state.open=null;toast('過去フィードバックを提出しました。確認後にマニュアルへ反映されます');return true;
+      removeDraft(open.job.id);state.open=null;toast('過去フィードバックを提出しました。確認後にマニュアルへ反映されます');
+      notifyPush('feedback',{portalUid:uid,jobId:open.job.id});
+      return true;
     }catch(error){console.warn('feedback submit',error);toast(error?.message==='feedback-already-reviewed'?'確認済みの記録は再提出できません':'過去フィードバックを提出できませんでした','err');return false}finally{state.submitting=false}
   }
   async function review(portalId,id,nextStatus){
     if((nextStatus!=='approved'&&nextStatus!=='rejected')||!canSee({portalUid:portalId})||state.reviewing.has(`${portalId}/${id}`)||blocked())return false;
     const row=state.managerRows.find(x=>x.portalUid===String(portalId)&&x.id===String(id));if(!row||row.status!=='submitted'||!state.db)return false;
     const input=root.document?.getElementById(`feedback-review-${id}`),reviewNote=text(input?.value,MAX_REVIEW),key=`${portalId}/${id}`,feedbackRef=state.db.collection('editor_portals').doc(portalId).collection('feedback').doc(id),manualRef=state.db.collection('editor_manuals').doc(manualId(row));state.reviewing.add(key);
-    try{await state.db.runTransaction(async tx=>{const snap=await tx.get(feedbackRef);if(!snap.exists)throw new Error('missing-feedback');const latest=normalize(id,snap.data());if(latest.status!=='submitted')throw new Error('already-reviewed');const reviewerUid=portalUid(),reviewerName=userName(),review={status:nextStatus,reviewNote,reviewedByUid:reviewerUid,reviewedByName:reviewerName,updatedAt:at()};tx.update(feedbackRef,review);if(nextStatus==='approved')tx.set(manualRef,{recordType:'editor_manual',kind:'feedback',title:`過去フィードバック：${latest.jobTitle||'案件'}`.slice(0,160),body:latest.learning,url:'',scope:latest.accountId?'account':latest.clientId?'client':'global',scopeLabel:latest.accountId?'アカウント':latest.clientId?'クライアント':'全体',clientId:latest.clientId,accountId:latest.accountId,version:'1.0',required:false,audience:'assigned',allowedUids:[latest.editorUid],directorUid:isDirector()?reviewerUid:'',origin:{type:'editor_feedback',portalUid:latest.portalUid,feedbackId:latest.id,jobId:latest.jobId},active:true,createdAt:at(),createdBy:reviewerName,updatedAt:at(),updatedBy:reviewerName},{merge:false});if(nextStatus==='approved')tx.update(feedbackRef,{manualId:manualRef.id})});toast(nextStatus==='approved'?'承認し、編集者向けマニュアルへ反映しました':'差し戻しました');return true}catch(error){console.warn('feedback review',error);toast(error?.message==='already-reviewed'?'すでに確認済みです':'確認結果を保存できませんでした','err');return false}finally{state.reviewing.delete(key)}}
+    try{await state.db.runTransaction(async tx=>{const snap=await tx.get(feedbackRef);if(!snap.exists)throw new Error('missing-feedback');const latest=normalize(id,snap.data());if(latest.status!=='submitted')throw new Error('already-reviewed');const reviewerUid=portalUid(),reviewerName=userName(),review={status:nextStatus,reviewNote,reviewedByUid:reviewerUid,reviewedByName:reviewerName,updatedAt:at()};tx.update(feedbackRef,review);if(nextStatus==='approved')tx.set(manualRef,{recordType:'editor_manual',kind:'feedback',title:`過去フィードバック：${latest.jobTitle||'案件'}`.slice(0,160),body:latest.learning,url:'',scope:latest.accountId?'account':latest.clientId?'client':'global',scopeLabel:latest.accountId?'アカウント':latest.clientId?'クライアント':'全体',clientId:latest.clientId,accountId:latest.accountId,version:'1.0',required:false,audience:'assigned',allowedUids:[latest.editorUid],directorUid:isDirector()?reviewerUid:'',origin:{type:'editor_feedback',portalUid:latest.portalUid,feedbackId:latest.id,jobId:latest.jobId},active:true,createdAt:at(),createdBy:reviewerName,updatedAt:at(),updatedBy:reviewerName},{merge:false});if(nextStatus==='approved')tx.update(feedbackRef,{manualId:manualRef.id})});toast(nextStatus==='approved'?'承認し、編集者向けマニュアルへ反映しました':'差し戻しました');notifyPush('feedback',{portalUid:String(portalId),jobId:row.jobId});return true}catch(error){console.warn('feedback review',error);toast(error?.message==='already-reviewed'?'すでに確認済みです':'確認結果を保存できませんでした','err');return false}finally{state.reviewing.delete(key)}}
   const api={configure,openFromJob,renderEditorPage,renderManagerPage,start,stop,submit,review,saveOpenDraft,_test:{normalize,isCorrection,feedbackId,manualId,canSee,managerPortalUids,listenerError}};
   root.EditflowFeedback=api;
   // Backward-compatible short name for the inline buttons rendered by this

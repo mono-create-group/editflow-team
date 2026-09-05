@@ -71,7 +71,8 @@ test('manager and owner UI route external settlement away from the external port
   assert.match(manager, /firebase\.firestore\.FieldValue\.delete\(\)/);
   assert.match(manager, /mono\.createからディレクターへの依頼単価も表示しません/);
   assert.match(index, /if\(_portalIsExternal\(x\._portalUid\)\)return\{ok:false/);
-  assert.match(index, /filter\(x=>!_portalIsExternal\(x\._portalUid\)\)/);
+  // 外部編集者を外すのと同じ絞り込みで、編集者側の未提出の下書きも管理画面から除く。
+  assert.match(index, /filter\(x=>!_portalIsExternal\(x\._portalUid\)&&x\.status!=='下書き'\)/);
   assert.match(index, /vp-director-settlement/);
   assert.match(index, /editorPayReference:editorPay/);
   assert.match(index, /approvedPayAmount:ownerWorkerPay/);
