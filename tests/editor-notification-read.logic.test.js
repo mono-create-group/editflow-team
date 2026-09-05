@@ -7,7 +7,7 @@ const source=fs.readFileSync(path.resolve(__dirname,'..','editor-features.js'),'
 
 test('unread badge is calculated from per-editor read state, not every active notification',()=>{
   assert.match(source,/function unreadNotificationItems\(\)\{const read=notificationReadIds\(\);return notificationItems\(\)\.filter\(item=>!read\.has\(item\.id\)\)\}/);
-  assert.match(source,/function editorVisibleNotificationCount\(\)\{[\s\S]*?sourceSnapshot\?\.\('editor-case'\)\.count/);
+  assert.match(source,/function editorVisibleNotificationCount\(\)\{[\s\S]*?sourceSnapshot\?\.\('editor-case'\)\.ids/);
   assert.match(source,/const noticeCount=editorVisibleNotificationCount\(\);/);
   assert.match(source,/editor_notification_read_\$\{user\?\.uid\|\|'guest'\}/);
 });

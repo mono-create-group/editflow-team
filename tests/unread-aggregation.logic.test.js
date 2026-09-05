@@ -68,13 +68,14 @@ test('owner app and service worker load the shared registry and never increment 
   assert.doesNotMatch(sw, /previous\+1|setAppBadge\?\.\(badgeCount\)/);
 });
 
-test('owner Dock badge sums only unread DM and pending submissions', () => {
+test('owner Dock badge sums unread DM, pending submissions and pending invoices', () => {
   assert.match(owner, /function ownerSubmissionUnreadItems\(source=_videoSubmissionReviewItems\(\)\)/);
   assert.match(owner, /notificationId:`submission:\$\{portalUid\}:\$\{jobId\}:/);
-  assert.match(owner, /api\.set\('owner-submissions',_isOwner\(\)&&!ownerDmIsDemo\(\)\?ownerSubmissionUnreadItems\(\):\[\]\)/);
+  assert.match(owner, /api\.set\('owner-submissions',active\?ownerSubmissionUnreadItems\(\):\[\]\)/);
+  assert.match(owner, /api\.set\('owner-invoices',active\?ownerInvoiceUnreadItems\(\):\[\]\)/);
   assert.match(owner, /sourceSnapshot\?\.\('owner-dm'\)\.count/);
   assert.match(owner, /function ownerVisibleNotificationCount\(\)\{[\s\S]*?sourceSnapshot\?\.\('owner-submissions'\)\.count/);
-  assert.match(owner, /dmCount\+submissionCount/);
+  assert.match(owner, /dmCount\+submissionCount\+invoiceCount/);
   assert.match(owner, /function ownerSyncAppBadge\(\)\{const count=ownerVisibleNotificationCount\(\);/);
   assert.doesNotMatch(owner, /function ownerSyncAppBadge\(\)\{[^}]*ownerUnreadCount\(/);
   assert.match(owner, /_ownerPortalBridgeReady\.jobs=true;_notifyOwnerPortalBridge\(\);\s*ownerSyncAppBadge\(\);/);
@@ -107,6 +108,7 @@ test('owner visible notification count excludes unrelated registry sources', () 
     ownerDmApi: () => ({ unreadItems: () => [] }),
     OWNER_DM_STATE: { threads: [] },
     ownerSubmissionUnreadItems: () => [{}, {}, {}, {}],
+    ownerInvoiceUnreadItems: () => [],
     Array,
     Number,
     Math,
@@ -115,7 +117,27 @@ test('owner visible notification count excludes unrelated registry sources', () 
   assert.equal(context.result, 6);
 });
 
-test('owner visible notification count falls back to unread DM plus submissions without the registry', () => {
+test('owner visible notification count adds invoices waiting for approval', () => {
+  const source = owner.match(/function ownerVisibleNotificationCount\(\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(source);
+  const context = vm.createContext({
+    ownerSyncUnreadSources: () => null,
+    ownerUnreadApi: () => ({ sourceSnapshot: name => ({ count: ({ 'owner-dm': 2, 'owner-submissions': 4, 'owner-invoices': 3, 'owner-case': 30 })[name] || 0 }) }),
+    _isOwner: () => true,
+    ownerDmIsDemo: () => false,
+    ownerDmApi: () => ({ unreadItems: () => [] }),
+    OWNER_DM_STATE: { threads: [] },
+    ownerSubmissionUnreadItems: () => [{}, {}, {}, {}],
+    ownerInvoiceUnreadItems: () => [{}, {}, {}],
+    Array,
+    Number,
+    Math,
+  });
+  vm.runInContext(`${source};this.result=ownerVisibleNotificationCount();`, context);
+  assert.equal(context.result, 9);
+});
+
+test('owner visible notification count falls back to unread DM plus submissions and invoices without the registry', () => {
   const source = owner.match(/function ownerVisibleNotificationCount\(\)\{[\s\S]*?\n\}/)?.[0];
   assert.ok(source);
   const context = vm.createContext({
@@ -126,12 +148,52 @@ test('owner visible notification count falls back to unread DM plus submissions 
     ownerDmApi: () => ({ unreadItems: () => [{}, {}] }),
     OWNER_DM_STATE: { threads: [{ unread: true }, { unread: true }] },
     ownerSubmissionUnreadItems: () => [{}, {}, {}, {}],
+    ownerInvoiceUnreadItems: () => [{}, {}, {}],
     Array,
     Number,
     Math,
   });
   vm.runInContext(`${source};this.result=ownerVisibleNotificationCount();`, context);
-  assert.equal(context.result, 6);
+  assert.equal(context.result, 9);
+});
+
+test('owner invoice notifications cover only editor invoices the owner has not acted on', () => {
+  const source = owner.match(/function ownerInvoiceUnreadItems\(source=PORTAL_INVOICES\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(source);
+  const context = vm.createContext({ OWNER_INVOICE_PENDING_STATUSES: ['提出済み', '再提出'], Array, String, PORTAL_INVOICES: [] });
+  vm.runInContext(`${source};this.collect=ownerInvoiceUnreadItems;`, context);
+  const rows = context.collect([
+    { _portalUid: 'editor-a', id: 'inv-1', status: '提出済み', version: 1 },
+    { _portalUid: 'editor-b', id: 'inv-2', status: '再提出', version: 2 },
+    { _portalUid: 'editor-c', id: 'inv-3', status: '承認済み', version: 1 },
+    { _portalUid: 'editor-d', id: 'inv-4', status: '下書き', version: 1 },
+    { _portalUid: 'editor-e', id: 'inv-5', status: '差戻し', version: 1 },
+    { _portalUid: '', id: 'inv-6', status: '提出済み', version: 1 },
+    { _portalUid: 'editor-f', id: 'inv-7', status: '提出済み', updatedAt: 1730000000000 }
+  ]);
+  assert.deepEqual(Array.from(rows, row => row.notificationId), [
+    'invoice:editor-a:inv-1:1',
+    'invoice:editor-b:inv-2:2',
+    'invoice:editor-f:inv-7:1730000000000'
+  ]);
+  assert.equal(rows.every(row => row.unread === true && row.kind === 'invoice'), true);
+});
+
+test('an owner approval or rejection clears the invoice notification without a separate read store', () => {
+  const source = owner.match(/function ownerInvoiceUnreadItems\(source=PORTAL_INVOICES\)\{[\s\S]*?\n\}/)?.[0];
+  const context = vm.createContext({ OWNER_INVOICE_PENDING_STATUSES: ['提出済み', '再提出'], Array, String, PORTAL_INVOICES: [] });
+  vm.runInContext(`${source};this.collect=ownerInvoiceUnreadItems;`, context);
+  const submitted = [{ _portalUid: 'editor-a', id: 'inv-1', status: '提出済み', version: 1 }];
+  assert.equal(context.collect(submitted).length, 1);
+  assert.equal(context.collect([{ ...submitted[0], status: '承認済み' }]).length, 0);
+  assert.equal(context.collect([{ ...submitted[0], status: '差戻し' }]).length, 0);
+  assert.doesNotMatch(owner, /invoiceNotificationRead|owner_invoice_read/);
+});
+
+test('the 請求書 sidebar entry shows a red count for invoices waiting on the owner', () => {
+  assert.match(owner, /const invoicesPending=c\.id==='videoinvoices'\?ownerInvoiceUnreadItems\(\)\.length:0;/);
+  assert.match(owner, /invoicesPending\?`<span class="video-submission-nav-badge" aria-label="未確認の請求書 \$\{invoicesPending\}件">/);
+  assert.match(owner, /_ownerPortalBridgeReady\.invoices=true;_notifyOwnerPortalBridge\(\);\s*ownerSyncAppBadge\(\);/);
 });
 
 test('authentication changes clear stale unread registry and device badge before rebuilding', () => {
@@ -146,10 +208,45 @@ test('editor badge uses source snapshots and clears all editor sources on stop',
   assert.match(features, /registry\.set\('editor-case',editorCaseUnreadItems\(\)\)/);
   assert.match(features, /registry\?\.clear\?\.\('editor-dm'\)/);
   assert.match(features, /registry\?\.clear\?\.\('editor-case'\)/);
-  assert.match(features, /function editorVisibleNotificationCount\(\)\{[\s\S]*?sourceSnapshot\?\.\('editor-case'\)\.count/);
+  assert.match(features, /function editorVisibleNotificationCount\(\)\{[\s\S]*?sourceSnapshot\?\.\('editor-case'\)\.ids/);
   assert.match(features, /function syncEditorAppBadge\(\)\{\s*const count=editorVisibleNotificationCount\(\);/);
   const visibleCount = (features.match(/function editorVisibleNotificationCount\(\)\{[\s\S]*?\n  \}\n  function syncEditorAppBadge/) || [''])[0];
   assert.doesNotMatch(visibleCount, /dmUnreadCount\(/);
+  assert.match(visibleCount, /sourceSnapshot\?\.\('editor-dm'\)\.ids/);
+});
+
+test('the editor app badge counts unread cases and unread DM, deduped by notification ID', () => {
+  const features = fs.readFileSync(path.join(root, 'editor-features.js'), 'utf8');
+  const source = features.match(/function editorVisibleNotificationCount\(\)\{[\s\S]*?\n  \}/)?.[0];
+  assert.ok(source);
+  const { api } = registry();
+  api.set('editor-case', [{ notificationId: 'case:job-1:msg-1' }, { notificationId: 'case:job-2:msg-2' }, { notificationId: 'dm:thread-a:1' }]);
+  api.set('editor-dm', [{ notificationId: 'dm:thread-a:1' }, { notificationId: 'dm:thread-b:2' }]);
+  const context = vm.createContext({
+    syncEditorUnreadSources: () => null,
+    editorUnreadApi: () => api,
+    editorCaseUnreadItems: () => [],
+    dmApi: () => null,
+    feature: { dmThreads: [] },
+    Array, Set, Math, Number, String,
+  });
+  vm.runInContext(`${source};this.result=editorVisibleNotificationCount();`, context);
+  assert.equal(context.result, 4);
+});
+
+test('the editor app badge falls back to case plus DM items when the registry is missing', () => {
+  const features = fs.readFileSync(path.join(root, 'editor-features.js'), 'utf8');
+  const source = features.match(/function editorVisibleNotificationCount\(\)\{[\s\S]*?\n  \}/)?.[0];
+  const context = vm.createContext({
+    syncEditorUnreadSources: () => null,
+    editorUnreadApi: () => null,
+    editorCaseUnreadItems: () => [{ notificationId: 'case:job-1:msg-1' }, { notificationId: 'case:job-2:msg-2' }],
+    dmApi: () => ({ unreadItems: () => [{ notificationId: 'dm:thread-a:1' }, { notificationId: 'case:job-1:msg-1' }] }),
+    feature: { dmThreads: [] },
+    Array, Set, Math, Number, String,
+  });
+  vm.runInContext(`${source};this.result=editorVisibleNotificationCount();`, context);
+  assert.equal(context.result, 3);
 });
 
 test('DM unread entries have stable token identities and collapse duplicate snapshots', () => {

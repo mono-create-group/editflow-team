@@ -64,13 +64,15 @@ test('unread counts use a local app badge without adding Firestore writes', () =
   assert.match(client, /async function pendingBadgeCount\(\)[\s\S]*return 0;/);
   assert.doesNotMatch(client, /reg\.getNotifications\(\)/);
   assert.match(editorFeatures, /function editorVisibleNotificationCount\(\)/);
-  assert.match(editorFeatures, /sourceSnapshot\?\.\('editor-case'\)\.count/);
+  assert.match(editorFeatures, /sourceSnapshot\?\.\('editor-case'\)\.ids/);
+  assert.match(editorFeatures, /sourceSnapshot\?\.\('editor-dm'\)\.ids/);
   assert.match(editorFeatures, /window\.EditorPush\?\.syncBadge\?\.\(count\)/);
   assert.match(editorFeatures, /feature\.dmThreads=incoming;feature\.dmLoading=false;feature\.dmError='';syncEditorAppBadge\(\)/);
   assert.match(owner, /function ownerSyncAppBadge\(\)/);
   assert.match(owner, /function ownerVisibleNotificationCount\(\)/);
   assert.match(owner, /sourceSnapshot\?\.\('owner-dm'\)\.count/);
   assert.match(owner, /sourceSnapshot\?\.\('owner-submissions'\)\.count/);
+  assert.match(owner, /sourceSnapshot\?\.\('owner-invoices'\)\.count/);
   assert.match(owner, /ownerSetUnreadSource\('owner-dm'/);
   assert.match(owner, /window\.addEventListener\('editflow-push-received'/);
   assert.doesNotMatch(owner, /pendingCount/);

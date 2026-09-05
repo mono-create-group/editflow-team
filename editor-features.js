@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const PORTAL_APP_VERSION='20260905-01';
+  const PORTAL_APP_VERSION='20260905-02';
   const feature={
     board:[],boardSelectedId:'',boardSearch:'',catalog:[],manuals:[],schedules:[],release:null,
     messages:new Map(),messageUnsubs:new Map(),messageLoading:new Set(),openMessageJobIds:new Set(),groupDraftSaving:new Set(),unsubs:[],startedFor:'',serverVersion:'',jobsListMode:'active',jobsTypeFilter:'all',lastSuggestionCode:'',
@@ -100,12 +100,15 @@
     return registry.snapshot();
   }
   function editorVisibleNotificationCount(){
-    // The Dock/PWA badge means the same thing as the visible 「通知」 page.
-    // DM has its own badge in the DM menu, so it is intentionally excluded
-    // here rather than being added to a different total.
+    // The Dock/PWA badge covers both queues the editor must act on: unread
+    // 「通知」 records and unread DM.  Every record carries one stable
+    // notification ID, so a record shown in both places is counted once.
     syncEditorUnreadSources();
-    const count=editorUnreadApi()?.sourceSnapshot?.('editor-case').count;
-    return Number.isFinite(Number(count))?Math.max(0,Math.min(999,Number(count))):Math.max(0,Math.min(999,unreadNotificationItems().length));
+    const registry=editorUnreadApi();
+    const caseIds=registry?.sourceSnapshot?.('editor-case').ids,dmIds=registry?.sourceSnapshot?.('editor-dm').ids;
+    if(Array.isArray(caseIds)&&Array.isArray(dmIds))return Math.max(0,Math.min(999,new Set([...caseIds,...dmIds]).size));
+    const fallback=editorCaseUnreadItems().concat(dmApi()?.unreadItems?.(feature.dmThreads)||[]).map(item=>String(item?.notificationId||item?.id||''));
+    return Math.max(0,Math.min(999,new Set(fallback.filter(Boolean)).size));
   }
   function syncEditorAppBadge(){
     const count=editorVisibleNotificationCount();
@@ -214,8 +217,9 @@
   }
 
   function navHtmlExtended(){
-    const items=[['dashboard','ホーム'],['jobs','担当案件'],['board','案件を探す'],['dm','DM'],['notifications','通知'],['schedule','スケジュール'],['manuals','マニュアル'],['feedback','過去フィードバック'],['ranking','編集者ランキング'],['invoices',isExternal()?'支払い案内':'請求書'],['settings','登録情報'],['mobile-setup','端末通知'],['guide','使い方ガイド'],['suggestion','匿名目安箱']];
-    const work=[['dashboard','ホーム'],['jobs','担当案件'],['board','案件を探す']],communication=[['dm','DM'],['notifications','通知']],tools=[['schedule','スケジュール'],['manuals','マニュアル'],['feedback','過去フィードバック'],['ranking','編集者ランキング'],['invoices',isExternal()?'支払い案内':'請求書'],['settings','登録情報']];
+    // 請求書と請求者情報は毎月使うため、「その他」でも先頭側に置きます。
+    const items=[['dashboard','ホーム'],['jobs','担当案件'],['dm','DM'],['notifications','通知'],['invoices',isExternal()?'支払い案内':'請求書'],['settings','請求者情報・登録'],['board','案件を探す'],['schedule','スケジュール'],['manuals','マニュアル'],['feedback','過去フィードバック'],['ranking','編集者ランキング'],['mobile-setup','端末通知'],['guide','使い方ガイド'],['suggestion','匿名目安箱']];
+    const work=[['dashboard','ホーム'],['jobs','担当案件'],['board','案件を探す']],communication=[['dm','DM'],['notifications','通知']],tools=[['invoices',isExternal()?'支払い案内':'請求書'],['settings','請求者情報・登録'],['schedule','スケジュール'],['manuals','マニュアル'],['feedback','過去フィードバック'],['ranking','編集者ランキング']];
     const mobile=[['dashboard','ホーム'],['jobs','案件'],['dm','DM'],['notifications','通知']];
     const open=feature.board.filter(x=>x.status==='open').length;
     const noticeCount=editorVisibleNotificationCount();
