@@ -32,6 +32,6 @@ test('workflow commit is handled before best-effort legacy projection', () => {
   const projection = body.indexOf('workflow legacy projection');
   assert.ok(commit >= 0 && projection > commit, 'legacy projection runs only after Firestore commit');
   assert.match(body, /toast\(_portalWorkflowSaveErrorMessage\(e\),'err'\)/);
-  assert.match(body, /toast\(legacyProjectionSaved\?'進捗を更新しました'/);
+  assert.match(body, /toast\(legacyProjectionSaved\?`進捗を更新しました（\$\{videoStatusLabel\(status\)\}）`/);
   assert.match(body, /byRole:_isActualOwner\(\)\?'owner':'director'/);
 });

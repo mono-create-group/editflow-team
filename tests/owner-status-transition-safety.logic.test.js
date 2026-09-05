@@ -57,7 +57,7 @@ test('linked parent subcases expose only current valid workflow actions inline',
   assert.match(index, /String\(job\.directorUid\)===String\(FB_USER\?\.uid\|\|''\)/);
   assert.match(index, /if\(!_canManagePortalWorkflow\(j\)\)return toast\('この案件の進捗を変更する権限がありません','err'\)/);
   assert.match(index, /function _portalWorkflowActionsForJob\(job\)\{/);
-  assert.match(index, /stage==='director_review'\)return\[\['directorRevision','修正指示（修正中）'\],\['directorApprove','D確認OKにする'\]\]/);
+  assert.match(index, /stage==='director_review'\)return\[\['directorRevision','修正指示（修正中）'\],\['directorApprove','D確認OKにする'\],\['directorApproveAndSubmit','D確認OK・先方へ提出済み（先方確認中）'\]\]/);
   assert.match(index, /stage==='client_submission'\)return\[\['clientSubmitted','先方確認中にする'\]\]/);
   assert.match(index, /stage==='client_review'\)return _editorOwnsPortalCompletion\(job\)\?\[\['clientRevision','修正指示（修正中）'\]\]:\[\['clientRevision','修正指示（修正中）'\],\['clientApproved','先方OK（完了）'\]\]/);
   assert.match(index, /function advanceLegacyPortalSubcaseWorkflow\(portalUid,jobId,controlKey\)\{/);
