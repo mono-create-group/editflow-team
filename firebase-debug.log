@@ -1,0 +1,161 @@
+[debug] [2026-09-05T13:47:40.464Z] ----------------------------------------------------------------------
+[debug] [2026-09-05T13:47:40.466Z] Command:       /Users/nakamurawataru/.nvm/versions/node/v24.15.0/bin/node /Users/nakamurawataru/.npm/_npx/ba4f1959e38407b5/node_modules/.bin/firebase deploy --only firestore:rules --project editflow-mono-create --non-interactive
+[debug] [2026-09-05T13:47:40.467Z] CLI Version:   15.29.0
+[debug] [2026-09-05T13:47:40.467Z] Platform:      darwin
+[debug] [2026-09-05T13:47:40.467Z] Node Version:  v24.15.0
+[debug] [2026-09-05T13:47:40.467Z] Detected Agent: claude-code_2-1-260_agent
+[debug] [2026-09-05T13:47:40.467Z] Time:          Sat Sep 05 2026 22:47:40 GMT+0900 (Japan Standard Time)
+[debug] [2026-09-05T13:47:40.467Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-09-05T13:47:41.454Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-09-05T13:47:41.454Z] > authorizing via signed-in user (mono.create.group@gmail.com)
+[debug] [2026-09-05T13:47:41.454Z] [iam] checking project editflow-mono-create for permissions ["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]
+[debug] [2026-09-05T13:47:41.468Z] Checked if tokens are valid: false, expires at: 1788592439474
+[debug] [2026-09-05T13:47:41.469Z] Checked if tokens are valid: false, expires at: 1788592439474
+[debug] [2026-09-05T13:47:41.469Z] > refreshing access token with scopes: []
+[debug] [2026-09-05T13:47:41.471Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-09-05T13:47:41.471Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-09-05T13:47:41.681Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-09-05T13:47:41.681Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-09-05T13:47:41.695Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/editflow-mono-create:testIamPermissions [none]
+[debug] [2026-09-05T13:47:41.695Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/editflow-mono-create:testIamPermissions  x-goog-user-project=editflow-mono-create
+[debug] [2026-09-05T13:47:41.695Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/editflow-mono-create:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[debug] [2026-09-05T13:47:42.473Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/editflow-mono-create:testIamPermissions 200
+[debug] [2026-09-05T13:47:42.474Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/editflow-mono-create:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[info] 
+[info] === Deploying to 'editflow-mono-create'...
+[info] 
+[info] i  deploying firestore 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[debug] [2026-09-05T13:47:42.477Z] Checked if tokens are valid: true, expires at: 1788619660681
+[debug] [2026-09-05T13:47:42.477Z] Checked if tokens are valid: true, expires at: 1788619660681
+[debug] [2026-09-05T13:47:42.477Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/editflow-mono-create/databases/(default) [none]
+[debug] [2026-09-05T13:47:42.656Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/editflow-mono-create/databases/(default) 200
+[debug] [2026-09-05T13:47:42.656Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/editflow-mono-create/databases/(default) {"name":"projects/editflow-mono-create/databases/(default)","uid":"d722dd48-13ab-4357-9c9e-bbd94fe5f8c1","createTime":"2026-07-03T09:27:33.408313Z","updateTime":"2026-07-03T09:27:33.408313Z","locationId":"asia-northeast1","type":"FIRESTORE_NATIVE","concurrencyMode":"PESSIMISTIC","versionRetentionPeriod":"3600s","earliestVersionTime":"2026-09-05T12:47:42.701Z","appEngineIntegrationMode":"DISABLED","keyPrefix":"b","pointInTimeRecoveryEnablement":"POINT_IN_TIME_RECOVERY_DISABLED","deleteProtectionState":"DELETE_PROTECTION_DISABLED","databaseEdition":"STANDARD","freeTier":true,"realtimeUpdatesMode":"REALTIME_UPDATES_MODE_ENABLED","enhancedTextSearchQueryMode":"ENHANCED_QUERY_MODE_ENABLED","etag":"IMSWuojK15YDMOuftJmatpUD"}
+[info] i  firestore: reading indexes from firestore.indexes.json... 
+[info] i  cloud.firestore: checking firestore.rules for compilation errors... 
+[debug] [2026-09-05T13:47:42.659Z] Checked if tokens are valid: true, expires at: 1788619660681
+[debug] [2026-09-05T13:47:42.659Z] Checked if tokens are valid: true, expires at: 1788619660681
+[debug] [2026-09-05T13:47:42.660Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/editflow-mono-create:test [none]
+[debug] [2026-09-05T13:47:42.660Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/editflow-mono-create:test [omitted]
+[debug] [2026-09-05T13:47:48.878Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/editflow-mono-create:test 503
+[debug] [2026-09-05T13:47:48.878Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/editflow-mono-create:test {"error":{"code":503,"message":"The service is currently unavailable.","status":"UNAVAILABLE"}}
+[error] 
+[error] Error: Request to https://firebaserules.googleapis.com/v1/projects/editflow-mono-create:test had HTTP Error: 503, The service is currently unavailable.
+[debug] [2026-09-05T13:47:48.881Z] Error Context: {
+  "body": {
+    "error": {
+      "code": 503,
+      "message": "The service is currently unavailable.",
+      "status": "UNAVAILABLE"
+    }
+  },
+  "response": {
+    "statusCode": 503
+  }
+}
+[debug] [2026-09-05T13:48:11.132Z] ----------------------------------------------------------------------
+[debug] [2026-09-05T13:48:11.134Z] Command:       /Users/nakamurawataru/.nvm/versions/node/v24.15.0/bin/node /Users/nakamurawataru/.npm/_npx/ba4f1959e38407b5/node_modules/.bin/firebase deploy --only firestore:rules --project editflow-mono-create --non-interactive
+[debug] [2026-09-05T13:48:11.134Z] CLI Version:   15.29.0
+[debug] [2026-09-05T13:48:11.134Z] Platform:      darwin
+[debug] [2026-09-05T13:48:11.135Z] Node Version:  v24.15.0
+[debug] [2026-09-05T13:48:11.135Z] Detected Agent: claude-code_2-1-260_agent
+[debug] [2026-09-05T13:48:11.135Z] Time:          Sat Sep 05 2026 22:48:11 GMT+0900 (Japan Standard Time)
+[debug] [2026-09-05T13:48:11.135Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-09-05T13:48:11.950Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-09-05T13:48:11.951Z] > authorizing via signed-in user (mono.create.group@gmail.com)
+[debug] [2026-09-05T13:48:11.951Z] [iam] checking project editflow-mono-create for permissions ["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]
+[debug] [2026-09-05T13:48:11.960Z] Checked if tokens are valid: true, expires at: 1788619660681
+[debug] [2026-09-05T13:48:11.960Z] Checked if tokens are valid: true, expires at: 1788619660681
+[debug] [2026-09-05T13:48:11.960Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/editflow-mono-create:testIamPermissions [none]
+[debug] [2026-09-05T13:48:11.960Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/editflow-mono-create:testIamPermissions  x-goog-user-project=editflow-mono-create
+[debug] [2026-09-05T13:48:11.960Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/editflow-mono-create:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[debug] [2026-09-05T13:48:12.676Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/editflow-mono-create:testIamPermissions 200
+[debug] [2026-09-05T13:48:12.676Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/editflow-mono-create:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[info] 
+[info] === Deploying to 'editflow-mono-create'...
+[info] 
+[info] i  deploying firestore 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[debug] [2026-09-05T13:48:12.680Z] Checked if tokens are valid: true, expires at: 1788619660681
+[debug] [2026-09-05T13:48:12.680Z] Checked if tokens are valid: true, expires at: 1788619660681
+[debug] [2026-09-05T13:48:12.680Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/editflow-mono-create/databases/(default) [none]
+[debug] [2026-09-05T13:48:12.882Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/editflow-mono-create/databases/(default) 200
+[debug] [2026-09-05T13:48:12.882Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/editflow-mono-create/databases/(default) {"name":"projects/editflow-mono-create/databases/(default)","uid":"d722dd48-13ab-4357-9c9e-bbd94fe5f8c1","createTime":"2026-07-03T09:27:33.408313Z","updateTime":"2026-07-03T09:27:33.408313Z","locationId":"asia-northeast1","type":"FIRESTORE_NATIVE","concurrencyMode":"PESSIMISTIC","versionRetentionPeriod":"3600s","earliestVersionTime":"2026-09-05T12:48:12.880206Z","appEngineIntegrationMode":"DISABLED","keyPrefix":"b","pointInTimeRecoveryEnablement":"POINT_IN_TIME_RECOVERY_DISABLED","deleteProtectionState":"DELETE_PROTECTION_DISABLED","databaseEdition":"STANDARD","freeTier":true,"realtimeUpdatesMode":"REALTIME_UPDATES_MODE_ENABLED","enhancedTextSearchQueryMode":"ENHANCED_QUERY_MODE_ENABLED","etag":"IImW7JbK15YDMOuftJmatpUD"}
+[info] i  firestore: reading indexes from firestore.indexes.json... 
+[info] i  cloud.firestore: checking firestore.rules for compilation errors... 
+[debug] [2026-09-05T13:48:12.887Z] Checked if tokens are valid: true, expires at: 1788619660681
+[debug] [2026-09-05T13:48:12.887Z] Checked if tokens are valid: true, expires at: 1788619660681
+[debug] [2026-09-05T13:48:12.888Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/editflow-mono-create:test [none]
+[debug] [2026-09-05T13:48:12.888Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/editflow-mono-create:test [omitted]
+[debug] [2026-09-05T13:48:19.045Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/editflow-mono-create:test 503
+[debug] [2026-09-05T13:48:19.045Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/editflow-mono-create:test {"error":{"code":503,"message":"The service is currently unavailable.","status":"UNAVAILABLE"}}
+[error] 
+[error] Error: Request to https://firebaserules.googleapis.com/v1/projects/editflow-mono-create:test had HTTP Error: 503, The service is currently unavailable.
+[debug] [2026-09-05T13:48:19.047Z] Error Context: {
+  "body": {
+    "error": {
+      "code": 503,
+      "message": "The service is currently unavailable.",
+      "status": "UNAVAILABLE"
+    }
+  },
+  "response": {
+    "statusCode": 503
+  }
+}
+[debug] [2026-09-05T13:48:41.636Z] ----------------------------------------------------------------------
+[debug] [2026-09-05T13:48:41.638Z] Command:       /Users/nakamurawataru/.nvm/versions/node/v24.15.0/bin/node /Users/nakamurawataru/.npm/_npx/ba4f1959e38407b5/node_modules/.bin/firebase deploy --only firestore:rules --project editflow-mono-create --non-interactive
+[debug] [2026-09-05T13:48:41.639Z] CLI Version:   15.29.0
+[debug] [2026-09-05T13:48:41.639Z] Platform:      darwin
+[debug] [2026-09-05T13:48:41.639Z] Node Version:  v24.15.0
+[debug] [2026-09-05T13:48:41.639Z] Detected Agent: claude-code_2-1-260_agent
+[debug] [2026-09-05T13:48:41.639Z] Time:          Sat Sep 05 2026 22:48:41 GMT+0900 (Japan Standard Time)
+[debug] [2026-09-05T13:48:41.639Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-09-05T13:48:42.487Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-09-05T13:48:42.488Z] > authorizing via signed-in user (mono.create.group@gmail.com)
+[debug] [2026-09-05T13:48:42.488Z] [iam] checking project editflow-mono-create for permissions ["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]
+[debug] [2026-09-05T13:48:42.496Z] Checked if tokens are valid: true, expires at: 1788619660681
+[debug] [2026-09-05T13:48:42.497Z] Checked if tokens are valid: true, expires at: 1788619660681
+[debug] [2026-09-05T13:48:42.497Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/editflow-mono-create:testIamPermissions [none]
+[debug] [2026-09-05T13:48:42.497Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/editflow-mono-create:testIamPermissions  x-goog-user-project=editflow-mono-create
+[debug] [2026-09-05T13:48:42.497Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/editflow-mono-create:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[debug] [2026-09-05T13:48:42.773Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/editflow-mono-create:testIamPermissions 200
+[debug] [2026-09-05T13:48:42.773Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/editflow-mono-create:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[info] 
+[info] === Deploying to 'editflow-mono-create'...
+[info] 
+[info] i  deploying firestore 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[debug] [2026-09-05T13:48:42.775Z] Checked if tokens are valid: true, expires at: 1788619660681
+[debug] [2026-09-05T13:48:42.775Z] Checked if tokens are valid: true, expires at: 1788619660681
+[debug] [2026-09-05T13:48:42.775Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/editflow-mono-create/databases/(default) [none]
+[debug] [2026-09-05T13:48:42.923Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/editflow-mono-create/databases/(default) 200
+[debug] [2026-09-05T13:48:42.923Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/editflow-mono-create/databases/(default) {"name":"projects/editflow-mono-create/databases/(default)","uid":"d722dd48-13ab-4357-9c9e-bbd94fe5f8c1","createTime":"2026-07-03T09:27:33.408313Z","updateTime":"2026-07-03T09:27:33.408313Z","locationId":"asia-northeast1","type":"FIRESTORE_NATIVE","concurrencyMode":"PESSIMISTIC","versionRetentionPeriod":"3600s","earliestVersionTime":"2026-09-05T12:48:42.970956Z","appEngineIntegrationMode":"DISABLED","keyPrefix":"b","pointInTimeRecoveryEnablement":"POINT_IN_TIME_RECOVERY_DISABLED","deleteProtectionState":"DELETE_PROTECTION_DISABLED","databaseEdition":"STANDARD","freeTier":true,"realtimeUpdatesMode":"REALTIME_UPDATES_MODE_ENABLED","enhancedTextSearchQueryMode":"ENHANCED_QUERY_MODE_ENABLED","etag":"IKzhmKXK15YDMOuftJmatpUD"}
+[info] i  firestore: reading indexes from firestore.indexes.json... 
+[info] i  cloud.firestore: checking firestore.rules for compilation errors... 
+[debug] [2026-09-05T13:48:42.926Z] Checked if tokens are valid: true, expires at: 1788619660681
+[debug] [2026-09-05T13:48:42.927Z] Checked if tokens are valid: true, expires at: 1788619660681
+[debug] [2026-09-05T13:48:42.928Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/editflow-mono-create:test [none]
+[debug] [2026-09-05T13:48:42.928Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/editflow-mono-create:test [omitted]
+[debug] [2026-09-05T13:48:49.666Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/editflow-mono-create:test 503
+[debug] [2026-09-05T13:48:49.666Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/editflow-mono-create:test {"error":{"code":503,"message":"The service is currently unavailable.","status":"UNAVAILABLE"}}
+[error] 
+[error] Error: Request to https://firebaserules.googleapis.com/v1/projects/editflow-mono-create:test had HTTP Error: 503, The service is currently unavailable.
+[debug] [2026-09-05T13:48:49.669Z] Error Context: {
+  "body": {
+    "error": {
+      "code": 503,
+      "message": "The service is currently unavailable.",
+      "status": "UNAVAILABLE"
+    }
+  },
+  "response": {
+    "statusCode": 503
+  }
+}

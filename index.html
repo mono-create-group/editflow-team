@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260905-05"></script>
+<script src="./billing-terms.js?v=20260905-06"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -999,7 +999,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260905-05">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260905-06">
 </head>
 <body class="owner-yellow-ui">
 
@@ -1059,8 +1059,8 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="./ai-bridge-client.js"></script>
-<script src="./owner-video-performance.js?v=20260905-05"></script>
-<script src="./feedback-workflow.js?v=20260905-05"></script>
+<script src="./owner-video-performance.js?v=20260905-06"></script>
+<script src="./feedback-workflow.js?v=20260905-06"></script>
 <script>/* lz-string 1.5.0 (MIT) — CDN非依存でオフライン/圧縮チーム同期を保証するためインライン化 */
 var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",e={};function t(r,o){if(!e[r]){e[r]={};for(var n=0;n<r.length;n++)e[r][r.charAt(n)]=n}return e[r][o]}var i={compressToBase64:function(r){if(null==r)return"";var n=i._compress(r,6,function(r){return o.charAt(r)});switch(n.length%4){default:case 0:return n;case 1:return n+"===";case 2:return n+"==";case 3:return n+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(n){return t(o,r.charAt(n))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(r){return null==r?"":""==r?null:i._decompress(r.length,16384,function(o){return r.charCodeAt(o)-32})},compressToUint8Array:function(r){for(var o=i.compress(r),n=new Uint8Array(2*o.length),e=0,t=o.length;e<t;e++){var s=o.charCodeAt(e);n[2*e]=s>>>8,n[2*e+1]=s%256}return n},decompressFromUint8Array:function(o){if(null==o)return i.decompress(o);for(var n=new Array(o.length/2),e=0,t=n.length;e<t;e++)n[e]=256*o[2*e]+o[2*e+1];var s=[];return n.forEach(function(o){s.push(r(o))}),i.decompress(s.join(""))},compressToEncodedURIComponent:function(r){return null==r?"":i._compress(r,6,function(r){return n.charAt(r)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),i._decompress(r.length,32,function(o){return t(n,r.charAt(o))}))},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(r,o,n){if(null==r)return"";var e,t,i,s={},u={},a="",p="",c="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<r.length;i+=1)if(a=r.charAt(i),Object.prototype.hasOwnProperty.call(s,a)||(s[a]=f++,u[a]=!0),p=c+a,Object.prototype.hasOwnProperty.call(s,p))c=p;else{if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++),s[p]=f++,c=String(a)}if(""!==c){if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++)}for(t=2,e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;for(;;){if(m<<=1,v==o-1){d.push(n(m));break}v++}return d.join("")},decompress:function(r){return null==r?"":""==r?null:i._decompress(r.length,32768,function(o){return r.charCodeAt(o)})},_decompress:function(o,n,e){var t,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:e(0),position:n,index:1};for(t=0;t<3;t+=1)l[t]=t;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return i}();"function"==typeof define&&define.amd?define(function(){return LZString}):"undefined"!=typeof module&&null!=module?module.exports=LZString:"undefined"!=typeof angular&&null!=angular&&angular.module("LZString",[]).factory("LZString",function(){return LZString});
 </script>
@@ -7764,7 +7764,37 @@ function rVideoSubmissions(){
     const openAction=`openPortalJobModal(${JSON.stringify(item.portalUid)},${JSON.stringify(item.id)})`,title=item.parentCaseName&&item.parentCaseName!==item.title?`${item.parentCaseName} / ${item.title}`:item.title,client=[item.clientDisplay,item.accountDisplay].filter(Boolean).join(' / ');
     return`<article class="card video-submission-card"><div><div class="video-submission-head"><span class="badge ${item.kind==='修正稿'?'br':'bp'}">${esc(item.kind)}</span><span class="badge bk">第${Number(item.round)||1}回</span><b class="video-submission-title">${esc(title)}</b></div><div class="video-submission-meta"><span>クライアント <b>${esc(client)}</b></span><span>担当編集者 <b>${esc(item.editorName)}</b></span><span>提出日時 <b>${esc(_videoSubmissionTime(item.submittedAt))}</b></span><span>編集者初稿 <b>${esc(item.editorDraftDate||'未設定')}</b></span><span>クライアント初稿 <b>${esc(item.clientDraftDate||'未設定')}</b></span><span>納期（予定） <b>${esc(item.deadline||'未設定')}</b></span></div></div><div class="video-submission-actions">${item.evidenceUrl?`<a class="btn btn-p btn-sm" href="${esc(item.evidenceUrl)}" target="_blank" rel="noopener noreferrer">提出リンクを開く</a>`:'<span class="video-submission-missing">提出リンク未登録</span>'}<button class="btn btn-g btn-sm" type="button" onclick="${esc(openAction)}">案件・修正指示を開く</button>${item.canManage?`<button class="btn btn-p btn-sm" type="button" onclick="advancePortalWorkflow(${JSON.stringify(item.portalUid)},${JSON.stringify(item.id)},'directorApprove')">D確認OK</button><button class="btn btn-p btn-sm" type="button" onclick="advancePortalWorkflow(${JSON.stringify(item.portalUid)},${JSON.stringify(item.id)},'directorApproveAndSubmit')">D確認OK・先方へ提出済み</button>`:''}</div></article>`;
   }).join('');
-  return`<div class="ph"><div><div class="ph-title">提出確認</div><div style="font-size:13px;color:var(--t2);margin-top:4px">編集者から提出され、まだD確認が確定していない初稿・修正稿です。</div></div><span class="badge ${items.length?'br':'bg'}">${items.length}件</span></div><div class="notice" style="margin-bottom:12px;box-shadow:none"><b>確認後は「D確認OK」「D確認OK・先方へ提出済み」をここで押すか、案件を開いて「修正指示」を記録してください。</b><div style="font-size:12px;color:var(--t2);margin-top:4px">「D確認OK・先方へ提出済み」はD確認と先方提出を一度に記録し、進捗が「先方確認中」になります。判断を確定すると、この一覧から自動的に外れます。リンクを開いただけでは確認済みになりません。</div></div><div class="video-submission-list">${cards||'<div class="empty"><div class="empty-icon">✓</div><div class="empty-title">未確認の初稿・修正稿はありません</div></div>'}</div>`;
+  return`<div class="ph"><div><div class="ph-title">提出確認</div><div style="font-size:13px;color:var(--t2);margin-top:4px">編集者から提出され、まだD確認が確定していない初稿・修正稿です。</div></div><span class="badge ${items.length?'br':'bg'}">${items.length}件</span></div><div class="notice" style="margin-bottom:12px;box-shadow:none"><b>確認後は「D確認OK」「D確認OK・先方へ提出済み」をここで押すか、案件を開いて「修正指示」を記録してください。</b><div style="font-size:12px;color:var(--t2);margin-top:4px">「D確認OK・先方へ提出済み」はD確認と先方提出を一度に記録し、進捗が「先方確認中」になります。判断を確定すると、この一覧から自動的に外れます。リンクを開いただけでは確認済みになりません。</div></div><div class="video-submission-list">${cards||'<div class="empty"><div class="empty-icon">✓</div><div class="empty-title">未確認の初稿・修正稿はありません</div></div>'}</div>${_ownerSubmitFailuresHtml()}`;
+}
+// 編集者側で初稿・修正稿の保存が失敗した記録（editor_submit_failures）。
+// 「できなかった」の原因（権限拒否・通信・URL形式・古いアプリ版）を編集者に聞かずに確認できる。
+const OWNER_SUBMIT_FAILURES={items:[],loaded:false,loading:false,error:''};
+async function ownerLoadSubmitFailures(force=false){
+  if(!_isOwner()||!fbDb||OWNER_SUBMIT_FAILURES.loading||(OWNER_SUBMIT_FAILURES.loaded&&!force))return;
+  OWNER_SUBMIT_FAILURES.loading=true;OWNER_SUBMIT_FAILURES.error='';
+  try{
+    const snap=await fbDb.collection('editor_submit_failures').orderBy('at','desc').limit(30).get();
+    OWNER_SUBMIT_FAILURES.items=snap.docs.map(d=>{const x=d.data()||{};return{id:d.id,at:x.at&&typeof x.at.toMillis==='function'?x.at.toMillis():Number(x.clientAt)||0,editorName:String(x.editorName||x.email||'編集者'),jobTitle:String(x.jobTitle||x.jobId||''),parentCaseName:String(x.parentCaseName||''),status:String(x.status||''),previousStatus:String(x.previousStatus||''),code:String(x.code||''),message:String(x.message||''),appVersion:String(x.appVersion||''),hasEvidence:!!x.hasEvidence,evidenceOk:!!x.evidenceOk,dates:[x.sharedDate,x.editorDraftDate,x.clientDraftDate,x.deliveryDate].map(v=>String(v||'')),userAgent:String(x.userAgent||'')}});
+    OWNER_SUBMIT_FAILURES.loaded=true;
+  }catch(e){console.warn('submit failures',e);OWNER_SUBMIT_FAILURES.error=String(e&&e.code||'読み込みに失敗しました');}
+  finally{OWNER_SUBMIT_FAILURES.loading=false;if(typeof renderSyncSafe==='function')renderSyncSafe();else render();}
+}
+function _ownerSubmitFailureHint(item){
+  const code=item.code;
+  if(!item.hasEvidence)return'提出URLが空のまま';
+  if(!item.evidenceOk)return'提出URLが https:// で始まっていない';
+  if(code==='permission-denied')return'保存が拒否された（日付の順序・工程の不一致・権限）';
+  if(code==='resource-exhausted')return'Firestoreの利用上限';
+  if(code==='unavailable'||code==='deadline-exceeded')return'通信が不安定';
+  if(code==='unauthenticated')return'ログイン期限切れ';
+  return item.message||'不明';
+}
+function _ownerSubmitFailuresHtml(){
+  if(!_isOwner())return'';
+  if(!OWNER_SUBMIT_FAILURES.loaded&&!OWNER_SUBMIT_FAILURES.loading&&!OWNER_SUBMIT_FAILURES.error)setTimeout(()=>ownerLoadSubmitFailures(),0);
+  const rows=OWNER_SUBMIT_FAILURES.items.map(item=>`<tr><td style="white-space:nowrap">${esc(item.at?new Date(item.at).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'-')}</td><td>${esc(item.editorName)}</td><td>${esc(item.parentCaseName?`${item.parentCaseName} / ${item.jobTitle}`:item.jobTitle)}</td><td>${esc(item.previousStatus)} → ${esc(item.status)}</td><td>${esc(_ownerSubmitFailureHint(item))}${item.code?`<div style="font-size:10px;color:var(--t3)">${esc(item.code)}</div>`:''}</td><td style="white-space:nowrap">${esc(item.appVersion||'-')}</td></tr>`).join('');
+  const body=OWNER_SUBMIT_FAILURES.loading?'<div class="muted" style="padding:8px 0">読み込み中…</div>':OWNER_SUBMIT_FAILURES.error?`<div class="muted" style="padding:8px 0">取得できませんでした（${esc(OWNER_SUBMIT_FAILURES.error)}）</div>`:rows?`<div style="overflow-x:auto"><table class="priority-table" style="min-width:720px;font-size:12px"><thead><tr style="background:var(--card2);font-weight:700;color:var(--t2)"><th style="padding:6px 8px;text-align:left">日時</th><th style="padding:6px 8px;text-align:left">編集者</th><th style="padding:6px 8px;text-align:left">案件</th><th style="padding:6px 8px;text-align:left">変更</th><th style="padding:6px 8px;text-align:left">原因</th><th style="padding:6px 8px;text-align:left">アプリ版</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="muted" style="padding:8px 0">失敗の記録はありません。</div>';
+  return`<details class="card" style="margin-top:14px"><summary style="cursor:pointer;font-weight:800;font-size:14px">編集者が提出できなかった記録（直近30件）<span class="badge ${OWNER_SUBMIT_FAILURES.items.length?'br':'bk'}" style="margin-left:6px">${OWNER_SUBMIT_FAILURES.items.length}</span></summary><div class="muted" style="margin:6px 0 8px">編集者の画面で初稿・修正稿の保存に失敗すると、ここに原因が残ります（20260905-06以降のアプリ版から）。</div>${body}<div style="margin-top:8px"><button class="btn btn-g btn-xs" type="button" onclick="ownerLoadSubmitFailures(true)">再読み込み</button></div></details>`;
 }
 
 function _videoNotificationItems(biz=PBIZ){
@@ -10190,7 +10220,7 @@ const DOCLINK_SEEDS=[
    url:'https://mono-create-group.github.io/editflow-team/dm-manual.html?v=20260816-01',
    category:'マニュアル',notes:'新メンバー向け。アイコン・アカウント名の予約(早い者勝ち)・DM文章の作成・営業リストでの送付と記録まで1ページで完結',ver:3},
   {id:'doclink_invoice_manual',title:'請求書の作り方（編集者向けマニュアル・見本つき）',
-   url:'https://mono-create-group.github.io/editflow-team/invoice-manual.html?v=20260905-05',
+   url:'https://mono-create-group.github.io/editflow-team/invoice-manual.html?v=20260905-06',
    category:'マニュアル',notes:'編集者へ共有する。請求者情報の登録→完了案件を選んで明細（1案件＝1行）→確認して提出、締切と支払日、NG例/見本、FAQ',ver:1},
   {id:'doclink_dm_entry_form',title:'DM営業スタッフ 登録フォーム（応募者に送るURL）',
    url:'https://mono-create-group.github.io/editflow-team/dm-entry.html',
@@ -18464,7 +18494,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260905-05';
+const APP_VERSION='20260905-06';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -18541,13 +18571,13 @@ window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});  
 checkServerVersion();                                                              // 初回表示でも旧版を即時検出
   </script>
 <script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
-<script src="./editor-push.js?v=20260905-05"></script>
-<script src="./bulletin.js?v=20260905-05"></script>
-<script src="./direct-messages.js?v=20260905-05"></script>
+<script src="./editor-push.js?v=20260905-06"></script>
+<script src="./bulletin.js?v=20260905-06"></script>
+<script src="./direct-messages.js?v=20260905-06"></script>
 <script>
   try{if(V==='directmessages')render();else renderNav();}catch(error){console.warn('owner dm init',error);}
 </script>
-<script src="./manager-features.js?v=20260905-05"></script>
-<script src="./sales-video-leads.js?v=20260905-05"></script>
+<script src="./manager-features.js?v=20260905-06"></script>
+<script src="./sales-video-leads.js?v=20260905-06"></script>
 </body>
 </html>

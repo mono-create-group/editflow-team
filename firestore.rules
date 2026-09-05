@@ -2136,6 +2136,27 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // 編集者が初稿・修正稿の保存に失敗した記録。編集者本人だけが作成でき、
+    // オーナーが「提出確認」で原因を確認する。本文・金額は含めない。
+    match /editor_submit_failures/{failureId} {
+      allow read: if owner() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          'uid','email','editorName','jobId','jobTitle','parentCaseName','status','previousStatus',
+          'editorSubmitted','code','message','appVersion','workflow','sharedDate','editorDraftDate',
+          'clientDraftDate','deliveryDate','hasEvidence','evidenceOk','userAgent','at','clientAt'
+        ])
+        && request.resource.data.jobId is string && request.resource.data.jobId.size() <= 160
+        && request.resource.data.jobTitle is string && request.resource.data.jobTitle.size() <= 120
+        && request.resource.data.status is string && request.resource.data.status.size() <= 40
+        && request.resource.data.code is string && request.resource.data.code.size() <= 60
+        && request.resource.data.message is string && request.resource.data.message.size() <= 300
+        && request.resource.data.userAgent is string && request.resource.data.userAgent.size() <= 200
+        && request.resource.data.at == request.time;
+      allow update, delete: if false;
+    }
+
     match /editor_portals/{uid} {
       allow read: if portalManager(uid) || editor(uid);
       allow create, update: if owner();

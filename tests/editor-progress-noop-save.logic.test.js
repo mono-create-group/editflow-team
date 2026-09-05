@@ -46,7 +46,7 @@ function makeHarness({ job = baseJob, changes, commitError } = {}) {
     $: selector => controls[selector] || null, safeUrl: value => /^https?:\/\//.test(value), now: () => 123,
     editorDraftDateSetter: () => 'editor', editorCanSaveStatus: () => true, editorMilestoneError: () => '', scheduleError: () => '',
     EDITOR_MILESTONE_BY_STATUS: { '初稿提出済み': { key: 'initial_submitted', label: '初稿提出' }, '修正稿提出済み': { key: 'revision_submitted', label: '修正稿提出' } },
-    clearJobDraft: () => { calls.clear += 1; }, saveJobDraft: () => {}, setJobInlineError: () => {}, clearJobInlineError: () => {}, progressSavingIds: new Set(), toast: message => { calls.toasts.push(message); }, console: { warn: () => {} },
+    clearJobDraft: () => { calls.clear += 1; }, saveJobDraft: () => {}, logSubmissionFailure: () => {}, setJobInlineError: () => {}, clearJobInlineError: () => {}, progressSavingIds: new Set(), toast: message => { calls.toasts.push(message); }, console: { warn: () => {} },
     portalSaveErrorMessage: () => '保存に失敗しました', portalWriteFailure: () => ({ quota: false, message: '保存に失敗しました' }),
     firebase: { firestore: { FieldValue: { serverTimestamp: () => 'server-time' } } },
     db: { collection: () => ({ doc: () => ({ collection: () => ({ doc: () => ({ collection: () => ({ doc: () => ({}) }) }) }) }) }), batch: () => ({ update: () => { calls.update += 1; }, set: () => { calls.set += 1; }, commit: async () => { calls.commit += 1; if (commitError) throw new Error('offline'); } }) }
