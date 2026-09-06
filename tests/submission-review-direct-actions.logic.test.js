@@ -20,8 +20,10 @@ function functionSource(name){
 
 test('the submission review list lets a manager approve, or approve and submit to the client, in place',()=>{
   const view=functionSource('rVideoSubmissions');
-  assert.match(view,/item\.canManage\?`<button[^>]+onclick="advancePortalWorkflow\(\$\{JSON\.stringify\(item\.portalUid\)\},\$\{JSON\.stringify\(item\.id\)\},'directorApprove'\)">D確認OK<\/button>/);
-  assert.match(view,/'directorApproveAndSubmit'\)">D確認OK・先方へ提出済み<\/button>/);
+  // onclick 属性の中に生の二重引用符が入ると属性が途中で切れ、クリックしても何も起きない。必ず esc() を通す。
+  assert.match(view,/onclick="\$\{esc\(`advancePortalWorkflow\(\$\{JSON\.stringify\(item\.portalUid\)\},\$\{JSON\.stringify\(item\.id\)\},'directorApprove'\)`\)\}">D確認OK<\/button>/);
+  assert.match(view,/onclick="\$\{esc\(`advancePortalWorkflow\(\$\{JSON\.stringify\(item\.portalUid\)\},\$\{JSON\.stringify\(item\.id\)\},'directorApproveAndSubmit'\)`\)\}">D確認OK・先方へ提出済み<\/button>/);
+  assert.doesNotMatch(view,/onclick="advancePortalWorkflow\(\$\{JSON\.stringify/,'raw JSON inside a double-quoted attribute breaks the handler');
   assert.match(view,/D確認と先方提出を一度に記録し、進捗が「先方確認中」になります/);
   assert.match(functionSource('_videoSubmissionReviewItems'),/canManage:typeof _canManagePortalWorkflow==='function'\?!!_canManagePortalWorkflow\(job\):false/);
 });
