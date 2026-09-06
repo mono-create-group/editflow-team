@@ -272,16 +272,43 @@ test('the rendered confirmation block shows every item the editor must check bef
 });
 
 test('editing a draft keeps every line instead of collapsing the invoice to its first one', () => {
-  // 明細が複数になったので、下書き修正は行ごとの金額を読み直す。
+  // 明細が複数になったので、下書き修正は行ごとの内容と金額を読み直す。
   // 修正フォームの markup は最下層の invoiceCard 宣言にある。
   assert.match(editor, /id="invoice-line-amount-\$\{x\.id\}-\$\{i\}"/);
-  assert.match(editor, /<label>明細（税込金額）<\/label><ul class="invoice-edit-lines">/);
+  assert.match(editor, /<label>明細（内容・税込金額）<\/label><ul class="invoice-edit-lines">/);
   assert.equal(editor.includes('id="invoice-description-${x.id}"'), false);
   assert.equal(editor.includes('id="invoice-amount-${x.id}"'), false);
   const save = sourceOf('saveInvoiceDraft');
-  assert.match(save, /\(x\.lines\|\|\[\]\)\.map\(\(l,i\)=>\(\{\.\.\.l,amount:Math\.round\(Number\(\$\(`#invoice-line-amount-\$\{iid\}-\$\{i\}`\)\?\.value\)\|\|0\),taxRate:rate\}\)\)/);
+  assert.match(save, /const lines=readInvoiceEditLines\(iid\)\.map\(l=>\(\{\.\.\.l,taxRate:rate\}\)\)/);
   assert.match(save, /jobIds:lines\.map\(/);
   assert.doesNotMatch(save, /lines:\[line\]/);
+});
+
+test('a manual draft lets the editor type each line title and add or remove video lines', () => {
+  // 編集者から「請求書に動画のタイトル名が入力できない」と問い合わせがあった。
+  // 手入力請求書の下書き修正では、明細の内容（タイトル）を入力欄にし、
+  // 動画が複数あれば明細を1本ずつ追加できるようにする。
+  assert.match(editor, /id="invoice-line-title-\$\{x\.id\}-\$\{i\}" class="invoice-edit-line-title" maxlength="200"/);
+  assert.match(editor, /onclick="addInvoiceEditLine\('\$\{x\.id\}'\)">明細を追加<\/button>/);
+  assert.match(editor, /onclick="removeInvoiceEditLine\('\$\{x\.id\}',\$\{i\}\)"/);
+  assert.equal(editor.includes('案件名と納品日は案件から引いています。金額だけ直せます。'), false);
+  const read = sourceOf('readInvoiceEditLines');
+  assert.match(read, /#invoice-line-title-\$\{iid\}-\$\{i\}/);
+  assert.match(read, /title:description,serviceDescription:description,amount/);
+  const add = sourceOf('addInvoiceEditLine');
+  assert.match(add, /x\.authorizationId!=='manual'\)return/);
+  assert.match(add, /lines\.length>=50\)return toast/);
+  assert.match(add, /jobId:`manual-line-\$\{iid\}-\$\{now\(\)\}-\$\{lines\.length\}`/);
+  const remove = sourceOf('removeInvoiceEditLine');
+  assert.match(remove, /lines\.length<=1\)return toast\('明細は1件以上必要です'\)/);
+  const save = sourceOf('saveInvoiceDraft');
+  assert.match(save, /lines\.some\(l=>!l\.serviceDescription\)\)return toast\('各明細の内容（動画タイトルなど）を入力してください'\)/);
+  assert.match(save, /lines\.some\(l=>isMonthlyLumpInvoiceDescription\(l\.serviceDescription\)\)\)return toast/);
+  assert.match(save, /lines\.some\(l=>!\(l\.amount>0\)\)\)return toast\('各明細の税込金額を確認してください'\)/);
+  // 保存・キャンセル・修正開始のたびに、画面保持中の明細は捨てて実データから読み直す。
+  assert.match(sourceOf('openInvoiceDraftEdit'), /invoiceEditLines=null/);
+  assert.match(sourceOf('cancelInvoiceDraftEdit'), /invoiceEditLines=null/);
+  assert.equal((save.match(/invoiceEditLines=null/g) || []).length, 2);
 });
 
 test('the optional issuer address is saved, snapshotted, and printed on the invoice', () => {

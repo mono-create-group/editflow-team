@@ -286,4 +286,5 @@ body.editor-yellow-ui{
 .editor-yellow-ui .invoice-edit-line-copy{display:block;min-width:0;flex:1 1 200px}
 .editor-yellow-ui .invoice-edit-line-copy b,.editor-yellow-ui .invoice-edit-line-copy .muted{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .editor-yellow-ui .invoice-edit-lines input{width:130px;flex:0 0 auto;border:1px solid var(--border);border-radius:8px;padding:8px 10px;background:#fff;color:var(--text)}
+.editor-yellow-ui .invoice-edit-lines input.invoice-edit-line-title{width:100%;flex:1 1 auto;margin-bottom:4px}
 @media(max-width:520px){.editor-yellow-ui .invoice-edit-lines input{width:100%;flex:1 1 100%}}

@@ -92,6 +92,47 @@ test('malformed or missing evidence stays visible without creating a clickable U
   assert.equal(item.evidenceUrl, '');
 });
 
+test('client submission text is a paste-ready message built from the draft kind, title, and link', () => {
+  // 編集者から初稿が届いたら、そのまま先方へ貼り付けて送れる文面をコピーできる。
+  const context = inboxContext([]);
+  vm.runInContext(functionSource('_videoClientSubmissionText'), context);
+  const text = vm.runInContext(
+    `_videoClientSubmissionText({kind:'初稿',title:'17若く見える人と老けて見える人の決定的な違いってありますか？.mp4',evidenceUrl:'https://drive.google.com/file/d/1Lm4ySITeOnQ3AcblbKE6VGs62EjyGjn5/view?usp=sharing'})`,
+    context,
+  );
+  assert.equal(text, [
+    '【初稿提出】',
+    'お世話になっております！',
+    '下記動画の初稿を提出いたします。',
+    'ご確認のほど、よろしくお願いいたします。',
+    '',
+    '【17若く見える人と老けて見える人の決定的な違いってありますか？.mp4】',
+    '--------------------------------------------',
+    '◇ドライブリンク',
+    'https://drive.google.com/file/d/1Lm4ySITeOnQ3AcblbKE6VGs62EjyGjn5/view?usp=sharing',
+  ].join('\n'));
+  const revision = vm.runInContext(`_videoClientSubmissionText({kind:'修正稿',title:'案件A',evidenceUrl:'https://example.com/r2'})`, context);
+  assert.match(revision, /^【修正稿提出】\n/);
+  assert.match(revision, /下記動画の修正稿を提出いたします。/);
+  // 提出リンクが無い・危険なスキームなら文面を作らない。
+  assert.equal(vm.runInContext(`_videoClientSubmissionText({kind:'初稿',title:'x',evidenceUrl:''})`, context), '');
+  assert.equal(vm.runInContext(`_videoClientSubmissionText({kind:'初稿',title:'x',evidenceUrl:'javascript:alert(1)'})`, context), '');
+});
+
+test('the copy button appears only next to a registered submission link and never writes to Firestore', () => {
+  const source = functionSource('rVideoSubmissions');
+  assert.match(source, /copyVideoClientSubmissionText\(\$\{JSON\.stringify\(item\.portalUid\)\},\$\{JSON\.stringify\(item\.id\)\}\)/);
+  assert.match(source, /先方提出文をコピー/);
+  // ボタンは提出リンクがある分岐（`item.evidenceUrl?`）の中だけに出る。
+  const branch = source.slice(source.indexOf('${item.evidenceUrl?`'), source.indexOf('提出リンク未登録'));
+  assert.match(branch, /先方提出文をコピー/);
+  const copy = functionSource('copyVideoClientSubmissionText');
+  assert.match(copy, /if\(!_videoCanEdit\(\)\)return;/);
+  assert.match(copy, /_videoSubmissionReviewItems\(\)\.find\(/);
+  assert.match(copy, /navigator\.clipboard\.writeText\(txt\)/);
+  assert.doesNotMatch(copy, /onSnapshot|fbDb|batch\.|\.set\(|\.update\(|\.add\(|save\(\)/);
+});
+
 test('page reuses existing portal memory and review modal without its own writes or listeners', () => {
   const source = functionSource('rVideoSubmissions');
   assert.match(source, /_videoSubmissionReviewItems\(\)/);
