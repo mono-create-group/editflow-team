@@ -19,7 +19,7 @@
     @media(max-width:420px){.metric{grid-column:span 12}.who{max-width:46%}.btn{width:100%}.nav .btn,.actions .btn,.topbar .btn{width:auto}.actions .job-primary{width:100%}}
   </style>
   <link rel="stylesheet" href="app-ui.css">
-  <link rel="stylesheet" href="editor-yellow-ui.css?v=20260905-11">
+  <link rel="stylesheet" href="editor-yellow-ui.css?v=20260905-12">
 </head>
 <body class="editor-yellow-ui">
   <a class="app-skip-link" href="#app">メイン画面へ移動</a>
@@ -30,7 +30,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" onerror="portalSdkLoadFailed()"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js" onerror="portalSdkLoadFailed()"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js" onerror="portalSdkLoadFailed()"></script>
-  <script src="./billing-terms.js?v=20260905-11"></script>
+  <script src="./billing-terms.js?v=20260905-12"></script>
   <!-- PDF libraries are loaded only when an editor creates a PDF. -->
   <script>
   const PAGE_PARAMS=new URLSearchParams(location.search);
@@ -271,6 +271,8 @@
 
   function guideHtml(){return`<div class="guide-hero"><div class="guide-kicker">EDITOR WORK GUIDE</div><h1>初めての方のための編集者ガイド</h1><p>案件を受ける、日程を伝える、質問する、DM、初稿・修正稿を提出する操作はこのアプリで行います。端末通知をオンにして、アプリ内のDMを見落とさないようにしてください。D確認OK・先方確認中はディレクターまたはオーナーが更新します。編集者派遣案件は、先方OK後の完了だけ担当編集者が実納品日と納品URLを付けて記録します。</p></div>
   <div class="section-title"><h2>案件には2つの形態があります</h2><span>担当案件の「編集代行」「編集者派遣」の違い</span></div><div class="guide-detail-grid"><section class="card guide-detail"><h2>編集者派遣</h2><p><b>クライアントと直接やり取りする形態</b>です。案件外の依頼も、クライアントから直接あなたに届きます。</p><ol><li>連絡・質問・素材の受け取りはクライアントと直接行います。</li><li>初稿・修正稿もクライアントへ直接提出し、このアプリには「提出した」記録とURLを残します。</li><li>先方OKが出たら、<b>あなたが</b>実際の納品日と納品URLを付けて「納品を完了した」を押します。</li><li>案件外の追加依頼を受けたら「担当案件」の「編集者派遣の案件を追加」から登録します（登録がないと報酬の対象になりません）。</li></ol><div class="guide-done"><b>目印</b>案件カードの左上が「編集者派遣」。次の担当が「クライアント」と表示されます。</div></section><section class="card guide-detail"><h2>編集代行</h2><p><b>ディレクターが間に入る形態</b>です。あなたはディレクターに納品し、ディレクターがクライアントへ納品します。</p><ol><li>連絡・質問はディレクター（案件内チャット・DM）に行います。クライアントへ直接連絡しません。</li><li>初稿・修正稿はディレクターへ提出します（「初稿を提出」「修正稿を提出」）。</li><li>D確認・先方への提出・先方確認・完了は<b>ディレクターまたはオーナー</b>が記録します。あなたが完了を押すことはありません。</li><li>クライアントから直接依頼が来ても受けず、ディレクターへ連絡してください。</li></ol><div class="guide-done"><b>目印</b>案件カードの左上が「編集代行」。提出後の次の担当が「ディレクター」と表示されます。</div></section></div><div class="guide-warning">請求書はどちらの形態も、このアプリの「請求書」から完了案件を選んで作ります（1案件＝1行）。</div>
+  <div class="section-title"><h2>案件の受託</h2><span>案件を探す → 内容を確認 → 受託</span></div><section class="card guide-detail"><h2>「案件を探す」から受託します</h2><ol><li>「案件を探す」で募集中の案件を開き、日程・編集内容・素材を確認します。</li><li>マニュアルと素材はすべて案件に添付されています。受託後はそのまま作業に入れます。</li><li>「この案件を受ける」を押すと「担当案件」に追加され、進捗は「アサイン済み」になります。</li></ol><div class="guide-done"><b>目印</b>「担当案件」の進行中に、その案件が「アサイン済み」で並びます。</div></section>
+  <div class="section-title"><h2>進捗の変更ルール</h2><span>忘れると業務が止まります</span></div><section class="card guide-detail"><h2>あなたが変更する3つの進捗</h2><p>案件カードの「進捗を選択」から変更します。次の工程は最初から選ばれているので、URLを貼って提出ボタンを押すだけです。</p><ol><li><b>編集者進行中</b>：編集を始めるときに「編集を開始」を押します。</li><li><b>初稿提出済み</b>：初稿を提出するときに「初稿を提出」。提出リンク（Drive等）を必ず添付します。</li><li><b>修正稿提出済み</b>：修正を終えて提出するときに「修正稿を提出」。修正版のリンクを必ず添付します。</li></ol><div class="guide-warning">提出URLが無いと保存できません。保存に失敗した場合は画面に理由が出るので、その内容に従って直してからもう一度押してください。</div></section><section class="card guide-detail"><h2>ディレクター・オーナーが変更する進捗（あなたは確認するだけ）</h2><ol><li><b>アサイン済み</b>：担当者は決まっているが、編集がまだ始まっていない状態。</li><li><b>進行中</b>：mono.create内で案件を捌いている状態。</li><li><b>修正中</b>：ディレクターが修正指示を記録すると自動でこの状態になります。差戻し内容が案件カードに表示されるので、直して「修正稿を提出」します。</li><li><b>D確認OK</b>：ディレクターが提出物を確認してOKを出した状態。</li><li><b>先方確認中</b>：ディレクターがクライアントへ提出した状態。修正が来た場合は再び「修正中」になります。</li><li><b>完了</b>：クライアントからOKが出た状態。編集代行はディレクター側で完了にします。編集者派遣だけは、先方OK後にあなたが納品日と納品URLを付けて「納品を完了した」を押します。</li></ol><div class="guide-done"><b>目印</b>案件カードの「現在の進捗」と「次の担当」で、いま誰の番かが分かります。「次の担当：あなた」のときだけ操作が必要です。</div></section>
   <div class="section-title"><h2>最初の1回だけすること</h2><span>所要目安5分</span></div><div class="guide-detail-grid"><section class="card guide-detail"><h2>1. ログイン承認</h2><ol><li>Chatworkの概要からこのアプリを開きます。</li><li>Googleでサインインします。</li><li>「アクセス承認待ち」と出たら、管理者の承認後に再読み込みします。</li></ol><div class="guide-done"><b>完了の目印</b>上部に「案件を探す」「担当案件」などのメニューが表示されます。</div></section><section class="card guide-detail"><h2>2. 請求者設定</h2><ol><li>「請求者設定」を開きます。</li><li>氏名、銀行、支店、口座番号、口座名義を入力します。</li><li>「設定を保存」を押します。</li></ol><div class="guide-warning">適格請求書発行事業者でない場合、登録番号は空欄のままで大丈夫です。</div><div class="actions"><button class="btn primary small" onclick="setView('settings')">請求者設定を開く</button></div></section></div>
   <div class="section-title"><h2>DM通知を必ず設定する</h2><span>最初の1回だけ</span></div><section class="card guide-detail"><h2>PC・スマホ共通：アプリ内で通知を有効にする</h2><ol><li>左メニューの「端末通知」、または「通知」画面の「端末通知を設定」を開きます。</li><li>画面の「通知を有効にする」を押し、OSまたはブラウザの確認画面で「許可」を選びます。</li><li>画面に「この端末で通知を受け取れます」と表示されたことを確認します。</li><li>DMを開き、左メニューの「DM」に赤い件数が表示されることを確認します。これは未読DMの件数です。</li></ol><div class="guide-done"><b>完了の目印</b>この端末の「端末通知」画面が「✓ 設定完了」になります。DMの赤い件数は、DMを開くか「すべて既読」にすると消えます。通知を見ただけでは既読になりません。</div><div class="guide-warning">ロック画面の通知には、DM本文・案件名・クライアント名などの具体的な内容を表示しません。内容は必ずサインイン後のアプリ内で確認してください。</div><div class="actions"><button class="btn primary small" onclick="setView('mobile-setup')">通知設定を開く</button><button class="btn small" onclick="setView('dm')">DMを開く</button></div></section>
   <div class="guide-detail-grid"><section class="card guide-detail"><h2>PC（Chrome / Edge）</h2><ol><li>アプリをChromeまたはEdgeで開きます。</li><li>「端末通知」→「通知を有効にする」を押します。</li><li>許可画面が出ない・拒否した場合は、アドレスバー左のサイト情報から「通知」を「許可」にして、アプリを開き直します。</li><li>アプリアイコンの赤い件数も使う場合は、アドレスバー右側またはブラウザメニューからEditFlowをインストールします。</li></ol><div class="guide-done">ブラウザタブでも端末通知を有効にできます。インストールすると独立したアプリとアイコンを使えます。</div></section><section class="card guide-detail"><h2>Android（Chrome）</h2><ol><li>Chromeでアプリを開き、ブラウザメニューから「アプリをインストール」または「ホーム画面に追加」を選びます。</li><li>ホーム画面に追加されたEditFlowを開きます。</li><li>「端末通知」→「通知を有効にする」を押し、「許可」を選びます。</li><li>届かない場合はAndroidの「設定」→「通知」→「EditFlow（またはChrome）」で通知をオンにします。</li></ol></section><section class="card guide-detail"><h2>iPhone（Safari / ホーム画面）</h2><ol><li>Safariでアプリを開き、共有ボタンから「ホーム画面に追加」を選びます。</li><li>ホーム画面に追加されたEditFlowアイコンから、もう一度アプリを開きます。</li><li>「端末通知」→「通知を有効にする」を押し、「許可」を選びます。</li><li>拒否後はiPhoneの「設定」→「通知」→「EditFlow」で「通知を許可」をオンにして、アプリを開き直します。</li></ol><div class="guide-warning">Safariのタブのままでは設定できません。必ずホーム画面に追加したEditFlowから設定してください。</div></section></div>
@@ -775,10 +777,10 @@
   if(!DEMO&&'serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(error=>console.warn('service worker',error));
   </script>
   <script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
-  <script src="./editor-push.js?v=20260905-11"></script>
-  <script src="./bulletin.js?v=20260905-11"></script>
-  <script src="./direct-messages.js?v=20260905-11"></script>
-  <script src="./feedback-workflow.js?v=20260905-11"></script>
-  <script src="./editor-features.js?v=20260905-11"></script>
+  <script src="./editor-push.js?v=20260905-12"></script>
+  <script src="./bulletin.js?v=20260905-12"></script>
+  <script src="./direct-messages.js?v=20260905-12"></script>
+  <script src="./feedback-workflow.js?v=20260905-12"></script>
+  <script src="./editor-features.js?v=20260905-12"></script>
 </body>
 </html>
