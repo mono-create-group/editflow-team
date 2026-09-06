@@ -1110,7 +1110,10 @@ service cloud.firestore {
     function validPortalJobUpdate(uid, jobId) {
       let changed = request.resource.data.diff(resource.data).affectedKeys();
       let eventType = changed.hasAny(['progressEvents']) ? portalUpdateEventType() : '';
-      return changed.hasOnly([
+      // チャット控えの分岐は lastMessage* を実際に触る書き込みだけ。updatedAt だけの
+      // 更新（同期済み案件の再保存など）まで送信者チェックに回すと、オーナーの保存が拒否される。
+      return changed.hasAny(['lastMessageAt','lastMessageSenderUid','lastMessagePreview'])
+        && changed.hasOnly([
           'lastMessageAt','lastMessageSenderUid','lastMessagePreview','updatedAt'
         ]) ? validJobChatStamp(uid)
         : eventType in [
