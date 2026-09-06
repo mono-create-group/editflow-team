@@ -34,7 +34,7 @@ test('和光8件と清水7件を、みゆう本人のポータルだけへ重複
     _isOwner:()=>true,myRoles:()=>['オーナー'],jobBiz:j=>j.biz,_legacyPortalStatus:s=>['完了','キャンセル'].includes(s)?'':s,
     _legacyPortalWorkerId:(parent,record)=>record.workerId||parent.workerId||'',
     _legacyPortalJobId:(parentId,subId)=>`legacy_${parentId}_${subId}`.replace(/[^A-Za-z0-9_-]/g,'_'),
-    _legacyPortalAccessForWorker:wid=>wid==='worker-miyuu'?{id:'uid-miyuu',email:'miyuu@example.test',name:'みゆう',directorUid:'uid-miura'}:null,
+    _legacyPortalAccessForWorker:wid=>wid==='worker-miyuu'?{id:'uid-miyuu',email:'miyuu@example.test',name:'みゆう',directorUid:'uid-miura'}:null,_legacyPortalAccessMatches:()=>[],
     _editorDraftDateSetter:r=>r.editorDraftDateSetter==='creator'?'creator':'editor',_videoAttachments:rows=>rows||[],_paymentWorkerName:()=>'',
     _caseManualIds:rows=>Array.isArray(rows)?[...new Set(rows.map(String))].slice(0,20):[],
     _myEmail:()=> 'owner@example.test',toast:()=>{},save:()=>{saved.count++},
@@ -80,7 +80,7 @@ test('担当変更はみゆう側を作成してから旧三浦側の派生デ�
   const context={
     S:{jobs:[parent],clients:[{id:'itsuba',name:'itsuba.net 河戸様'}]},fbDb:db,FB_USER:{uid:'owner'},SELF_WID:'self',_isOwner:()=>true,jobBiz:j=>j.biz,
     _legacyPortalStatus:s=>s,_legacyPortalWorkerId:(_parent,record)=>record.workerId,_legacyPortalJobId:(parentId,subId)=>`legacy_${parentId}_${subId}`,
-    _legacyPortalAccessForWorker:wid=>wid==='worker-miyuu'?{id:'uid-miyuu',email:'miyuu@example.test',name:'みゆう',directorUid:'uid-miura'}:null,
+    _legacyPortalAccessForWorker:wid=>wid==='worker-miyuu'?{id:'uid-miyuu',email:'miyuu@example.test',name:'みゆう',directorUid:'uid-miura'}:null,_legacyPortalAccessMatches:()=>[],
     _editorDraftDateSetter:()=> 'editor',_videoAttachments:rows=>rows||[],_paymentWorkerName:()=>'',_caseManualIds:rows=>Array.isArray(rows)?rows:[],_myEmail:()=> 'owner@example.test',toast:()=>{},save:()=>{},
     firebase:{firestore:{FieldValue:{serverTimestamp:()=>({serverTimestamp:true})}}},console,Date,String,Number,Array,Set,Map,Promise,
   };
