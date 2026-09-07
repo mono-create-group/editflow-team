@@ -120,7 +120,7 @@
         const merged = { ...parent, ...child };
         if (legacyHasPortalLink(merged, portalLegacyIds)) return;
         const childId = text(child.id || child.subtaskId || index);
-        push({ ...merged, source: 'legacy', key: `legacy:${text(parent.id)}:${children.length ? childId : 'parent'}`, legacyParentId: text(parent.id), legacySubtaskId: children.length ? childId : '', legacyJobId: text(merged.legacyJobId || (children.length ? `${text(parent.id)}:${childId}` : parent.id)), workerId: merged.workerId || merged.assigneeWorkerId || '', editorUid: merged.editorUid || merged.assignedUid || '', editorName: merged.editorName || merged.assignee || merged.assignedName || '', completedDeliveryDate: merged.completedDeliveryDate || merged.deliveryCompletedDate || '', deadline: merged.deadline || merged.deliveryDate || '' });
+        push({ ...merged, source: 'legacy', key: `legacy:${text(parent.id)}:${children.length ? childId : 'parent'}`, legacyParentId: text(parent.id), legacySubtaskId: children.length ? childId : '', legacyChildUnitPrice: children.length ? number(child?.unitPrice ?? child?.clientUnitPrice) : null, legacyParentUnitPrice: number(parent.unitPrice ?? parent.clientUnitPrice), legacySiblingCount: rows.length, legacySiblingPriced: children.some(row => (number(row?.unitPrice) || 0) > 0 || (number(row?.clientUnitPrice) || 0) > 0), legacyJobId: text(merged.legacyJobId || (children.length ? `${text(parent.id)}:${childId}` : parent.id)), workerId: merged.workerId || merged.assigneeWorkerId || '', editorUid: merged.editorUid || merged.assignedUid || '', editorName: merged.editorName || merged.assignee || merged.assignedName || '', completedDeliveryDate: merged.completedDeliveryDate || merged.deliveryCompletedDate || '', deadline: merged.deadline || merged.deliveryDate || '' });
       });
     });
     return units;
@@ -176,6 +176,15 @@
       if (value !== null && value >= 0) return { amount: value, source: text(resolved && typeof resolved === 'object' ? resolved.source : '') || 'resolver' };
     }
     if (unit?.source === 'legacy') {
+      if (unit.legacySubtaskId) {
+        // 子案件は自分の単価だけを見る（{...parent, ...child} で親の単価を継承した値を子ごとに数えると
+        // 親の一括単価が子の本数分に膨らむ）。子がどれも未入力で親に一括単価が入っていれば本数で配分する。
+        const own = number(unit.legacyChildUnitPrice);
+        if (own !== null && own > 0) return { amount: own, source: 'job' };
+        const parentPrice = number(unit.legacyParentUnitPrice), count = Math.max(1, Number(unit.legacySiblingCount) || 1);
+        if (!unit.legacySiblingPriced && parentPrice !== null && parentPrice > 0) return { amount: Math.round(parentPrice / count), source: 'parent' };
+        return null;
+      }
       for (const field of ['clientUnitPrice', 'unitPrice']) {
         const value = number(unit[field]);
         if (value !== null && value > 0) return { amount: value, source: 'job' };

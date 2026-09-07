@@ -34,7 +34,8 @@ function valuesFor(job, changes = {}) {
     '#job-client-draft-job-1': { value: next.clientDraftDate }, '#job-thumbnail-job-1': { value: next.thumbnailDate },
     '#job-progress-job-1': { value: next.progress }, '#job-evidence-job-1': { value: next.evidenceUrl },
     '#job-blocker-job-1': { value: next.blocker }, '#job-workdate-job-1': { value: next.workDate },
-    '#job-start-job-1': { value: next.startTime }, '#job-end-job-1': { value: next.endTime }
+    '#job-start-job-1': { value: next.startTime }, '#job-end-job-1': { value: next.endTime },
+    '#job-pm-job-1': { value: next.pmUrl || '' }, '#job-framer-job-1': { value: next.framerUrl || '' }
   };
 }
 
@@ -49,7 +50,7 @@ function makeHarness({ job = baseJob, changes, commitError } = {}) {
     clearJobDraft: () => { calls.clear += 1; }, saveJobDraft: () => {}, logSubmissionFailure: () => {}, setJobInlineError: () => {}, clearJobInlineError: () => {}, progressSavingIds: new Set(), toast: message => { calls.toasts.push(message); }, console: { warn: () => {} },
     portalSaveErrorMessage: () => '保存に失敗しました', portalWriteFailure: () => ({ quota: false, message: '保存に失敗しました' }),
     firebase: { firestore: { FieldValue: { serverTimestamp: () => 'server-time' } } },
-    db: { collection: () => ({ doc: () => ({ collection: () => ({ doc: () => ({ collection: () => ({ doc: () => ({}) }) }) }) }) }), batch: () => ({ update: () => { calls.update += 1; }, set: () => { calls.set += 1; }, commit: async () => { calls.commit += 1; if (commitError) throw new Error('offline'); } }) }
+    db: { collection: () => ({ doc: () => ({ collection: () => ({ doc: () => ({ collection: () => ({ doc: () => ({}) }) }) }) }) }), batch: () => ({ update: (_ref, payload) => { calls.update += 1; calls.lastUpdate = payload; }, set: () => { calls.set += 1; }, commit: async () => { calls.commit += 1; if (commitError) throw new Error('offline'); } }) }
   };
   vm.createContext(context);
   vm.runInContext(`${functionSource('jobProgressInputsUnchanged')}\n${functionSource('portalProgressFailureMessage')}\n${functionSource('saveJobProgressRequired')}\nthis.save = saveJobProgressRequired;`, context);
@@ -78,7 +79,7 @@ test('one changed progress field keeps the required job and event writes', async
 });
 
 test('a normal initial submission records its milestone once, but a repeated click is a no-op', async () => {
-  const initial = makeHarness({ changes: { status: '初稿提出済み' } });
+  const initial = makeHarness({ changes: { status: '初稿提出済み', pmUrl: 'https://example.com/pm' } });
   await initial.context.save('job-1');
   assert.equal(initial.calls.update, 1);
   assert.equal(initial.calls.set, 1);
@@ -93,7 +94,7 @@ test('a normal initial submission records its milestone once, but a repeated cli
 });
 
 test('initial submission event includes the workflow round required by Firestore rules', async () => {
-  const { context, calls } = makeHarness({ changes: { status: '初稿提出済み' } });
+  const { context, calls } = makeHarness({ changes: { status: '初稿提出済み', pmUrl: 'https://example.com/pm' } });
   let jobData;
   context.db.batch = () => ({ update: (_ref, data) => { jobData = data; calls.update += 1; }, set: () => { calls.set += 1; }, commit: async () => { calls.commit += 1; } });
   await context.save('job-1');
@@ -101,10 +102,37 @@ test('initial submission event includes the workflow round required by Firestore
 });
 
 test('failed saves preserve the local draft for retry', async () => {
-  const { context, calls } = makeHarness({ changes: { status: '初稿提出済み' }, commitError: true });
+  const { context, calls } = makeHarness({ changes: { status: '初稿提出済み', pmUrl: 'https://example.com/pm' }, commitError: true });
   await context.save('job-1');
   assert.equal(calls.commit, 1);
   assert.equal(calls.clear, 0);
   assert.equal(context.$('#job-status-job-1').value, '進行中');
   assert.deepEqual(calls.toasts, ['初稿・修正稿の提出は記録されていません。入力内容は保持しました。']);
+});
+
+test('an initial or revision submission without the project-management link is rejected before any write', async () => {
+  // 会長指示: 初稿・修正稿の提出時はプロマネリンク必須。Framer リンクは任意。
+  const { context, calls } = makeHarness({ changes: { status: '初稿提出済み' } });
+  await context.save('job-1');
+  assert.equal(calls.update, 0);
+  assert.equal(calls.commit, 0);
+  assert.ok(calls.toasts.some(message => /プロマネリンク/.test(message)), calls.toasts.join(' / '));
+  const optionalFramer = makeHarness({ changes: { status: '初稿提出済み', pmUrl: 'https://example.com/pm' } });
+  await optionalFramer.context.save('job-1');
+  assert.equal(optionalFramer.calls.commit, 1, 'Framer link stays optional');
+});
+
+test('submission links are recorded on the submission event and history, never as top-level job keys', async () => {
+  // Firestore ルールの更新キー一覧にトップレベルの pmUrl / framerUrl は無いため、イベント・履歴側に保存する。
+  const { context, calls } = makeHarness({ changes: { status: '初稿提出済み', pmUrl: 'https://example.com/pm', framerUrl: 'https://framer.example.com/x' } });
+  await context.save('job-1');
+  assert.equal(calls.commit, 1);
+  const data = calls.lastUpdate;
+  assert.equal(Object.prototype.hasOwnProperty.call(data, 'pmUrl'), false);
+  assert.equal(Object.prototype.hasOwnProperty.call(data, 'framerUrl'), false);
+  const event = data.progressEvents.find(row => row.type === 'editor_submitted');
+  assert.equal(event.pmUrl, 'https://example.com/pm');
+  assert.equal(event.framerUrl, 'https://framer.example.com/x');
+  assert.equal(data.history[data.history.length - 1].pmUrl, 'https://example.com/pm');
+  assert.equal(data.progressMilestones[0].framerUrl, 'https://framer.example.com/x');
 });

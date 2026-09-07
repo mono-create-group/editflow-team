@@ -32,7 +32,7 @@ test('a failed progress save writes a redacted failure record that never blocks 
   assert.match(log,/db\.collection\('editor_submit_failures'\)\.add\(record\)\.catch\(/);
   assert.doesNotMatch(log,/instructions|correctionReason|progress:|ownPay|editorPayAmount/,'no case text or money leaves the portal');
   const calls=[];
-  const context={DEMO:false,ADMIN_PREVIEW:false,db:{collection:name=>({add:record=>{calls.push([name,record]);return Promise.resolve()}})},user:{uid:'u1',email:'e@example.com',displayName:'みゆう'},access:{name:'みゆう'},PORTAL_APP_VERSION:'20260906-03',safeUrl:v=>/^https?:\/\//.test(v),now:()=>123,navigator:{userAgent:'UA'},firebase:{firestore:{FieldValue:{serverTimestamp:()=>'TS'}}},console:{warn:()=>{}}};
+  const context={DEMO:false,ADMIN_PREVIEW:false,db:{collection:name=>({add:record=>{calls.push([name,record]);return Promise.resolve()}})},user:{uid:'u1',email:'e@example.com',displayName:'みゆう'},access:{name:'みゆう'},PORTAL_APP_VERSION:'20260906-04',safeUrl:v=>/^https?:\/\//.test(v),now:()=>123,navigator:{userAgent:'UA'},firebase:{firestore:{FieldValue:{serverTimestamp:()=>'TS'}}},console:{warn:()=>{}}};
   vm.createContext(context);
   vm.runInContext(`${log}\nthis.log=logSubmissionFailure;`,context);
   context.log({jid:'j1',job:{title:'WD-S087',parentCaseName:'9月分',workflow:{round:2,stage:'editing'}},status:'修正稿提出済み',previousStatus:'修正中',error:{code:'permission-denied',message:'Missing or insufficient permissions.'},editorSubmitted:true,schedule:{sharedDate:'2026-08-28',editorDraftDate:'2026-09-02',clientDraftDate:'2026-09-11',deliveryDate:''},evidence:'https://drive.google.com/x'});
@@ -44,7 +44,7 @@ test('a failed progress save writes a redacted failure record that never blocks 
   assert.equal(record.status,'修正稿提出済み');
   assert.equal(record.evidenceOk,true);
   assert.equal(record.workflow?.round,2);assert.equal(record.workflow?.stage,'editing');
-  assert.equal(record.appVersion,'20260906-03');
+  assert.equal(record.appVersion,'20260906-04');
   assert.equal(record.at,'TS');
   const allowed=rules.match(/match \/editor_submit_failures\/\{failureId\}[\s\S]*?hasOnly\(\[([\s\S]*?)\]\)/)[1].match(/'([^']+)'/g).map(s=>s.replace(/'/g,''));
   for(const key of Object.keys(record))assert.ok(allowed.includes(key),`rules must allow key ${key}`);
