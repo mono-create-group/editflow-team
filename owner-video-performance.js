@@ -120,7 +120,7 @@
         const merged = { ...parent, ...child };
         if (legacyHasPortalLink(merged, portalLegacyIds)) return;
         const childId = text(child.id || child.subtaskId || index);
-        push({ ...merged, source: 'legacy', key: `legacy:${text(parent.id)}:${children.length ? childId : 'parent'}`, legacyParentId: text(parent.id), legacySubtaskId: children.length ? childId : '', legacyChildUnitPrice: children.length ? number(child?.unitPrice ?? child?.clientUnitPrice) : null, legacyParentUnitPrice: number(parent.unitPrice ?? parent.clientUnitPrice), legacySiblingCount: rows.length, legacySiblingPriced: children.some(row => (number(row?.unitPrice) || 0) > 0 || (number(row?.clientUnitPrice) || 0) > 0), legacyJobId: text(merged.legacyJobId || (children.length ? `${text(parent.id)}:${childId}` : parent.id)), workerId: merged.workerId || merged.assigneeWorkerId || '', editorUid: merged.editorUid || merged.assignedUid || '', editorName: merged.editorName || merged.assignee || merged.assignedName || '', completedDeliveryDate: merged.completedDeliveryDate || merged.deliveryCompletedDate || '', deadline: merged.deadline || merged.deliveryDate || '' });
+        push({ ...merged, source: 'legacy', key: `legacy:${text(parent.id)}:${children.length ? childId : 'parent'}`, legacyParentId: text(parent.id), legacySubtaskId: children.length ? childId : '', legacySubtaskIndex: children.length ? index : null, legacyChildUnitPrice: children.length ? number(child?.unitPrice ?? child?.clientUnitPrice) : null, legacyParentUnitPrice: number(parent.unitPrice ?? parent.clientUnitPrice), legacySiblingCount: rows.length, legacySiblingPriced: children.some(row => (number(row?.unitPrice) || 0) > 0 || (number(row?.clientUnitPrice) || 0) > 0), legacyJobId: text(merged.legacyJobId || (children.length ? `${text(parent.id)}:${childId}` : parent.id)), workerId: merged.workerId || merged.assigneeWorkerId || '', editorUid: merged.editorUid || merged.assignedUid || '', editorName: merged.editorName || merged.assignee || merged.assignedName || '', completedDeliveryDate: merged.completedDeliveryDate || merged.deliveryCompletedDate || '', deadline: merged.deadline || merged.deliveryDate || '' });
       });
     });
     return units;
@@ -133,31 +133,53 @@
     (Array.isArray(records) ? records : []).forEach(record => {
       if (!record) return;
       if (text(record.portalUid) && text(record.portalJobId)) index.set(`portal:${text(record.portalUid)}:${text(record.portalJobId)}`, record);
-      if (text(record.legacyJobId)) {
-        index.set(`legacy:${text(record.legacyJobId)}`, record);
-        if (record.recordType === 'owner_legacy_finance') {
-          (Array.isArray(record.subtaskAmounts) ? record.subtaskAmounts : []).forEach((line, rowIndex) => {
-            const childId = text(line?.id || line?.subtaskId || rowIndex);
-            index.set(`legacy:${text(record.legacyJobId)}:${childId}`, { ...record, _deliveryFinanceLine: line });
-          });
-        }
-      }
+      if (text(record.legacyJobId)) index.set(`legacy:${text(record.legacyJobId)}`, record);
+      if (text(record.id)) index.set(`finance:${text(record.id)}`, record);
     });
     return index;
   }
-
-  function financeAmount(record) {
-    for (const field of ['unitPrice', 'clientUnitPrice', 'masterClientUnitPrice', 'amount']) {
-      const value = number(record?._deliveryFinanceLine?.[field] ?? record?.[field]);
+  // 旧台帳の明細行は、訂正後（currentSubtaskAmounts）があればそれを、無ければ移行時の原本（subtaskAmounts）を読む。
+  // 案件モーダル（index.html の _withOwnerJobFinance）と同じ読み方。行は id、id が無い行は index で子案件と突き合わせる。
+  function legacyFinanceLines(record) { return Array.isArray(record?.currentSubtaskAmounts) ? record.currentSubtaskAmounts : (Array.isArray(record?.subtaskAmounts) ? record.subtaskAmounts : []); }
+  function legacyFinanceLine(record, unit) {
+    if (record?.recordType !== 'owner_legacy_finance' || !unit?.legacySubtaskId) return null;
+    const lines = legacyFinanceLines(record), id = text(unit.legacySubtaskId), position = Number(unit.legacySubtaskIndex);
+    return lines.find(row => text(row?.id || row?.subtaskId) === id)
+      || lines.find((row, rowIndex) => !text(row?.id || row?.subtaskId) && Number(row?.index ?? rowIndex) === position)
+      || null;
+  }
+  function financeRecordFor(unit, index) {
+    if (unit.source === 'legacy') {
+      return (unit.legacyParentId ? index.get(`legacy:${text(unit.legacyParentId)}`) : null)
+        || (unit.ownerFinanceId ? index.get(`finance:${text(unit.ownerFinanceId)}`) : null)
+        || (!unit.legacySubtaskId && unit.legacyJobId ? index.get(`legacy:${text(unit.legacyJobId)}`) : null)
+        || null;
+    }
+    const linked = text(unit.linkedLegacyJobId);
+    return index.get(unit.key)
+      || (unit.legacyJobId ? index.get(`legacy:${text(unit.legacyJobId)}`) : null)
+      || (linked ? index.get(`legacy:${linked}`) : null)
+      || null;
+  }
+  function lineAmount(line) {
+    if (!line) return null;
+    for (const field of ['unitPrice', 'clientUnitPrice', 'amount']) {
+      const value = number(line[field]);
       if (value !== null && value >= 0) return value;
     }
-    if (record?.recordType === 'owner_legacy_finance') {
-      const value = number(record?.parentAmounts?.unitPrice);
-      if (value !== null && value >= 0) return value;
+    return null;
+  }
+  function financeAmount(record, unit) {
+    if (!record) return null;
+    if (record.recordType === 'owner_legacy_finance') {
+      // 子案件は自分の行だけ。行が無ければ台帳では未設定（親の合計を子ごとに数えない）。
+      if (unit?.legacySubtaskId) return lineAmount(legacyFinanceLine(record, unit));
+      const parent = record.currentParentAmounts || record.parentAmounts || {};
+      const value = number(parent.unitPrice);
+      return value !== null && value >= 0 ? value : null;
     }
-    /* Compatibility for the immutable per-case ledger. */
-    for (const field of ['clientUnitPrice', 'masterClientUnitPrice', 'amount']) {
-      const value = number(record?.[field]);
+    for (const field of ['currentClientUnitPrice', 'unitPrice', 'clientUnitPrice', 'masterClientUnitPrice', 'amount']) {
+      const value = number(record[field]);
       if (value !== null && value >= 0) return value;
     }
     return null;
@@ -196,12 +218,8 @@
     const index = financeIndex(financeRecords);
     const resolver = options && typeof options.fallbackAmount === 'function' ? options.fallbackAmount : null;
     return (units || []).map(unit => {
-      const linked = text(unit.linkedLegacyJobId);
-      const finance = index.get(unit.key)
-        || (unit.legacyJobId ? index.get(`legacy:${text(unit.legacyJobId)}`) : null)
-        || (linked ? (index.get(`legacy:${linked}`) || index.get(`legacy:${linked}:parent`)) : null)
-        || null;
-      let amount = financeAmount(finance), amountSource = amount === null ? '' : 'finance';
+      const finance = financeRecordFor(unit, index);
+      let amount = financeAmount(finance, unit), amountSource = amount === null ? '' : 'finance';
       if (amount === null) {
         const fallback = fallbackAmountOf(unit, resolver);
         if (fallback) { amount = fallback.amount; amountSource = fallback.source; }

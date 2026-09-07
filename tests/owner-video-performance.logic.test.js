@@ -235,3 +235,39 @@ test('a lump parent price is split across unpriced children instead of being cou
   assert.equal(summary.all.amount, 6336 + 3000);
   assert.equal(summary.all.missingAmountCount, 1);
 });
+
+test('legacy child amounts come from the corrected ledger lines exactly like the case modal reads them', () => {
+  // 会長のスクショ: SU-S016 の単価 3000 は owner_legacy_finance の訂正後の行（currentSubtaskAmounts）にある。
+  // 移行時の原本（subtaskAmounts）しか見ないと、後から足した子案件や訂正後の金額が永久に「未設定」になる。
+  const units = logic.normalizeWorkUnits([], [
+    { id: 'SU', status: '完了', unitPrice: 0, ownerFinanceId: 'fin-SU', subtasks: [
+      { id: 's15', title: 'SU-S015', status: '完了', completedDeliveryDate: '2026-09-05', unitPrice: 0 },
+      { id: 's16', title: 'SU-S016', status: '完了', completedDeliveryDate: '2026-09-06', unitPrice: 0 },
+      { title: 'no-id', status: '完了', completedDeliveryDate: '2026-09-06', unitPrice: 0 },
+    ] },
+  ], '__self');
+  const ledger = {
+    id: 'fin-SU', recordType: 'owner_legacy_finance', legacyJobId: 'SU', parentAmounts: { unitPrice: 0 },
+    subtaskAmounts: [{ id: 's15', index: 0, unitPrice: 0 }],
+    currentSubtaskAmounts: [{ id: 's15', index: 0, unitPrice: 3000 }, { id: 's16', index: 1, unitPrice: 3000 }, { index: 2, unitPrice: 2500 }],
+  };
+  const byKey = Object.fromEntries(logic.joinOwnerFinance(units, [ledger]).map(unit => [unit.key, unit]));
+  assert.deepEqual([byKey['legacy:SU:s15'].amount, byKey['legacy:SU:s15'].amountSource], [3000, 'finance']);
+  assert.deepEqual([byKey['legacy:SU:s16'].amount, byKey['legacy:SU:s16'].amountSource], [3000, 'finance']);
+  assert.deepEqual([byKey['legacy:SU:2'].amount, byKey['legacy:SU:2'].amountSource], [2500, 'finance'], 'id-less lines match by index');
+  // 台帳が legacyJobId を持たなくても ownerFinanceId（台帳の doc id）で辿れる。
+  const byFinanceId = logic.joinOwnerFinance(units, [{ ...ledger, legacyJobId: '' }]);
+  assert.equal(byFinanceId.find(unit => unit.key === 'legacy:SU:s16').amount, 3000);
+  // 台帳に行が無い子案件は、親合計を子ごとに数えず、案件側の単価か未設定へ落ちる。
+  const partial = logic.joinOwnerFinance(units, [{ ...ledger, currentSubtaskAmounts: [{ id: 's15', unitPrice: 3000 }] }]);
+  assert.equal(partial.find(unit => unit.key === 'legacy:SU:s16').amountMissing, true);
+  // 原本しか無い台帳は原本の行を読む（従来どおり）。
+  const original = logic.joinOwnerFinance(units, [{ id: 'fin-SU', recordType: 'owner_legacy_finance', legacyJobId: 'SU', parentAmounts: { unitPrice: 0 }, subtaskAmounts: [{ id: 's16', unitPrice: 2800 }] }]);
+  assert.equal(original.find(unit => unit.key === 'legacy:SU:s16').amount, 2800);
+});
+
+test('portal finance prefers the corrected client unit price over the original snapshot', () => {
+  const units = logic.normalizeWorkUnits([{ id: 'h', _portalUid: 'u', status: '完了', completedDeliveryDate: '2026-09-03', businessType: 'dispatch' }], [], '__self');
+  const joined = logic.joinOwnerFinance(units, [{ portalUid: 'u', portalJobId: 'h', clientUnitPrice: 4000, currentClientUnitPrice: 4500 }]);
+  assert.equal(joined[0].amount, 4500);
+});
