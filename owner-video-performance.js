@@ -468,6 +468,9 @@
     if (!unit) return notify('案件が見つかりません。再読み込みしてください', 'warn');
     if (unit.source === 'portal' && typeof global.openPortalJobModal === 'function') return global.openPortalJobModal(text(unit._portalUid || unit.portalUid || unit.editorUid), text(unit.id));
     if (unit.source === 'legacy') {
+      // 単価（j-unit / 子案件の unitPrice）を入力できるのは案件モーダル（openJobModal）だけ。
+      // 進捗用の簡易モーダルや子案件詳細には金額欄が無く、開いても未設定を解消できない。
+      if (typeof global.openJobModal === 'function') return global.openJobModal(text(unit.legacyParentId));
       if (unit.legacySubtaskId && typeof global.openLegacySubcaseDetail === 'function') return global.openLegacySubcaseDetail(text(unit.legacyParentId), text(unit.legacySubtaskId));
       if (typeof global.openVideoLegacySafeModal === 'function') return global.openVideoLegacySafeModal(text(unit.legacyParentId));
     }
