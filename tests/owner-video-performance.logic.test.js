@@ -198,6 +198,9 @@ test('the gate and the performance page both render the missing-amount list and 
   assert.match(source, /<div class="owner-performance-cards">\$\{cards\}<\/div>\$\{missingAmountListHtml\(data\.monthSummary\.rows\)\}/);
   assert.match(source, /global\.ownerPerformanceOpenUnit = openUnitFromPage;/);
   assert.match(source, /global\.openPortalJobModal\(text\(unit\._portalUid \|\| unit\.portalUid \|\| unit\.editorUid\), text\(unit\.id\)\)/);
+  // 旧台帳案件は単価欄のある案件モーダル（openJobModal）を最優先で開く。簡易モーダルには金額欄が無い。
+  const legacyBranch = source.slice(source.indexOf("if (unit.source === 'legacy') {"), source.indexOf("return notify('この案件は画面から開けません'"));
+  assert.ok(legacyBranch.indexOf('global.openJobModal(text(unit.legacyParentId))') < legacyBranch.indexOf('global.openLegacySubcaseDetail('), 'openJobModal must come before the fallbacks');
   assert.match(source, /global\.openLegacySubcaseDetail\(text\(unit\.legacyParentId\), text\(unit\.legacySubtaskId\)\)/);
   assert.match(source, /global\.openVideoLegacySafeModal\(text\(unit\.legacyParentId\)\)/);
   // 確認の確定条件（金額未設定0件）と Firestore ルールは変えていない。
