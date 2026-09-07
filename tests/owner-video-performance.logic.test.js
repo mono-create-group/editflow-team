@@ -210,3 +210,28 @@ test('the gate and the performance page both render the missing-amount list and 
   assert.match(index, /function _ownerPerformanceFallbackAmount\(unit\)\{[\s\S]*?_ownerPortalClientPricingSnapshot\(job\)/);
   assert.match(index, /return Number\.isInteger\(amount\)&&amount>0\?\{amount,source:'client_rate'\}:null;/);
 });
+
+test('a lump parent price is split across unpriced children instead of being counted once per child or lost', () => {
+  // SU-S016 型: 親案件（クライアント単位）に一括単価、子案件は 0 のまま。子は {...parent, ...child} で親単価を
+  // 継承して見えるが、それを子ごとに数えると本数分に膨らむ。子が全て未入力なら親単価を本数で配分する。
+  const units = logic.normalizeWorkUnits([], [
+    { id: 'SU', status: '完了', unitPrice: 6336, subtasks: [
+      { id: 's15', title: 'SU-S015', status: '完了', completedDeliveryDate: '2026-09-05', unitPrice: 0 },
+      { id: 's16', title: 'SU-S016', status: '完了', completedDeliveryDate: '2026-09-06' },
+    ] },
+    { id: 'MIX', status: '完了', unitPrice: 9000, subtasks: [
+      { id: 'a', title: 'priced', status: '完了', completedDeliveryDate: '2026-09-02', unitPrice: 3000 },
+      { id: 'b', title: 'unpriced', status: '完了', completedDeliveryDate: '2026-09-03', unitPrice: 0 },
+    ] },
+  ], '__self');
+  const joined = logic.joinOwnerFinance(units, []);
+  const byKey = Object.fromEntries(joined.map(unit => [unit.key, unit]));
+  assert.deepEqual([byKey['legacy:SU:s15'].amount, byKey['legacy:SU:s15'].amountSource], [3168, 'parent']);
+  assert.deepEqual([byKey['legacy:SU:s16'].amount, byKey['legacy:SU:s16'].amountSource], [3168, 'parent']);
+  // 兄弟に単価入力があるときは配分しない（入力漏れとして未設定に残す）。
+  assert.deepEqual([byKey['legacy:MIX:a'].amount, byKey['legacy:MIX:a'].amountSource], [3000, 'job']);
+  assert.equal(byKey['legacy:MIX:b'].amountMissing, true);
+  const summary = logic.summarizeDelivery(joined, { month: '2026-09' });
+  assert.equal(summary.all.amount, 6336 + 3000);
+  assert.equal(summary.all.missingAmountCount, 1);
+});
