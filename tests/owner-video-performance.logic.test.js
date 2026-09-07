@@ -121,3 +121,89 @@ test('quality action escapes its JSON arguments before placing them in HTML', ()
   assert.match(source, /onclick="\$\{escapeHtml\(action\)\}"/);
   assert.doesNotMatch(source, /onclick="ownerPerformanceSaveQuality\(\$\{JSON\.stringify/);
 });
+
+test('finance is also found through the linked legacy ledger id of a promoted portal job', () => {
+  // 統合済みポータル案件は linkedLegacyJobId しか持たないため、legacy 台帳をこの ID でも探す。
+  const units = logic.normalizeWorkUnits([
+    { id: 'p1', _portalUid: 'u', status: '完了', completedDeliveryDate: '2026-09-02', linkedLegacyJobId: 'L1', businessType: 'edit_agency' },
+  ], [], '__self');
+  const joined = logic.joinOwnerFinance(units, [{ recordType: 'owner_legacy_finance', legacyJobId: 'L1', parentAmounts: { unitPrice: 3200 } }]);
+  assert.equal(joined[0].amount, 3200);
+  assert.equal(joined[0].amountSource, 'finance');
+  assert.equal(joined[0].amountMissing, false);
+});
+
+test('a completed unit without any owner ledger falls back to the caller resolver, then to the job price, never to zero', () => {
+  // 派遣以外のポータル案件は owner_job_finance が作られない。クライアント単価表（呼び出し側の解決関数）で
+  // 金額を引けるようにし、それも無ければ「金額未設定」のまま残す（0円に化けさせない）。
+  const units = logic.normalizeWorkUnits([
+    { id: 'agency', _portalUid: 'u', status: '完了', completedDeliveryDate: '2026-09-03', businessType: 'edit_agency', clientId: 'c1' },
+    { id: 'unpriced', _portalUid: 'u', status: '完了', completedDeliveryDate: '2026-09-04', businessType: 'edit_agency', clientId: 'c2' },
+  ], [
+    { id: 'legacy-own', status: '完了', completedDeliveryDate: '2026-09-05', unitPrice: 2000 },
+    { id: 'legacy-zero', status: '完了', completedDeliveryDate: '2026-09-06', unitPrice: 0 },
+  ], '__self');
+  const resolver = unit => (unit.clientId === 'c1' ? { amount: 2100, source: 'client_rate' } : null);
+  const joined = logic.joinOwnerFinance(units, [], { fallbackAmount: resolver });
+  const byId = Object.fromEntries(joined.map(unit => [unit.id, unit]));
+  assert.deepEqual([byId.agency.amount, byId.agency.amountSource, byId.agency.amountMissing], [2100, 'client_rate', false]);
+  assert.deepEqual([byId.unpriced.amount, byId.unpriced.amountMissing], [null, true]);
+  assert.deepEqual([byId['legacy-own'].amount, byId['legacy-own'].amountSource], [2000, 'job']);
+  assert.equal(byId['legacy-zero'].amountMissing, true, 'a masked 0 unit price on a legacy job is not a confirmed amount');
+  const summary = logic.summarizeDelivery(joined, { month: '2026-09' });
+  assert.equal(summary.all.amount, 4100);
+  assert.equal(summary.all.missingAmountCount, 2);
+  assert.equal(logic.missingAmountUnits(joined).length, 2);
+  // 解決関数が例外を投げても集計は落とさない。
+  const guarded = logic.joinOwnerFinance(units, [], { fallbackAmount: () => { throw new Error('boom'); } });
+  assert.equal(guarded.filter(unit => unit.amountMissing).length, 3);
+});
+
+test('dashboard forwards the fallback resolver so the gate and page use the same amounts', () => {
+  const data = logic.dashboard({
+    portalJobs: [{ id: 'agency', _portalUid: 'u', status: '完了', completedDeliveryDate: '2026-09-03', businessType: 'edit_agency' }],
+    jobs: [], finance: [], goal: { month: '2026-09', agencyTargetCount: 10, agencyTargetAmount: 50000 }, selfWid: '__self', month: '2026-09', today: '2026-09-06',
+    fallbackAmount: () => 2100,
+  });
+  assert.equal(data.monthSummary.all.amount, 2100);
+  assert.equal(data.monthSummary.all.missingAmountCount, 0);
+});
+
+test('missing-amount units are listed with a way to open the case instead of a bare count', () => {
+  // 会長が「金額未設定が1件」のロック画面から進めなくなった。どの案件かと直す導線を出す。
+  const units = logic.joinOwnerFinance(logic.normalizeWorkUnits([
+    { id: 'p1', _portalUid: 'u1', status: '完了', completedDeliveryDate: '2026-09-04', businessType: 'edit_agency', title: '17若く見える人と老けて見える人.mp4', editorName: '山田 美咲' },
+    { id: 'priced', _portalUid: 'u1', status: '完了', completedDeliveryDate: '2026-09-05', businessType: 'dispatch', title: '金額あり' },
+  ], [
+    { id: 'L2', status: '完了', completedDeliveryDate: '2026-09-02', title: '旧台帳', subtasks: [{ id: 's1', title: '子1 <案件>', status: '完了', completedDeliveryDate: '2026-09-02' }] },
+  ], '__self'), [{ portalUid: 'u1', portalJobId: 'priced', clientUnitPrice: 5000 }]);
+  const html = logic.missingAmountListHtml(units);
+  assert.match(html, /金額未設定の完了案件 2件/);
+  assert.match(html, /17若く見える人と老けて見える人\.mp4/);
+  assert.match(html, /山田 美咲/);
+  assert.doesNotMatch(html, /金額あり/);
+  assert.match(html, /onclick="ownerPerformanceOpenUnit\(&quot;portal:u1:p1&quot;\)"/);
+  assert.match(html, /onclick="ownerPerformanceOpenUnit\(&quot;legacy:L2:s1&quot;\)"/);
+  // ポータル案件だけクライアント単価表への導線を出す（旧台帳案件は案件モーダルで単価を直す）。
+  assert.equal((html.match(/setV\('videoclients'\)/g) || []).length, 1);
+  assert.match(html, /子1 &lt;案件&gt;/);
+  assert.equal(logic.missingAmountListHtml(units.filter(unit => !unit.amountMissing)), '');
+  const legacyUnit = units.find(unit => unit.key === 'legacy:L2:s1');
+  assert.deepEqual([legacyUnit.legacyParentId, legacyUnit.legacySubtaskId], ['L2', 's1']);
+});
+
+test('the gate and the performance page both render the missing-amount list and expose the open action', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'owner-video-performance.js'), 'utf8');
+  assert.match(source, /確認を確定できません。<\/p>\$\{missingAmountListHtml\(data\.monthSummary\.rows\)\}/);
+  assert.match(source, /<div class="owner-performance-cards">\$\{cards\}<\/div>\$\{missingAmountListHtml\(data\.monthSummary\.rows\)\}/);
+  assert.match(source, /global\.ownerPerformanceOpenUnit = openUnitFromPage;/);
+  assert.match(source, /global\.openPortalJobModal\(text\(unit\._portalUid \|\| unit\.portalUid \|\| unit\.editorUid\), text\(unit\.id\)\)/);
+  assert.match(source, /global\.openLegacySubcaseDetail\(text\(unit\.legacyParentId\), text\(unit\.legacySubtaskId\)\)/);
+  assert.match(source, /global\.openVideoLegacySafeModal\(text\(unit\.legacyParentId\)\)/);
+  // 確認の確定条件（金額未設定0件）と Firestore ルールは変えていない。
+  assert.match(source, /Number\(summary\.missingAmountCount \|\| 0\) > 0\) throw new Error\('delivery-summary-incomplete'\)/);
+  const index = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  assert.match(index, /fallbackAmount:_ownerPerformanceFallbackAmount\}/);
+  assert.match(index, /function _ownerPerformanceFallbackAmount\(unit\)\{[\s\S]*?_ownerPortalClientPricingSnapshot\(job\)/);
+  assert.match(index, /return Number\.isInteger\(amount\)&&amount>0\?\{amount,source:'client_rate'\}:null;/);
+});

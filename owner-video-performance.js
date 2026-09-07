@@ -120,7 +120,7 @@
         const merged = { ...parent, ...child };
         if (legacyHasPortalLink(merged, portalLegacyIds)) return;
         const childId = text(child.id || child.subtaskId || index);
-        push({ ...merged, source: 'legacy', key: `legacy:${text(parent.id)}:${children.length ? childId : 'parent'}`, legacyJobId: text(merged.legacyJobId || (children.length ? `${text(parent.id)}:${childId}` : parent.id)), workerId: merged.workerId || merged.assigneeWorkerId || '', editorUid: merged.editorUid || merged.assignedUid || '', editorName: merged.editorName || merged.assignee || merged.assignedName || '', completedDeliveryDate: merged.completedDeliveryDate || merged.deliveryCompletedDate || '', deadline: merged.deadline || merged.deliveryDate || '' });
+        push({ ...merged, source: 'legacy', key: `legacy:${text(parent.id)}:${children.length ? childId : 'parent'}`, legacyParentId: text(parent.id), legacySubtaskId: children.length ? childId : '', legacyJobId: text(merged.legacyJobId || (children.length ? `${text(parent.id)}:${childId}` : parent.id)), workerId: merged.workerId || merged.assigneeWorkerId || '', editorUid: merged.editorUid || merged.assignedUid || '', editorName: merged.editorName || merged.assignee || merged.assignedName || '', completedDeliveryDate: merged.completedDeliveryDate || merged.deliveryCompletedDate || '', deadline: merged.deadline || merged.deliveryDate || '' });
       });
     });
     return units;
@@ -163,16 +163,55 @@
     return null;
   }
 
-  function joinOwnerFinance(units, financeRecords = []) {
+  // 金額の解決順: ①オーナー台帳（portal / legacy / 連携済み legacy ID）②呼び出し側の
+  // 解決関数（クライアント単価表など）③案件自体に残る単価。どれも無ければ「金額未設定」。
+  // 0円は金額として扱い、未設定と混同しない。
+  function fallbackAmountOf(unit, resolver) {
+    if (typeof resolver === 'function') {
+      let resolved = null;
+      try { resolved = resolver(unit); } catch (_) { resolved = null; }
+      const raw = resolved && typeof resolved === 'object' ? resolved.amount : resolved;
+      // null / undefined / 空文字は「解決できなかった」。0円に化けさせない。
+      const value = raw === null || raw === undefined || raw === '' ? null : number(raw);
+      if (value !== null && value >= 0) return { amount: value, source: text(resolved && typeof resolved === 'object' ? resolved.source : '') || 'resolver' };
+    }
+    if (unit?.source === 'legacy') {
+      for (const field of ['clientUnitPrice', 'unitPrice']) {
+        const value = number(unit[field]);
+        if (value !== null && value > 0) return { amount: value, source: 'job' };
+      }
+    }
+    return null;
+  }
+  function joinOwnerFinance(units, financeRecords = [], options = {}) {
     const index = financeIndex(financeRecords);
+    const resolver = options && typeof options.fallbackAmount === 'function' ? options.fallbackAmount : null;
     return (units || []).map(unit => {
+      const linked = text(unit.linkedLegacyJobId);
       const finance = index.get(unit.key)
-        || (unit.source === 'legacy' ? index.get(unit.key.replace(/^legacy:/, 'legacy:')) : null)
         || (unit.legacyJobId ? index.get(`legacy:${text(unit.legacyJobId)}`) : null)
+        || (linked ? (index.get(`legacy:${linked}`) || index.get(`legacy:${linked}:parent`)) : null)
         || null;
-      const amount = financeAmount(finance);
-      return { ...unit, finance, amount, amountMissing: amount === null };
+      let amount = financeAmount(finance), amountSource = amount === null ? '' : 'finance';
+      if (amount === null) {
+        const fallback = fallbackAmountOf(unit, resolver);
+        if (fallback) { amount = fallback.amount; amountSource = fallback.source; }
+      }
+      return { ...unit, finance, amount, amountSource, amountMissing: amount === null };
     });
+  }
+  const CATEGORY_LABELS = { internal: '社内編集', agency: '編集代行', dispatch: '編集者派遣' };
+  function missingAmountUnits(units) { return completedWorkUnits(units).filter(unit => unit.amountMissing); }
+  // 金額未設定の完了案件を、直す導線つきで一覧にする。ロック画面と納品・目標ページで共用。
+  function missingAmountListHtml(units, { heading = '金額未設定の完了案件' } = {}) {
+    const rows = missingAmountUnits(units);
+    if (!rows.length) return '';
+    const items = rows.map(unit => {
+      const openAction = `ownerPerformanceOpenUnit(${JSON.stringify(text(unit.key))})`;
+      const rateAction = unit.source === 'portal' ? `<button class="btn btn-g btn-sm" type="button" onclick="setV('videoclients')">クライアント単価を設定</button>` : '';
+      return `<li><span class="owner-missing-amount-copy"><b>${escapeHtml(unit.title || unit.jobTitle || unit.key)}</b><small>${escapeHtml(CATEGORY_LABELS[unit.category] || '編集代行')} ・ ${escapeHtml(unit.editorName || '担当者未設定')} ・ 納品 ${escapeHtml(unit.completedDeliveryDate)}</small></span><span class="owner-missing-amount-actions"><button class="btn btn-p btn-sm" type="button" onclick="${escapeHtml(openAction)}">案件を開く</button>${rateAction}</span></li>`;
+    }).join('');
+    return `<div class="owner-missing-amount-list"><b>${escapeHtml(heading)} ${rows.length}件</b><p>案件を開いて単価を確定するか、クライアント一覧で適用開始日つき単価を登録すると、ここから消えます。</p><ul>${items}</ul></div>`;
   }
 
   function summarizeDelivery(units, { month = '', weekStart = '', date = '' } = {}) {
@@ -234,10 +273,10 @@
       .map((row, index) => ({ ...row, rank: index + 1 }));
   }
 
-  function dashboard({ portalJobs, jobs, finance, goal, qualityReviews, selfWid, month, today: todayValue, weekStart } = {}) {
+  function dashboard({ portalJobs, jobs, finance, goal, qualityReviews, selfWid, month, today: todayValue, weekStart, fallbackAmount } = {}) {
     const g = globals();
     const normalized = normalizeWorkUnits(portalJobs || g.portalJobs, jobs || g.jobs, selfWid || g.selfWid);
-    const financed = joinOwnerFinance(normalized, finance || []);
+    const financed = joinOwnerFinance(normalized, finance || [], { fallbackAmount });
     const todayKey = dateOnly(todayValue || ymd(new Date()));
     const currentMonth = monthOf(month || goal?.month || todayKey);
     const monthSummary = summarizeDelivery(financed, { month: currentMonth });
@@ -367,7 +406,7 @@
     if (!options.skipStart) lazyStart({ ...options, date, includeQuality: false, onChange: options.onChange });
     const passed = gatePassed(date), ready = allReady(options), data = ready ? currentDashboard(state.lastOptions) : null;
     const missing = data?.monthSummary?.all?.missingAmountCount || 0, goal = state.goal;
-    const html = `<section class="owner-delivery-gate" data-gate-passed="${passed ? 'true' : 'false'}"><div class="company-gate-kicker">OWNER DAILY DELIVERY CHECK</div><h1>${passed ? '本日の確認済み' : '納品本数・金額を確認'}</h1>${!ready ? `<p>${state.error ? '集計データを読み込めません。再読み込み後に確認してください。' : '実績と目標を読み込んでいます。'}</p>` : `<div class="owner-performance-cards"><article><b>今日の納品</b><div>${data.todaySummary.all.count}本</div></article><article><b>今日の確定売上</b><div>${data.todaySummary.all.amount.toLocaleString('ja-JP')}円</div><small>金額未設定 ${data.todaySummary.all.missingAmountCount}件</small></article><article><b>今月の納品・売上</b><div>${data.monthSummary.all.count}本 / ${data.monthSummary.all.amount.toLocaleString('ja-JP')}円</div><small>金額未設定 ${missing}件</small></article><article><b>目標まで</b><div>${data.pace.remainingCount}本 / ${data.pace.remainingAmount.toLocaleString('ja-JP')}円</div></article></div>`}${!goal?.active ? '<p class="notice">今月の目標が未設定です。「納品・目標」画面で設定してください。</p>' : ''}${missing ? `<p class="notice">金額未設定が${missing}件あるため、確認を確定できません。</p>` : ''}${passed ? '<p>オーナー確認が完了しています。</p>' : `<label class="company-gate-check"><input id="owner-performance-confirm" type="checkbox" ${ready && goal?.active && !missing ? '' : 'disabled'}>本日の納品本数・金額・目標ペースを確認しました</label><div class="actions"><button class="btn btn-p" onclick="ownerPerformanceConfirmToday()" ${ready && goal?.active && !missing ? '' : 'disabled'}>確認して社内アプリを開く</button><button class="btn btn-g" onclick="setV('videoperformance')">納品・目標を開く</button></div>`}</section>`;
+    const html = `<section class="owner-delivery-gate" data-gate-passed="${passed ? 'true' : 'false'}"><div class="company-gate-kicker">OWNER DAILY DELIVERY CHECK</div><h1>${passed ? '本日の確認済み' : '納品本数・金額を確認'}</h1>${!ready ? `<p>${state.error ? '集計データを読み込めません。再読み込み後に確認してください。' : '実績と目標を読み込んでいます。'}</p>` : `<div class="owner-performance-cards"><article><b>今日の納品</b><div>${data.todaySummary.all.count}本</div></article><article><b>今日の確定売上</b><div>${data.todaySummary.all.amount.toLocaleString('ja-JP')}円</div><small>金額未設定 ${data.todaySummary.all.missingAmountCount}件</small></article><article><b>今月の納品・売上</b><div>${data.monthSummary.all.count}本 / ${data.monthSummary.all.amount.toLocaleString('ja-JP')}円</div><small>金額未設定 ${missing}件</small></article><article><b>目標まで</b><div>${data.pace.remainingCount}本 / ${data.pace.remainingAmount.toLocaleString('ja-JP')}円</div></article></div>`}${!goal?.active ? '<p class="notice">今月の目標が未設定です。「納品・目標」画面で設定してください。</p>' : ''}${missing ? `<p class="notice">金額未設定が${missing}件あるため、確認を確定できません。</p>${missingAmountListHtml(data.monthSummary.rows)}` : ''}${passed ? '<p>オーナー確認が完了しています。</p>' : `<label class="company-gate-check"><input id="owner-performance-confirm" type="checkbox" ${ready && goal?.active && !missing ? '' : 'disabled'}>本日の納品本数・金額・目標ペースを確認しました</label><div class="actions"><button class="btn btn-p" onclick="ownerPerformanceConfirmToday()" ${ready && goal?.active && !missing ? '' : 'disabled'}>確認して社内アプリを開く</button><button class="btn btn-g" onclick="setV('videoperformance')">納品・目標を開く</button></div>`}</section>`;
     if (target && typeof target === 'object') target.innerHTML = html;
     return html;
   }
@@ -393,7 +432,7 @@
     const ranking = data.ranking.map(row => `<li><b>${row.rank}位 ${escapeHtml(row.editorName)}</b> — ${row.delivered}本 / ${row.score === null ? '集計対象なし' : row.score.toFixed(1) + '点'} / 納期遵守 ${row.onTimeRate === null ? '対象なし' : Math.round(row.onTimeRate * 100) + '%'} / 品質評価 ${Math.round(row.qualityEvaluationRate * 100)}%</li>`).join('') || '<li>今週の納品はありません</li>';
     const weekUnits = data.units.filter(unit => unit.completed && unit.completedDeliveryDate >= weekStart && unit.completedDeliveryDate <= addDays(weekStart, 6));
     const quality = weekUnits.map(unit => { const review = state.qualityReviews.find(row => row.unitKey === unit.key && row.active !== false), id = safeKey(unit.key), action = `ownerPerformanceSaveQuality(${JSON.stringify(unit.key)},${JSON.stringify(unit.editorUid || unit.workerId || unit.editorName || '')})`; return `<article class="card"><b>${escapeHtml(unit.title || unit.jobTitle || unit.key)}</b><div class="muted">${escapeHtml(unit.editorName || '担当者未設定')} ・ ${unit.completedDeliveryDate}</div><div class="form-grid"><label>品質<select id="owner-quality-${id}">${[1,2,3,4,5].map(score => `<option value="${score}" ${Number(review?.score || 0) === score ? 'selected' : ''}>${score}</option>`).join('')}</select></label><label>コメント（任意）<input id="owner-quality-note-${id}" maxlength="2000" value="${escapeHtml(review?.note || '')}"></label></div><button class="btn btn-g btn-sm" onclick="${escapeHtml(action)}">品質評価を保存</button></article>`; }).join('') || '<div class="card">今週の納品はありません。</div>';
-    const html = `<section class="owner-video-performance"><div class="ph"><div><div class="ph-title">納品・目標</div><div class="muted">完了案件とオーナー専用の確定単価から自動集計</div></div></div><div class="card owner-goal-editor"><h3>${month} の目標</h3><p class="muted">3つの編集形態ごとに、目標本数と目標報酬額を設定します。</p><div class="owner-goal-category-grid">${goalInputs}</div><aside class="owner-goal-total" aria-live="polite"><span>合計目標</span><b><strong id="owner-goal-total-count">${targets.targetCount}</strong>本</b><b><strong id="owner-goal-total-amount">${targets.targetAmount.toLocaleString('ja-JP')}</strong>円</b><small>3区分の入力から自動計算</small></aside>${targets.migratedFromLegacy ? '<p class="notice">旧形式の月目標は「編集代行」へ引き継いで表示しています。3区分を確認して保存してください。</p>' : ''}<div class="actions"><button class="btn btn-p" onclick="ownerPerformanceSaveGoal()">3区分の月目標を保存</button>${state.goal?.active ? '<button class="btn btn-g" onclick="ownerPerformanceDeactivateGoal()">目標を無効化</button>' : ''}</div></div><div class="owner-performance-cards">${cards}</div><div class="card"><b>残り ${data.pace.remainingCount}本・${data.pace.remainingAmount.toLocaleString('ja-JP')}円</b><p>1日平均：${data.pace.daily.count.toFixed(2)}本・${Math.ceil(data.pace.daily.amount).toLocaleString('ja-JP')}円</p><p>1週間平均：${data.pace.weekly.count.toFixed(2)}本・${Math.ceil(data.pace.weekly.amount).toLocaleString('ja-JP')}円</p></div><h3>今週の品質評価</h3><div class="feature-grid two">${quality}</div><div class="card"><div class="section-title"><h3>編集者ランキング</h3><span>${weekStart} から7日間</span></div><ol>${ranking}</ol><button class="btn btn-p btn-sm" onclick="ownerPerformancePublishRanking()">このランキングを編集者へ公開</button></div>${renderGate(null, { ...options, date: options.today || ymd(new Date()), skipStart: true })}</section>`;
+    const html = `<section class="owner-video-performance"><div class="ph"><div><div class="ph-title">納品・目標</div><div class="muted">完了案件とオーナー専用の確定単価から自動集計</div></div></div><div class="card owner-goal-editor"><h3>${month} の目標</h3><p class="muted">3つの編集形態ごとに、目標本数と目標報酬額を設定します。</p><div class="owner-goal-category-grid">${goalInputs}</div><aside class="owner-goal-total" aria-live="polite"><span>合計目標</span><b><strong id="owner-goal-total-count">${targets.targetCount}</strong>本</b><b><strong id="owner-goal-total-amount">${targets.targetAmount.toLocaleString('ja-JP')}</strong>円</b><small>3区分の入力から自動計算</small></aside>${targets.migratedFromLegacy ? '<p class="notice">旧形式の月目標は「編集代行」へ引き継いで表示しています。3区分を確認して保存してください。</p>' : ''}<div class="actions"><button class="btn btn-p" onclick="ownerPerformanceSaveGoal()">3区分の月目標を保存</button>${state.goal?.active ? '<button class="btn btn-g" onclick="ownerPerformanceDeactivateGoal()">目標を無効化</button>' : ''}</div></div><div class="owner-performance-cards">${cards}</div>${missingAmountListHtml(data.monthSummary.rows)}<div class="card"><b>残り ${data.pace.remainingCount}本・${data.pace.remainingAmount.toLocaleString('ja-JP')}円</b><p>1日平均：${data.pace.daily.count.toFixed(2)}本・${Math.ceil(data.pace.daily.amount).toLocaleString('ja-JP')}円</p><p>1週間平均：${data.pace.weekly.count.toFixed(2)}本・${Math.ceil(data.pace.weekly.amount).toLocaleString('ja-JP')}円</p></div><h3>今週の品質評価</h3><div class="feature-grid two">${quality}</div><div class="card"><div class="section-title"><h3>編集者ランキング</h3><span>${weekStart} から7日間</span></div><ol>${ranking}</ol><button class="btn btn-p btn-sm" onclick="ownerPerformancePublishRanking()">このランキングを編集者へ公開</button></div>${renderGate(null, { ...options, date: options.today || ymd(new Date()), skipStart: true })}</section>`;
     if (target && typeof target === 'object') target.innerHTML = html;
     return html;
   }
@@ -424,7 +463,18 @@
   global.ownerPerformanceDeactivateGoal = () => saveGoalFromPage(false);
   global.ownerPerformanceUpdateGoalTotal = updateGoalTotalFromPage;
   global.ownerPerformanceConfirmToday = confirmFromPage;
+  function openUnitFromPage(key) {
+    const unit = currentDashboard(state.lastOptions).units.find(row => row.key === text(key));
+    if (!unit) return notify('案件が見つかりません。再読み込みしてください', 'warn');
+    if (unit.source === 'portal' && typeof global.openPortalJobModal === 'function') return global.openPortalJobModal(text(unit._portalUid || unit.portalUid || unit.editorUid), text(unit.id));
+    if (unit.source === 'legacy') {
+      if (unit.legacySubtaskId && typeof global.openLegacySubcaseDetail === 'function') return global.openLegacySubcaseDetail(text(unit.legacyParentId), text(unit.legacySubtaskId));
+      if (typeof global.openVideoLegacySafeModal === 'function') return global.openVideoLegacySafeModal(text(unit.legacyParentId));
+    }
+    return notify('この案件は画面から開けません', 'warn');
+  }
+  global.ownerPerformanceOpenUnit = openUnitFromPage;
   global.ownerPerformanceSaveQuality = saveQualityFromPage;
   global.ownerPerformancePublishRanking = publishFromPage;
-  global.EditflowOwnerPerformance = { logic: { goalBreakdown, goalTotals, normalizeWorkUnits, completedWorkUnits, joinOwnerFinance, summarizeDelivery, monthlyPace, weeklyEditorRanking, dashboard, mondayOf, sourceHash }, lazyStart, stop, saveGoal, confirmDailyCheck, saveQualityReview, publishWeeklyRanking, gatePassed, allReady, renderGate, renderPage };
+  global.EditflowOwnerPerformance = { logic: { goalBreakdown, goalTotals, normalizeWorkUnits, completedWorkUnits, joinOwnerFinance, missingAmountUnits, missingAmountListHtml, summarizeDelivery, monthlyPace, weeklyEditorRanking, dashboard, mondayOf, sourceHash }, lazyStart, stop, saveGoal, confirmDailyCheck, saveQualityReview, publishWeeklyRanking, gatePassed, allReady, renderGate, renderPage };
 })(typeof window !== 'undefined' ? window : globalThis);
