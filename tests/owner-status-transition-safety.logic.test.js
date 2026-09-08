@@ -58,7 +58,17 @@ test('linked parent subcases expose only current valid workflow actions inline',
   assert.match(index, /if\(!_canManagePortalWorkflow\(j\)\)return toast\('この案件の進捗を変更する権限がありません','err'\)/);
   assert.match(index, /function _portalWorkflowActionsForJob\(job\)\{/);
   assert.match(index, /stage==='director_review'\)return\[\['directorRevision','修正指示（修正中）'\],\['directorApprove','D確認OKにする'\],\['directorApproveAndSubmit','D確認OK・先方へ提出済み（先方確認中）'\]\]/);
-  assert.match(index, /stage==='client_submission'\)return\[\['clientSubmitted','先方確認中にする'\]\]/);
+  // 会長報告: D確認OK の子案件を「完了」に変えられなかった。D確認OK からは先方提出（先方確認中）と先方OK（完了）を
+  // 一度に記録する複合操作を出す。担当編集者が完了を記録する案件（派遣）では出さない。
+  assert.match(index, /stage==='client_submission'\)return _editorOwnsPortalCompletion\(job\)\?\[\['clientSubmitted','先方確認中にする'\]\]:\[\['clientSubmitted','先方確認中にする'\],\['clientSubmitAndApprove','先方提出済み・先方OK（完了）'\]\]/);
+  assert.match(index, /clientSubmitAndApprove:'完了'/);
+  const combined = index.slice(index.indexOf("if(action==='clientSubmitAndApprove'){"), index.indexOf("if(action==='clientApproved'&&_editorOwnsPortalCompletion(j))return toast("));
+  assert.match(combined, /_videoWorkflow\(j\)\.stage!=='client_submission'\)return toast/);
+  assert.match(combined, /if\(_editorOwnsPortalCompletion\(j\)\)return toast/);
+  assert.match(combined, /advancePortalWorkflow\(portalUid,id,'clientSubmitted','',providedCompletionDate\)/);
+  assert.match(combined, /if\(submitted!==true\)return submitted;/);
+  assert.match(combined, /return advancePortalWorkflow\(portalUid,id,'clientApproved','',providedCompletionDate\);/);
+  assert.match(index, /w\.stage==='client_submission'\?\(editorCompletion\?\[\['clientSubmitted','先方へ提出する'\]\]:\[\['clientSubmitted','先方へ提出する'\],\['clientSubmitAndApprove','先方提出済み・クライアントOK・完了'\]\]\):/);
   assert.match(index, /stage==='client_review'\)return _editorOwnsPortalCompletion\(job\)\?\[\['clientRevision','修正指示（修正中）'\]\]:\[\['clientRevision','修正指示（修正中）'\],\['clientApproved','先方OK（完了）'\]\]/);
   assert.match(index, /function advanceLegacyPortalSubcaseWorkflow\(portalUid,jobId,controlKey\)\{/);
   assert.match(index, /selectedOptions\?\.\[0\]\?\.dataset\?\.action/);
