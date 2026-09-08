@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260906-06"></script>
+<script src="./billing-terms.js?v=20260906-07"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -999,7 +999,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260906-06">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260906-07">
 </head>
 <body class="owner-yellow-ui">
 
@@ -1059,8 +1059,8 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="./ai-bridge-client.js"></script>
-<script src="./owner-video-performance.js?v=20260906-06"></script>
-<script src="./feedback-workflow.js?v=20260906-06"></script>
+<script src="./owner-video-performance.js?v=20260906-07"></script>
+<script src="./feedback-workflow.js?v=20260906-07"></script>
 <script>/* lz-string 1.5.0 (MIT) — CDN非依存でオフライン/圧縮チーム同期を保証するためインライン化 */
 var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",e={};function t(r,o){if(!e[r]){e[r]={};for(var n=0;n<r.length;n++)e[r][r.charAt(n)]=n}return e[r][o]}var i={compressToBase64:function(r){if(null==r)return"";var n=i._compress(r,6,function(r){return o.charAt(r)});switch(n.length%4){default:case 0:return n;case 1:return n+"===";case 2:return n+"==";case 3:return n+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(n){return t(o,r.charAt(n))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(r){return null==r?"":""==r?null:i._decompress(r.length,16384,function(o){return r.charCodeAt(o)-32})},compressToUint8Array:function(r){for(var o=i.compress(r),n=new Uint8Array(2*o.length),e=0,t=o.length;e<t;e++){var s=o.charCodeAt(e);n[2*e]=s>>>8,n[2*e+1]=s%256}return n},decompressFromUint8Array:function(o){if(null==o)return i.decompress(o);for(var n=new Array(o.length/2),e=0,t=n.length;e<t;e++)n[e]=256*o[2*e]+o[2*e+1];var s=[];return n.forEach(function(o){s.push(r(o))}),i.decompress(s.join(""))},compressToEncodedURIComponent:function(r){return null==r?"":i._compress(r,6,function(r){return n.charAt(r)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),i._decompress(r.length,32,function(o){return t(n,r.charAt(o))}))},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(r,o,n){if(null==r)return"";var e,t,i,s={},u={},a="",p="",c="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<r.length;i+=1)if(a=r.charAt(i),Object.prototype.hasOwnProperty.call(s,a)||(s[a]=f++,u[a]=!0),p=c+a,Object.prototype.hasOwnProperty.call(s,p))c=p;else{if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++),s[p]=f++,c=String(a)}if(""!==c){if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++)}for(t=2,e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;for(;;){if(m<<=1,v==o-1){d.push(n(m));break}v++}return d.join("")},decompress:function(r){return null==r?"":""==r?null:i._decompress(r.length,32768,function(o){return r.charCodeAt(o)})},_decompress:function(o,n,e){var t,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:e(0),position:n,index:1};for(t=0;t<3;t+=1)l[t]=t;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return i}();"function"==typeof define&&define.amd?define(function(){return LZString}):"undefined"!=typeof module&&null!=module?module.exports=LZString:"undefined"!=typeof angular&&null!=angular&&angular.module("LZString",[]).factory("LZString",function(){return LZString});
 </script>
@@ -1121,7 +1121,7 @@ const BIZ_CFG={
     // 掲載前の導線と中止は残す。担当開始後は VIDEO_WORKFLOW_STATUSES の9状態のみを通常選択肢にする。
     statuses:['案件掲載中','未着手','アサイン済み','進行中','編集者進行中','初稿提出済み','修正中','修正稿提出済み','D確認OK','先方確認中','完了','キャンセル'],
     board:['案件掲載中','未着手','アサイン済み','進行中','編集者進行中','初稿提出済み','修正中','修正稿提出済み','D確認OK','先方確認中','初稿完成','FB待ち'],
-    scopes:['動画編集','サムネイル制作','動画編集＋サムネイル','ショート動画','VSL','スクール動画','その他'],
+    scopes:['動画編集','サムネイル制作','動画編集＋サムネイル','ショート動画','VSL','スクール動画','残り工程（社内カット・テロップ済み）','その他'],
     lbl:{scope:'担当範囲',shared:'共有日',deliver:'納期（予定）',d1:'編集者 初稿',d2:'クライアント提出 初稿',unit:'単価（円）',wpay:'ワーカー支払額（円）',profit:'利益（自動計算）',monthly:'',member:'👤 編集者別',d1s:'✏️ 編集者初稿',d2s:'📋 クライアント提出',deliverS:'📅 納期（予定）'},
     show:{scope:1,d1:1,d2:1,thumb:1,wpay:1,subs:1,monthly:0},
     tabs:['board','calendar','deadline','listing','list','clients','profit','payment','completed','worker','priority'],
@@ -1131,7 +1131,7 @@ const BIZ_CFG={
     // 募集・受注の導線は派遣案件だけで保持し、担当開始後は正式な9状態を使用する。
     statuses:['案件掲載中','募集中','編集者決定','受注済み','アサイン済み','進行中','編集者進行中','初稿提出済み','修正中','修正稿提出済み','D確認OK','先方確認中','完了','キャンセル'],
     board:['案件掲載中','募集中','編集者決定','アサイン済み','受注済み','進行中','編集者進行中','初稿提出済み','修正中','修正稿提出済み','D確認OK','先方確認中','初稿完成'],
-    scopes:['長尺動画','ショート動画','サムネイル制作','その他'],
+    scopes:['長尺動画','ショート動画','サムネイル制作','残り工程（社内カット・テロップ済み）','その他'],
     lbl:{scope:'案件種別',shared:'受注日',deliver:'納期（予定）',d1:'編集者 初稿',d2:'クライアント提出 初稿',unit:'クライアント請求額（円）',wpay:'編集者支払額（円）',profit:'手数料（自動計算）',monthly:'',member:'👤 編集者別',d1s:'✏️ 編集者初稿',d2s:'📋 クライアント提出',deliverS:'📅 納期（予定）'},
     show:{scope:1,d1:1,d2:1,thumb:1,wpay:1,subs:1,monthly:0},
     tabs:['board','calendar','deadline','listing','list','clients','profit','payment','completed','worker','priority'],
@@ -6552,10 +6552,18 @@ function _videoFiltered(biz=PBIZ,source=_videoJobs()){const q=VIDEO_QUERY.trim()
 function setVideoQuery(value){VIDEO_QUERY=String(value||'');VIDEO_RENDER_LIMIT=50;clearTimeout(_videoQueryTimer);_videoQueryTimer=setTimeout(render,140);}
 function showMoreVideoCases(){VIDEO_RENDER_LIMIT+=50;render();}
 function _videoCanEdit(){return _isOwner()||hasAppRole('動画編集ディレクター');}
+// 作業分担（社内でカット・テロップ挿入まで終え、残り工程を編集者へ回す案件）は、Firestore ルールの
+// 更新キーを増やさずに済むよう attachments の型付き項目（type:'作業分担'）で持つ。編集者側にもそのまま同期される。
+function _videoWorkSplit(job){const items=Array.isArray(job?.attachments)?job.attachments:[];return items.find(item=>String(item?.type||'')==='作業分担')||null;}
+function _videoWorkSplitNoticeHtml(job){
+  const split=_videoWorkSplit(job);if(!split)return'';
+  const url=_videoSafeUrl(split.url||'');
+  return`<div class="notice" style="margin:8px 0;box-shadow:none;border-left:4px solid var(--amber)"><b>社内でカット・テロップ挿入まで完了。残り工程を編集者が担当する案件です。</b><div style="font-size:12px;color:var(--t2);margin-top:3px">${esc(split.title||'')}</div>${url?`<a class="btn btn-g btn-sm" style="margin-top:6px" href="${esc(url)}" target="_blank" rel="noopener noreferrer">社内編集済みプロジェクトを開く</a>`:'<div style="font-size:12px;color:var(--red);margin-top:4px">prproj のリンクが未登録です。素材・資料の「作業分担」行にURLを入れてください。</div>'}</div>`;
+}
 function _videoSafeUrl(v){try{const u=new URL(v);return['https:','http:'].includes(u.protocol)?u.href:'';}catch(_){return'';}}
 // 案件の素材は外部URLだけを保存する。ファイル本体を社内アプリへ置かないため、
 // Drive・Notion・動画共有先など既存の保管場所と両立し、不要なアクセス権も増やさない。
-const VIDEO_ATTACHMENT_TYPES=['素材','台本','参考動画','参考画像','指示書','その他'];
+const VIDEO_ATTACHMENT_TYPES=['素材','台本','参考動画','参考画像','指示書','プロジェクトファイル','作業分担','その他'];
 function _videoAttachmentType(type){return VIDEO_ATTACHMENT_TYPES.includes(type)?type:'その他';}
 function _videoAttachments(value){
   return(Array.isArray(value)?value:[]).map((item,index)=>{
@@ -6933,6 +6941,7 @@ async function openPortalJobModal(portalUid,id){
 	<div class="frow"><div class="fg"><div class="fl">納期（予定・任意）</div><input id="vp-deadline" type="date" value="${esc(deliveryDate)}" ${canEdit?'':'disabled'}></div><div class="fg"><div class="fl">納品日</div><input type="date" value="${esc(completedDeliveryDate)}" disabled aria-label="${portalBiz==='haken'?'担当編集者':'Dまたはオーナー'}が記録する納品日"><div style="font-size:10px;color:var(--t3);margin-top:3px">${portalBiz==='haken'?'先方OK後に担当編集者が、実納品日と納品URLを付けて記録します。':'先方OK後にDまたはオーナーが、実納品日と納品URLを付けて記録します。'}未記録の案件には報酬が発生しません。</div></div></div>
 <div class="fg"><div class="fl">ステータス</div><input id="vp-status" value="${esc(bizStatusLabel(portalBiz,j.status))}" data-status="${esc(j.status)}" readonly aria-readonly="true"><div class="fhint">進捗は下の「進捗共有」の操作から更新します。</div></div>
 	<div class="fg"><div class="fl">指示・確認メモ</div><textarea id="vp-instructions" ${canEdit?'':'disabled'}>${esc(j.instructions||'')}</textarea></div>
+	${_videoWorkSplitNoticeHtml(j)}
 	${canEdit?_videoAttachmentEditorHtml(j.attachments||[],"addVideoAttachmentRow(document.getElementById('vp-attachment-list'))",'vp-attachment-list'):`<div class="video-attachment-editor"><div class="video-attachment-heading"><div><b>素材・資料</b><span>閲覧のみ</span></div></div>${_videoAttachmentLinksHtml(_videoCaseMaterials(j.attachments,j))||'<div class="video-attachment-hint">添付された素材・資料はありません。</div>'}</div>`}
 	<div class="fg"><div class="fl">差戻し理由</div><textarea id="vp-correction" ${canEdit?'':'disabled'}>${esc(j.correctionReason||'')}</textarea></div>
 	${_videoWorkflowHtml(j,portalUid)}
@@ -7846,7 +7855,7 @@ function _videoSubmissionReviewItems(source=PORTAL_JOBS){
   }).map(job=>{
     const workflow=_videoWorkflow(job),event=_videoLatestSubmissionEvent(job,workflow.round),status=String(job.status||''),revision=status==='修正稿提出済み'||String(event?.status||'')==='修正稿提出済み'||workflow.round>1;
     const evidenceUrl=_videoSafeUrl(event?.evidenceUrl||'')||_videoSafeUrl(job.evidenceUrl||''),pmUrl=_videoSafeUrl(event?.pmUrl||''),framerUrl=_videoSafeUrl(event?.framerUrl||''),submittedAt=_videoSubmissionEpoch(event?.at)||_videoSubmissionEpoch(job.updatedAt),lastMessage=String(job.lastMessagePreview||'').trim(),lastMessageAt=_videoSubmissionEpoch(job.lastMessageAt),lastMessageFromEditor=!!lastMessage&&String(job.lastMessageSenderUid||'')===String(job._portalUid||'');
-    return{portalUid:String(job._portalUid||''),id:String(job.id||''),kind:revision?'修正稿':'初稿',round:workflow.round,title:String(job.title||'案件名未設定'),parentCaseName:String(job.parentCaseName||job.caseName||''),clientDisplay:String(job.clientDisplay||'クライアント未設定'),accountDisplay:String(job.accountDisplay||''),editorName:String(event?.byName||job.editorName||event?.byEmail||job.editorEmail||'担当編集者'),submittedAt,evidenceUrl,pmUrl,framerUrl,lastMessage,lastMessageAt,lastMessageFromEditor,editorDraftDate:String(job.editorDraftDate||''),clientDraftDate:String(job.clientDraftDate||''),deadline:String(job.deliveryDate||job.deadline||''),canManage:typeof _canManagePortalWorkflow==='function'?!!_canManagePortalWorkflow(job):false};
+    return{portalUid:String(job._portalUid||''),id:String(job.id||''),kind:revision?'修正稿':'初稿',round:workflow.round,title:String(job.title||'案件名未設定'),parentCaseName:String(job.parentCaseName||job.caseName||''),clientDisplay:String(job.clientDisplay||'クライアント未設定'),accountDisplay:String(job.accountDisplay||''),editorName:String(event?.byName||job.editorName||event?.byEmail||job.editorEmail||'担当編集者'),submittedAt,evidenceUrl,pmUrl,framerUrl,lastMessage,lastMessageAt,lastMessageFromEditor,workSplit:_videoWorkSplit(job),editorDraftDate:String(job.editorDraftDate||''),clientDraftDate:String(job.clientDraftDate||''),deadline:String(job.deliveryDate||job.deadline||''),canManage:typeof _canManagePortalWorkflow==='function'?!!_canManagePortalWorkflow(job):false};
   }).sort((a,b)=>b.submittedAt-a.submittedAt||a.title.localeCompare(b.title,'ja'));
 }
 function _videoSubmissionTime(value){
@@ -7874,7 +7883,7 @@ function rVideoSubmissions(){
   const items=_videoSubmissionReviewItems();
   const cards=items.map(item=>{
     const openAction=`openPortalJobModal(${JSON.stringify(item.portalUid)},${JSON.stringify(item.id)})`,title=item.parentCaseName&&item.parentCaseName!==item.title?`${item.parentCaseName} / ${item.title}`:item.title,client=[item.clientDisplay,item.accountDisplay].filter(Boolean).join(' / ');
-    return`<article class="card video-submission-card"><div><div class="video-submission-head"><span class="badge ${item.kind==='修正稿'?'br':'bp'}">${esc(item.kind)}</span><span class="badge bk">第${Number(item.round)||1}回</span><b class="video-submission-title">${esc(title)}</b></div><div class="video-submission-meta"><span>クライアント <b>${esc(client)}</b></span><span>担当編集者 <b>${esc(item.editorName)}</b></span><span>提出日時 <b>${esc(_videoSubmissionTime(item.submittedAt))}</b></span><span>編集者初稿 <b>${esc(item.editorDraftDate||'未設定')}</b></span><span>クライアント初稿 <b>${esc(item.clientDraftDate||'未設定')}</b></span><span>納期（予定） <b>${esc(item.deadline||'未設定')}</b></span></div>${item.lastMessage?`<div class="video-submission-message"><b>${item.lastMessageFromEditor?'編集者からの連絡':'最新の連絡'}</b>（${esc(_videoSubmissionTime(item.lastMessageAt))}）：${esc(item.lastMessage)}</div>`:''}</div><div class="video-submission-actions">${item.evidenceUrl?`<a class="btn btn-p btn-sm" href="${esc(item.evidenceUrl)}" target="_blank" rel="noopener noreferrer">提出リンクを開く</a><button class="btn btn-g btn-sm" type="button" onclick="${esc(`copyVideoClientSubmissionText(${JSON.stringify(item.portalUid)},${JSON.stringify(item.id)})`)}">先方提出文をコピー</button>`:'<span class="video-submission-missing">提出リンク未登録</span>'}${item.pmUrl?`<a class="btn btn-g btn-sm" href="${esc(item.pmUrl)}" target="_blank" rel="noopener noreferrer">プロマネリンク</a>`:'<span class="video-submission-missing">プロマネリンク未登録</span>'}${item.framerUrl?`<a class="btn btn-g btn-sm" href="${esc(item.framerUrl)}" target="_blank" rel="noopener noreferrer">Framer</a>`:''}<button class="btn btn-g btn-sm" type="button" onclick="${esc(openAction)}">案件・修正指示を開く</button><button class="btn btn-g btn-sm" type="button" onclick="${esc(`openPortalJobChat(${JSON.stringify(item.portalUid)},${JSON.stringify(item.id)})`)}">案件内チャット</button>${item.canManage?`<button class="btn btn-p btn-sm" type="button" onclick="${esc(`advancePortalWorkflow(${JSON.stringify(item.portalUid)},${JSON.stringify(item.id)},'directorApprove')`)}">D確認OK</button><button class="btn btn-p btn-sm" type="button" onclick="${esc(`advancePortalWorkflow(${JSON.stringify(item.portalUid)},${JSON.stringify(item.id)},'directorApproveAndSubmit')`)}">D確認OK・先方へ提出済み</button>`:''}</div></article>`;
+    return`<article class="card video-submission-card"><div><div class="video-submission-head"><span class="badge ${item.kind==='修正稿'?'br':'bp'}">${esc(item.kind)}</span><span class="badge bk">第${Number(item.round)||1}回</span>${item.workSplit?'<span class="badge ba">社内カット・テロップ済み</span>':''}<b class="video-submission-title">${esc(title)}</b></div><div class="video-submission-meta"><span>クライアント <b>${esc(client)}</b></span><span>担当編集者 <b>${esc(item.editorName)}</b></span><span>提出日時 <b>${esc(_videoSubmissionTime(item.submittedAt))}</b></span><span>編集者初稿 <b>${esc(item.editorDraftDate||'未設定')}</b></span><span>クライアント初稿 <b>${esc(item.clientDraftDate||'未設定')}</b></span><span>納期（予定） <b>${esc(item.deadline||'未設定')}</b></span></div>${item.lastMessage?`<div class="video-submission-message"><b>${item.lastMessageFromEditor?'編集者からの連絡':'最新の連絡'}</b>（${esc(_videoSubmissionTime(item.lastMessageAt))}）：${esc(item.lastMessage)}</div>`:''}</div><div class="video-submission-actions">${item.evidenceUrl?`<a class="btn btn-p btn-sm" href="${esc(item.evidenceUrl)}" target="_blank" rel="noopener noreferrer">提出リンクを開く</a><button class="btn btn-g btn-sm" type="button" onclick="${esc(`copyVideoClientSubmissionText(${JSON.stringify(item.portalUid)},${JSON.stringify(item.id)})`)}">先方提出文をコピー</button>`:'<span class="video-submission-missing">提出リンク未登録</span>'}${item.pmUrl?`<a class="btn btn-g btn-sm" href="${esc(item.pmUrl)}" target="_blank" rel="noopener noreferrer">プロマネリンク</a>`:'<span class="video-submission-missing">プロマネリンク未登録</span>'}${item.framerUrl?`<a class="btn btn-g btn-sm" href="${esc(item.framerUrl)}" target="_blank" rel="noopener noreferrer">Framer</a>`:''}<button class="btn btn-g btn-sm" type="button" onclick="${esc(openAction)}">案件・修正指示を開く</button><button class="btn btn-g btn-sm" type="button" onclick="${esc(`openPortalJobChat(${JSON.stringify(item.portalUid)},${JSON.stringify(item.id)})`)}">案件内チャット</button>${item.canManage?`<button class="btn btn-p btn-sm" type="button" onclick="${esc(`advancePortalWorkflow(${JSON.stringify(item.portalUid)},${JSON.stringify(item.id)},'directorApprove')`)}">D確認OK</button><button class="btn btn-p btn-sm" type="button" onclick="${esc(`advancePortalWorkflow(${JSON.stringify(item.portalUid)},${JSON.stringify(item.id)},'directorApproveAndSubmit')`)}">D確認OK・先方へ提出済み</button>`:''}</div></article>`;
   }).join('');
   return`<div class="ph"><div><div class="ph-title">提出確認</div><div style="font-size:13px;color:var(--t2);margin-top:4px">編集者から提出され、まだD確認が確定していない初稿・修正稿です。</div></div><span class="badge ${items.length?'br':'bg'}">${items.length}件</span></div><div class="notice" style="margin-bottom:12px;box-shadow:none"><b>確認後は「D確認OK」「D確認OK・先方へ提出済み」をここで押すか、案件を開いて「修正指示」を記録してください。</b><div style="font-size:12px;color:var(--t2);margin-top:4px">「D確認OK・先方へ提出済み」はD確認と先方提出を一度に記録し、進捗が「先方確認中」になります。判断を確定すると、この一覧から自動的に外れます。リンクを開いただけでは確認済みになりません。</div></div><div class="video-submission-list">${cards||'<div class="empty"><div class="empty-icon">✓</div><div class="empty-title">未確認の初稿・修正稿はありません</div></div>'}</div>${_ownerSubmitFailuresHtml()}`;
 }
@@ -7906,7 +7915,7 @@ function _ownerSubmitFailuresHtml(){
   if(!OWNER_SUBMIT_FAILURES.loaded&&!OWNER_SUBMIT_FAILURES.loading&&!OWNER_SUBMIT_FAILURES.error)setTimeout(()=>ownerLoadSubmitFailures(),0);
   const rows=OWNER_SUBMIT_FAILURES.items.map(item=>`<tr><td style="white-space:nowrap">${esc(item.at?new Date(item.at).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'-')}</td><td>${esc(item.editorName)}</td><td>${esc(item.parentCaseName?`${item.parentCaseName} / ${item.jobTitle}`:item.jobTitle)}</td><td>${esc(item.previousStatus)} → ${esc(item.status)}</td><td>${esc(_ownerSubmitFailureHint(item))}${item.code?`<div style="font-size:10px;color:var(--t3)">${esc(item.code)}</div>`:''}</td><td style="white-space:nowrap">${esc(item.appVersion||'-')}</td></tr>`).join('');
   const body=OWNER_SUBMIT_FAILURES.loading?'<div class="muted" style="padding:8px 0">読み込み中…</div>':OWNER_SUBMIT_FAILURES.error?`<div class="muted" style="padding:8px 0">取得できませんでした（${esc(OWNER_SUBMIT_FAILURES.error)}）</div>`:rows?`<div style="overflow-x:auto"><table class="priority-table" style="min-width:720px;font-size:12px"><thead><tr style="background:var(--card2);font-weight:700;color:var(--t2)"><th style="padding:6px 8px;text-align:left">日時</th><th style="padding:6px 8px;text-align:left">編集者</th><th style="padding:6px 8px;text-align:left">案件</th><th style="padding:6px 8px;text-align:left">変更</th><th style="padding:6px 8px;text-align:left">原因</th><th style="padding:6px 8px;text-align:left">アプリ版</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="muted" style="padding:8px 0">失敗の記録はありません。</div>';
-  return`<details class="card" style="margin-top:14px"><summary style="cursor:pointer;font-weight:800;font-size:14px">編集者が提出できなかった記録（直近30件）<span class="badge ${OWNER_SUBMIT_FAILURES.items.length?'br':'bk'}" style="margin-left:6px">${OWNER_SUBMIT_FAILURES.items.length}</span></summary><div class="muted" style="margin:6px 0 8px">編集者の画面で初稿・修正稿の保存に失敗すると、ここに原因が残ります（20260906-06以降のアプリ版から）。</div>${body}<div style="margin-top:8px"><button class="btn btn-g btn-xs" type="button" onclick="ownerLoadSubmitFailures(true)">再読み込み</button></div></details>`;
+  return`<details class="card" style="margin-top:14px"><summary style="cursor:pointer;font-weight:800;font-size:14px">編集者が提出できなかった記録（直近30件）<span class="badge ${OWNER_SUBMIT_FAILURES.items.length?'br':'bk'}" style="margin-left:6px">${OWNER_SUBMIT_FAILURES.items.length}</span></summary><div class="muted" style="margin:6px 0 8px">編集者の画面で初稿・修正稿の保存に失敗すると、ここに原因が残ります（20260906-07以降のアプリ版から）。</div>${body}<div style="margin-top:8px"><button class="btn btn-g btn-xs" type="button" onclick="ownerLoadSubmitFailures(true)">再読み込み</button></div></details>`;
 }
 
 function _videoNotificationItems(biz=PBIZ){
@@ -10332,7 +10341,7 @@ const DOCLINK_SEEDS=[
    url:'https://mono-create-group.github.io/editflow-team/dm-manual.html?v=20260816-01',
    category:'マニュアル',notes:'新メンバー向け。アイコン・アカウント名の予約(早い者勝ち)・DM文章の作成・営業リストでの送付と記録まで1ページで完結',ver:3},
   {id:'doclink_invoice_manual',title:'請求書の作り方（編集者向けマニュアル・見本つき）',
-   url:'https://mono-create-group.github.io/editflow-team/invoice-manual.html?v=20260906-06',
+   url:'https://mono-create-group.github.io/editflow-team/invoice-manual.html?v=20260906-07',
    category:'マニュアル',notes:'編集者へ共有する。請求者情報の登録→完了案件を選んで明細（1案件＝1行）→確認して提出、締切と支払日、NG例/見本、FAQ',ver:1},
   {id:'doclink_dm_entry_form',title:'DM営業スタッフ 登録フォーム（応募者に送るURL）',
    url:'https://mono-create-group.github.io/editflow-team/dm-entry.html',
@@ -18619,7 +18628,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260906-06';
+const APP_VERSION='20260906-07';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -18696,13 +18705,13 @@ window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});  
 checkServerVersion();                                                              // 初回表示でも旧版を即時検出
   </script>
 <script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
-<script src="./editor-push.js?v=20260906-06"></script>
-<script src="./bulletin.js?v=20260906-06"></script>
-<script src="./direct-messages.js?v=20260906-06"></script>
+<script src="./editor-push.js?v=20260906-07"></script>
+<script src="./bulletin.js?v=20260906-07"></script>
+<script src="./direct-messages.js?v=20260906-07"></script>
 <script>
   try{if(V==='directmessages')render();else renderNav();}catch(error){console.warn('owner dm init',error);}
 </script>
-<script src="./manager-features.js?v=20260906-06"></script>
-<script src="./sales-video-leads.js?v=20260906-06"></script>
+<script src="./manager-features.js?v=20260906-07"></script>
+<script src="./sales-video-leads.js?v=20260906-07"></script>
 </body>
 </html>

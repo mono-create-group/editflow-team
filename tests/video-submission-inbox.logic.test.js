@@ -32,6 +32,7 @@ function inboxContext(jobs) {
   const context = vm.createContext({ URL, Date, Intl, PORTAL_JOBS: jobs });
   const names = [
     '_videoSafeUrl',
+    '_videoWorkSplit',
     '_videoWorkflow',
     '_videoSubmissionEpoch',
     '_videoLatestSubmissionEvent',

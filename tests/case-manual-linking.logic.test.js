@@ -20,7 +20,8 @@ test('manager case form selects only safe manual metadata and supplies common fa
   assert.match(manager,/mb-subcase-manuals/);
   assert.match(manager,/mb-subcase-caution/);
   assert.match(manager,/manualIds=combinedManualIds\(parentManualIds,subcase\.manualIds\)/);
-  assert.match(manager,/caution=subcase\.caution\|\|parentCaution/);
+  // 作業分担の注意を先頭に付けたうえで、子案件に注意事項が無ければ親案件共通へフォールバックする。
+  assert.match(manager,/caution=splitCaution&&subcase\.caution\?\[splitCaution,subcase\.caution\]\.join\('\\n'\)\.slice\(0,2000\):\(subcase\.caution\|\|parentCaution\)/);
 });
 
 test('editor transports case links without embedding manuals and shows cautions before instructions',()=>{
