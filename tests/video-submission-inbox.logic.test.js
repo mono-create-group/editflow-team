@@ -146,6 +146,35 @@ test('submission cards surface the project-management and Framer links recorded 
   assert.match(source, /\$\{item\.framerUrl\?`<a class="btn btn-g btn-sm" href="\$\{esc\(item\.framerUrl\)\}" target="_blank" rel="noopener noreferrer">Framer<\/a>`:''\}/);
 });
 
+test('submission cards show the latest job-chat message from the editor and open the thread', () => {
+  // 編集者が提出時に案件内チャットへ送った連絡を、オーナーが社内アプリで読める場所が無かった。
+  const jobs = [{
+    id: 'chat', _portalUid: 'editor-uid', status: '初稿提出済み', workflow: { stage: 'director_review', round: 1 }, title: '連絡あり', updatedAt: 10,
+    evidenceUrl: 'https://example.com/draft', lastMessagePreview: '  初稿です。BGMだけ仮です。 ', lastMessageAt: 20, lastMessageSenderUid: 'editor-uid',
+  }, {
+    id: 'owner-sent', _portalUid: 'editor-2', status: '初稿提出済み', workflow: { stage: 'director_review', round: 1 }, title: 'D送信', updatedAt: 5,
+    lastMessagePreview: '確認します', lastMessageAt: 6, lastMessageSenderUid: 'owner-uid',
+  }];
+  const items = vm.runInContext('_videoSubmissionReviewItems()', inboxContext(jobs));
+  const fromEditor = items.find(item => item.id === 'chat'), fromOwner = items.find(item => item.id === 'owner-sent');
+  assert.deepEqual([fromEditor.lastMessage, fromEditor.lastMessageAt, fromEditor.lastMessageFromEditor], ['初稿です。BGMだけ仮です。', 20, true]);
+  assert.equal(fromOwner.lastMessageFromEditor, false);
+  const source = functionSource('rVideoSubmissions');
+  assert.match(source, /class="video-submission-message"><b>\$\{item\.lastMessageFromEditor\?'編集者からの連絡':'最新の連絡'\}<\/b>/);
+  assert.match(source, /openPortalJobChat\(\$\{JSON\.stringify\(item\.portalUid\)\},\$\{JSON\.stringify\(item\.id\)\}\)/);
+  assert.match(source, />案件内チャット<\/button>/);
+  // 一覧は読み取り専用のまま（Firestore 読み込みは案件を開いたときだけ）。
+  assert.doesNotMatch(source, /onSnapshot|fbDb|\.get\(/);
+  const loader = functionSource('loadPortalJobChat');
+  assert.match(loader, /collection\('editor_portals'\)\.doc\(String\(portalUid\)\)\.collection\('editor_jobs'\)\.doc\(String\(id\)\)\.collection\('messages'\)\.orderBy\('createdAt','asc'\)\.limit\(200\)\.get\(\)/);
+  assert.doesNotMatch(loader, /onSnapshot|batch\.|\.update\(|\.add\(|\.delete\(/);
+  assert.match(loader, /if\(!fbDb\|\|!_videoCanEdit\(\)\)/);
+  assert.match(html, /<div class="card" id="vp-job-chat"/);
+  assert.match(html, /loadPortalJobChat\(portalUid,id\);\n\}/);
+  // カードの吹き出しCSSはモバイル用 @media の外（共通）に置く。
+  assert.match(html, /\.video-submission-list\{display:grid;gap:10px\}\.video-submission-message\{/);
+});
+
 test('page reuses existing portal memory and review modal without its own writes or listeners', () => {
   const source = functionSource('rVideoSubmissions');
   assert.match(source, /_videoSubmissionReviewItems\(\)/);
