@@ -35,7 +35,7 @@ function valuesFor(job, changes = {}) {
     '#job-progress-job-1': { value: next.progress }, '#job-evidence-job-1': { value: next.evidenceUrl },
     '#job-blocker-job-1': { value: next.blocker }, '#job-workdate-job-1': { value: next.workDate },
     '#job-start-job-1': { value: next.startTime }, '#job-end-job-1': { value: next.endTime },
-    '#job-pm-job-1': { value: next.pmUrl || '' }, '#job-framer-job-1': { value: next.framerUrl || '' }
+    '#job-pm-job-1': { value: next.pmUrl || '' }, '#job-frameio-job-1': { value: next.frameioUrl || '' }, '#job-tool-job-1': { value: next.tool || 'premiere' }
   };
 }
 
@@ -111,28 +111,49 @@ test('failed saves preserve the local draft for retry', async () => {
 });
 
 test('an initial or revision submission without the project-management link is rejected before any write', async () => {
-  // 会長指示: 初稿・修正稿の提出時はプロマネリンク必須。Framer リンクは任意。
+  // 会長指示: 初稿・修正稿の提出時はプロマネリンク必須。Frame.io リンクは任意。
   const { context, calls } = makeHarness({ changes: { status: '初稿提出済み' } });
   await context.save('job-1');
   assert.equal(calls.update, 0);
   assert.equal(calls.commit, 0);
   assert.ok(calls.toasts.some(message => /プロマネリンク/.test(message)), calls.toasts.join(' / '));
-  const optionalFramer = makeHarness({ changes: { status: '初稿提出済み', pmUrl: 'https://example.com/pm' } });
-  await optionalFramer.context.save('job-1');
-  assert.equal(optionalFramer.calls.commit, 1, 'Framer link stays optional');
+  const optionalFrameio = makeHarness({ changes: { status: '初稿提出済み', pmUrl: 'https://example.com/pm' } });
+  await optionalFrameio.context.save('job-1');
+  assert.equal(optionalFrameio.calls.commit, 1, 'Frame.io link stays optional');
 });
 
 test('submission links are recorded on the submission event and history, never as top-level job keys', async () => {
-  // Firestore ルールの更新キー一覧にトップレベルの pmUrl / framerUrl は無いため、イベント・履歴側に保存する。
-  const { context, calls } = makeHarness({ changes: { status: '初稿提出済み', pmUrl: 'https://example.com/pm', framerUrl: 'https://framer.example.com/x' } });
+  // Firestore ルールの更新キー一覧にトップレベルの pmUrl / frameioUrl は無いため、イベント・履歴側に保存する。
+  const { context, calls } = makeHarness({ changes: { status: '初稿提出済み', pmUrl: 'https://example.com/pm', frameioUrl: 'https://f.io/x' } });
   await context.save('job-1');
   assert.equal(calls.commit, 1);
   const data = calls.lastUpdate;
   assert.equal(Object.prototype.hasOwnProperty.call(data, 'pmUrl'), false);
-  assert.equal(Object.prototype.hasOwnProperty.call(data, 'framerUrl'), false);
+  assert.equal(Object.prototype.hasOwnProperty.call(data, 'frameioUrl'), false);
   const event = data.progressEvents.find(row => row.type === 'editor_submitted');
   assert.equal(event.pmUrl, 'https://example.com/pm');
-  assert.equal(event.framerUrl, 'https://framer.example.com/x');
+  assert.equal(event.frameioUrl, 'https://f.io/x');
+  assert.equal(event.tool, 'premiere');
   assert.equal(data.history[data.history.length - 1].pmUrl, 'https://example.com/pm');
-  assert.equal(data.progressMilestones[0].framerUrl, 'https://framer.example.com/x');
+  assert.equal(data.progressMilestones[0].frameioUrl, 'https://f.io/x');
+});
+
+test('a CapCut delivery submits without the project-management link and records the tool', async () => {
+  // 会長指示: CapCut で納品する編集者もいる。CapCut ならプロマネ・Frame.io は不要。
+  const { context, calls } = makeHarness({ changes: { status: '修正稿提出済み', tool: 'capcut', pmUrl: '', frameioUrl: '' } });
+  await context.save('job-1');
+  assert.equal(calls.commit, 1, calls.toasts.join(' / '));
+  const event = calls.lastUpdate.progressEvents.find(row => row.type === 'editor_submitted');
+  assert.equal(event.tool, 'capcut');
+  assert.equal(event.pmUrl, null);
+  // CapCut を選んでいれば、欄に残っていた古いリンクも記録しない。
+  const stale = makeHarness({ changes: { status: '修正稿提出済み', tool: 'capcut', pmUrl: 'https://example.com/old', frameioUrl: 'https://f.io/old' } });
+  await stale.context.save('job-1');
+  const staleEvent = stale.calls.lastUpdate.progressEvents.find(row => row.type === 'editor_submitted');
+  assert.deepEqual([staleEvent.pmUrl, staleEvent.frameioUrl], [null, null]);
+  // Premiere のままプロマネ無しは従来どおり差し戻し（案内文で CapCut への切替を示す）。
+  const premiere = makeHarness({ changes: { status: '修正稿提出済み', tool: 'premiere' } });
+  await premiere.context.save('job-1');
+  assert.equal(premiere.calls.commit, 0);
+  assert.ok(premiere.calls.toasts.some(message => /CapCut/.test(message)), premiere.calls.toasts.join(' / '));
 });

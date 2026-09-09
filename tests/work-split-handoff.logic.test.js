@@ -55,7 +55,7 @@ test('the board form offers the split and publish requires the prproj link, adds
 });
 
 test('editors, the submission inbox, the case modal, and the legacy ledger all show the split', () => {
-  assert.match(editor, /split=editorWorkSplit\(job\),jid=esc\(j\.id\);/);
+  assert.match(editor, /split=editorWorkSplit\(job\),tool=String\(j\.tool\|\|lastSubmission\.tool\|\|'premiere'\)==='capcut'\?'capcut':'premiere',jid=esc\(j\.id\);/);
   assert.match(editor, /社内でカット・テロップ挿入まで完了しています。残り工程を担当してください。/);
   assert.match(editor, /社内編集済みプロジェクトを開く/);
   assert.match(index, /\$\{item\.workSplit\?'<span class="badge ba">社内カット・テロップ済み<\/span>':''\}/);

@@ -134,17 +134,22 @@ test('the copy button appears only next to a registered submission link and neve
   assert.doesNotMatch(copy, /onSnapshot|fbDb|batch\.|\.set\(|\.update\(|\.add\(|save\(\)/);
 });
 
-test('submission cards surface the project-management and Framer links recorded on the submission event', () => {
+test('submission cards surface the project-management and Frame.io links recorded on the submission event', () => {
   const jobs = [{
     id: 'links', _portalUid: 'editor', status: '初稿提出済み', workflow: { stage: 'director_review', round: 1 }, title: 'リンク付き', updatedAt: 10,
-    progressEvents: [{ type: 'editor_submitted', status: '初稿提出済み', round: 1, at: 10, evidenceUrl: 'https://example.com/draft', pmUrl: 'https://pm.example.com/case', framerUrl: 'javascript:alert(1)' }],
+    progressEvents: [{ type: 'editor_submitted', status: '初稿提出済み', round: 1, at: 10, evidenceUrl: 'https://example.com/draft', pmUrl: 'https://pm.example.com/case', frameioUrl: 'javascript:alert(1)', tool: 'premiere' }],
   }];
   const item = vm.runInContext('_videoSubmissionReviewItems()[0]', inboxContext(jobs));
   assert.equal(item.pmUrl, 'https://pm.example.com/case');
-  assert.equal(item.framerUrl, '', 'unsafe Framer link is dropped');
+  assert.equal(item.frameioUrl, '', 'unsafe Frame.io link is dropped');
+  assert.equal(item.tool, 'premiere');
   const source = functionSource('rVideoSubmissions');
-  assert.match(source, /\$\{item\.pmUrl\?`<a class="btn btn-g btn-sm" href="\$\{esc\(item\.pmUrl\)\}" target="_blank" rel="noopener noreferrer">プロマネリンク<\/a>`:'<span class="video-submission-missing">プロマネリンク未登録<\/span>'\}/);
-  assert.match(source, /\$\{item\.framerUrl\?`<a class="btn btn-g btn-sm" href="\$\{esc\(item\.framerUrl\)\}" target="_blank" rel="noopener noreferrer">Framer<\/a>`:''\}/);
+  // CapCut 納品はプロマネ不要なので「未登録」の赤字を出さずバッジにする。
+  assert.match(source, /\$\{item\.tool==='capcut'\?'<span class="badge bk">CapCut納品<\/span>':item\.pmUrl\?`<a class="btn btn-g btn-sm" href="\$\{esc\(item\.pmUrl\)\}" target="_blank" rel="noopener noreferrer">プロマネリンク<\/a>`:'<span class="video-submission-missing">プロマネリンク未登録<\/span>'\}/);
+  assert.match(source, /\$\{item\.frameioUrl\?`<a class="btn btn-g btn-sm" href="\$\{esc\(item\.frameioUrl\)\}" target="_blank" rel="noopener noreferrer">Frame\.io<\/a>`:''\}/);
+  const capcut = vm.runInContext('_videoSubmissionReviewItems()[0]', inboxContext([{ id: 'cc', _portalUid: 'e', status: '修正稿提出済み', workflow: { stage: 'director_review', round: 2 }, title: 'CapCut', updatedAt: 1, progressEvents: [{ type: 'editor_submitted', status: '修正稿提出済み', round: 2, at: 1, evidenceUrl: 'https://example.com/v2', tool: 'capcut', framerUrl: 'https://legacy.example.com/f' }] }]));
+  assert.equal(capcut.tool, 'capcut');
+  assert.equal(capcut.frameioUrl, 'https://legacy.example.com/f', 'older events that stored framerUrl still surface');
 });
 
 test('submission cards show the latest job-chat message from the editor and open the thread', () => {
