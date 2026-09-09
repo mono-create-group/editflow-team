@@ -47,7 +47,7 @@ test('portal job administration displays status only and rejects tampered raw st
   assert.match(modal, /進捗は下の「進捗共有」の操作から更新します。/);
   assert.match(save, /const statusField=document\.getElementById\('vp-status'\),requestedStatus=String\(statusField\?\.dataset\.status\|\|j\.status\);/);
   assert.match(save, /if\(String\(statusField\?\.value\|\|''\)!==bizStatusLabel\(_portalVideoBiz\(j\),j\.status\)\|\|requestedStatus!==j\.status\)return toast\('進捗は「進捗共有」の操作から更新してください','warn'\);/);
-  assert.match(index, /function advancePortalWorkflow\(portalUid,id,action,providedReason,providedCompletionDate\)/);
+  assert.match(index, /function advancePortalWorkflow\(portalUid,id,action,providedReason,providedCompletionDate,providedImages\)/);
 });
 
 test('linked parent subcases expose only current valid workflow actions inline', () => {
@@ -76,7 +76,7 @@ test('linked parent subcases expose only current valid workflow actions inline',
   assert.match(index, /if\(!allowed\.includes\(action\)\)return toast\('現在の工程ではこの操作はできません。案件を開き直してください','warn'\);/);
   assert.match(index, /修正指示の内容/);
   assert.match(index, /await advancePortalWorkflow\(portalUid,jobId,action,reason,completionDate\);/);
-  assert.match(index, /async function advancePortalWorkflow\(portalUid,id,action,providedReason,providedCompletionDate\)/);
+  assert.match(index, /async function advancePortalWorkflow\(portalUid,id,action,providedReason,providedCompletionDate,providedImages\)/);
   assert.match(index, /providedReason===undefined\?\(document\.getElementById\('vp-correction'\)\?\.value\.trim\(\)\|\|''\):String\(providedReason\)\.trim\(\)/);
   assert.match(index, /const PORTAL_WORKFLOW_ACTION_PENDING=new Set\(\);/);
   assert.match(index, /if\(PORTAL_WORKFLOW_ACTION_PENDING\.has\(pendingKey\)\)return toast\('進捗を保存しています。完了までお待ちください','warn'\);/);

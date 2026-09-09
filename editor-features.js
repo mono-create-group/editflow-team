@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const PORTAL_APP_VERSION='20260906-09';
+  const PORTAL_APP_VERSION='20260906-10';
   const feature={
     board:[],boardSelectedId:'',boardSearch:'',catalog:[],manuals:[],schedules:[],release:null,
     messages:new Map(),messageUnsubs:new Map(),messageLoading:new Set(),openMessageJobIds:new Set(),openCaseGroupKeys:new Set(),groupDraftSaving:new Set(),unsubs:[],startedFor:'',serverVersion:'',jobsListMode:'active',jobsTypeFilter:'all',lastSuggestionCode:'',
@@ -597,7 +597,7 @@
 
   function feedbackEntryHtml(job){
     const revision=String(job?.status||'')==='修正中'||String(job?.correctionReason||'').trim();if(!revision)return'';
-    return`<section class="card" style="margin-top:10px;border-color:#ddd6fe;background:#faf5ff"><div class="section-title"><h3>過去フィードバックに記録</h3><span>修正時の学びを残す</span></div><p class="muted">案件内チャットには保存しません。専用ページに記録し、確認後にあなた向けマニュアルへ反映されます。</p>${job.correctionReason?`<div class="job-urgent-note"><b>Dからの修正指示</b><br>${esc(job.correctionReason)}</div>`:''}<div class="actions"><button class="btn primary small" type="button" onclick="openEditorFeedback('${esc(job.id)}')">フィードバックを記録する</button></div></section>`;
+    return`<section class="card" style="margin-top:10px;border-color:#ddd6fe;background:#faf5ff"><div class="section-title"><h3>過去フィードバックに記録</h3><span>修正時の学びを残す</span></div><p class="muted">案件内チャットには保存しません。専用ページに記録し、確認後にあなた向けマニュアルへ反映されます。</p>${job.correctionReason?`<div class="job-urgent-note"><b>Dからの修正指示</b><br>${esc(job.correctionReason)}</div>`:''}${editorRevisionImagesHtml(job)}<div class="actions"><button class="btn primary small" type="button" onclick="openEditorFeedback('${esc(job.id)}')">フィードバックを記録する</button></div></section>`;
   }
   function messageBlock(job){
     const list=(feature.messages.get(job.id)||[]).slice().sort((a,b)=>stamp(a.createdAt)-stamp(b.createdAt));
@@ -625,6 +625,10 @@
   // 納品ツール切替: CapCut ならプロマネ・Frame.io の欄を隠す（提出時の必須チェックも外れる）。
   function deliveryToolChanged(jid){const card=document.getElementById('editor-job-'+jid),capcut=String(document.getElementById('job-tool-'+jid)?.value||'premiere')==='capcut';if(card)card.querySelectorAll('[data-tool-only="premiere"]').forEach(el=>{el.style.display=capcut?'none':''});if(typeof saveJobDraft==='function')saveJobDraft(jid)}
   window.editorDeliveryToolChanged=deliveryToolChanged;
+  // 直近の修正指示イベント（D／クライアント）に添えられた画像URL。Drive 共有リンクはサムネイルURLへ変換して表示する。
+  function latestRevisionEvent(job){const events=Array.isArray(job?.progressEvents)?job.progressEvents:[];for(let i=events.length-1;i>=0;i-=1){const e=events[i];if(e&&['director_revision_requested','client_revision_requested'].includes(String(e.type||'')))return e}return null}
+  function revisionImagePreviewUrl(url){const m=String(url||'').match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([A-Za-z0-9_-]{10,})/);return m?`https://drive.google.com/thumbnail?id=${m[1]}&sz=w600`:String(url||'')}
+  function editorRevisionImagesHtml(job){const event=latestRevisionEvent(job),urls=(Array.isArray(event?.images)?event.images:[]).map(u=>safeUrl(u)).filter(Boolean).slice(0,10);if(!urls.length)return'';return`<div class="editor-revision-images" aria-label="修正指示の画像"><b>修正指示の画像</b><div>${urls.map(u=>`<a href="${esc(u)}" target="_blank" rel="noopener noreferrer"><img src="${esc(revisionImagePreviewUrl(u))}" alt="修正指示の画像" loading="lazy" referrerpolicy="no-referrer"></a>`).join('')}</div></div>`}
   function lastEditorSubmissionEvent(job){const events=Array.isArray(job?.progressEvents)?job.progressEvents.filter(e=>e&&e.type==='editor_submitted'):[];return events[events.length-1]||{}}
   function jobCardExtended(job){
     const j={...job,...readJobDraft(job.id)},lastSubmission=lastEditorSubmissionEvent(job),deliveryDate=j.deliveryDate||j.deadline||'',overdue=editorWorkIsOverdue(j),e=safeUrl(j.evidenceUrl),action=nextEditorJobAction(j),statuses=editorAllowedStatuses(j),timeline=editorTimelineState(j),deadline=editorDeadlineLabel(j),waiting=editorWaitMessage(j),split=editorWorkSplit(job),tool=String(j.tool||lastSubmission.tool||'premiere')==='capcut'?'capcut':'premiere',jid=esc(j.id);

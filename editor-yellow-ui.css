@@ -288,3 +288,6 @@ body.editor-yellow-ui{
 .editor-yellow-ui .invoice-edit-lines input{width:130px;flex:0 0 auto;border:1px solid var(--border);border-radius:8px;padding:8px 10px;background:#fff;color:var(--text)}
 .editor-yellow-ui .invoice-edit-lines input.invoice-edit-line-title{width:100%;flex:1 1 auto;margin-bottom:4px}
 @media(max-width:520px){.editor-yellow-ui .invoice-edit-lines input{width:100%;flex:1 1 100%}}
+
+/* 修正指示に添えられた画像（URL方式）のサムネイル */
+.editor-revision-images{margin:8px 0}.editor-revision-images>b{display:block;font-size:12px;margin-bottom:4px}.editor-revision-images>div{display:flex;flex-wrap:wrap;gap:6px}.editor-revision-images img{width:120px;height:90px;object-fit:cover;border-radius:8px;border:1px solid var(--border,#e5e7eb);background:#fff}
