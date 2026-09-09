@@ -119,3 +119,60 @@ test('ordinary legacy subcases require and retain a completion date when newly c
   assert.match(index, /completedDeliveryDate:requestedCompletionDate/);
   assert.match(index, /if\(date&&select\?\.value==='完了'&&!date\.value\)date\.value=today\(\)/);
 });
+
+test('the owner can move a linked subcase to any workflow status through the audited manual override', () => {
+  // 会長指示: 子案件モーダルのステータスをオーナーは自由に変えられるようにする。
+  // 案件モーダルの「任意の進捗に変更」と同じ経路（理由必須・履歴に残る・ルール検証済み）を子案件のステータス欄から使う。
+  const vm = require('node:vm');
+  function fnSource(name) {
+    const start = index.indexOf(`function ${name}(`);
+    assert.notEqual(start, -1, `${name} must exist`);
+    const open = index.indexOf('{', start);
+    let depth = 0, quote = '', escaped = false;
+    for (let i = open; i < index.length; i += 1) {
+      const ch = index[i];
+      if (quote) { if (escaped) escaped = false; else if (ch === '\\') escaped = true; else if (ch === quote) quote = ''; continue; }
+      if (ch === '"' || ch === "'" || ch === '`') { quote = ch; continue; }
+      if (ch === '{') depth += 1; else if (ch === '}' && --depth === 0) return index.slice(start, i + 1);
+    }
+    throw new Error(`unterminated ${name}`);
+  }
+  const make = owner => {
+    const ctx = vm.createContext({
+      VIDEO_WORKFLOW_STATUSES: ['アサイン済み', '進行中', '編集者進行中', '初稿提出済み', '修正中', '修正稿提出済み', 'D確認OK', '先方確認中', '完了'],
+      _isActualOwner: () => owner, _rolePreviewActive: () => false, bizStatusLabel: (_biz, status) => status, _portalVideoBiz: () => 'edit',
+      _videoWorkflow: job => job.workflow || { round: 1, stage: 'editing' }, _editorOwnsPortalCompletion: () => false,
+    });
+    ['_portalWorkflowActionsForJob', '_portalWorkflowTargetStatus', '_ownerCanOverridePortalStatus', '_portalSubcaseStatusOptions'].forEach(name => vm.runInContext(fnSource(name), ctx));
+    return ctx;
+  };
+  // 編集者作業中（案内できる次の1手が無い工程）でも、オーナーには全ステータスが出る。
+  const ownerOptions = vm.runInContext(`_portalSubcaseStatusOptions({status:'編集者進行中',workflow:{round:1,stage:'editing'}})`, make(true));
+  const values = Array.from(ownerOptions, ([value]) => value);
+  assert.equal(values[0], '編集者進行中');
+  ['アサイン済み', '進行中', '初稿提出済み', '修正中', '修正稿提出済み', 'D確認OK', '先方確認中', '完了'].forEach(status => assert.ok(values.includes(status), `${status} must be selectable`));
+  assert.ok(Array.from(ownerOptions).filter(([, , action]) => action === 'managerStatusOverride').every(([, label]) => /（任意変更・理由必須）$/.test(label)));
+  // 案内される1手（D確認OK など）は任意変更ではなく従来の誘導操作のまま。
+  const review = vm.runInContext(`_portalSubcaseStatusOptions({status:'初稿提出済み',workflow:{round:1,stage:'director_review'}})`, make(true));
+  assert.equal(Array.from(review).find(([value]) => value === 'D確認OK')[2], 'directorApprove');
+  // ディレクター（オーナー以外）には出さない。完了・請求確定済みにも出さない。
+  const director = vm.runInContext(`_portalSubcaseStatusOptions({status:'編集者進行中',workflow:{round:1,stage:'editing'}})`, make(false));
+  assert.equal(Array.from(director).length, 1);
+  assert.equal(vm.runInContext(`_ownerCanOverridePortalStatus({status:'完了'})`, make(true)), false);
+  assert.equal(vm.runInContext(`_ownerCanOverridePortalStatus({status:'進行中',payableApproved:true})`, make(true)), false);
+  // 子案件モーダルの保存は、監査つきの setPortalWorkflowStatus に値を渡して実行する（ルール上の manager_status_changed 経路）。
+  const handler = fnSource('advanceLegacyPortalSubcaseWorkflow');
+  assert.match(handler, /if\(action==='managerStatusOverride'\)\{/);
+  assert.match(handler, /if\(!_ownerCanOverridePortalStatus\(job\)\)return toast\('任意の進捗変更はオーナーのみ操作できます','err'\);/);
+  assert.match(handler, /return setPortalWorkflowStatus\(portalUid,jobId,\{status,reason:overrideReason,evidenceUrl,completionDate,clientApprovalConfirmed\}\);/);
+  assert.match(handler, /status==='完了'\?confirm\(/);
+  const setter = fnSource('setPortalWorkflowStatus');
+  assert.match(setter, /function setPortalWorkflowStatus\(portalUid,id,provided\)/);
+  assert.match(setter, /const input=provided&&typeof provided==='object'\?provided:null;/);
+  assert.match(setter, /if\(!reason\)return toast\('変更理由を入力してください','warn'\);/);
+  assert.match(setter, /if\(needsEvidence&&!evidenceUrl\)return toast/);
+  // 変更理由欄と提出リンク欄はステータス欄の選択に応じて出す。
+  assert.match(index, /class="j-sub-portal-evidence" type="url"/);
+  assert.match(fnSource('jobSubStatusChanged'), /\['directorRevision','clientRevision','managerStatusOverride'\]\.includes\(action\)/);
+  assert.match(index, /オーナーは任意の進捗へ変更できます。/);
+});
