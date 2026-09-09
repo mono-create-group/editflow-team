@@ -75,7 +75,7 @@ test('linked parent subcases expose only current valid workflow actions inline',
   assert.match(index, /const allowed=_portalWorkflowActionsForJob\(job\)\.map\(\(\[value\]\)=>value\);/);
   assert.match(index, /if\(!allowed\.includes\(action\)\)return toast\('現在の工程ではこの操作はできません。案件を開き直してください','warn'\);/);
   assert.match(index, /修正指示の内容/);
-  assert.match(index, /await advancePortalWorkflow\(portalUid,jobId,action,reason,completionDate\);/);
+  assert.match(index, /await advancePortalWorkflow\(portalUid,jobId,action,reason,completionDate,images\);/);
   assert.match(index, /async function advancePortalWorkflow\(portalUid,id,action,providedReason,providedCompletionDate,providedImages\)/);
   assert.match(index, /providedReason===undefined\?\(document\.getElementById\('vp-correction'\)\?\.value\.trim\(\)\|\|''\):String\(providedReason\)\.trim\(\)/);
   assert.match(index, /const PORTAL_WORKFLOW_ACTION_PENDING=new Set\(\);/);
