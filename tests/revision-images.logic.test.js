@@ -66,5 +66,16 @@ test('editors see the latest revision images as thumbnails next to the instructi
   assert.doesNotMatch(html, /old\.example/, 'only the latest revision instruction is shown');
   assert.doesNotMatch(html, /javascript:/);
   assert.equal(vm.runInContext(`editorRevisionImagesHtml({progressEvents:[{type:'editor_submitted'}]})`, ctx), '');
-  assert.match(editor, /\$\{editorRevisionImagesHtml\(job\)\}<div class="actions"><button class="btn primary small" type="button" onclick="openEditorFeedback/);
+  // 会長指示: 編集者が修正指示を開いたその場に画像が出ること。案件カードの注意事項の直下に本文＋画像の通知を置く。
+  assert.match(editor, /\$\{editorRevisionNoticeHtml\(j\)\}\$\{caseCautionHtml\(j\)\}\$\{caseManualCardsHtml\(j\)\}/);
+  const noticeCtx = vm.createContext({ esc: escapeHtml, safeUrl: v => (/^https?:\/\//.test(String(v || '')) ? String(v) : '') });
+  ['latestRevisionEvent', 'revisionImagePreviewUrl', 'editorRevisionImagesHtml', 'editorRevisionNoticeHtml'].forEach(name => vm.runInContext(functionSource(editor, name), noticeCtx));
+  const notice = vm.runInContext(`editorRevisionNoticeHtml({status:'修正中',correctionReason:'冒頭のテロップ <位置> を直す',progressEvents:[{type:'director_revision_requested',images:['https://a.example/1.png']}]})`, noticeCtx);
+  assert.match(notice, /<section class="job-urgent-note" aria-label="Dからの修正指示"><b>Dからの修正指示<\/b><br>冒頭のテロップ &lt;位置&gt; を直す/);
+  assert.match(notice, /a\.example\/1\.png/);
+  assert.equal(vm.runInContext(`editorRevisionNoticeHtml({status:'編集者進行中',correctionReason:'',progressEvents:[]})`, noticeCtx), '');
+  // 過去フィードバックページの「Dからの修正指示」にも同じ画像を出す。
+  const feedback = fs.readFileSync(path.join(root, 'feedback-workflow.js'), 'utf8');
+  assert.match(feedback, /window\.editorRevisionImagesHtml\(current\.job\)/);
+  assert.match(editor, /window\.editorRevisionImagesHtml=editorRevisionImagesHtml;/);
 });
