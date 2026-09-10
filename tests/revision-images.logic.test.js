@@ -41,7 +41,7 @@ test('image urls are parsed safely, de-duplicated, and capped at ten', () => {
 
 test('revision actions record the images on the progress event and the history shows them', () => {
   const flow = functionSource(index, 'advancePortalWorkflow');
-  assert.match(flow, /function advancePortalWorkflow\(portalUid,id,action,providedReason,providedCompletionDate,providedImages\)\{/);
+  assert.match(flow, /function advancePortalWorkflow\(portalUid,id,action,providedReason,providedCompletionDate,providedImages,options\)\{/);
   // 修正指示（D／クライアント）のときだけ画像を読む。承認系の遷移には付けない。
   assert.match(flow, /images=\['directorRevision','clientRevision'\]\.includes\(action\)\?_videoParseImageUrls\(providedImages===undefined\?\(document\.getElementById\('vp-correction-images'\)\?\.value\|\|''\):providedImages\):\[\]/);
   assert.match(flow, /\.\.\.\(reason\?\{reason\}:\{\}\),\.\.\.\(images\.length\?\{images\}:\{\}\),/);
@@ -49,7 +49,7 @@ test('revision actions record the images on the progress event and the history s
   assert.match(functionSource(index, '_videoWorkflowHistoryItem'), /_videoRevisionImagesHtml\(event\?\.images\)/);
   // 旧台帳の子案件モーダルからも画像URLを渡せる。
   assert.match(index, /class="j-sub-portal-images"/);
-  assert.match(functionSource(index, 'advanceLegacyPortalSubcaseWorkflow'), /const images=document\.getElementById\(`\$\{controlKey\}-images`\)\?\.value\|\|'';\n  await advancePortalWorkflow\(portalUid,jobId,action,reason,completionDate,images\);/);
+  assert.match(functionSource(index, 'advanceLegacyPortalSubcaseWorkflow'), /const images=document\.getElementById\(`\$\{controlKey\}-images`\)\?\.value\|\|'';\n  await advancePortalWorkflow\(portalUid,jobId,action,reason,completionDate,images,\{keepOpen:true\}\);/);
 });
 
 test('editors see the latest revision images as thumbnails next to the instruction', () => {

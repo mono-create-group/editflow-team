@@ -47,7 +47,7 @@ test('portal job administration displays status only and rejects tampered raw st
   assert.match(modal, /進捗は下の「進捗共有」の操作から更新します。/);
   assert.match(save, /const statusField=document\.getElementById\('vp-status'\),requestedStatus=String\(statusField\?\.dataset\.status\|\|j\.status\);/);
   assert.match(save, /if\(String\(statusField\?\.value\|\|''\)!==bizStatusLabel\(_portalVideoBiz\(j\),j\.status\)\|\|requestedStatus!==j\.status\)return toast\('進捗は「進捗共有」の操作から更新してください','warn'\);/);
-  assert.match(index, /function advancePortalWorkflow\(portalUid,id,action,providedReason,providedCompletionDate,providedImages\)/);
+  assert.match(index, /function advancePortalWorkflow\(portalUid,id,action,providedReason,providedCompletionDate,providedImages,options\)/);
 });
 
 test('linked parent subcases expose only current valid workflow actions inline', () => {
@@ -75,8 +75,9 @@ test('linked parent subcases expose only current valid workflow actions inline',
   assert.match(index, /const allowed=_portalWorkflowActionsForJob\(job\)\.map\(\(\[value\]\)=>value\);/);
   assert.match(index, /if\(!allowed\.includes\(action\)\)return toast\('現在の工程ではこの操作はできません。案件を開き直してください','warn'\);/);
   assert.match(index, /修正指示の内容/);
-  assert.match(index, /await advancePortalWorkflow\(portalUid,jobId,action,reason,completionDate,images\);/);
-  assert.match(index, /async function advancePortalWorkflow\(portalUid,id,action,providedReason,providedCompletionDate,providedImages\)/);
+  // 会長指示: 案件編集の「進捗を保存」で親案件の編集画面を閉じない。
+  assert.match(index, /await advancePortalWorkflow\(portalUid,jobId,action,reason,completionDate,images,\{keepOpen:true\}\);/);
+  assert.match(index, /async function advancePortalWorkflow\(portalUid,id,action,providedReason,providedCompletionDate,providedImages,options\)/);
   assert.match(index, /providedReason===undefined\?\(document\.getElementById\('vp-correction'\)\?\.value\.trim\(\)\|\|''\):String\(providedReason\)\.trim\(\)/);
   assert.match(index, /const PORTAL_WORKFLOW_ACTION_PENDING=new Set\(\);/);
   assert.match(index, /if\(PORTAL_WORKFLOW_ACTION_PENDING\.has\(pendingKey\)\)return toast\('進捗を保存しています。完了までお待ちください','warn'\);/);
@@ -151,7 +152,7 @@ test('the owner can move a linked subcase to any workflow status through the aud
   const values = Array.from(ownerOptions, ([value]) => value);
   assert.equal(values[0], '編集者進行中');
   ['アサイン済み', '進行中', '初稿提出済み', '修正中', '修正稿提出済み', 'D確認OK', '先方確認中', '完了'].forEach(status => assert.ok(values.includes(status), `${status} must be selectable`));
-  assert.ok(Array.from(ownerOptions).filter(([, , action]) => action === 'managerStatusOverride').every(([, label]) => /（任意変更・理由必須）$/.test(label)));
+  assert.ok(Array.from(ownerOptions).filter(([, , action]) => action === 'managerStatusOverride').every(([, label]) => /（任意変更）$/.test(label)));
   // 案内される1手（D確認OK など）は任意変更ではなく従来の誘導操作のまま。
   const review = vm.runInContext(`_portalSubcaseStatusOptions({status:'初稿提出済み',workflow:{round:1,stage:'director_review'}})`, make(true));
   assert.equal(Array.from(review).find(([value]) => value === 'D確認OK')[2], 'directorApprove');
@@ -164,12 +165,13 @@ test('the owner can move a linked subcase to any workflow status through the aud
   const handler = fnSource('advanceLegacyPortalSubcaseWorkflow');
   assert.match(handler, /if\(action==='managerStatusOverride'\)\{/);
   assert.match(handler, /if\(!_ownerCanOverridePortalStatus\(job\)\)return toast\('任意の進捗変更はオーナーのみ操作できます','err'\);/);
-  assert.match(handler, /return setPortalWorkflowStatus\(portalUid,jobId,\{status,reason:overrideReason,evidenceUrl,completionDate,clientApprovalConfirmed\}\);/);
+  assert.match(handler, /return setPortalWorkflowStatus\(portalUid,jobId,\{status,reason:overrideReason,evidenceUrl,completionDate,clientApprovalConfirmed,keepOpen:true\}\);/);
   assert.match(handler, /status==='完了'\?confirm\(/);
   const setter = fnSource('setPortalWorkflowStatus');
   assert.match(setter, /function setPortalWorkflowStatus\(portalUid,id,provided\)/);
   assert.match(setter, /const input=provided&&typeof provided==='object'\?provided:null;/);
-  assert.match(setter, /if\(!reason\)return toast\('変更理由を入力してください','warn'\);/);
+  // 会長指示: オーナーは理由なしでも任意変更できる。ディレクターは従来どおり必須。
+  assert.match(setter, /if\(!reason&&_portalStatusReasonRequired\(\)\)return toast\('変更理由を入力してください','warn'\);/);
   assert.match(setter, /if\(needsEvidence&&!evidenceUrl\)return toast/);
   // 変更理由欄と提出リンク欄はステータス欄の選択に応じて出す。
   assert.match(index, /class="j-sub-portal-evidence" type="url"/);

@@ -11,7 +11,8 @@ test('case modal offers every official workflow status without unlocking the raw
   const modal = index.slice(index.indexOf('function openPortalJobModal'), index.indexOf('\nasync function savePortalJobAdmin'));
   assert.match(control, /VIDEO_WORKFLOW_STATUSES\.map\(status=>/);
   assert.match(control, /任意の進捗に変更/);
-  assert.match(control, /変更理由（必須）/);
+  // 会長指示: オーナーは理由なしで任意変更できる。ディレクターには従来どおり「必須」と出す。
+  assert.match(control, /変更理由\$\{_portalStatusReasonRequired\(\)\?'（必須）':'（任意）'\}/);
   assert.match(control, /setPortalWorkflowStatus/);
   assert.match(control, /status==='完了'&&editorCompletion\?'disabled':''/);
   assert.match(modal, /<input id="vp-status"[^>]*readonly aria-readonly="true">/);
@@ -23,7 +24,7 @@ test('manual progress save keeps role, final-state, completion, and audit safegu
     "_canManagePortalWorkflow(j)",
     "String(j.status||'')==='完了'||j.payableApproved===true",
     'VIDEO_WORKFLOW_STATUSES.includes(status)',
-    "if(!reason)return toast('変更理由を入力してください'",
+    "if(!reason&&_portalStatusReasonRequired())return toast('変更理由を入力してください'",
     "if(needsEvidence&&!evidenceUrl)return toast('提出・納品リンクを http:// または https:// から入力してください'",
     "status==='完了'&&_editorOwnsPortalCompletion(j)",
     "status==='完了'&&!clientApprovalConfirmed",
