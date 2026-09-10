@@ -77,3 +77,21 @@ test('saveJob writes the derived status and does not lock the save behind the op
   // ポータル連携の親案件は従来どおり、案件編集からステータスを動かさない。
   assert.match(save, /if\(_legacyPortalStatusLocked\(current\)&&requestedStatus!==current\.status\)/);
 });
+
+// 実アプリで駆動して判明: 新規サブ案件の既定が「案件掲載中」（編集者募集の掲載中）だったため、
+// 進行中の親案件にサブ案件を1件足すだけで親が「案件掲載中」へ落ちていた。
+test('a brand-new subcase starts at 未着手 so adding one does not demote the parent', () => {
+  const ctx = vm.createContext({
+    bizCfgOf: biz => ({ statuses: biz === 'haken'
+      ? ['案件掲載中', '募集中', '編集者決定', '受注済み', 'アサイン済み', '進行中', '完了', 'キャンセル']
+      : EDIT_STATUSES }),
+  });
+  vm.runInContext(functionSource(index, '_jobSubDefaultStatus'), ctx);
+  assert.equal(vm.runInContext("_jobSubDefaultStatus('edit')", ctx), '未着手');
+  // 編集者派遣は掲載から始まるため従来どおり先頭のまま。
+  assert.equal(vm.runInContext("_jobSubDefaultStatus('haken')", ctx), '案件掲載中');
+  assert.match(index, /const st=s\.status\|\|_jobSubDefaultStatus\(_bk\);/);
+  // 折りたたみカード・読み出し・保存の既定と揃っている。
+  assert.match(index, /videoStatusLabel\(record\?\.status\|\|'未着手'\)/);
+  assert.match(index, /requestedSubStatus=el\.querySelector\('\.j-sub-status'\)\?\.value\|\|'未着手'/);
+});
