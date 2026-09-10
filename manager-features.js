@@ -341,8 +341,10 @@
       const title=row.querySelector('.mb-subcase-title')?.value.trim()||'',editorDraftDateSetter=row.querySelector('.mb-subcase-draft-setter')?.value==='editor'?'editor':'creator',editorDraftDate=editorDraftDateSetter==='creator'?(row.querySelector('.mb-subcase-draft')?.value||''):'',clientDraftDate=row.querySelector('.mb-subcase-client-draft')?.value||'',deliveryDate=row.querySelector('.mb-subcase-delivery')?.value||'',instructions=row.querySelector('.mb-subcase-instructions')?.value.trim()||'',manualIds=selectedManualIds(row.querySelector('.mb-subcase-manuals')),caution=row.querySelector('.mb-subcase-caution')?.value.trim()||'';
       if(!title||!instructions)return{error:'すべての子案件に、案件名・編集指示を入力してください',items:[]};
       if(!internal&&editorDraftDateSetter==='creator'&&!editorDraftDate)return{error:`「${title}」：案件追加者が設定する場合は、編集者初稿日を入力してください`,items:[]};
-      if(editorDraftDate&&clientDraftDate&&clientDraftDate<editorDraftDate)return{error:`「${title}」：クライアント初稿は編集者初稿以降に設定してください`,items:[]};
-      if(clientDraftDate&&deliveryDate&&deliveryDate<clientDraftDate)return{error:`「${title}」：納期（予定）はクライアント初稿以降に設定してください`,items:[]};
+      // 日程の順序はオーナーのみ免除（編集者・ディレクターは従来どおり順番どおりに入力させる）。
+      const enforceOrder=!(typeof _isOwner==='function'&&_isOwner());
+      if(enforceOrder&&editorDraftDate&&clientDraftDate&&clientDraftDate<editorDraftDate)return{error:`「${title}」：クライアント初稿は編集者初稿以降に設定してください`,items:[]};
+      if(enforceOrder&&clientDraftDate&&deliveryDate&&deliveryDate<clientDraftDate)return{error:`「${title}」：納期（予定）はクライアント初稿以降に設定してください`,items:[]};
       const attachmentRead=typeof _readVideoAttachments==='function'?_readVideoAttachments(row.querySelector('.video-attachment-list')):{error:'',items:[]};
       if(attachmentRead.error)return{error:`「${title}」：${attachmentRead.error}`,items:[]};
       const requestUrl=row.querySelector('.mb-subcase-request')?.value.trim()||'',sourceUrl=row.querySelector('.mb-subcase-source')?.value.trim()||'';
