@@ -122,8 +122,8 @@ test('ordinary legacy subcases require and retain a completion date when newly c
 });
 
 test('the owner can move a linked subcase to any workflow status through the audited manual override', () => {
-  // 会長指示: 子案件モーダルのステータスをオーナーは自由に変えられるようにする。
-  // 案件モーダルの「任意の進捗に変更」と同じ経路（理由必須・履歴に残る・ルール検証済み）を子案件のステータス欄から使う。
+  // 子案件モーダルのステータスをオーナーは自由に変えられる。
+  // 監査履歴付きの同じ保存経路を子案件のステータス欄から使う。
   const vm = require('node:vm');
   function fnSource(name) {
     const start = index.indexOf(`function ${name}(`);
@@ -152,8 +152,8 @@ test('the owner can move a linked subcase to any workflow status through the aud
   const values = Array.from(ownerOptions, ([value]) => value);
   assert.equal(values[0], '編集者進行中');
   ['アサイン済み', '進行中', '初稿提出済み', '修正中', '修正稿提出済み', 'D確認OK', '先方確認中', '完了'].forEach(status => assert.ok(values.includes(status), `${status} must be selectable`));
-  assert.ok(Array.from(ownerOptions).filter(([, , action]) => action === 'managerStatusOverride').every(([, label]) => /（任意変更）$/.test(label)));
-  // 案内される1手（D確認OK など）は任意変更ではなく従来の誘導操作のまま。
+  assert.ok(Array.from(ownerOptions).filter(([, , action]) => action === 'managerStatusOverride').every(([value, label]) => label === value));
+  // 案内される1手（D確認OK など）は従来の誘導操作のまま。
   const review = vm.runInContext(`_portalSubcaseStatusOptions({status:'初稿提出済み',workflow:{round:1,stage:'director_review'}})`, make(true));
   assert.equal(Array.from(review).find(([value]) => value === 'D確認OK')[2], 'directorApprove');
   // ディレクター（オーナー以外）には出さない。完了・請求確定済みにも出さない。
@@ -164,17 +164,17 @@ test('the owner can move a linked subcase to any workflow status through the aud
   // 子案件モーダルの保存は、監査つきの setPortalWorkflowStatus に値を渡して実行する（ルール上の manager_status_changed 経路）。
   const handler = fnSource('advanceLegacyPortalSubcaseWorkflow');
   assert.match(handler, /if\(action==='managerStatusOverride'\)\{/);
-  assert.match(handler, /if\(!_ownerCanOverridePortalStatus\(job\)\)return toast\('任意の進捗変更はオーナーのみ操作できます','err'\);/);
+  assert.match(handler, /if\(!_ownerCanOverridePortalStatus\(job\)\)return toast\('この進捗変更はオーナーのみ操作できます','err'\);/);
   assert.match(handler, /return setPortalWorkflowStatus\(portalUid,jobId,\{status,reason:overrideReason,evidenceUrl,completionDate,clientApprovalConfirmed,keepOpen:true\}\);/);
   assert.match(handler, /status==='完了'\?confirm\(/);
   const setter = fnSource('setPortalWorkflowStatus');
   assert.match(setter, /function setPortalWorkflowStatus\(portalUid,id,provided\)/);
   assert.match(setter, /const input=provided&&typeof provided==='object'\?provided:null;/);
-  // 会長指示: オーナーは理由なしでも任意変更できる。ディレクターは従来どおり必須。
+  // オーナーは理由入力を省略できる。ディレクターは従来どおり必須。
   assert.match(setter, /if\(!reason&&_portalStatusReasonRequired\(\)\)return toast\('変更理由を入力してください','warn'\);/);
   assert.match(setter, /if\(needsEvidence&&!evidenceUrl\)return toast/);
   // 変更理由欄と提出リンク欄はステータス欄の選択に応じて出す。
   assert.match(index, /class="j-sub-portal-evidence" type="url"/);
   assert.match(fnSource('jobSubStatusChanged'), /\['directorRevision','clientRevision','managerStatusOverride'\]\.includes\(action\)/);
-  assert.match(index, /オーナーは任意の進捗へ変更できます。/);
+  assert.match(index, /オーナーは一覧から進捗を変更できます。/);
 });

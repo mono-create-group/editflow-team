@@ -265,6 +265,7 @@ async function expectAllowed(label, promise) {
       await setDoc(doc(db, 'editor_portals', 'external1', 'editor_jobs', 'done1'), portalJob('external1', { directorUid: 'dir1', status: '完了', evidenceUrl: 'https://example.com/delivery' }));
       await setDoc(doc(db, 'editor_portals', 'external1', 'editor_jobs', 'workflow-save-budget'), externalWorkflowJob());
       await setDoc(doc(db, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-director'), externalWorkflowJob({ title: '手動進捗変更-D' }));
+      await setDoc(doc(db, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-owner-progress'), externalWorkflowJob({ title: '手動進捗変更-オーナー', status: '編集者進行中' }));
       await setDoc(doc(db, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-no-reason'), externalWorkflowJob({ title: '手動進捗変更-理由なし' }));
       await setDoc(doc(db, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-revision'), externalWorkflowJob({ title: '手動進捗変更-修正稿' }));
       await setDoc(doc(db, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-initial-round-two'), externalWorkflowJob({
@@ -509,6 +510,21 @@ async function expectAllowed(label, promise) {
       ...directorOverride, at: serverTimestamp(),
     });
     await expectAllowed('assigned director can choose a non-adjacent progress with an audit event', directorOverrideBatch.commit());
+    // Regression: the owner UI permits an omitted reason. The client must add
+    // this deterministic audit reason before the Firestore write so the rule
+    // contract remains strict and the save does not fail with permission-denied.
+    const ownerProgressEvent = managerOverrideEvent({
+      byUid: 'owner', byEmail: 'mono.create.group@gmail.com', byRole: 'owner',
+      fromStatus: '編集者進行中', fromStage: 'editing', status: '進行中',
+      toStage: 'editing', round: 1, reason: '社内アプリで進捗を変更',
+    });
+    const ownerProgressBatch = writeBatch(owner);
+    const ownerProgressRef = doc(owner, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-owner-progress');
+    ownerProgressBatch.update(ownerProgressRef, managerOverrideUpdate(ownerProgressEvent));
+    ownerProgressBatch.set(doc(owner, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-owner-progress', 'events', 'manager-override-owner-progress'), {
+      ...ownerProgressEvent, at: serverTimestamp(),
+    });
+    await expectAllowed('owner changes editor progress to in progress with the generated audit reason', ownerProgressBatch.commit());
     const missingReason = managerOverrideEvent({ reason: '' });
     await expectDenied('manual progress override requires a reason', updateDoc(
       doc(dir1, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-no-reason'),
@@ -962,8 +978,8 @@ async function expectAllowed(label, promise) {
     // 案件内チャットの新着控え。送信者本人だけが、この3項目＋updatedAt を書ける。
     const chatStamp = { lastMessageAt: 1757030400000, lastMessageSenderUid: 'direct1', lastMessagePreview: '初稿を提出しました', updatedAt: 3 };
     await expectAllowed('editor stamps the last chat message on own case', updateDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_jobs', 'draft-editor'), chatStamp));
-    await expectAllowed('owner stamps the last chat message on an editor case', updateDoc(doc(owner, 'editor_portals', 'direct1', 'editor_jobs', 'draft-editor'), { ...chatStamp, lastMessageSenderUid: 'owner', updatedAt: 4 }));
     await expectDenied('editor cannot claim someone else sent the last chat message', updateDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_jobs', 'draft-editor'), { ...chatStamp, lastMessageSenderUid: 'owner', updatedAt: 5 }));
+    await expectAllowed('owner stamps the last chat message on an editor case', updateDoc(doc(owner, 'editor_portals', 'direct1', 'editor_jobs', 'draft-editor'), { ...chatStamp, lastMessageSenderUid: 'owner', updatedAt: 4 }));
     await expectDenied('chat preview is capped at 80 characters', updateDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_jobs', 'draft-editor'), { ...chatStamp, lastMessagePreview: 'あ'.repeat(81), updatedAt: 6 }));
     await expectDenied('an unrelated editor cannot stamp another portal case', updateDoc(doc(external1, 'editor_portals', 'direct1', 'editor_jobs', 'draft-editor'), { ...chatStamp, lastMessageSenderUid: 'external1', updatedAt: 7 }));
     await expectDenied('the chat stamp cannot smuggle another field through', updateDoc(doc(direct1, 'editor_portals', 'direct1', 'editor_jobs', 'draft-editor'), { ...chatStamp, ownPay: 9999, updatedAt: 8 }));

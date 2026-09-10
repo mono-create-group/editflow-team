@@ -44,8 +44,8 @@ test('the inline refresh only resets the status control and the reason inputs', 
   assert.match(refresh, /if\(!select\)return false;/);
 });
 
-// 会長指示: オーナーは任意変更のときも変更理由なしで保存できる。ディレクターは従来どおり必須。
-test('the reason stays required for directors and becomes optional for the owner', () => {
+// オーナーは理由入力を省略できるが、Firestore の監査契約を満たす理由文字列は必ず生成する。
+test('the reason stays required for directors and owner omissions get an audit reason', () => {
   const source = functionSource('_portalStatusReasonRequired');
   const run = (owner, preview) => {
     const ctx = vm.createContext({ _isActualOwner: () => owner, _rolePreviewActive: () => preview });
@@ -56,8 +56,15 @@ test('the reason stays required for directors and becomes optional for the owner
   assert.equal(run(false, false), true);
   // オーナーが役割プレビュー中なら、見えている役割どおり必須に戻す。
   assert.equal(run(true, true), true);
+  const auditContext = vm.createContext({});
+  vm.runInContext(functionSource('_portalStatusAuditReason'), auditContext);
+  assert.equal(vm.runInContext("_portalStatusAuditReason('')", auditContext), '社内アプリで進捗を変更');
+  assert.equal(vm.runInContext("_portalStatusAuditReason(' 実際の進捗へ修正 ')", auditContext), '実際の進捗へ修正');
   const setter = functionSource('setPortalWorkflowStatus');
   assert.match(setter, /if\(!reason&&_portalStatusReasonRequired\(\)\)return toast\('変更理由を入力してください','warn'\);/);
+  assert.match(setter, /const auditReason=_portalStatusAuditReason\(reason\)/);
+  assert.match(setter, /reason:auditReason/);
+  assert.match(setter, /correctionReason:status==='修正中'\?auditReason:''/);
   // 提出リンク・完了日・クライアントOKの確認は緩めない。
   assert.match(setter, /if\(needsEvidence&&!evidenceUrl\)return toast/);
   assert.match(setter, /status==='完了'&&!clientApprovalConfirmed/);

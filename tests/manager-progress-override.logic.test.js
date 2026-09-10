@@ -10,9 +10,9 @@ test('case modal offers every official workflow status without unlocking the raw
   const control = index.slice(index.indexOf('function _videoManualProgressControl'), index.indexOf('\nfunction _videoWorkflowHtml'));
   const modal = index.slice(index.indexOf('function openPortalJobModal'), index.indexOf('\nasync function savePortalJobAdmin'));
   assert.match(control, /VIDEO_WORKFLOW_STATUSES\.map\(status=>/);
-  assert.match(control, /任意の進捗に変更/);
-  // 会長指示: オーナーは理由なしで任意変更できる。ディレクターには従来どおり「必須」と出す。
-  assert.match(control, /変更理由\$\{_portalStatusReasonRequired\(\)\?'（必須）':'（任意）'\}/);
+  assert.match(control, /進捗を変更/);
+  // オーナーは理由を省略でき、ディレクターには従来どおり「必須」と出す。
+  assert.match(control, /変更理由\$\{_portalStatusReasonRequired\(\)\?'（必須）':'（省略可）'\}/);
   assert.match(control, /setPortalWorkflowStatus/);
   assert.match(control, /status==='完了'&&editorCompletion\?'disabled':''/);
   assert.match(modal, /<input id="vp-status"[^>]*readonly aria-readonly="true">/);
@@ -25,6 +25,7 @@ test('manual progress save keeps role, final-state, completion, and audit safegu
     "String(j.status||'')==='完了'||j.payableApproved===true",
     'VIDEO_WORKFLOW_STATUSES.includes(status)',
     "if(!reason&&_portalStatusReasonRequired())return toast('変更理由を入力してください'",
+    'const auditReason=_portalStatusAuditReason(reason)',
     "if(needsEvidence&&!evidenceUrl)return toast('提出・納品リンクを http:// または https:// から入力してください'",
     "status==='完了'&&_editorOwnsPortalCompletion(j)",
     "status==='完了'&&!clientApprovalConfirmed",
@@ -34,7 +35,7 @@ test('manual progress save keeps role, final-state, completion, and audit safegu
     "fromStatus:String(j.status||'')",
     "clientApprovalConfirmed:true",
     "needsEvidence?{evidenceUrl}",
-    "correctionReason:status==='修正中'?reason:''",
+    "correctionReason:status==='修正中'?auditReason:''",
     'await batch.commit()',
     '_applyPortalToLegacy({...j,...data},false)',
   ]) assert.ok(body.includes(marker), `missing ${marker}`);
