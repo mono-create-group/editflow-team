@@ -33,6 +33,18 @@ test('saving subcase progress from the case form keeps the case modal open', () 
   assert.match(setter, /Object\.assign\(j,data\);/);
 });
 
+test('subcase detail exposes an editable status and persists the selected status', () => {
+  const modal = index.slice(index.indexOf('function _videoSubcaseDetailHtml'), index.indexOf('\nfunction openLegacySubcaseDetail'));
+  assert.match(modal, /<select id="vs-status"/);
+  assert.match(modal, /statusCanEdit=canEdit&&!statusLocked/);
+  assert.match(modal, /bizStatOpts\(jobBiz\(parent\)/);
+  const saver = functionSource('saveLegacySubcaseDraftDates');
+  assert.match(saver, /const requestedStatus=document\.getElementById\('vs-status'\)\?\.value/);
+  assert.match(saver, /status:requestedStatus/);
+  assert.match(saver, /type:requestedStatus===previousStatus\?'subcase_schedule_update':'subcase_status_update'/);
+  assert.match(saver, /fromStatus:previousStatus/);
+});
+
 // 行ごと作り直すと、入力途中の日程・単価まで消える（§11 データを壊さない）。触るのはステータス欄と理由欄だけにする。
 test('the inline refresh only resets the status control and the reason inputs', () => {
   const refresh = functionSource('_refreshJobModalPortalSubProgress');
