@@ -64,14 +64,18 @@ test('the case form hides the parent status field and shows the derived value in
   assert.match(index, /id="j-stat-auto"/);
   const rule = functionSource(index, 'updateJobParentStatusRule');
   assert.match(rule, /field\.style\.display=hasSubs\?'none':''/);
+  assert.match(rule, /field\.setAttribute\('aria-hidden',hasSubs\?'true':'false'\)/);
+  assert.match(rule, /parentSelect\.disabled=hasSubs/);
   assert.match(rule, /auto\.style\.display=hasSubs\?'':'none'/);
+  assert.match(rule, /auto\.setAttribute\('aria-hidden',hasSubs\?'false':'true'\)/);
   assert.match(functionSource(index, 'updateJobInternalScheduleRules'), /updateJobParentStatusRule\(hasSubs\)/);
 });
 
 test('saveJob writes the derived status and does not lock the save behind the ops checklist', () => {
   const save = functionSource(index, 'saveJob');
   assert.match(save, /const parentStatusAuto=subtasks\.length>0&&!_legacyPortalStatusLocked\(current\);/);
-  assert.match(save, /const finalStatus=parentStatusAuto\?_aggregateSubcaseStatus\(currentBiz,subtasks,requestedStatus\):requestedStatus;/);
+  assert.match(save, /const finalStatus=parentStatusAuto\?_aggregateSubcaseStatus\(currentBiz,subtasks,_jobSubDefaultStatus\(currentBiz\)\):requestedStatus;/);
+  assert.match(save, /const requestedStatus=String\(document\.getElementById\('j-stat'\)\?\.value\|\|''\);/);
   assert.match(save, /status:finalStatus,/);
   assert.match(save, /const entersOperationalCompletion=!parentStatusAuto&&opsRequiresChecklist/);
   // ポータル連携の親案件は従来どおり、案件編集からステータスを動かさない。
