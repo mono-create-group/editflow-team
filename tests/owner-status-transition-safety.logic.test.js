@@ -172,7 +172,7 @@ test('the owner can move a linked subcase to any workflow status through the aud
   assert.match(setter, /const input=provided&&typeof provided==='object'\?provided:null;/);
   // オーナーは理由入力を省略できる。ディレクターは従来どおり必須。
   assert.match(setter, /if\(!reason&&_portalStatusReasonRequired\(\)\)return toast\('変更理由を入力してください','warn'\);/);
-  assert.match(setter, /if\(needsEvidence&&!evidenceUrl\)return toast/);
+  assert.match(setter, /if\(evidenceRequired&&!evidenceUrl\)return toast/);
   // 変更理由欄と提出リンク欄はステータス欄の選択に応じて出す。
   assert.match(index, /class="j-sub-portal-evidence" type="url"/);
   assert.match(fnSource('jobSubStatusChanged'), /\['directorRevision','clientRevision','managerStatusOverride'\]\.includes\(action\)/);

@@ -111,6 +111,17 @@ service cloud.firestore {
           && request.resource.data.blocker.size() == 0);
     }
 
+    // 管理者の進捗変更は、オーナー本人に限り提出リンクを省略できる。
+    // 編集者・ディレクターの変更では完了時も従来どおりURLを要求する。
+    function validManagerCompletionEvidence() {
+      return request.resource.data.status != '完了'
+        || (request.resource.data.blocker is string
+          && request.resource.data.blocker.size() == 0
+          && (owner()
+            || (request.resource.data.evidenceUrl is string
+              && request.resource.data.evidenceUrl.matches('^https?://.+'))));
+    }
+
     function validSubtaskIndex(data) {
       return !('subtaskIndex' in data)
         || (data.subtaskIndex is int && data.subtaskIndex >= 0 && data.subtaskIndex < 500);
@@ -936,7 +947,7 @@ service cloud.firestore {
         && request.resource.data.get('history', []) is list
         && (owner() || scopedVideoDirectorFor(uid))
         && validJobStatus(request.resource.data.status)
-        && validCompletedJobEvidence()
+        && validManagerCompletionEvidence()
         && validCompletedDeliveryDate()
         && (hasReviewWorkflow(resource.data)
           ? validCurrentManagerReviewTransition()
@@ -955,7 +966,7 @@ service cloud.firestore {
         && request.resource.data.get('history', []) is list
         && (owner() || scopedVideoDirectorFor(uid))
         && validJobStatus(request.resource.data.status)
-        && validCompletedJobEvidence()
+        && validManagerCompletionEvidence()
         && validCompletedDeliveryDate()
         && validManagerStatusOverride()
         && preservesFinalJob();
@@ -1503,7 +1514,7 @@ service cloud.firestore {
     }
 
     function managerOverrideNeedsEvidence(status) {
-      return status in ['初稿提出済み', '修正稿提出済み', '完了'];
+      return !owner() && status in ['初稿提出済み', '修正稿提出済み', '完了'];
     }
 
     function managerStatusOverrideRequested() {

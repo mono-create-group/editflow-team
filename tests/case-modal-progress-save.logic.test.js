@@ -78,8 +78,20 @@ test('the reason stays required for directors and owner omissions get an audit r
   assert.match(setter, /const auditReason=_portalStatusAuditReason\(reason\)/);
   assert.match(setter, /reason:auditReason/);
   assert.match(setter, /correctionReason:status==='修正中'\?auditReason:''/);
-  // 提出リンク・完了日・クライアントOKの確認は緩めない。
-  assert.match(setter, /if\(needsEvidence&&!evidenceUrl\)return toast/);
+  // オーナーは提出リンクを省略できるが、ディレクターには従来どおり必須。
+  const evidence = functionSource('_portalStatusEvidenceRequired');
+  const evidenceRun = (owner, preview, status) => {
+    const ctx = vm.createContext({
+      _isActualOwner: () => owner,
+      _rolePreviewActive: () => preview,
+    });
+    vm.runInContext(`${functionSource('_portalStatusReasonRequired')}\n${evidence}`, ctx);
+    return vm.runInContext(`_portalStatusEvidenceRequired(${JSON.stringify(status)})`, ctx);
+  };
+  assert.equal(evidenceRun(true, false, '完了'), false);
+  assert.equal(evidenceRun(false, false, '完了'), true);
+  assert.equal(evidenceRun(true, true, '完了'), true);
+  assert.match(setter, /if\(evidenceRequired&&!evidenceUrl\)return toast/);
   assert.match(setter, /status==='完了'&&!clientApprovalConfirmed/);
   assert.match(setter, /_validPortalCompletionDate\(completionDate\)/);
   assert.match(functionSource('togglePortalManualProgressFields'), /\(_portalStatusReasonRequired\(\)&&!reason\)/);

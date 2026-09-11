@@ -26,7 +26,7 @@ test('manual progress save keeps role, final-state, completion, and audit safegu
     'VIDEO_WORKFLOW_STATUSES.includes(status)',
     "if(!reason&&_portalStatusReasonRequired())return toast('変更理由を入力してください'",
     'const auditReason=_portalStatusAuditReason(reason)',
-    "if(needsEvidence&&!evidenceUrl)return toast('提出・納品リンクを http:// または https:// から入力してください'",
+    "if(evidenceRequired&&!evidenceUrl)return toast('提出・納品リンクを http:// または https:// から入力してください'",
     "status==='完了'&&_editorOwnsPortalCompletion(j)",
     "status==='完了'&&!clientApprovalConfirmed",
     '_validPortalCompletionDate(completionDate)',
@@ -41,7 +41,7 @@ test('manual progress save keeps role, final-state, completion, and audit safegu
   ]) assert.ok(body.includes(marker), `missing ${marker}`);
   assert.match(index, /manager_status_changed:'管理者が進捗を変更'/);
   assert.match(index, /変更前：\$\{esc\(videoStatusLabel\(event\.fromStatus\)\)\} → 変更後：/);
-  assert.match(index, /提出・納品リンク（必須）/);
+  assert.match(index, /提出・納品リンク\$\{evidenceRequired\?'（必須）':'（省略可）'\}/);
   assert.match(index, /クライアントOKを確認済み/);
 });
 

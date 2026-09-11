@@ -29,9 +29,9 @@ test('large case lists render in bounded batches and search waits for typing to 
   assert.match(html, /function showMoreVideoCases\(\)\{VIDEO_RENDER_LIMIT\+=50;render\(\);\}/);
   assert.match(html, /_videoQueryTimer=setTimeout\(\(\)=>\{/);
   assert.match(html, /\},350\);/);
-  assert.match(html, /oninput="setVideoQuery\(this\.value,this\)"/);
-  assert.match(html, /oncompositionstart="startVideoQueryComposition\(this\)"/);
-  assert.match(html, /oncompositionend="endVideoQueryComposition\(this\)"/);
+  assert.match(html, /oninput="setVideoQuery\(this\.value,this,event\)"/);
+  assert.match(html, /document\.addEventListener\('compositionstart'/);
+  assert.match(html, /document\.addEventListener\('compositionend'/);
 });
 
 test('video search does not render during Japanese IME composition and restores focus after conversion', () => {
@@ -54,19 +54,20 @@ test('video search does not render during Japanese IME composition and restores 
   };
   let pending = null;
   let delay = null;
-  let renderCount = 0;
   const context = {
     clearTimeout() {},
     setTimeout(fn, wait) { pending = fn; delay = wait; return 1; },
-    render() { renderCount += 1; },
     requestAnimationFrame(fn) { fn(); },
     document: {
       activeElement: original,
       querySelectorAll: selector => selector === 'input[data-video-query]' ? [replacement] : [],
+      addEventListener() {},
     },
   };
   vm.createContext(context);
-  vm.runInContext(`let VIDEO_QUERY='',VIDEO_RENDER_LIMIT=50,_videoQueryTimer=0,_videoQueryComposing=false,_videoQueryFocusLabel='案件検索';\n${html.slice(start, end)}`, context);
+  const focusStart = html.indexOf('function _captureVideoQueryFocus');
+  const focusEnd = html.indexOf('function _captureViewBoardScroll', focusStart);
+  vm.runInContext(`let VIDEO_QUERY='',VIDEO_RENDER_LIMIT=50,_videoQueryTimer=0,_videoQueryComposing=false,_videoQueryRenderPending=false,_videoQueryFocusLabel='案件検索',renderCount=0;\n${html.slice(focusStart, focusEnd)}\n${html.slice(start, end)}\nfunction render(){renderCount+=1;const state=_captureVideoQueryFocus();_restoreVideoQueryFocus(state);}`, context);
 
   context.startVideoQueryComposition(original);
   context.setVideoQuery('し', original);
@@ -76,7 +77,7 @@ test('video search does not render during Japanese IME composition and restores 
   assert.equal(delay, 350);
   assert.equal(typeof pending, 'function');
   pending();
-  assert.equal(renderCount, 1);
+  assert.equal(vm.runInContext('renderCount', context), 1);
   assert.equal(replacement.focused, true);
   assert.deepEqual(replacement.selection, [2, 2]);
 });
