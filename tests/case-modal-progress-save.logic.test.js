@@ -38,6 +38,7 @@ test('subcase detail exposes an editable status and persists the selected status
   assert.match(modal, /<select id="vs-status"/);
   assert.match(modal, /statusCanEdit=canEdit&&!statusLocked/);
   assert.match(modal, /bizStatOpts\(jobBiz\(parent\)/);
+  assert.match(modal, /portalProgress=portalJob\?_videoManualProgressControl\(portalJob,portalUid\):''/);
   const saver = functionSource('saveLegacySubcaseDraftDates');
   assert.match(saver, /const requestedStatus=document\.getElementById\('vs-status'\)\?\.value/);
   assert.match(saver, /status:requestedStatus/);
