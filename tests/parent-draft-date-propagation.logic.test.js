@@ -8,9 +8,9 @@ const index = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 // 会長報告: 親案件の「編集者 初稿」が変更できない（子案件があると欄が無効化されていた）。
 test('the owner can edit the parent editor-draft date and it propagates to unset or aggregate-matching subcases only', () => {
   // 子案件があるとき、オーナーだけ欄を有効にする（ディレクターは従来どおり無効）。
-  assert.match(index, /id="j-editor-draft" value="\$\{j\?\.editorDraftDate\|\|''\}" \$\{subs\.length\?\(_isOwner\(\)\?'':'disabled'\):\(parentDraftSetter!=='creator'\?'disabled':''\)\}/);
+  assert.match(index, /id="j-editor-draft" value="\$\{j\?\.editorDraftDate\|\|''\}" \$\{subs\.length\?\(_isOwner\(\)\?'':'disabled'\):\(!_isOwner\(\)&&parentDraftSetter!=='creator'\?'disabled':''\)\}/);
   assert.match(index, /const PARENT_DRAFT_BULK_HINT='ここに入れると、未設定の子案件（案件追加者が設定するもの）へ一括で入ります。/);
-  assert.match(index, /subs\.length\?\(_isOwner\(\)\?PARENT_DRAFT_BULK_HINT:'子案件ごとに下の欄で設定します。'\)/);
+  assert.match(index, /subs\.length\?\(_isOwner\(\)\?PARENT_DRAFT_BULK_HINT:'子案件ごとに設定します。'\)/);
   assert.match(index, /hasSubs\?\(_isOwner\(\)\?PARENT_DRAFT_BULK_HINT:'子案件ごとに下の欄で設定します。'\)/);
   // 保存時: 親の値が直前の集約値と違うときだけ、未設定 or 集約値と同じ子案件に入れる。担当編集者が設定する子案件は触らない。
   const save = index.slice(index.indexOf('async function saveJob(){'), index.indexOf('const subtasks=_isOwner()?parsedSubtasks:oldSubs;'));

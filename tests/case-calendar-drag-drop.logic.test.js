@@ -30,7 +30,7 @@ test('calendar entries are draggable and every day cell accepts a drop for the d
   assert.match(css,/\.case-calendar-item\[draggable="true"\][^{]*\{cursor:grab\}/);
 });
 
-function makeContext(){
+function makeContext({owner=true}={}){
   const calls=[];
   const context={
     S:{jobs:[
@@ -42,6 +42,7 @@ function makeContext(){
     PORTAL_JOBS:[{id:'p1',_portalUid:'uid-1',editorDraftDate:'2026-09-04',clientDraftDate:'',editorDraftDateSetter:'creator'}],
     PRIO_IDX:0,
     _videoCanEdit:()=>true,
+    _isOwner:()=>owner,
     _myEmail:()=>'owner@example.com',
     _editorDraftDateSetter:record=>record?.editorDraftDateSetter||'editor',
     _findVideoSubcase:(parent,subId)=>{const index=(parent?.subtasks||[]).findIndex(sub=>String(sub.id)===String(subId));return index<0?null:{index,sub:parent.subtasks[index]};},
@@ -68,7 +69,7 @@ test('dropping a legacy parent moves only the displayed field and records histor
   assert.equal(calls.at(-1)[1],'編集者初稿を2026-09-10に変更しました');
 });
 
-test('dropping a legacy subtask updates that subtask only and respects editor-owned draft dates',async()=>{
+test('owner can move an editor-owned legacy subtask draft date without touching siblings',async()=>{
   const{context,calls}=makeContext();
   await context.setDate({t:'sub',s:'legacy',j:'legacy-1',u:'',sub:'s1',pj:'',pu:''},'clientDraftDate','2026-09-12');
   const[first,second]=context.S.jobs[0].subtasks;
@@ -79,7 +80,16 @@ test('dropping a legacy subtask updates that subtask only and respects editor-ow
 
   calls.length=0;
   await context.setDate({t:'sub',s:'legacy',j:'legacy-1',u:'',sub:'s2',pj:'',pu:''},'editorDraftDate','2026-09-12');
-  assert.equal(second.editorDraftDate,'','editor-owned draft dates are not overwritten by the owner');
+  assert.equal(context.S.jobs[0].subtasks[1].editorDraftDate,'2026-09-12');
+  assert.equal(context.S.jobs[0].subtasks[0].editorDraftDate,'2026-09-03');
+  assert.deepEqual(calls.map(c=>c[0]),['save','render','toast']);
+  assert.equal(calls.at(-1)[1],'編集者初稿を2026-09-12に変更しました');
+});
+
+test('non-owner managers still cannot move an editor-owned draft date',async()=>{
+  const{context,calls}=makeContext({owner:false});
+  await context.setDate({t:'sub',s:'legacy',j:'legacy-1',u:'',sub:'s2',pj:'',pu:''},'editorDraftDate','2026-09-12');
+  assert.equal(context.S.jobs[0].subtasks[1].editorDraftDate,'');
   assert.deepEqual(calls,[['toast','この子案件の編集者初稿は担当編集者が設定します','warn']]);
 });
 
