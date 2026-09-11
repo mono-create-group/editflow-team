@@ -27,8 +27,58 @@ test('large case lists render in bounded batches and search waits for typing to 
   assert.match(html, /perPhaseLimit=Math\.max\(10,Math\.ceil\(renderLimit\/VIDEO_PHASES\.length\)\)/);
   assert.match(html, /shown=phaseJobs\.slice\(0,perPhaseLimit\)/);
   assert.match(html, /function showMoreVideoCases\(\)\{VIDEO_RENDER_LIMIT\+=50;render\(\);\}/);
-  assert.match(html, /_videoQueryTimer=setTimeout\(render,140\)/);
-  assert.match(html, /oninput="setVideoQuery\(this\.value\)"/);
+  assert.match(html, /_videoQueryTimer=setTimeout\(\(\)=>\{/);
+  assert.match(html, /\},350\);/);
+  assert.match(html, /oninput="setVideoQuery\(this\.value,this\)"/);
+  assert.match(html, /oncompositionstart="startVideoQueryComposition\(this\)"/);
+  assert.match(html, /oncompositionend="endVideoQueryComposition\(this\)"/);
+});
+
+test('video search does not render during Japanese IME composition and restores focus after conversion', () => {
+  const start = html.indexOf('function startVideoQueryComposition');
+  const end = html.indexOf('function showMoreVideoCases', start);
+  assert.ok(start >= 0 && end > start);
+
+  const replacement = {
+    value: '清水',
+    focused: false,
+    selection: null,
+    getAttribute: () => '案件検索',
+    focus() { this.focused = true; },
+    setSelectionRange(from, to) { this.selection = [from, to]; },
+  };
+  const original = {
+    value: '清水',
+    getAttribute: () => '案件検索',
+    matches: selector => selector === 'input[data-video-query]',
+  };
+  let pending = null;
+  let delay = null;
+  let renderCount = 0;
+  const context = {
+    clearTimeout() {},
+    setTimeout(fn, wait) { pending = fn; delay = wait; return 1; },
+    render() { renderCount += 1; },
+    requestAnimationFrame(fn) { fn(); },
+    document: {
+      activeElement: original,
+      querySelectorAll: selector => selector === 'input[data-video-query]' ? [replacement] : [],
+    },
+  };
+  vm.createContext(context);
+  vm.runInContext(`let VIDEO_QUERY='',VIDEO_RENDER_LIMIT=50,_videoQueryTimer=0,_videoQueryComposing=false,_videoQueryFocusLabel='案件検索';\n${html.slice(start, end)}`, context);
+
+  context.startVideoQueryComposition(original);
+  context.setVideoQuery('し', original);
+  assert.equal(pending, null, '変換中に再描画を予約しない');
+
+  context.endVideoQueryComposition(original);
+  assert.equal(delay, 350);
+  assert.equal(typeof pending, 'function');
+  pending();
+  assert.equal(renderCount, 1);
+  assert.equal(replacement.focused, true);
+  assert.deepEqual(replacement.selection, [2, 2]);
 });
 
 test('each kanban phase receives visible rows when its header count is non-zero', () => {
