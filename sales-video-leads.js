@@ -89,7 +89,7 @@ function _videoLeadCapCutRequired(x){
   if(/^(?:cap\s*cut|キャップカット)(?:\s*pro)?$/i.test(software))return true;
   const text=[x.software,x.workContent,x.editContent,x.requiredSkills].map(v=>String(v||'')).join(' ');
   if(!/(?:cap\s*cut|キャップカット)/i.test(text))return false;
-  return /(?:cap\s*cut|キャップカット).{0,24}(?:必須|指定|のみ|限定|で編集|を使用|編集データ|プロジェクト)|(?:必須|指定ソフト).{0,24}(?:cap\s*cut|キャップカット)|(?:使用ソフト|編集ソフト)\s*(?:は|[:：])\s*(?:cap\s*cut|キャップカット)(?:\s*(?:です|のみ|限定))?/i.test(text);
+  return /(?:cap\s*cut|キャップカット)(?:\s*pro)?\s*(?:必須|指定|限定|のみ|で編集|を使用|編集データ|プロジェクト)|(?:必須|指定ソフト)\s*(?:は|[:：])?\s*(?:cap\s*cut|キャップカット)|(?:使用ソフト|編集ソフト)\s*(?:は|[:：])\s*(?:cap\s*cut|キャップカット)(?:\s*(?:です|のみ|限定))/i.test(text);
 }
 function _videoLeadNormalize(raw){
   const jobUrl=_videoLeadUrl(raw.jobUrl);

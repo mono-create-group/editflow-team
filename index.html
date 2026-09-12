@@ -18810,7 +18810,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260913-01';
+const APP_VERSION='20260913-02';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -18893,7 +18893,7 @@ checkServerVersion();                                                           
 <script>
   try{if(V==='directmessages')render();else renderNav();}catch(error){console.warn('owner dm init',error);}
 </script>
-<script src="./manager-features.js?v=20260913-01"></script>
-<script src="./sales-video-leads.js?v=20260913-01"></script>
+<script src="./manager-features.js?v=20260913-02"></script>
+<script src="./sales-video-leads.js?v=20260913-02"></script>
 </body>
 </html>

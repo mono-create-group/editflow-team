@@ -53,10 +53,13 @@ test('Threads leads accept unknown software and optional CapCut but reject CapCu
   const result=ctx.SalesVideoLeads.upsert([
     {name:'Threadsソフト未記載',jobUrl:'https://www.threads.com/@editor/post/abc123',unitPrice:'5000',videoCount:'1本',software:'未記載',workContent:'ショート動画編集',editContent:'カット・テロップ'},
     {name:'Threadsソフト不問',jobUrl:'https://threads.com/@editor/post/def456',unitPrice:'3000',videoCount:'月10本',software:'使用ソフト不問（CapCut・Premiere Pro等）',workContent:'ショート動画編集',editContent:'カット・テロップ'},
+    {name:'Xタグのみ',jobUrl:'https://x.com/editor/status/optional1',unitPrice:'4000',videoCount:'1本',software:'#CapCutタグのみ（必須表現なし）',workContent:'ショート動画編集',editContent:'詳細未記載'},
+    {name:'X複数例示',jobUrl:'https://x.com/editor/status/optional2',unitPrice:'4000',videoCount:'1本',software:'CapCut等（単独必須ではない）',workContent:'ショート動画編集',editContent:'カット・テロップ'},
+    {name:'スキル欄で必須',jobUrl:'https://x.com/editor/status/required1',unitPrice:'5000',videoCount:'1本',software:'未記載',workContent:'ショート動画編集',editContent:'カット・テロップ',requiredSkills:'CapCut必須'},
     {name:'CapCut必須',jobUrl:'https://www.threads.com/@editor/post/ghi789',unitPrice:'5000',videoCount:'1本',software:'CapCut必須',workContent:'ショート動画編集',editContent:'カット・テロップ'}
   ]);
-  assert.deepEqual({added:result.added,updated:result.updated,skipped:result.skipped},{added:2,updated:0,skipped:1});
-  assert.deepEqual(Array.from(ctx.S.salesLeads,lead=>lead.service),['Threads','Threads']);
+  assert.deepEqual({added:result.added,updated:result.updated,skipped:result.skipped},{added:4,updated:0,skipped:2});
+  assert.deepEqual(Array.from(ctx.S.salesLeads,lead=>lead.service),['Threads','Threads','X','X']);
   assert.equal(ctx.S.salesLeads[0].platformFeeRate,null);
   assert.equal(ctx.S.salesLeads[0].platformFeeAmount,null);
   assert.equal(ctx.S.salesLeads[0].netUnitPrice,null);
@@ -179,8 +182,8 @@ test('Threads cards expose the source filter and never invent a take-home amount
 test('owner shell and service worker load the video-lead extension on the same release',()=>{
   const index=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
   const sw=fs.readFileSync(path.join(__dirname,'..','sw.js'),'utf8');
-  assert.match(index,/const APP_VERSION='20260913-01';/);
-  assert.match(index,/<script src="\.\/sales-video-leads\.js\?v=20260913-01"><\/script>/);
-  assert.match(sw,/const CACHE='mcshanai-20260913-01';/);
+  assert.match(index,/const APP_VERSION='20260913-02';/);
+  assert.match(index,/<script src="\.\/sales-video-leads\.js\?v=20260913-02"><\/script>/);
+  assert.match(sw,/const CACHE='mcshanai-20260913-02';/);
   assert.match(sw,/'\.\/sales-video-leads\.js'/);
 });
