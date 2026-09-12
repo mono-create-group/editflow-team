@@ -62,6 +62,47 @@ test('Threads leads accept unknown software and optional CapCut but reject CapCu
   assert.equal(ctx.S.salesLeads[0].netUnitPrice,null);
 });
 
+test('CrowdWorks and X URLs, edit scope, and source-specific fees are supported',()=>{
+  const ctx=makeContext();
+  const csv=[
+    '区分,サービス,案件名,案件URL,1本単価,総報酬,本数,掲載日,応募期限,ソフト指定,業務内容,編集内容,編集範囲区分,必要スキル,募集状態,最終確認日',
+    '新着,クラウドワークス,テロップ案件,https://crowdworks.jp/public/jobs/13429240,25000円,1本25000円,1本,2026-09-04,2026-09-11,Premiere Pro,カット済み長尺動画,テロップのみ,テロップのみ,日本語校正,募集中,2026-09-11',
+    '新着,X,ショート案件,https://x.com/editor/status/123,5000円,1本5000円,1本,2026-09-10,未記載,未記載,縦型動画編集,詳細未記載,判定不能,縦型編集,公開中,2026-09-11'
+  ].join('\n');
+  const result=ctx.SalesVideoLeads.upsert(ctx.SalesVideoLeads.parseCsv(csv));
+  assert.deepEqual({added:result.added,updated:result.updated,skipped:result.skipped},{added:2,updated:0,skipped:0});
+  const crowdworks=ctx.S.salesLeads[0];
+  assert.equal(crowdworks.service,'クラウドワークス');
+  assert.equal(crowdworks.editScope,'テロップのみ');
+  assert.equal(crowdworks.platformFeeAmount,5500);
+  assert.equal(crowdworks.netUnitPrice,19500);
+  const x=ctx.S.salesLeads[1];
+  assert.equal(x.service,'X');
+  assert.equal(x.editScope,'判定不能');
+  assert.equal(x.platformFeeAmount,null);
+  ctx._slBiz='video';
+  const html=ctx.rSalesLeads();
+  for(const text of ['クラウドワークス <strong>1</strong>','X <strong>1</strong>','編集範囲区分:</b> テロップのみ','段階制（20%／10%／5%＋消費税10%）','Xは募集投稿の提示額です'])assert.ok(html.includes(text));
+});
+
+test('legacy headerless CSV stays aligned and tracking variants deduplicate',()=>{
+  const ctx=makeContext();
+  const oldCsv='新着,X,旧CSV案件,https://twitter.com/editor/status/123?s=20,5000円,1本5000円,1本,2026-09-10,未記載,未記載,縦型動画編集,カット・テロップ,縦型編集,公開中,2026-09-11';
+  const parsed=ctx.SalesVideoLeads.parseCsv(oldCsv)[0];
+  assert.equal(parsed.requiredSkills,'縦型編集');
+  assert.equal(parsed.listingStatus,'公開中');
+  assert.equal(parsed.lastCheckedAt,'2026-09-11');
+  let result=ctx.SalesVideoLeads.upsert([parsed]);
+  assert.equal(result.added,1);
+  const lead=ctx.S.salesLeads[0];
+  lead.editScope='通常編集';
+  lead.contacts=[{at:'2026-09-12',note:'手動履歴'}];
+  result=ctx.SalesVideoLeads.upsert([{...parsed,jobUrl:'https://x.com/editor/status/123?ref=home',name:'更新済み'}]);
+  assert.deepEqual({added:result.added,updated:result.updated},{added:0,updated:1});
+  assert.equal(ctx.S.salesLeads[0].editScope,'通常編集');
+  assert.equal(ctx.S.salesLeads[0].contacts[0].note,'手動履歴');
+});
+
 test('same job URL updates facts without duplicating or overwriting workflow status',()=>{
   const ctx=makeContext();
   let result=ctx.SalesVideoLeads.upsert([{name:'案件A',jobUrl:'https://www.lancers.jp/work/detail/5594318',unitPrice:'3000',videoCount:'1本',software:'Premiere Pro',workContent:'制作',editContent:'カット',freshness:'新着'}]);
@@ -101,7 +142,8 @@ test('Lancers instant payout shows the additional five percent without allocatin
   assert.equal(low.feeAmount,209);
   assert.equal(low.netAfterInstantFee,3966);
   assert.equal(low.eligibleAsSingle,false);
-  assert.equal(low.bankFeeRakuten,110);
+  assert.equal(low.bankFeeRakuten,220);
+  assert.equal(low.bankFeeSmbc,220);
   assert.equal(low.bankFeeOther,550);
   const eligible={...ctx.SalesVideoLeads.instantPayout('ランサーズ',12000)};
   assert.equal(eligible.netAfterInstantFee,11400);
@@ -122,7 +164,7 @@ test('Lancers card includes instant payout estimate, aggregate eligibility, and 
   ctx.SalesVideoLeads.upsert([{name:'ランサーズ案件',jobUrl:'https://www.lancers.jp/work/detail/5594638',unitPrice:'5000',totalReward:'5000円',videoCount:'1本',software:'Premiere Pro',workContent:'制作',editContent:'編集'}]);
   ctx._slBiz='video';
   const html=ctx.rSalesLeads();
-  for(const text of ['即日払い5%差引後（概算・振込手数料前） 3,966円','即日払い手数料（概算）: 209円','この案件単体では金額条件未達です','楽天銀行110円／その他銀行550円'])assert.match(html,new RegExp(text));
+  for(const text of ['即日払い5%差引後（概算・振込手数料前） 3,966円','即日払い手数料（概算）: 209円','この案件単体では金額条件未達です','楽天銀行220円／三井住友銀行220円／その他銀行550円'])assert.match(html,new RegExp(text));
 });
 
 test('Threads cards expose the source filter and never invent a take-home amount',()=>{
@@ -137,8 +179,8 @@ test('Threads cards expose the source filter and never invent a take-home amount
 test('owner shell and service worker load the video-lead extension on the same release',()=>{
   const index=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
   const sw=fs.readFileSync(path.join(__dirname,'..','sw.js'),'utf8');
-  assert.match(index,/const APP_VERSION='20260911-07';/);
-  assert.match(index,/<script src="\.\/sales-video-leads\.js\?v=20260911-07"><\/script>/);
-  assert.match(sw,/const CACHE='mcshanai-20260911-07';/);
+  assert.match(index,/const APP_VERSION='20260913-01';/);
+  assert.match(index,/<script src="\.\/sales-video-leads\.js\?v=20260913-01"><\/script>/);
+  assert.match(sw,/const CACHE='mcshanai-20260913-01';/);
   assert.match(sw,/'\.\/sales-video-leads\.js'/);
 });
