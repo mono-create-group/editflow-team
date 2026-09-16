@@ -58,7 +58,10 @@ test('portal child documents are grouped under a display-only parent and keep a 
   assert.equal(result.find(job => job.id === 'single')._aggregateParent, undefined);
   const card = sourceBetween('_videoCard', 'openVideoLegacySafeModal');
   assert.match(card, /s\._portalChildJobId\?`openPortalJobModal\(\$\{JSON\.stringify\(s\._portalChildPortalUid\)/);
-  assert.match(card, /親案件・集計/);
+  assert.doesNotMatch(card, /親案件・集計/);
+  assert.match(card, /isDisplayOnlyParent=j\._source==='portal-parent'/);
+  assert.match(card, /サブ案件一覧/);
+  assert.match(card, /<details class="video-subcase-list"\$\{isParent\?' open':''\}/);
 });
 
 test('phase-sliced parent and subcase cards keep the real parent id as their detail target', () => {
