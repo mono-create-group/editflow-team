@@ -33,7 +33,7 @@ test('calendar grid covers a complete month including leap day',()=>{
   assert.equal(days.filter(Boolean).length,29);
 });
 
-test('schedule rows include every active parent and child but exclude completed records',()=>{
+test('schedule rows include every active standalone case and child but exclude completed records',()=>{
   const source=[
     {id:'legacy',biz:'edit',status:'進行中',editorDraftDate:'2026-09-02',subtasks:[{id:'s1',status:'未着手',editorDraftDate:'2026-09-03'},{id:'s2',status:'完了',editorDraftDate:'2026-09-04'}]},
     {id:'done',biz:'edit',status:'完了',editorDraftDate:'2026-09-01',subtasks:[]},
@@ -41,7 +41,7 @@ test('schedule rows include every active parent and child but exclude completed 
     {id:'other',biz:'haken',status:'進行中',editorDraftDate:'2026-09-02',subtasks:[]},
   ];
   const result=evaluateFunction('_caseScheduleRows','_caseScheduleOpenAction',`_caseScheduleRows('editorDraftDate','edit',${JSON.stringify(source)})`);
-  assert.deepEqual(result.map(row=>row.type==='sub'?row.sub.id:row.job.id),['legacy','s1','p1']);
+  assert.deepEqual(result.map(row=>row.type==='sub'?row.sub.id:row.job.id),['s1','p1']);
 });
 
 test('calendar and priority CSS keep all entries accessible on desktop and narrow screens',()=>{

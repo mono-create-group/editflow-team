@@ -19,19 +19,13 @@ test('video owner options keep pre-assignment flow and expose the nine official 
   assert.match(index, /function bizStatOpts\(k,cur\)\{const list=bizCfgOf\(k\)\.statuses\.slice\(\);if\(cur&&list\.indexOf\(cur\)<0\)list\.unshift\(cur\)/);
 });
 
-test('linked subcases change progress from the visible status field without bypassing the portal workflow', () => {
+test('linked subcases expose status as read-only outside the progress board', () => {
   assert.match(index, /function _legacyPortalStatusLocked\(record\)\{return !!\(record&&String\(record\.portalUid\|\|''\)\.trim\(\)&&String\(record\.portalJobId\|\|''\)\.trim\(\)\);\}/);
-  assert.match(index, /id="j-stat" onchange="jobStatusChanged\(this\)" \$\{linkedPortalParent\?'disabled':''\}/);
-  assert.match(index, /class="j-sub-status"[^>]*onchange="jobSubStatusChanged\(this\)"/);
-  assert.match(index, /portalStatusLocked&&!portalJob\?'disabled':''/);
+  assert.match(index, /id="j-stat" onchange="jobStatusChanged\(this\)" disabled aria-readonly="true"/);
+  assert.match(index, /function mkSubRow\(s,ph,bk,originalIndex=-1,financeLocked=false\)/);
+  assert.match(index, /class="j-sub-status" value="\$\{esc\(status\)\}" readonly aria-readonly="true"/);
   assert.match(index, /function _portalSubcaseStatusOptions\(job\)/);
-  assert.match(index, /ステータス欄から進捗を変更できます/);
-  assert.match(index, /現在の工程で選べる進捗だけを表示します。/);
-  assert.match(index, /if\(_legacyPortalStatusLocked\(current\)&&requestedStatus!==current\.status\)\{toast\('進捗はサブ案件詳細の進捗操作で更新してください','warn'\);return;\}/);
-  assert.match(index, /if\(_legacyPortalStatusLocked\(previous\)&&requestedSubStatus!==previous\.status\)subStatusError=/);
-  assert.match(index, /if\(subStatusError\)\{toast\(subStatusError,'warn'\);return;\}/);
-  assert.match(index, /const portalProgressAction=portalStatusLocked\?`openPortalJobModal\(\$\{JSON\.stringify\(String\(s\.portalUid\)\)\},\$\{JSON\.stringify\(String\(s\.portalJobId\)\)\}\)`:\'\';/);
-  assert.match(index, /onclick="\$\{esc\(portalProgressAction\)\}"/);
+  assert.match(index, /進捗の変更は「編集進行ボード」で行います。/);
   const esc = value => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const action = `openPortalJobModal(${JSON.stringify('uid"with-quote')},${JSON.stringify('job"with-quote')})`;
   const rendered = `<button onclick="${esc(action)}">進捗を開く</button>`;
@@ -44,7 +38,7 @@ test('portal job administration displays status only and rejects tampered raw st
   const save = index.slice(index.indexOf('async function savePortalJobAdmin'), index.indexOf('\nfunction _portalLegacyId'));
   assert.match(modal, /<input id="vp-status" value="\$\{esc\(bizStatusLabel\(portalBiz,j\.status\)\)\}" data-status="\$\{esc\(j\.status\)\}" readonly aria-readonly="true">/);
   assert.doesNotMatch(modal, /<select id="vp-status"/);
-  assert.match(modal, /進捗は下の「進捗共有」の操作から更新します。/);
+  assert.match(modal, /進捗の変更は「編集進行ボード」で行います。/);
   assert.match(save, /const statusField=document\.getElementById\('vp-status'\),requestedStatus=String\(statusField\?\.dataset\.status\|\|j\.status\);/);
   assert.match(save, /if\(String\(statusField\?\.value\|\|''\)!==bizStatusLabel\(_portalVideoBiz\(j\),j\.status\)\|\|requestedStatus!==j\.status\)return toast\('進捗は「進捗共有」の操作から更新してください','warn'\);/);
   assert.match(index, /function advancePortalWorkflow\(portalUid,id,action,providedReason,providedCompletionDate,providedImages,options\)/);

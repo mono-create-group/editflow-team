@@ -145,7 +145,7 @@ test('collapsing a child records its edited values without loading the worker di
 
 test('internal work makes editor draft optional and lets the owner record actual delivery', () => {
   assert.match(html, /const parentInternalOnly=selWorkerIds\.length>0&&selWorkerIds\.every\(id=>id===SELF_WID\)/);
-  assert.match(html, /if\(!hasSubtasks&&!parentInternalOnly&&bizCfgOf/);
+  assert.match(html, /if\(!hasSubcaseStructure&&!parentInternalOnly&&bizCfgOf/);
   assert.match(html, /if\(sub\.workerId!==SELF_WID&&_editorDraftDateSetter\(sub\)==='creator'&&!sub\.editorDraftDate\)/);
   assert.match(html, /completionEditable=!_legacyPortalStatusLocked\(previous\)&&\(workerId===SELF_WID\|\|currentBiz==='edit'\)/);
   assert.match(html, /completedDeliveryDate:requestedCompletionDate/);
@@ -171,7 +171,7 @@ test('dispatch parent and child cases use plain, distinct labels without changin
   assert.match(modalSource, /親案件名 \*/);
   assert.match(modalSource, /親案件に「9月分」などを入力し、ここに各動画名を追加します。/);
   assert.match(modalSource, /＋ サブ案件を追加/);
-  assert.match(html, /mkSubRow\(\{},'サブ案件'/);
+  assert.match(html, /mkSubRowReadOnly\(\{},'サブ案件'/);
   assert.match(html, /subtasks,/);
 });
 

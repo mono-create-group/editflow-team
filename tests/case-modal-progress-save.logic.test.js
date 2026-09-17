@@ -33,17 +33,27 @@ test('saving subcase progress from the case form keeps the case modal open', () 
   assert.match(setter, /Object\.assign\(j,data\);/);
 });
 
-test('subcase detail exposes an editable status and persists the selected status', () => {
+test('subcase detail exposes a read-only status and routes changes to the progress board', () => {
   const modal = index.slice(index.indexOf('function _videoSubcaseDetailHtml'), index.indexOf('\nfunction openLegacySubcaseDetail'));
-  assert.match(modal, /<select id="vs-status"/);
-  assert.match(modal, /statusCanEdit=canEdit&&!statusLocked/);
-  assert.match(modal, /bizStatOpts\(jobBiz\(parent\)/);
-  assert.match(modal, /portalProgress=portalJob\?_videoManualProgressControl\(portalJob,portalUid\):''/);
+  assert.match(modal, /readonly aria-readonly/);
+  assert.match(modal, /進捗の変更は「編集進行ボード」で行います。/);
+  assert.match(index, /function openVideoProgressModal\(source,id,subId\)/);
+  assert.match(index, /_videoWorkflowHtml\(job,portalUid,\{controls:true\}\)/);
   const saver = functionSource('saveLegacySubcaseDraftDates');
-  assert.match(saver, /const requestedStatus=document\.getElementById\('vs-status'\)\?\.value/);
+  assert.match(saver, /const requestedStatus=found\.sub\.done\?'完了':\(found\.sub\.status\|\|'未着手'\)/);
   assert.match(saver, /status:requestedStatus/);
   assert.match(saver, /type:requestedStatus===previousStatus\?'subcase_schedule_update':'subcase_status_update'/);
   assert.match(saver, /fromStatus:previousStatus/);
+});
+
+test('the progress board is the only visible status-change entry point', () => {
+  const board = functionSource('_videoProgressBoard');
+  assert.match(board, /進捗を変更できる場所はここだけです/);
+  assert.match(board, /video-progress-change/);
+  assert.match(board, /_videoProgressBoardAction\(parent,row\)/);
+  assert.match(index, /id="j-stat" onchange="jobStatusChanged\(this\)" disabled aria-readonly="true"/);
+  assert.match(index, /function mkSubRow\(s,ph,bk,originalIndex=-1,financeLocked=false\)/);
+  assert.match(functionSource('mkSubRowReadOnly'), /readonly aria-readonly/);
 });
 
 // 行ごと作り直すと、入力途中の日程・単価まで消える（§11 データを壊さない）。触るのはステータス欄と理由欄だけにする。

@@ -48,7 +48,7 @@ test('owner can edit migrated case prices while the private ledger boundary stay
   assert.doesNotMatch(source,/id="j-add-subcase"[^>]*disabled/);
   assert.match(source,/単価・支払はオーナーが変更でき、専用台帳へ保存されます。/);
   assert.doesNotMatch(source,/if\(c\?\.dataset\.financeLocked==='1'\)return toast/);
-  assert.match(source,/mkSubRow\(\{\},'サブ案件',_curJobBiz\(\),-1,financeLocked\)/);
+  assert.match(source,/mkSubRowReadOnly\(\{\},'サブ案件',_curJobBiz\(\),-1,financeLocked\)/);
 });
 
 test('all legacy profit and payment totals restore owner-only amounts before calculation',()=>{
