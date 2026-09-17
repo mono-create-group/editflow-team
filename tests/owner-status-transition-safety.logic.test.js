@@ -21,7 +21,7 @@ test('video owner options keep pre-assignment flow and expose the nine official 
 
 test('linked subcases expose status as read-only outside the progress board', () => {
   assert.match(index, /function _legacyPortalStatusLocked\(record\)\{return !!\(record&&String\(record\.portalUid\|\|''\)\.trim\(\)&&String\(record\.portalJobId\|\|''\)\.trim\(\)\);\}/);
-  assert.match(index, /id="j-stat" onchange="jobStatusChanged\(this\)" disabled aria-readonly="true"/);
+  assert.doesNotMatch(index, /id="j-stat"/);
   assert.match(index, /function mkSubRow\(s,ph,bk,originalIndex=-1,financeLocked=false\)/);
   assert.match(index, /class="j-sub-status" value="\$\{esc\(status\)\}" readonly aria-readonly="true"/);
   assert.match(index, /function _portalSubcaseStatusOptions\(job\)/);
@@ -84,14 +84,11 @@ test('linked parent subcases expose only current valid workflow actions inline',
   assert.ok((index.match(/PORTAL_WORKFLOW_ACTION_PENDING\.delete\(pendingKey\);/g) || []).length >= 2);
 });
 
-test('inline portal workflow actions quote escaped JSON before placement in an HTML attribute', () => {
+test('case-modal workflow controls are removed so only the progress board can change status', () => {
   assert.match(index, /const portalConfirmAction=portalStatusLocked\?`advanceLegacyPortalSubcaseWorkflow\(\$\{JSON\.stringify\(String\(s\.portalUid\)\)\},\$\{JSON\.stringify\(String\(s\.portalJobId\)\)\},\$\{JSON\.stringify\(portalControlKey\)\}\)`:'';/);
-  assert.match(index, /onclick="\$\{esc\(portalConfirmAction\)\}" disabled>進捗を保存<\/button>/);
-  const esc = value => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  const action = `advanceLegacyPortalSubcaseWorkflow(${JSON.stringify('uid"quoted')},${JSON.stringify('job"quoted')},${JSON.stringify('safe-key')})`;
-  const rendered = `<button onclick="${esc(action)}">進捗を保存</button>`;
-  assert.match(rendered, /onclick="advanceLegacyPortalSubcaseWorkflow\(&quot;uid\\&quot;quoted&quot;,&quot;job\\&quot;quoted&quot;,&quot;safe-key&quot;\)"/);
-  assert.doesNotMatch(rendered, /onclick="advanceLegacyPortalSubcaseWorkflow\("/);
+  assert.doesNotMatch(index, /class="j-sub-portal-progress"/);
+  assert.doesNotMatch(index, /onclick="\$\{esc\(portalConfirmAction\)\}" disabled>進捗を保存<\/button>/);
+  assert.match(index, /class="j-sub-status" value="\$\{esc\(st\)\}" readonly aria-readonly="true"/);
 });
 
 test('completion records the selected non-future date in both the job and audit event', () => {
@@ -167,8 +164,8 @@ test('the owner can move a linked subcase to any workflow status through the aud
   // オーナーは理由入力を省略できる。ディレクターは従来どおり必須。
   assert.match(setter, /if\(!reason&&_portalStatusReasonRequired\(\)\)return toast\('変更理由を入力してください','warn'\);/);
   assert.match(setter, /if\(evidenceRequired&&!evidenceUrl\)return toast/);
-  // 変更理由欄と提出リンク欄はステータス欄の選択に応じて出す。
-  assert.match(index, /class="j-sub-portal-evidence" type="url"/);
-  assert.match(fnSource('jobSubStatusChanged'), /\['directorRevision','clientRevision','managerStatusOverride'\]\.includes\(action\)/);
-  assert.match(index, /オーナーは一覧から進捗を変更できます。/);
+  // 案件編集モーダルではサブ案件の進捗も表示のみ。変更導線は進捗ボードに集約する。
+  assert.doesNotMatch(index, /class="j-sub-portal-progress"/);
+  assert.match(index, /class="j-sub-status" value="\$\{esc\(st\)\}" readonly aria-readonly="true"/);
+  assert.match(index, /進捗の変更は「編集進行ボード」で行います。/);
 });

@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260917-02"></script>
+<script src="./billing-terms.js?v=20260917-03"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -1000,7 +1000,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260917-02">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260917-03">
 </head>
 <body class="owner-yellow-ui">
 
@@ -1060,8 +1060,8 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="./ai-bridge-client.js"></script>
-<script src="./owner-video-performance.js?v=20260917-02"></script>
-<script src="./feedback-workflow.js?v=20260917-02"></script>
+<script src="./owner-video-performance.js?v=20260917-03"></script>
+<script src="./feedback-workflow.js?v=20260917-03"></script>
 <script>/* lz-string 1.5.0 (MIT) — CDN非依存でオフライン/圧縮チーム同期を保証するためインライン化 */
 var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",e={};function t(r,o){if(!e[r]){e[r]={};for(var n=0;n<r.length;n++)e[r][r.charAt(n)]=n}return e[r][o]}var i={compressToBase64:function(r){if(null==r)return"";var n=i._compress(r,6,function(r){return o.charAt(r)});switch(n.length%4){default:case 0:return n;case 1:return n+"===";case 2:return n+"==";case 3:return n+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(n){return t(o,r.charAt(n))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(r){return null==r?"":""==r?null:i._decompress(r.length,16384,function(o){return r.charCodeAt(o)-32})},compressToUint8Array:function(r){for(var o=i.compress(r),n=new Uint8Array(2*o.length),e=0,t=o.length;e<t;e++){var s=o.charCodeAt(e);n[2*e]=s>>>8,n[2*e+1]=s%256}return n},decompressFromUint8Array:function(o){if(null==o)return i.decompress(o);for(var n=new Array(o.length/2),e=0,t=n.length;e<t;e++)n[e]=256*o[2*e]+o[2*e+1];var s=[];return n.forEach(function(o){s.push(r(o))}),i.decompress(s.join(""))},compressToEncodedURIComponent:function(r){return null==r?"":i._compress(r,6,function(r){return n.charAt(r)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),i._decompress(r.length,32,function(o){return t(n,r.charAt(o))}))},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(r,o,n){if(null==r)return"";var e,t,i,s={},u={},a="",p="",c="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<r.length;i+=1)if(a=r.charAt(i),Object.prototype.hasOwnProperty.call(s,a)||(s[a]=f++,u[a]=!0),p=c+a,Object.prototype.hasOwnProperty.call(s,p))c=p;else{if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++),s[p]=f++,c=String(a)}if(""!==c){if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++)}for(t=2,e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;for(;;){if(m<<=1,v==o-1){d.push(n(m));break}v++}return d.join("")},decompress:function(r){return null==r?"":""==r?null:i._decompress(r.length,32768,function(o){return r.charCodeAt(o)})},_decompress:function(o,n,e){var t,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:e(0),position:n,index:1};for(t=0;t<3;t+=1)l[t]=t;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return i}();"function"==typeof define&&define.amd?define(function(){return LZString}):"undefined"!=typeof module&&null!=module?module.exports=LZString:"undefined"!=typeof angular&&null!=angular&&angular.module("LZString",[]).factory("LZString",function(){return LZString});
 </script>
@@ -3065,7 +3065,7 @@ function _lsPutState(obj){
 }
 
 // ===STATE===
-let S=load(), V=new URLSearchParams(location.search).get('notification')==='1'?'directmessages':sessionStorage.getItem('ef_team_view')||'videoedit', TV='today', HV='weekly', WO=0, MO=0, EID=null, PVM='board', JD=today();
+let S=load(), V=new URLSearchParams(location.search).get('notification')==='1'?'directmessages':sessionStorage.getItem('ef_team_view')||'videoedit', TV='today', HV='weekly', WO=0, MO=0, EID=null, PVM='board', JD=today(), JOB_MODAL_PRE_STATUS='';
 if(V==='projects')V='videoedit'; // 旧セッションは編集代行画面へ非破壊移行
 if(window.AIBridge)_personalTaskBaseline=AIBridge.taskBaseline(S.tasks||[]);
 let KV=null; // 現在の事業部ID
@@ -7070,16 +7070,12 @@ function openVideoLegacyDetailModalSource(id){
   const j=(S.jobs||[]).find(x=>x.id===id);if(!j)return;
   const canEdit=_videoCanEdit();
   const materials=_videoCaseMaterials(j.attachments,j);
-  openModal(`<div class="mhdr"><div class="mtitle">${esc(j.title)}</div><button class="mclose" onclick="closeModal()">✕</button></div><div class="fg"><div class="fl">ステータス</div><select id="vls-status" ${canEdit?'':'disabled'}>${bizStatOpts(jobBiz(j),j.status)}</select></div><div class="fg"><div class="fl">進捗メモ</div><textarea id="vls-progress" ${canEdit?'':'disabled'}>${esc(j.progressNote||j.notes||'')}</textarea></div><div class="fg"><div class="fl">証跡URL</div><input id="vls-evidence" type="url" value="${esc(j.evidenceUrl||'')}" ${canEdit?'':'disabled'}></div><div class="fg"><div class="fl">停止理由</div><textarea id="vls-blocker" ${canEdit?'':'disabled'}>${esc(j.blocker||'')}</textarea></div><div class="video-attachment-editor"><div class="video-attachment-heading"><div><b>素材・資料</b><span>リンクを新しいタブで開きます</span></div></div>${_videoAttachmentLinksHtml(materials)||'<div class="video-attachment-hint">添付された素材・資料はありません。</div>'}</div><div class="mfooter"><button class="btn btn-g" onclick="closeModal()">閉じる</button>${canEdit?`<button class="btn btn-p" onclick="saveVideoLegacySafe('${id}')">保存</button>`:''}</div>`);
+  openModal(`<div class="mhdr"><div class="mtitle">${esc(j.title)}</div><button class="mclose" onclick="closeModal()">✕</button></div><div class="fg"><div class="fl">ステータス</div><input id="vls-status" value="${esc(videoStatusLabel(j.status||'未着手'))}" readonly aria-readonly="true"><div class="fhint">進捗の変更は「編集進行ボード」で行います。</div></div><div class="fg"><div class="fl">進捗メモ</div><textarea id="vls-progress" ${canEdit?'':'disabled'}>${esc(j.progressNote||j.notes||'')}</textarea></div><div class="fg"><div class="fl">証跡URL</div><input id="vls-evidence" type="url" value="${esc(j.evidenceUrl||'')}" ${canEdit?'':'disabled'}></div><div class="fg"><div class="fl">停止理由</div><textarea id="vls-blocker" ${canEdit?'':'disabled'}>${esc(j.blocker||'')}</textarea></div><div class="video-attachment-editor"><div class="video-attachment-heading"><div><b>素材・資料</b><span>リンクを新しいタブで開きます</span></div></div>${_videoAttachmentLinksHtml(materials)||'<div class="video-attachment-hint">添付された素材・資料はありません。</div>'}</div><div class="mfooter"><button class="btn btn-g" onclick="closeModal()">閉じる</button>${canEdit?`<button class="btn btn-p" onclick="saveVideoLegacySafe('${id}')">保存</button>`:''}</div>`);
 }
 function openVideoLegacySafeModal(id){
   openVideoLegacyDetailModalSource(id);
-  const select=document.getElementById('vls-status');
-  if(!select)return;
-  const display=document.createElement('input');display.value=videoStatusLabel(select.value||'未着手');display.readOnly=true;display.setAttribute('aria-readonly','true');display.className=select.className;select.hidden=true;select.parentElement?.insertBefore(display,select);
-  const hint=document.createElement('div');hint.className='fhint';hint.textContent='進捗の変更は「編集進行ボード」で行います。';select.parentElement?.appendChild(hint);
 }
-function saveVideoLegacySafe(id){const j=(S.jobs||[]).find(x=>x.id===id);if(!j||!_videoCanEdit())return;const at=Date.now();j.status=document.getElementById('vls-status').value;j.progressNote=document.getElementById('vls-progress').value.trim();j.evidenceUrl=document.getElementById('vls-evidence').value.trim();j.blocker=document.getElementById('vls-blocker').value.trim();j.updatedAt=at;j.updatedBy=_myEmail();j.statusHistory=[...(j.statusHistory||[]),{at,by:_myEmail(),status:j.status,note:j.progressNote,evidenceUrl:j.evidenceUrl}];save();closeModal();render();toast('進捗を更新しました');}
+function saveVideoLegacySafe(id){const j=(S.jobs||[]).find(x=>x.id===id);if(!j||!_videoCanEdit())return;const at=Date.now();j.status=String(j.status||'未着手');j.progressNote=document.getElementById('vls-progress').value.trim();j.evidenceUrl=document.getElementById('vls-evidence').value.trim();j.blocker=document.getElementById('vls-blocker').value.trim();j.updatedAt=at;j.updatedBy=_myEmail();save();closeModal();render();toast('案件情報を保存しました');}
 function _portalAccessRecord(portalUid){return(ACCESS_RECORDS||[]).find(x=>x.id===portalUid)||null;}
 function _portalIsExternal(portalUid){return _portalAccessRecord(portalUid)?.editorKind==='external';}
 function _portalBillingTerms(completedDeliveryDate){return window.EditflowBilling?.forCompletedDelivery(String(completedDeliveryDate||''))||null;}
@@ -8466,7 +8462,6 @@ function rProjListing(){
           ${s.editorDraftDate?`<span>✏️ 初稿: ${s.editorDraftDate}</span>`:''}
           ${s.deliveryDate?`<span class="${urgCls(s.deliveryDate)}">📅 納期（予定）: ${s.deliveryDate} (${fmt(s.deliveryDate)})</span>`:''}
           ${s.payoutDate?`<span>💸 支払予定: ${s.payoutDate}</span>`:''}
-          <button type="button" class="btn btn-p btn-xs" onclick="event.stopPropagation();openVideoProgressModal('legacy','${j.id}','${s.id||i}')">進捗を変更</button>
         </div>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;font-size:11px">
@@ -8508,7 +8503,6 @@ function rProjListing(){
       </div>
       ${showSubs.length?`<details style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)" onclick="event.stopPropagation()"><summary class="video-subcase-head">サブタスク${subsFilter?` (掲載中のみ表示)`:''} <span>${showSubs.filter(s=>!s.done).length}件未完了</span></summary><div>${showSubs.map((s,_)=>rSubRow(j,s,allSubs.indexOf(s),!!subsFilter)).join('')}</div></details>`:''}
       <div style="display:flex;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
-        ${isJobListing?`<button class="btn btn-p btn-xs" onclick="openVideoProgressModal('legacy','${j.id}','')">進捗を変更</button>`:''}
         <button class="btn btn-g btn-xs" style="margin-left:auto" onclick="openJobModal('${j.id}')">✏️ 編集</button>
       </div>
       ${j.notes?`<div style="font-size:11px;color:var(--t3);margin-top:6px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${esc(j.notes)}</div>`:''}
@@ -10554,7 +10548,7 @@ const DOCLINK_SEEDS=[
    url:'https://mono-create-group.github.io/editflow-team/dm-manual.html?v=20260816-01',
    category:'マニュアル',notes:'新メンバー向け。アイコン・アカウント名の予約(早い者勝ち)・DM文章の作成・営業リストでの送付と記録まで1ページで完結',ver:3},
   {id:'doclink_invoice_manual',title:'請求書の作り方（編集者向けマニュアル・見本つき）',
-  url:'https://mono-create-group.github.io/editflow-team/invoice-manual.html?v=20260917-02',
+  url:'https://mono-create-group.github.io/editflow-team/invoice-manual.html?v=20260917-03',
    category:'マニュアル',notes:'編集者へ共有する。請求者情報の登録→完了案件を選んで明細（1案件＝1行）→確認して提出、締切と支払日、NG例/見本、FAQ',ver:1},
   {id:'doclink_dm_entry_form',title:'DM営業スタッフ 登録フォーム（応募者に送るURL）',
    url:'https://mono-create-group.github.io/editflow-team/dm-entry.html',
@@ -14448,7 +14442,6 @@ function setJobSubcaseMode(mode,initial=false){
   const toggle=(id,visible)=>{const el=document.getElementById(id);if(!el)return;el.style.display=visible?'':'none';el.setAttribute('aria-hidden',visible?'false':'true');};
   // 「あり」では親に担当者・初稿・納期を持たせず、各サブ案件だけで管理する。
   ['jf-parent-worker','jf-parent-schedule','jf-drafts','jf-client-draft','jf-parent-completed','jf-parent-thumbnail','jf-parent-finance','jf-parent-payout'].forEach(id=>toggle(id,!hasSubcases));
-  toggle('jf-stat',!hasSubcases);toggle('jf-stat-auto',false);
   toggle('jf-subs',hasSubcases||!!document.querySelector('#j-sub-cont .j-sub-shell'));
   const hint=document.getElementById('j-case-structure-hint');
   if(hint)hint.textContent=hasSubcases?'親の担当者・初稿・納期・請求・支払情報は使わず、サブ案件ごとに入力します。':'親案件に担当者・初稿・納期・請求・支払情報を入力する通常案件です。';
@@ -14464,30 +14457,6 @@ function updateJobInternalScheduleRules(){
   if(completed)completed.disabled=!editable;
   if(completedLabel)completedLabel.textContent=editable?'納品日（オーナーが記録）':editorCompletes?'納品日（担当編集者が記録）':'納品日（Dまたはオーナーが記録）';
   if(completedHint)completedHint.textContent=hasSubs?'子案件ごとの進捗操作で納品日を記録します。':editable?'社内対応の実際の納品日を記録します。':editorCompletes?'先方OK後に担当編集者が記録します。納品日が未記録の案件には報酬が発生しません。':'先方OK後にDまたはオーナーが記録します。納品日が未記録の案件には報酬が発生しません。';
-  updateJobParentStatusRule(hasSubs);
-}
-// 案件編集モーダルのサブ案件（展開中の行・折りたたみ中のカード両方）から、現在のステータスを読み出す。
-function _jobModalSubcaseStatuses(){
-  return[...document.querySelectorAll('#j-sub-cont .j-sub-shell')].map(shell=>{
-    const row=shell.querySelector('.j-sub-row');
-    if(row)return{status:row.querySelector('.j-sub-status')?.value||'未着手',done:!!row.querySelector('.chk.done')};
-    const record=JOB_MODAL_SUB_RECORDS[Number(shell.dataset.stateIndex)]||{};
-    return{status:record.status||'未着手',done:!!record.done};
-  });
-}
-// サブ案件があるときは親のステータス欄を表示しない。集計値は内部互換用に保持する。
-function updateJobParentStatusRule(hasSubs){
-  const field=document.getElementById('jf-stat'),auto=document.getElementById('jf-stat-auto'),value=document.getElementById('j-stat-auto');
-  if(!field||!auto)return;
-  field.style.display=hasSubs?'none':'';
-  field.setAttribute('aria-hidden',hasSubs?'true':'false');
-  const parentSelect=document.getElementById('j-stat');
-  if(parentSelect)parentSelect.disabled=hasSubs;
-  auto.style.display='none';
-  auto.setAttribute('aria-hidden','true');
-  if(!hasSubs||!value)return;
-  const biz=_curJobBiz(),status=_aggregateSubcaseStatus(biz,_jobModalSubcaseStatuses(),_jobSubDefaultStatus(biz));
-  value.textContent=bizStatusLabel(biz,status)||status||'未着手';
 }
 function updateJobSubInternalRules(row){
   if(!row)return;
@@ -14643,6 +14612,7 @@ function hydrateJobSubWorkerSelect(select){
 }
 function openJobModal(id,preStatus,preClientId){
   EID=id||null;
+  JOB_MODAL_PRE_STATUS=preStatus||'';
   const rawJob=id?S.jobs.find(j=>j.id===id):null,j=rawJob?_withOwnerJobFinance(rawJob):null;
   const ownerFinanceLocked=!!(j?._ownerFinance||rawJob?.ownerFinanceId);
   const linkedPortalParent=_legacyPortalStatusLocked(rawJob);
@@ -14704,14 +14674,7 @@ function openJobModal(id,preStatus,preClientId){
   </label>
 </div>
 <input type="hidden" id="j-trial-val" value="${j?.isTrial?'1':'0'}">
-<div class="frow" id="jf-parent-status">
-  <div class="fg" id="jf-stat"><div class="fl">ステータス</div>
-    <select id="j-stat" onchange="jobStatusChanged(this)" disabled aria-readonly="true">${bizStatOpts(jbiz,j?.status||preStatus||'')}</select><div class="fhint">進捗の変更は「編集進行ボード」で行います。サブ案件がある場合、親案件は自動集計です。</div>
-  </div>
-  <div class="fg" id="jf-stat-auto" style="display:none"><div class="fl">ステータス（自動）</div>
-    <div id="j-stat-auto" class="job-auto-status">未着手</div>
-    <div class="fhint">サブ案件があるため、親案件のステータスはサブ案件の進み具合から自動で決まります。</div>
-  </div>
+<div class="frow">
   <div class="fg" id="jf-scope"><div class="fl" id="jl-scope">${bizCfgOf(jbiz).lbl.scope}</div>
     <select id="j-scope">${bizScopeOpts(jbiz,j?.scope||'')}</select>
   </div>
@@ -14871,8 +14834,6 @@ function setJobBiz(k,init){
   shw('jf-scope',cfg.show.scope);shw('jf-drafts',cfg.show.d1);shw('jf-client-draft',cfg.show.d2);shw('jf-parent-thumbnail',cfg.show.thumb);
   shw('jf-wpay',cfg.show.wpay);shw('jf-profit',cfg.show.wpay);shw('jf-subs',cfg.show.subs);shw('jf-monthly',cfg.show.monthly);
   if(!init){
-    const st=document.getElementById('j-stat');
-    if(st){const cur=st.value;st.innerHTML=bizStatOpts(k,cfg.statuses.indexOf(cur)>=0?cur:'');}
     const sc=document.getElementById('j-scope');
     if(sc){const cur=sc.value;sc.innerHTML=bizScopeOpts(k,cfg.scopes.indexOf(cur)>=0?cur:'');}
     document.querySelectorAll('#j-sub-cont .j-sub-status').forEach(sel=>{const cur=sel.value;sel.innerHTML=bizStatOpts(k,cfg.statuses.indexOf(cur)>=0?cur:'');});
@@ -15042,7 +15003,7 @@ function mkSubRow(s,ph,bk,originalIndex=-1,financeLocked=false){
   const portalActions=portalJob?_portalWorkflowActionsForJob(portalJob):[],portalStatusOptions=portalJob?_portalSubcaseStatusOptions(portalJob):[];
   const portalControlKey=`j-sub-progress-${String(s.portalUid||'')}-${String(s.portalJobId||'')}`.replace(/[^a-zA-Z0-9_-]/g,'_');
   const portalConfirmAction=portalStatusLocked?`advanceLegacyPortalSubcaseWorkflow(${JSON.stringify(String(s.portalUid))},${JSON.stringify(String(s.portalJobId))},${JSON.stringify(portalControlKey)})`:'';
-  const portalInlineWorkflow=portalStatusLocked?`<div class="j-sub-portal-progress" style="margin:8px 0;padding:8px;border:1px solid var(--purple);border-radius:var(--rs);background:var(--card)"><div style="font-size:11px;font-weight:800">ステータス欄から進捗を変更できます</div>${(portalActions.length||(portalJob&&_ownerCanOverridePortalStatus(portalJob)))?`<div style="display:flex;gap:6px;align-items:end;flex-wrap:wrap;margin-top:6px"><div class="j-sub-portal-reason-wrap" style="min-width:220px;flex:1" hidden><label for="${esc(portalControlKey)}-reason" style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">修正指示の内容</label><input id="${esc(portalControlKey)}-reason" class="j-sub-portal-reason" maxlength="2000" placeholder="修正内容を入力"><input id="${esc(portalControlKey)}-images" class="j-sub-portal-images" maxlength="2000" placeholder="修正指示の画像URL（任意・カンマ区切り・10件まで）" style="margin-top:4px"><input id="${esc(portalControlKey)}-evidence" class="j-sub-portal-evidence" type="url" placeholder="提出・納品リンク（初稿提出済み／修正稿提出済み／完了へ変えるとき必須）" style="margin-top:4px" hidden></div><button type="button" class="btn btn-p btn-xs j-sub-portal-confirm" onclick="${esc(portalConfirmAction)}" disabled>進捗を保存</button></div>`:'<div style="font-size:11px;color:var(--t2);margin-top:4px">現在は担当編集者の提出待ちです。提出後にこのステータス欄から次の進捗へ変更できます。</div>'}</div>`:'';
+  const portalInlineWorkflow='';
   const draftSetter=Object.keys(s||{}).length?_editorDraftDateSetter(s):'creator';
   const isNew=!Object.keys(s||{}).length,internal=s.workerId===SELF_WID,editorCompletes=_bk==='haken'&&!internal,managerCompletesPortal=!!portalJob&&!_editorOwnsPortalCompletion(portalJob),managerCanSetCompletion=internal||managerCompletesPortal||(_bk==='edit'&&!portalStatusLocked),masterPrice=isNew?_ownerMasterClientUnitPrice(document.getElementById('j-cl')?.value||''):null,subPrice=s.unitPrice||(masterPrice===null?'':masterPrice);
   return`<div class="j-sub-row" data-sub-id="${esc(s.id||'')}" data-original-index="${Number.isInteger(originalIndex)?originalIndex:-1}" style="background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);padding:10px;margin-bottom:8px">
@@ -15055,7 +15016,7 @@ function mkSubRow(s,ph,bk,originalIndex=-1,financeLocked=false){
   </div>
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:5px">
     <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">ステータス</div>
-      <select ${portalStatusLocked?`id="${esc(portalControlKey)}-status"`:''} class="j-sub-status" style="font-size:12px;padding:4px 6px" onchange="jobSubStatusChanged(this)" ${portalStatusLocked&&!portalJob?'disabled':''}>${portalStatusLocked&&portalJob?portalStatusOptions.map(([value,label,action])=>`<option value="${esc(value)}" data-action="${esc(action)}"${value===st?' selected':''}>${esc(label)}</option>`).join(''):bizStatOpts(_bk,st)}</select>${portalStatusLocked?(portalJob&&_ownerCanOverridePortalStatus(portalJob)?'<div class="fhint">オーナーは一覧から進捗を変更できます。理由は省略でき、入力すると履歴に残ります。</div>':'<div class="fhint">現在の工程で選べる進捗だけを表示します。</div>'):''}
+      <input ${portalStatusLocked?`id="${esc(portalControlKey)}-status"`:''} class="j-sub-status" value="${esc(st)}" readonly aria-readonly="true" style="font-size:12px;padding:4px 6px"><div class="fhint">進捗の変更は「編集進行ボード」で行います。</div>
     </div>
     <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">担当者</div>
       <select class="j-sub-worker" data-selected-worker-id="${esc(s.workerId||'')}" data-hydrated="0" style="font-size:12px;padding:4px 6px" onpointerdown="hydrateJobSubWorkerSelect(this)" onfocus="hydrateJobSubWorkerSelect(this)" onchange="updSubPaymentRecipients()">
@@ -15178,11 +15139,10 @@ async function saveJob(){
   const currentFinance=current?_ownerFinanceForLegacyJob(current):null,financeProtected=!!(currentFinance||current?.ownerFinanceId);
   if(current?.ownerFinanceId&&!currentFinance){toast('金額台帳を確認できないため保存を中止しました。読み込み完了後にもう一度お試しください','warn');return;}
   const previousDirectorSettlementTargets=_directorSettlementTargetsForJob(_withOwnerJobFinance(current));
-  // 子案件がある場合、親のステータス欄は表示・入力せず、保存値も子案件から決める。
-  // 欄が将来DOMから外れても、子案件の保存を親欄の存在に依存させない。
-  const requestedStatus=String(document.getElementById('j-stat')?.value||'');
-  if(current&&requestedStatus!==current.status){toast('進捗の変更は「編集進行ボード」で行ってください','warn');return;}
-  if(current?.portalJobId&&requestedStatus!==current.status&&EDITOR_OWNED_VIDEO_STATUSES.has(requestedStatus)){toast('この進捗は担当編集者本人が編集者ポータルから更新してください','warn');return;}
+  // 進捗は編集進行ボードでのみ変更する。案件編集モーダルでは現在値を保持し、
+  // サブ案件がある場合だけ保存時にサブ案件から親の集計値を算出する。
+  const currentBiz=document.getElementById('j-biz')?.value||jobBiz(current)||PBIZ||'edit';
+  const requestedStatus=String(current?.status||JOB_MODAL_PRE_STATUS||_jobSubDefaultStatus(currentBiz));
   const oldSubs=current?.subtasks||[];
   const subcaseMode=document.getElementById('j-case-structure')?.value==='with_subcases'?'with_subcases':'without_subcases';
   const hasSubcaseStructure=subcaseMode==='with_subcases'||oldSubs.length>0;
@@ -15203,7 +15163,6 @@ async function saveJob(){
   const parentEditorDraftDateSetter=document.getElementById('j-editor-draft-setter')?.value||_editorDraftDateSetter(current),parentEditorDraftDate=document.getElementById('j-editor-draft')?.value||null;
   const hasSubtasks=_isOwner()?subShells.length:oldSubs.length;
   if(!hasSubcaseStructure&&!parentInternalOnly&&bizCfgOf(document.getElementById('j-biz')?.value||jobBiz(current)).show.d1&&parentEditorDraftDateSetter==='creator'&&!parentEditorDraftDate){toast('案件追加者が設定する場合は、編集者初稿日を入力してください','warn');return;}
-  const currentBiz=document.getElementById('j-biz')?.value||jobBiz(current);
   let subLinkError='',subStatusError='';const assignmentReassignments=[];
   const parsedSubtasks=subShells.map(shell=>{
     const el=shell.querySelector('.j-sub-row'),stateIndex=Number(shell.dataset.stateIndex),stateRecord=JOB_MODAL_SUB_RECORDS[stateIndex]||{};
@@ -19003,7 +18962,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260917-02';
+const APP_VERSION='20260917-03';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -19080,13 +19039,13 @@ window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});  
 checkServerVersion();                                                              // 初回表示でも旧版を即時検出
   </script>
 <script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
-<script src="./editor-push.js?v=20260917-02"></script>
-<script src="./bulletin.js?v=20260917-02"></script>
-<script src="./direct-messages.js?v=20260917-02"></script>
+<script src="./editor-push.js?v=20260917-03"></script>
+<script src="./bulletin.js?v=20260917-03"></script>
+<script src="./direct-messages.js?v=20260917-03"></script>
 <script>
   try{if(V==='directmessages')render();else renderNav();}catch(error){console.warn('owner dm init',error);}
 </script>
-<script src="./manager-features.js?v=20260917-02"></script>
-<script src="./sales-video-leads.js?v=20260917-02"></script>
+<script src="./manager-features.js?v=20260917-03"></script>
+<script src="./sales-video-leads.js?v=20260917-03"></script>
 </body>
 </html>

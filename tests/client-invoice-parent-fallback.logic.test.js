@@ -56,7 +56,7 @@ test('the invoice page keeps parent fallback limited to standalone cases and kee
   assert.match(html, /請求明細 \$\{invoiceRows\.length\}件・合計/);
   assert.match(html, /選択した明細で請求書を作成/);
   assert.match(html, /index===-1&&_invoiceSubtasks\(_withOwnerJobFinance\(j\)\)\.some\(x=>x\.index===-1\)/);
-  assert.match(html, /const APP_VERSION='20260917-02'/);
+  assert.match(html, /const APP_VERSION='20260917-03'/);
   const sw = fs.readFileSync(path.join(__dirname, '..', 'sw.js'), 'utf8');
-  assert.match(sw, /const CACHE='mcshanai-20260917-02'/);
+  assert.match(sw, /const CACHE='mcshanai-20260917-03'/);
 });

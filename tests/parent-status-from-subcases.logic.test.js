@@ -58,28 +58,22 @@ test('an unknown status never wins over a known one', () => {
   assert.equal(aggregate([{ status: '謎ステータス' }]), '謎ステータス');
 });
 
-test('the case form hides the parent status field for subcase parents', () => {
-  assert.match(index, /<div class="fg" id="jf-stat">/);
-  assert.match(index, /<div class="fg" id="jf-stat-auto" style="display:none">/);
-  assert.match(index, /id="j-stat-auto"/);
-  const rule = functionSource(index, 'updateJobParentStatusRule');
-  assert.match(rule, /field\.style\.display=hasSubs\?'none':''/);
-  assert.match(rule, /field\.setAttribute\('aria-hidden',hasSubs\?'true':'false'\)/);
-  assert.match(rule, /parentSelect\.disabled=hasSubs/);
-  assert.match(rule, /auto\.style\.display='none'/);
-  assert.match(rule, /auto\.setAttribute\('aria-hidden','true'\)/);
-  assert.match(functionSource(index, 'updateJobInternalScheduleRules'), /updateJobParentStatusRule\(hasSubs\)/);
+test('the case form does not show a parent status field', () => {
+  assert.doesNotMatch(index, /id="jf-parent-status"/);
+  assert.doesNotMatch(index, /id="jf-stat"/);
+  assert.doesNotMatch(index, /id="jf-stat-auto"/);
+  assert.doesNotMatch(index, /id="j-stat-auto"/);
+  assert.doesNotMatch(index, /updateJobParentStatusRule/);
 });
 
 test('saveJob writes the derived status and does not lock the save behind the ops checklist', () => {
   const save = functionSource(index, 'saveJob');
   assert.match(save, /let parentStatusAuto=subtasks\.length>0&&!_legacyPortalStatusLocked\(current\);/);
   assert.match(save, /const finalStatus=parentStatusAuto\?_aggregateSubcaseStatus\(currentBiz,subtasks,_jobSubDefaultStatus\(currentBiz\)\):requestedStatus;/);
-  assert.match(save, /const requestedStatus=String\(document\.getElementById\('j-stat'\)\?\.value\|\|''\);/);
+  assert.match(save, /const requestedStatus=String\(current\?\.status\|\|JOB_MODAL_PRE_STATUS\|\|_jobSubDefaultStatus\(currentBiz\)\);/);
   assert.match(save, /status:finalStatus,/);
   assert.match(save, /const entersOperationalCompletion=!parentStatusAuto&&opsRequiresChecklist/);
-  // 親案件のステータスは、連携有無にかかわらず編集進行ボードからだけ変更する。
-  assert.match(save, /if\(current&&requestedStatus!==current\.status\)\{toast\('進捗の変更は「編集進行ボード」で行ってください','warn'\);return;\}/);
+  assert.doesNotMatch(save, /getElementById\('j-stat'\)/);
 });
 
 // 実アプリで駆動して判明: 新規サブ案件の既定が「案件掲載中」（編集者募集の掲載中）だったため、

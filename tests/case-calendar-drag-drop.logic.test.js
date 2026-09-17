@@ -130,7 +130,7 @@ test('setting the parent job progress to 完了 fills the owner-recorded deliver
   context.completed={disabled:false,value:''};
   context.changed({value:'進行中'});
   assert.equal(context.completed.value,'');
-  assert.match(html,/<select id="j-stat" onchange="jobStatusChanged\(this\)"/);
+  assert.doesNotMatch(html,/<select id="j-stat"/);
 });
 
 test('saving a job or subcase as 完了 without a delivery date falls back to today',()=>{

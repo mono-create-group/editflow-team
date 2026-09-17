@@ -47,9 +47,8 @@ test('revision actions record the images on the progress event and the history s
   assert.match(flow, /\.\.\.\(reason\?\{reason\}:\{\}\),\.\.\.\(images\.length\?\{images\}:\{\}\),/);
   assert.match(index, /<textarea id="vp-correction-images"/);
   assert.match(functionSource(index, '_videoWorkflowHistoryItem'), /_videoRevisionImagesHtml\(event\?\.images\)/);
-  // 旧台帳の子案件モーダルからも画像URLを渡せる。
-  assert.match(index, /class="j-sub-portal-images"/);
-  assert.match(functionSource(index, 'advanceLegacyPortalSubcaseWorkflow'), /const images=document\.getElementById\(`\$\{controlKey\}-images`\)\?\.value\|\|'';\n  await advancePortalWorkflow\(portalUid,jobId,action,reason,completionDate,images,\{keepOpen:true\}\);/);
+  // 案件編集モーダル内の旧インライン進捗操作は廃止し、画像入力も進捗ボードに集約する。
+  assert.doesNotMatch(index, /class="j-sub-portal-images"/);
 });
 
 test('editors see the latest revision images as thumbnails next to the instruction', () => {

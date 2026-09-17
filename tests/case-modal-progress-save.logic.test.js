@@ -51,7 +51,8 @@ test('the progress board is the only visible status-change entry point', () => {
   assert.match(board, /進捗を変更できる場所はここだけです/);
   assert.match(board, /video-progress-change/);
   assert.match(board, /_videoProgressBoardAction\(parent,row\)/);
-  assert.match(index, /id="j-stat" onchange="jobStatusChanged\(this\)" disabled aria-readonly="true"/);
+  assert.doesNotMatch(index, /id="j-stat"/);
+  assert.doesNotMatch(index, /class="j-sub-status"[^>]*<\/select>/);
   assert.match(index, /function mkSubRow\(s,ph,bk,originalIndex=-1,financeLocked=false\)/);
   assert.match(functionSource('mkSubRowReadOnly'), /readonly aria-readonly/);
 });
