@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260917-01"></script>
+<script src="./billing-terms.js?v=20260917-02"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -1000,7 +1000,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260917-01">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260917-02">
 </head>
 <body class="owner-yellow-ui">
 
@@ -1060,8 +1060,8 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="./ai-bridge-client.js"></script>
-<script src="./owner-video-performance.js?v=20260917-01"></script>
-<script src="./feedback-workflow.js?v=20260917-01"></script>
+<script src="./owner-video-performance.js?v=20260917-02"></script>
+<script src="./feedback-workflow.js?v=20260917-02"></script>
 <script>/* lz-string 1.5.0 (MIT) — CDN非依存でオフライン/圧縮チーム同期を保証するためインライン化 */
 var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",e={};function t(r,o){if(!e[r]){e[r]={};for(var n=0;n<r.length;n++)e[r][r.charAt(n)]=n}return e[r][o]}var i={compressToBase64:function(r){if(null==r)return"";var n=i._compress(r,6,function(r){return o.charAt(r)});switch(n.length%4){default:case 0:return n;case 1:return n+"===";case 2:return n+"==";case 3:return n+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(n){return t(o,r.charAt(n))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(r){return null==r?"":""==r?null:i._decompress(r.length,16384,function(o){return r.charCodeAt(o)-32})},compressToUint8Array:function(r){for(var o=i.compress(r),n=new Uint8Array(2*o.length),e=0,t=o.length;e<t;e++){var s=o.charCodeAt(e);n[2*e]=s>>>8,n[2*e+1]=s%256}return n},decompressFromUint8Array:function(o){if(null==o)return i.decompress(o);for(var n=new Array(o.length/2),e=0,t=n.length;e<t;e++)n[e]=256*o[2*e]+o[2*e+1];var s=[];return n.forEach(function(o){s.push(r(o))}),i.decompress(s.join(""))},compressToEncodedURIComponent:function(r){return null==r?"":i._compress(r,6,function(r){return n.charAt(r)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),i._decompress(r.length,32,function(o){return t(n,r.charAt(o))}))},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(r,o,n){if(null==r)return"";var e,t,i,s={},u={},a="",p="",c="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<r.length;i+=1)if(a=r.charAt(i),Object.prototype.hasOwnProperty.call(s,a)||(s[a]=f++,u[a]=!0),p=c+a,Object.prototype.hasOwnProperty.call(s,p))c=p;else{if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++),s[p]=f++,c=String(a)}if(""!==c){if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++)}for(t=2,e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;for(;;){if(m<<=1,v==o-1){d.push(n(m));break}v++}return d.join("")},decompress:function(r){return null==r?"":""==r?null:i._decompress(r.length,32768,function(o){return r.charCodeAt(o)})},_decompress:function(o,n,e){var t,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:e(0),position:n,index:1};for(t=0;t<3;t+=1)l[t]=t;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return i}();"function"==typeof define&&define.amd?define(function(){return LZString}):"undefined"!=typeof module&&null!=module?module.exports=LZString:"undefined"!=typeof angular&&null!=angular&&angular.module("LZString",[]).factory("LZString",function(){return LZString});
 </script>
@@ -2748,6 +2748,18 @@ function applyPaymentTerms(){
   const required=document.getElementById('j-invoice-required');if(required)required.hidden=terms!=='custom'&&terms!=='prepaid';
   if(terms==='custom')return;
   const dates=_billingDatesForTerms(terms,{sharedDate:document.getElementById('j-shared')?.value||'',deliveryDate:document.getElementById('j-deliver')?.value||'',completedDeliveryDate:document.getElementById('j-completed-delivery')?.value||''});
+  if(!dates)return;
+  if(invoice)invoice.value=dates.invoiceDate;
+  if(due)due.value=dates.dueDate;
+}
+// サブ案件に請求・支払条件を設定する。親案件にサブ案件がある場合、財務日付はここで管理する。
+function applyJobSubPaymentTerms(input){
+  const row=input?.closest('.j-sub-row');
+  if(!row)return;
+  const terms=_paymentTermsValue(input.value),invoice=row.querySelector('.j-sub-invoice'),due=row.querySelector('.j-sub-due');
+  const dates=_billingDatesForTerms(terms,{sharedDate:row.querySelector('.j-sub-shared')?.value||'',deliveryDate:row.querySelector('.j-sub-deliver')?.value||'',completedDeliveryDate:row.querySelector('.j-sub-completed-delivery')?.value||''});
+  const hint=row.querySelector('.j-sub-payment-terms-hint');
+  if(hint)hint.textContent=_paymentTermsHint(terms);
   if(!dates)return;
   if(invoice)invoice.value=dates.invoiceDate;
   if(due)due.value=dates.dueDate;
@@ -8694,18 +8706,30 @@ function jobMainOut(j){return jobTotalOut(j);}
 function jobMainProfit(j){return jobTotalIn(j)-jobTotalOut(j);}
 // 【2026-07-23改定】入金済み判定は paidAt(実際に入金があってボタンで設定)。
 // paymentDate は「入金予定日」であり、記入しても入金済みにはならない。
-function isJobPaid(j){return !!(j&&j.paidAt);}
+function _jobPaymentDate(j){
+  const subDates=(j?.subtasks||[]).map(s=>s.paymentDate).filter(Boolean).sort();
+  return j?.paymentDate||subDates[0]||'';
+}
+function isJobPaid(j){
+  const subs=Array.isArray(j?.subtasks)?j.subtasks:[];
+  return subs.length?subs.every(s=>!!s.paidAt):!!(j&&j.paidAt);
+}
 function markJobPaid(id){
   if(!_canViewFinancials())return toast('財務操作の権限がありません','err');
   const j=S.jobs.find(j=>j.id===id);if(!j)return;
-  j.paidAt=today();j.updatedAt=Date.now();
+  const at=today();
+  if(Array.isArray(j.subtasks)&&j.subtasks.length)j.subtasks.forEach(s=>{s.paidAt=at;});
+  else j.paidAt=at;
+  j.updatedAt=Date.now();
   save();render();toast('💰 入金済みにしました');
 }
 function unmarkJobPaid(id){
   if(!_canViewFinancials())return toast('財務操作の権限がありません','err');
   const j=S.jobs.find(j=>j.id===id);if(!j)return;
   if(!confirm('入金済みを取り消しますか？'))return;
-  j.paidAt=null;j.updatedAt=Date.now();
+  if(Array.isArray(j.subtasks)&&j.subtasks.length)j.subtasks.forEach(s=>{s.paidAt=null;});
+  else j.paidAt=null;
+  j.updatedAt=Date.now();
   save();render();toast('入金済みを取り消しました');
 }
 // 入金日が指定日以降(cutoff含む)の入金済みを一括取消(2026-07-23 会長指示: シート取込等で全件入金済みになった誤りの修正)。
@@ -8793,23 +8817,28 @@ function rProjDeadline(){
 // ===請求書ページ===
 // サブ案件がある場合は、単価が設定されたサブタスクを請求の最小単位にする。
 // サブ案件が1件もない場合だけ親案件の単価を採用し、親子の二重計上を防ぐ。
-function _invoiceSubtasks(j){
+function _invoiceSubtasks(j,month=''){
   const subtasks=Array.isArray(j.subtasks)?j.subtasks:[];
-  const rows=subtasks.map((sub,index)=>({sub,index})).filter(x=>Number(x.sub.unitPrice)>0);
+  const rows=subtasks.map((sub,index)=>({sub,index})).filter(x=>Number(x.sub.unitPrice)>0&&(!month||_subInvoiceDate(j,x.sub).startsWith(month)));
   if(rows.length)return rows;
-  if((!subtasks.length||j._ownerFinance)&&Number(j.unitPrice)>0)return[{sub:{...j,title:j.title||'案件',unitPrice:Number(j.unitPrice),invoicedAt:j.invoicedAt||null},index:-1}];
+  if(!month&&(!subtasks.length||j._ownerFinance)&&Number(j.unitPrice)>0)return[{sub:{...j,title:j.title||'案件',unitPrice:Number(j.unitPrice),invoicedAt:j.invoicedAt||null},index:-1}];
+  if(month&&!subtasks.length&&Number(j.unitPrice)>0&&_subInvoiceDate(j,j).startsWith(month))return[{sub:{...j,title:j.title||'案件',unitPrice:Number(j.unitPrice),invoicedAt:j.invoicedAt||null},index:-1}];
   return[];
 }
-function _invAmt(j){return _invoiceSubtasks(j).reduce((sum,x)=>sum+Number(x.sub.unitPrice||0),0);}
+function _invAmt(j,month=''){return _invoiceSubtasks(j,month).reduce((sum,x)=>sum+Number(x.sub.unitPrice||0),0);}
 function _invoiceLineName(j,sub,index){return index===-1?(j.title||sub.title||'案件'):(j.title||'親案件')+'（'+(sub.title||`サブタスク${index+1}`)+'）';}
-function _subInvoiceDate(j,sub){return sub.invoiceDate||j.invoiceDate||sub.completedDeliveryDate||j.completedDeliveryDate||sub.deliveryDate||j.deliveryDate||'';}
-function _subInvoicedAt(j,sub){return sub.invoicedAt||j.invoicedAt||null;}
+function _subInvoiceDate(j,sub){
+  // サブ案件がある場合は、請求日を親案件から継承しない。
+  return sub.invoiceDate||sub.completedDeliveryDate||sub.deliveryDate||(!Array.isArray(j.subtasks)||!j.subtasks.length?(j.invoiceDate||j.completedDeliveryDate||j.deliveryDate||''):'');
+}
+function _subInvoicedAt(j,sub){return sub.invoicedAt||(!Array.isArray(j.subtasks)||!j.subtasks.length?j.invoicedAt||null:null);}
 function _jobInvDate(j){
-  if(j.invoiceDate)return j.invoiceDate;
-  if(j.completedDeliveryDate)return j.completedDeliveryDate;
-  if(j.deliveryDate)return j.deliveryDate;
-  const sd=(j.subtasks||[]).map(s=>s.invoiceDate||s.completedDeliveryDate||s.deliveryDate).filter(Boolean).sort();
-  return sd.length?sd[sd.length-1]:'';
+  const subtasks=Array.isArray(j.subtasks)?j.subtasks:[];
+  if(subtasks.length){
+    const sd=subtasks.map(s=>s.invoiceDate||s.completedDeliveryDate||s.deliveryDate).filter(Boolean).sort();
+    return sd.length?sd[sd.length-1]:'';
+  }
+  return j.invoiceDate||j.completedDeliveryDate||j.deliveryDate||'';
 }
 function _invMonthMatch(j,m){if(!m)return true;const d=_jobInvDate(j);return !!d&&d.startsWith(m);}
 function _invFmt(n){return '¥'+Math.round(n||0).toLocaleString();}
@@ -8820,7 +8849,7 @@ function _issuer(){
 }
 function _endNextMonth(iso){const d=iso?new Date(iso):new Date();const last=new Date(d.getFullYear(),d.getMonth()+2,0);return `${last.getFullYear()}-${String(last.getMonth()+1).padStart(2,'0')}-${String(last.getDate()).padStart(2,'0')}`;}
 function _invoiceJobs(cid,m){
-  return BJOBS().filter(j=>!j.deleted&&j.status!=='キャンセル'&&_invAmt(j)>0&&_invMonthMatch(j,m)&&((j.clientId||'')===(cid||'')));
+  return BJOBS().filter(j=>!j.deleted&&j.status!=='キャンセル'&&_invAmt(j,m)>0&&((j.clientId||'')===(cid||'')));
 }
 function rProjInvoice(){
   if(!_canViewFinancials())return _financialAccessDenied('請求書');
@@ -8828,16 +8857,16 @@ function rProjInvoice(){
   LEGACY_FINANCE_CORRECTION_WARNINGS=[];
   const now=new Date();
   const nowM=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  const months=[...new Set(BJOBS().filter(j=>!j.deleted&&_invAmt(j)>0).map(j=>_jobInvDate(j)).filter(Boolean).map(d=>d.slice(0,7)))].sort().reverse();
+  const months=[...new Set(BJOBS().filter(j=>!j.deleted).flatMap(j=>_invoiceSubtasks(j).map(({sub})=>_subInvoiceDate(j,sub))).filter(Boolean).map(d=>d.slice(0,7)))].sort().reverse();
   if(!months.includes(nowM))months.unshift(nowM);
   const curM=(window._invMonth!==undefined)?window._invMonth:nowM;
   const mLabel=curM||'すべての期間';
-  const jobs=BJOBS().filter(j=>!j.deleted&&j.status!=='キャンセル'&&_invAmt(j)>0&&_invMonthMatch(j,curM));
+  const jobs=BJOBS().filter(j=>!j.deleted&&j.status!=='キャンセル'&&_invAmt(j,curM)>0);
   const byClient={};
   jobs.forEach(j=>{const k=j.clientId||'';(byClient[k]=byClient[k]||[]).push(j);});
   const clientName=cid=>cid?(S.clients.find(c=>c.id===cid)?.name||'不明'):'クライアント未設定';
   const iss=_issuer();
-  const grand=jobs.reduce((s,j)=>s+_invAmt(j),0);
+  const grand=jobs.reduce((s,j)=>s+_invAmt(j,curM),0);
   if(LEGACY_FINANCE_CORRECTION_WARNINGS.length)return _ownerFinanceLedgerStop('🧾 請求書',LEGACY_FINANCE_CORRECTION_WARNINGS.slice(0,3).join(' / '));
   return`${secTitle('🧾 請求書')}
 <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap">
@@ -8848,15 +8877,15 @@ function rProjInvoice(){
 ${!iss.name?`<div class="card" style="background:#fff7ed;border:2px solid #c2410c;color:#7c2d12;margin-bottom:10px;font-size:12px;font-weight:700">⚠️ まず「✏️ 請求元情報」に屋号・振込先などを設定してください（請求書に自動で差し込まれます）。</div>`:''}
 <div style="font-size:11px;color:var(--t3);margin-bottom:12px">請求書提出日が <b>${mLabel}</b> の請求明細を表示中。サブ案件がある場合は単価を設定したサブ案件を、サブ案件がない場合は親案件の単価を採用します。☑ で選び「請求書を作成」→ 編集 → PDF保存します。</div>
 ${!Object.keys(byClient).length?`<div class="empty"><div class="empty-icon">🧾</div><div class="empty-title">${mLabel} に請求予定の明細はありません</div><div style="color:var(--t2);font-size:12px;margin-top:4px">案件に「請求書提出日」と単価を設定すると表示されます。サブ案件がある場合はサブ案件の単価を使用します</div></div>`:Object.entries(byClient).map(([cid,js])=>{
-  const sub=js.reduce((s,j)=>s+_invAmt(j),0);
-  const invoiceRows=js.flatMap(j=>_invoiceSubtasks(j).map(x=>({j,...x})));
+  const sub=js.reduce((s,j)=>s+_invAmt(j,curM),0);
+  const invoiceRows=js.flatMap(j=>_invoiceSubtasks(j,curM).map(x=>({j,...x})));
   const allInvoiced=invoiceRows.length&&invoiceRows.every(x=>_subInvoicedAt(x.j,x.sub));
   return`<div class="card" style="margin-bottom:12px">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:8px">
       <div style="font-weight:700;font-size:15px">${esc(clientName(cid))} <span style="font-size:11px;font-weight:500;color:var(--t2)">御中</span></div>
       ${allInvoiced?`<span class="badge bg" style="font-size:10px">🧾 請求済</span>`:`<span class="badge ba" style="font-size:10px">⏳ 未請求</span>`}
     </div>
-    ${js.map(j=>{const rows=_invoiceSubtasks(j),parentOnly=rows.length===1&&rows[0].index===-1;return`<details style="border-bottom:1px solid var(--border);padding:5px 0"><summary class="video-subcase-head"><span>${esc(j.title||'親案件')}</span><span>${parentOnly?'親案件':'サブ案件'} ${rows.length}件</span></summary><div>${rows.map(({sub,index})=>`<label style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:7px 0;border-top:1px solid var(--border);cursor:pointer;gap:10px">
+    ${js.map(j=>{const rows=_invoiceSubtasks(j,curM),parentOnly=rows.length===1&&rows[0].index===-1;return`<details style="border-bottom:1px solid var(--border);padding:5px 0"><summary class="video-subcase-head"><span>${esc(j.title||'親案件')}</span><span>${parentOnly?'親案件':'サブ案件'} ${rows.length}件</span></summary><div>${rows.map(({sub,index})=>`<label style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:7px 0;border-top:1px solid var(--border);cursor:pointer;gap:10px">
       <span style="display:flex;align-items:center;gap:8px;min-width:0"><input type="checkbox" class="inv-sel" data-cid="${cid}" data-jid="${j.id}" data-sidx="${index}" checked><span><b>${esc(sub.title||`サブタスク${index+1}`)}</b> <span style="font-size:10px;color:var(--t3)">🧾${_subInvoiceDate(j,sub)||'-'}</span>${_subInvoicedAt(j,sub)?` <span style="font-size:10px;color:var(--green)">✅請求済 ${_subInvoicedAt(j,sub)}</span>`:''}</span></span>
       <span style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span style="font-weight:600">¥${Number(sub.unitPrice||0).toLocaleString()}</span><button class="btn btn-g btn-xs" onclick="event.preventDefault();event.stopPropagation();openJobModal('${j.id}')">詳細</button></span>
     </label>`).join('')}</div></details>`;}).join('')}
@@ -8876,11 +8905,12 @@ function openInvoiceEditor(cid,m,subtaskRefs){
   const i=_issuer();
   const cname=cid?(S.clients.find(c=>c.id===cid)?.name||'クライアント'):'クライアント';
   const issue=today();
-  const due=js.map(j=>j.dueDate).filter(Boolean).sort().reverse()[0]||_endNextMonth(issue);
+  const selectedRows=js.flatMap(j=>_invoiceSubtasks(j,m).filter(({index})=>!selected||selected.some(x=>x.jobId===j.id&&Number(x.subtaskIndex)===index)).map(row=>({j,...row})));
+  const due=selectedRows.map(({j,sub})=>sub.dueDate||(!Array.isArray(j.subtasks)||!j.subtasks.length?j.dueDate:'')).filter(Boolean).sort().reverse()[0]||_endNextMonth(issue);
   const items=[];
   const refs=[];
   js.forEach(j=>{
-    _invoiceSubtasks(j).forEach(({sub,index})=>{
+    _invoiceSubtasks(j,m).forEach(({sub,index})=>{
       if(selected&&!selected.some(x=>x.jobId===j.id&&Number(x.subtaskIndex)===index))return;
       items.push({name:_invoiceLineName(j,sub,index),qty:1,unit:Number(sub.unitPrice),amount:Number(sub.unitPrice)});
       refs.push({jobId:j.id,subtaskIndex:index});
@@ -9045,12 +9075,12 @@ function genInvoiceText(cid,m){
   const js=_invoiceJobs(cid,m);
   const name=cid?(S.clients.find(c=>c.id===cid)?.name||'クライアント'):'クライアント';
   const i=_issuer();
-  const sub=js.reduce((s,j)=>s+_invAmt(j),0);
+  const sub=js.reduce((s,j)=>s+_invAmt(j,m),0);
   const tax=i.defaultTax?Math.floor(sub*0.1):0;
   const wh=i.defaultWithholding?_calcWithholding(sub):0;
   const total=sub+tax-wh;
   let t=`請求書\n\n${name} 御中\n\nご請求日：${today()}\n下記の通りご請求申し上げます。\n\n────────────────\n`;
-  js.forEach(j=>_invoiceSubtasks(j).forEach(({sub,index})=>{t+=`${_invoiceLineName(j,sub,index)}　¥${Number(sub.unitPrice||0).toLocaleString()}\n`;}));
+  js.forEach(j=>_invoiceSubtasks(j,m).forEach(({sub,index})=>{t+=`${_invoiceLineName(j,sub,index)}　¥${Number(sub.unitPrice||0).toLocaleString()}\n`;}));
   t+=`────────────────\n小計　¥${sub.toLocaleString()}\n`;
   if(tax)t+=`消費税(10%)　¥${tax.toLocaleString()}\n`;
   if(wh)t+=`源泉徴収税　-¥${wh.toLocaleString()}\n`;
@@ -9070,7 +9100,7 @@ function copyInvoiceText(cid,m){
 function markClientInvoiced(cid,m,on){
   if(!_canViewFinancials())return toast('財務操作の権限がありません','err');
   const at=on?today():null;
-  _invoiceJobs(cid,m).forEach(j=>{const source=S.jobs.find(row=>row.id===j.id);if(!source)return;if(j._ownerFinance){source.invoicedAt=at;source.updatedAt=Date.now();return;}_invoiceSubtasks(source).forEach(({sub})=>{sub.invoicedAt=at;});source.invoicedAt=at;source.updatedAt=Date.now();});
+  _invoiceJobs(cid,m).forEach(j=>{const source=S.jobs.find(row=>row.id===j.id);if(!source)return;if(j._ownerFinance){source.invoicedAt=at;source.updatedAt=Date.now();return;}_invoiceSubtasks(source,m).forEach(({sub})=>{sub.invoicedAt=at;});source.invoicedAt=at;source.updatedAt=Date.now();});
   save();render();toast(on?'🧾 請求済みにしました':'請求済を取り消しました');
 }
 function openInvoiceInfo(){
@@ -9239,7 +9269,7 @@ function _profitWorkerKey(workerId){
 function _profitGroupEntries(jobs,mode){
   const entries=[];
   jobs.forEach(j=>{
-    const base={jobId:j.id,jobTitle:j.title,paymentDate:j.paymentDate||'',status:j.status||'',job:j};
+    const base={jobId:j.id,jobTitle:j.title,paymentDate:_jobPaymentDate(j),status:j.status||'',job:j};
     if(mode==='client'){
       const cl=S.clients.find(c=>c.id===j.clientId);
       const label=cl?.name||j.clientName||'クライアント未設定';
@@ -9306,8 +9336,8 @@ function rProjProfit(){
   // 【2026-07-23改定】利益タブ=「入金予定日(paymentDate)」の月でグルーピング。
   // 入金予定日を入れても入金済みにはならない。入金済み(paidAt=ボタンで確定)の案件はこのタブに表示しない。
   // 対象=「完了案件」または「入金予定日が入っている案件」（＝回収予定）。キャンセルは除外。
-  const done=BJOBS().filter(j=>!j.deleted&&j.status!=='キャンセル'&&jobMainIn(j)>0&&(j.status==='完了'||j.paymentDate));
-  const monthOf=j=>String(j.paymentDate||j.invoiceDate||j.deliveryDate||(j.createdAt||'').slice(0,10)||'').slice(0,7);
+  const done=BJOBS().filter(j=>!j.deleted&&j.status!=='キャンセル'&&jobMainIn(j)>0&&(j.status==='完了'||_jobPaymentDate(j)));
+  const monthOf=j=>String(_jobPaymentDate(j)||j.invoiceDate||j.deliveryDate||(j.createdAt||'').slice(0,10)||'').slice(0,7);
   const now=new Date();const selDefault=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const months=[...new Set(done.map(monthOf).filter(Boolean))].sort().reverse();
   if(!months.includes(selDefault))months.unshift(selDefault);
@@ -9348,7 +9378,7 @@ ${jobs.length?(groupMode==='job'?`<div class="card" style="padding:0;overflow:hi
   </div>
   ${jobs.map(j=>{const pr=jobMainProfit(j);const cl=S.clients.find(c=>c.id===j.clientId);
   return`<div class="profit-row">
-    <span style="font-weight:600;cursor:pointer" onclick="openJobModal('${j.id}')">${esc(j.title)}${j.status!=='完了'?` <span class="badge ba" style="font-size:9px">${esc(j.status)}</span>`:''}<br><span style="font-size:11px;color:var(--t2)">${cl?esc(cl.name):''}${j.paymentDate?` | 入金予定 ${j.paymentDate}`:' | 入金予定日未設定'}</span></span>
+    <span style="font-weight:600;cursor:pointer" onclick="openJobModal('${j.id}')">${esc(j.title)}${j.status!=='完了'?` <span class="badge ba" style="font-size:9px">${esc(j.status)}</span>`:''}<br><span style="font-size:11px;color:var(--t2)">${cl?esc(cl.name):''}${_jobPaymentDate(j)?` | 入金予定 ${_jobPaymentDate(j)}`:' | 入金予定日未設定'}</span></span>
     <span style="font-weight:700;color:var(--blue)">¥${jobMainIn(j).toLocaleString()}</span>
     <span style="color:var(--amber)">¥${jobMainOut(j).toLocaleString()}</span>
     <span style="${pr>=0?'color:var(--green)':'color:var(--red)'}">¥${pr.toLocaleString()}</span>
@@ -10524,7 +10554,7 @@ const DOCLINK_SEEDS=[
    url:'https://mono-create-group.github.io/editflow-team/dm-manual.html?v=20260816-01',
    category:'マニュアル',notes:'新メンバー向け。アイコン・アカウント名の予約(早い者勝ち)・DM文章の作成・営業リストでの送付と記録まで1ページで完結',ver:3},
   {id:'doclink_invoice_manual',title:'請求書の作り方（編集者向けマニュアル・見本つき）',
-  url:'https://mono-create-group.github.io/editflow-team/invoice-manual.html?v=20260917-01',
+  url:'https://mono-create-group.github.io/editflow-team/invoice-manual.html?v=20260917-02',
    category:'マニュアル',notes:'編集者へ共有する。請求者情報の登録→完了案件を選んで明細（1案件＝1行）→確認して提出、締切と支払日、NG例/見本、FAQ',ver:1},
   {id:'doclink_dm_entry_form',title:'DM営業スタッフ 登録フォーム（応募者に送るURL）',
    url:'https://mono-create-group.github.io/editflow-team/dm-entry.html',
@@ -14417,11 +14447,11 @@ function setJobSubcaseMode(mode,initial=false){
   if(select)select.value=hasSubcases?'with_subcases':'without_subcases';
   const toggle=(id,visible)=>{const el=document.getElementById(id);if(!el)return;el.style.display=visible?'':'none';el.setAttribute('aria-hidden',visible?'false':'true');};
   // 「あり」では親に担当者・初稿・納期を持たせず、各サブ案件だけで管理する。
-  ['jf-parent-worker','jf-parent-schedule','jf-drafts','jf-client-draft','jf-parent-completed','jf-parent-thumbnail','jf-parent-payout'].forEach(id=>toggle(id,!hasSubcases));
+  ['jf-parent-worker','jf-parent-schedule','jf-drafts','jf-client-draft','jf-parent-completed','jf-parent-thumbnail','jf-parent-finance','jf-parent-payout'].forEach(id=>toggle(id,!hasSubcases));
   toggle('jf-stat',!hasSubcases);toggle('jf-stat-auto',false);
   toggle('jf-subs',hasSubcases||!!document.querySelector('#j-sub-cont .j-sub-shell'));
   const hint=document.getElementById('j-case-structure-hint');
-  if(hint)hint.textContent=hasSubcases?'親の担当者・初稿・納期・支払予定日は使わず、サブ案件ごとに入力します。':'親案件に担当者・初稿・納期を入力する通常案件です。';
+  if(hint)hint.textContent=hasSubcases?'親の担当者・初稿・納期・請求・支払情報は使わず、サブ案件ごとに入力します。':'親案件に担当者・初稿・納期・請求・支払情報を入力する通常案件です。';
   updateJobInternalScheduleRules();
 }
 function updateJobInternalScheduleRules(){
@@ -14542,7 +14572,7 @@ function _jobModalSubCompactHtml(record,index,biz,financeLocked=false){
 }
 function _jobModalSubCompactBodyHtml(record,index,biz,financeLocked=false){
   const workerId=String(record?.workerId||''),workerName=workerId?_jobModalWorkerLabel(workerId):'未割当';
-  const dates=[record?.editorDraftDate?`編集者初稿 ${record.editorDraftDate}`:'',record?.clientDraftDate?`クライアント初稿 ${record.clientDraftDate}`:'',record?.deliveryDate?`納期 ${record.deliveryDate}`:'',record?.completedDeliveryDate?`納品日 ${record.completedDeliveryDate}`:''].filter(Boolean);
+  const dates=[record?.editorDraftDate?`編集者初稿 ${record.editorDraftDate}`:'',record?.clientDraftDate?`クライアント初稿 ${record.clientDraftDate}`:'',record?.deliveryDate?`納期 ${record.deliveryDate}`:'',record?.completedDeliveryDate?`納品日 ${record.completedDeliveryDate}`:'',record?.invoiceDate?`請求書 ${record.invoiceDate}`:'',record?.dueDate?`支払期日 ${record.dueDate}`:'',record?.paymentDate?`入金予定 ${record.paymentDate}`:''].filter(Boolean);
   return`<div class="job-sub-compact"><div class="job-sub-compact-main"><b class="job-sub-compact-title">${esc(record?.title||`サブ案件 ${index+1}`)}</b><div class="job-sub-compact-meta"><span>${esc(videoStatusLabel(record?.status||'未着手'))}</span><span>担当 ${esc(workerName)}</span>${dates.map(value=>`<span>${esc(value)}</span>`).join('')}</div></div><div class="job-sub-compact-actions"><button type="button" class="btn btn-g btn-xs" onclick="expandJobSubEditor(this)">編集</button>${financeLocked?'':`<button type="button" class="btn btn-g btn-xs" onclick="removeJobSubEditor(this)" aria-label="${esc(record?.title||'サブ案件')}を削除">✕</button>`}</div></div>`;
 }
 function _readJobSubEditorState(shell){
@@ -14558,6 +14588,7 @@ function _readJobSubEditorState(shell){
   const attachmentRead=canManageMaterials?_readVideoAttachments(row.querySelector('.video-attachment-list')):{error:'',items:_videoAttachments(previous.attachments)};
   if(attachmentRead.error)return{record:null,error:attachmentRead.error};
   const billingSnapshot=_paymentRecipientSnapshot(workerId,previous);
+  const paymentTerms=row.querySelector('.j-sub-payment-terms')?.value||previous.paymentTerms||'custom',paidAt=row.querySelector('.j-sub-paid-val')?.value||null;
   return{error:'',record:{
     ...previous,id:previous.id||uid(),title:input?.value.trim()||'',done:row.querySelector('.chk')?.classList.contains('done')||false,
     unitPrice:parseInt(row.querySelector('.j-sub-price')?.value)||0,workerPay:parseInt(row.querySelector('.j-sub-pay')?.value)||0,
@@ -14566,8 +14597,8 @@ function _readJobSubEditorState(shell){
     editorDraftDateSetter:row.querySelector('.j-sub-editor-setter')?.value||_editorDraftDateSetter(previous),
     editorDraftDate:row.querySelector('.j-sub-editor')?.value||null,clientDraftDate:row.querySelector('.j-sub-client')?.value||null,
     deliveryDate:row.querySelector('.j-sub-deliver')?.value||null,
-    completedDeliveryDate:workerId===SELF_WID?(row.querySelector('.j-sub-completed-delivery')?.value||null):(previous.completedDeliveryDate||null),invoiceDate:row.querySelector('.j-sub-invoice')?.value||null,
-    dueDate:row.querySelector('.j-sub-due')?.value||null,paymentDate:row.querySelector('.j-sub-payment')?.value||null,payoutDate:row.querySelector('.j-sub-payout')?.value||null,
+    completedDeliveryDate:workerId===SELF_WID?(row.querySelector('.j-sub-completed-delivery')?.value||null):(previous.completedDeliveryDate||null),...(paymentTerms!=='custom'||Object.prototype.hasOwnProperty.call(previous,'paymentTerms')?{paymentTerms}:{}),invoiceDate:row.querySelector('.j-sub-invoice')?.value||null,
+    dueDate:row.querySelector('.j-sub-due')?.value||null,paymentDate:row.querySelector('.j-sub-payment')?.value||null,payoutDate:row.querySelector('.j-sub-payout')?.value||null,...(paidAt||Object.prototype.hasOwnProperty.call(previous,'paidAt')?{paidAt}:{}),
     manualIds:_selectedJobCaseManualIds(row.querySelector('.j-sub-manuals')),caution:String(row.querySelector('.j-sub-caution')?.value||'').trim().slice(0,2000),
     requestUrl,sourceUrl,attachments:attachmentRead.items,
   }};
@@ -14738,6 +14769,8 @@ function openJobModal(id,preStatus,preClientId){
   </div>
   <div class="fg"><div class="fl">営業へのお支払い額（円）</div><input type="number" id="j-sales-pay" value="${j?.salesPay||''}" placeholder="0" ${ownerFinanceLocked?'readonly style="opacity:.6"':''}></div>
 </div>
+<div id="jf-parent-finance">
+<div class="fhint" style="margin:8px 0 6px">親案件にサブ案件がある場合は、この欄ではなく各サブ案件の請求・支払欄へ入力してください。</div>
 <div class="fg"><div class="fl">支払い形態</div>
   <select id="j-payment-terms" onchange="applyPaymentTerms()">${PAYMENT_TERMS.map(([value,label])=>`<option value="${value}"${_paymentTermsValue(j?.paymentTerms)===value?' selected':''}>${esc(label)}</option>`).join('')}</select>
   <div id="j-payment-terms-hint" style="font-size:10px;color:var(--t3);margin-top:3px">${esc(_paymentTermsHint(j?.paymentTerms))}</div>
@@ -14760,6 +14793,7 @@ function openJobModal(id,preStatus,preClientId){
     <span id="j-paid-lbl" style="font-size:12px"></span>
   </div>
   <div style="font-size:10px;color:var(--t3);margin-top:3px">実際に入金があったら「入金済みにする」を押してください。押すと「💰 利益」タブの回収予定から外れます。</div>
+</div>
 </div>
 <div id="jf-subs">
 <div style="font-size:12px;font-weight:700;color:var(--t2);margin:10px 0 4px">✅ サブ案件 <span style="font-weight:400;color:var(--t3)">（親案件に「9月分」などを入力し、ここに各動画名を追加します。単価・支払はサブ案件ごとに入力すると案件全体の金額が自動計算されます）</span></div>
@@ -14811,6 +14845,16 @@ function togglePaid(){
   if(!val)return;
   val.value=val.value?'':today();
   updPaidBtn();
+}
+function toggleSubPaid(button){
+  const row=button?.closest('.j-sub-row');
+  const value=row?.querySelector('.j-sub-paid-val');
+  if(!value)return;
+  value.value=value.value?'':today();
+  button.textContent=value.value?'入金済みを取り消す':'入金済みにする';
+  button.style.cssText=value.value?'white-space:nowrap;border:1px solid var(--border);color:var(--t2);background:transparent':'white-space:nowrap;border:1px solid var(--green);color:var(--green);background:transparent';
+  const label=row.querySelector('.j-sub-paid-label');
+  if(label){label.textContent=value.value?`💰 入金済み（${value.value}）`:'未入金';label.style.color=value.value?'var(--green)':'var(--t3)';}
 }
 function _curJobBiz(){return document.getElementById('j-biz')?.value||PBIZ||'edit';}
 function setJobBiz(k,init){
@@ -15033,7 +15077,7 @@ function mkSubRow(s,ph,bk,originalIndex=-1,financeLocked=false){
 	  ${portalInlineWorkflow}
 	  <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
     <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">共有日</div>
-      <input class="j-sub-shared" type="date" value="${s.sharedDate||''}" style="font-size:12px;padding:4px 6px">
+      <input class="j-sub-shared" type="date" value="${s.sharedDate||''}" style="font-size:12px;padding:4px 6px" onchange="applyJobSubPaymentTerms(this.closest('.j-sub-row')?.querySelector('.j-sub-payment-terms'))">
     </div>
     <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">編集者初稿の設定者</div>
       <select class="j-sub-editor-setter" style="font-size:12px;padding:4px 6px" onchange="changeEditorDraftDateSetter(this)"><option value="creator" ${draftSetter==='creator'?'selected':''}>案件追加者が設定</option><option value="editor" ${draftSetter==='editor'?'selected':''}>担当編集者が設定</option></select>
@@ -15046,16 +15090,25 @@ function mkSubRow(s,ph,bk,originalIndex=-1,financeLocked=false){
       <input class="j-sub-client" type="date" value="${s.clientDraftDate||''}" style="font-size:12px;padding:4px 6px">
     </div>
 	<div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">納期（予定・任意）</div>
-	  <input class="j-sub-deliver" type="date" value="${s.deliveryDate||''}" style="font-size:12px;padding:4px 6px">
+	  <input class="j-sub-deliver" type="date" value="${s.deliveryDate||''}" style="font-size:12px;padding:4px 6px" onchange="applyJobSubPaymentTerms(this.closest('.j-sub-row')?.querySelector('.j-sub-payment-terms'))">
 	</div>
 	<div><div class="j-sub-completed-delivery-label" style="font-size:10px;color:var(--t3);margin-bottom:2px">${managerCanSetCompletion?'完了日（Dまたはオーナーが記録）':editorCompletes?'納品日（担当編集者が記録）':'完了日'}</div>
-	  <input ${portalStatusLocked?`id="${esc(portalControlKey)}-completed-date"`:''} class="j-sub-completed-delivery" data-portal-manager-completion="${managerCompletesPortal?'1':'0'}" type="date" value="${s.completedDeliveryDate||''}" max="${esc(today())}" style="font-size:12px;padding:4px 6px" ${managerCanSetCompletion?'':'disabled'}>
+	  <input ${portalStatusLocked?`id="${esc(portalControlKey)}-completed-date"`:''} class="j-sub-completed-delivery" data-portal-manager-completion="${managerCompletesPortal?'1':'0'}" type="date" value="${s.completedDeliveryDate||''}" max="${esc(today())}" style="font-size:12px;padding:4px 6px" onchange="applyJobSubPaymentTerms(this.closest('.j-sub-row')?.querySelector('.j-sub-payment-terms'))" ${managerCanSetCompletion?'':'disabled'}>
 	  <div class="j-sub-completed-delivery-hint" style="font-size:10px;color:var(--t3);margin-top:3px">${managerCanSetCompletion?'「完了」にするとき、実際に完了した日を記録します。':editorCompletes?'先方OK後に担当編集者が記録します。':'先方OK後にDまたはオーナーが記録します。'}</div>
+	</div>
+	<div style="grid-column:1/-1"><div style="font-size:10px;color:var(--t3);margin-bottom:2px">支払い形態</div>
+	  <select class="j-sub-payment-terms" style="font-size:12px;padding:4px 6px" onchange="applyJobSubPaymentTerms(this)">${PAYMENT_TERMS.map(([value,label])=>`<option value="${value}"${_paymentTermsValue(s.paymentTerms)==value?' selected':''}>${esc(label)}</option>`).join('')}</select>
+	  <div class="j-sub-payment-terms-hint" style="font-size:10px;color:var(--t3);margin-top:3px">${esc(_paymentTermsHint(s.paymentTerms))}</div>
 	</div>
 	    <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">請求書提出日</div><input class="j-sub-invoice" type="date" value="${s.invoiceDate||''}" style="font-size:12px;padding:4px 6px"></div>
 	    <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">支払期日</div><input class="j-sub-due" type="date" value="${s.dueDate||''}" style="font-size:12px;padding:4px 6px"></div>
 	    <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">入金予定日</div><input class="j-sub-payment" type="date" value="${s.paymentDate||''}" style="font-size:12px;padding:4px 6px"></div>
 	    <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">支払予定日</div><input class="j-sub-payout" type="date" value="${s.payoutDate||''}" style="font-size:12px;padding:4px 6px"></div>
+	    <div style="grid-column:1/-1"><div style="font-size:10px;color:var(--t3);margin-bottom:2px">入金状態</div>
+	      <input type="hidden" class="j-sub-paid-val" value="${esc(s.paidAt||'')}">
+	      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button type="button" class="btn btn-xs j-sub-paid-btn" onclick="toggleSubPaid(this)" style="${s.paidAt?'white-space:nowrap;border:1px solid var(--border);color:var(--t2);background:transparent':'white-space:nowrap;border:1px solid var(--green);color:var(--green);background:transparent'}">${s.paidAt?'入金済みを取り消す':'入金済みにする'}</button><span class="j-sub-paid-label" style="font-size:12px;color:${s.paidAt?'var(--green)':'var(--t3)'}">${s.paidAt?`💰 入金済み（${esc(s.paidAt)}）`:'未入金'}</span></div>
+	      <div style="font-size:10px;color:var(--t3);margin-top:3px">このサブ案件だけの入金状態です。</div>
+	    </div>
 	  </div>
 	  <div class="frow" style="margin-top:8px">
 	    <div class="fg"><div class="fl">この子案件だけの台本・依頼URL（任意）</div><input class="j-sub-request" type="url" inputmode="url" maxlength="2000" value="${esc(s.requestUrl||'')}" placeholder="空欄なら親案件の共通URLを使用"></div>
@@ -15117,8 +15170,10 @@ async function saveJob(){
   const title=document.getElementById('j-ttl')?.value.trim();
   if(!title){toast('タイトルを入力してください','err');return;}
   const paymentTermsChoice=_paymentTermsValue(document.getElementById('j-payment-terms')?.value||'custom');
+  const currentBeforeFinance=EID?S.jobs.find(j=>j.id===EID):null;
+  const hasSubcaseStructureBeforeFinance=document.getElementById('j-case-structure')?.value==='with_subcases'||!!(currentBeforeFinance?.subtasks||[]).length;
   // 納品日で決まる形態（納品時請求・当月末・翌月末）は納品前は空でよく、納品日が入った時に自動で埋める。
-  if(_isOwner()&&!document.getElementById('j-invoice')?.value&&!['on_delivery','month_end','next_month_end'].includes(paymentTermsChoice)){toast('請求書提出日を入力してください（請求書ページで使います）','warn');return;}
+  if(_isOwner()&&!hasSubcaseStructureBeforeFinance&&!document.getElementById('j-invoice')?.value&&!['on_delivery','month_end','next_month_end'].includes(paymentTermsChoice)){toast('請求書提出日を入力してください（請求書ページで使います）','warn');return;}
   const current=EID?S.jobs.find(j=>j.id===EID):null;
   const currentFinance=current?_ownerFinanceForLegacyJob(current):null,financeProtected=!!(currentFinance||current?.ownerFinanceId);
   if(current?.ownerFinanceId&&!currentFinance){toast('金額台帳を確認できないため保存を中止しました。読み込み完了後にもう一度お試しください','warn');return;}
@@ -15166,6 +15221,7 @@ async function saveJob(){
     const requestRaw=String(el.querySelector('.j-sub-request')?.value||'').trim(),sourceRaw=String(el.querySelector('.j-sub-source')?.value||'').trim(),requestUrl=requestRaw?_videoSafeUrl(requestRaw):'',sourceUrl=sourceRaw?_videoSafeUrl(sourceRaw):'';
     if(requestRaw&&!requestUrl)subLinkError=`「${inp?.value.trim()||'サブ案件'}」の台本・依頼URLを確認してください`;
     if(sourceRaw&&!sourceUrl)subLinkError=`「${inp?.value.trim()||'サブ案件'}」の素材URLを確認してください`;
+    const paymentTerms=el.querySelector('.j-sub-payment-terms')?.value||previous.paymentTerms||'custom',paidAt=el.querySelector('.j-sub-paid-val')?.value||null;
     return{
       ...previous,id:subId,
       title:inp?.value.trim()||'',done:chk?.classList.contains('done')||false,
@@ -15178,10 +15234,12 @@ async function saveJob(){
       clientDraftDate:el.querySelector('.j-sub-client')?.value||null,
       deliveryDate:el.querySelector('.j-sub-deliver')?.value||null,
       completedDeliveryDate:requestedCompletionDate,
+      ...(paymentTerms!=='custom'||Object.prototype.hasOwnProperty.call(previous,'paymentTerms')?{paymentTerms}:{}),
       invoiceDate:el.querySelector('.j-sub-invoice')?.value||null,
       dueDate:el.querySelector('.j-sub-due')?.value||null,
       paymentDate:el.querySelector('.j-sub-payment')?.value||null,
       payoutDate:el.querySelector('.j-sub-payout')?.value||null,
+      ...(paidAt||Object.prototype.hasOwnProperty.call(previous,'paidAt')?{paidAt}:{}),
       manualIds:_selectedJobCaseManualIds(el.querySelector('.j-sub-manuals')),caution:String(el.querySelector('.j-sub-caution')?.value||'').trim().slice(0,2000),
       requestUrl,sourceUrl,
       attachments:canManageMaterials?subAttachmentReads.get(el).items:_videoAttachments(previous.attachments),
@@ -15216,7 +15274,11 @@ async function saveJob(){
   const primaryWorkerId=parentWorkerIds[0]||null,billingSnapshot=_paymentRecipientSnapshot(primaryWorkerId,current||{});
   const accountSelect=document.getElementById('j-account'),accountId=accountSelect?.value||null,accountName=accountId?(accountSelect?.selectedOptions?.[0]?.textContent||current?.accountName||''):null;
   const data={title,biz:document.getElementById('j-biz')?.value||'edit',subcaseMode:hasSubcaseStructure?'with_subcases':'without_subcases',hasSubcases:hasSubcaseStructure,monthlyFee:_isOwner()?(parseInt(document.getElementById('j-monthly')?.value)||0):(Number(current?.monthlyFee)||0),jobType:document.getElementById('j-type')?.value||'edit',clientId:document.getElementById('j-cl').value||null,accountId,accountName,workerIds:parentWorkerIds,workerId:primaryWorkerId,...billingSnapshot,scope:document.getElementById('j-scope').value||null,status:finalStatus,isTrial,unitPrice,profit:_isOwner()?unitPrice:(Number(current?.profit)||unitPrice),workerPay,sharedDate:hasSubcaseStructure?null:(document.getElementById('j-shared')?.value||null),editorDraftDateSetter:aggregateDraftSetter,editorDraftDate:aggregateDraftDate,clientDraftDate:hasSubcaseStructure?null:(document.getElementById('j-client-draft')?.value||null),thumbnailDate:hasSubcaseStructure?null:(document.getElementById('j-thumbnail')?.value||null),deliveryDate:hasSubcaseStructure?null:(document.getElementById('j-deliver')?.value||null),completedDeliveryDate:!hasSubtasks&&parentInternalOnly?(document.getElementById('j-completed-delivery')?.value||(requestedStatus==='完了'?today():null)):(current?.completedDeliveryDate||null),manualIds:canManageMaterials?_selectedJobCaseManualIds(document.getElementById('j-manuals')):_caseManualIds(current?.manualIds),caution:canManageMaterials?String(document.getElementById('j-caution')?.value||'').trim().slice(0,2000):String(current?.caution||''),requestUrl:canManageMaterials?parentRequestUrl:(current?.requestUrl||''),sourceUrl:canManageMaterials?parentSourceUrl:(current?.sourceUrl||''),paymentTerms:_isOwner()?_paymentTermsValue(document.getElementById('j-payment-terms')?.value||current?.paymentTerms||'custom'):(current?.paymentTerms||'custom'),invoiceDate:_isOwner()?(document.getElementById('j-invoice')?.value||null):(current?.invoiceDate||null),dueDate:_isOwner()?(document.getElementById('j-due')?.value||null):(current?.dueDate||null),paymentDate:_isOwner()?(document.getElementById('j-payin')?.value||null):(current?.paymentDate||null),paidAt:_isOwner()?(document.getElementById('j-paid-val')?.value||null):(current?.paidAt||null),payoutDate:_isOwner()?(hasSubcaseStructure?null:(document.getElementById('j-payout')?.value||null)):(current?.payoutDate||null),salesRep:_isOwner()?(document.getElementById('j-sales-rep')?.value||null):(current?.salesRep||null),salesPay:_isOwner()?(parseInt(document.getElementById('j-sales-pay')?.value)||0):(Number(current?.salesPay)||0),notes:document.getElementById('j-notes').value.trim(),opsChecklist:readOpsChecklist(),subtasks,attachments:canManageMaterials?parentAttachmentRead.items:_videoAttachments(current?.attachments),updatedAt:Date.now(),updatedBy:_myEmail()};
-  if(hasSubcaseStructure){data.editorDraftDateSetter=null;data.editorDraftDate=null;data.completedDeliveryDate=null;}
+  if(hasSubcaseStructure){
+    data.editorDraftDateSetter=null;data.editorDraftDate=null;data.completedDeliveryDate=null;
+    // 請求・入金状態はサブ案件単位で管理し、親案件には残さない。
+    data.paymentTerms='custom';data.invoiceDate=null;data.dueDate=null;data.paymentDate=null;data.paidAt=null;data.payoutDate=null;
+  }
   // 支払い形態が日付を決める場合、未入力の請求書提出日・支払期日を保存時に埋める（入力済みの値は尊重する）。
   if(_isOwner()&&data.paymentTerms&&data.paymentTerms!=='custom'){
     const auto=_billingDatesForTerms(data.paymentTerms,{sharedDate:data.sharedDate,deliveryDate:data.deliveryDate,completedDeliveryDate:data.completedDeliveryDate});
@@ -18941,7 +19003,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260917-01';
+const APP_VERSION='20260917-02';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -19018,13 +19080,13 @@ window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});  
 checkServerVersion();                                                              // 初回表示でも旧版を即時検出
   </script>
 <script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
-<script src="./editor-push.js?v=20260917-01"></script>
-<script src="./bulletin.js?v=20260917-01"></script>
-<script src="./direct-messages.js?v=20260917-01"></script>
+<script src="./editor-push.js?v=20260917-02"></script>
+<script src="./bulletin.js?v=20260917-02"></script>
+<script src="./direct-messages.js?v=20260917-02"></script>
 <script>
   try{if(V==='directmessages')render();else renderNav();}catch(error){console.warn('owner dm init',error);}
 </script>
-<script src="./manager-features.js?v=20260917-01"></script>
-<script src="./sales-video-leads.js?v=20260917-01"></script>
+<script src="./manager-features.js?v=20260917-02"></script>
+<script src="./sales-video-leads.js?v=20260917-02"></script>
 </body>
 </html>

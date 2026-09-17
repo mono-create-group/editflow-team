@@ -48,13 +48,15 @@ test('a parent price is not substituted when unpriced subcases exist', () => {
   assert.equal(context.invoiceAmount(job), 0);
 });
 
-test('the invoice page explains the parent-only fallback and keeps version caches aligned', () => {
+test('the invoice page keeps parent fallback limited to standalone cases and keeps version caches aligned', () => {
   assert.match(html, /サブ案件がない場合は親案件の単価を採用します/);
+  assert.match(html, /サブ案件がある場合は、請求日を親案件から継承しない/);
+  assert.match(html, /_invoiceSubtasks\(j,curM\)/);
   assert.match(html, /parentOnly\?'親案件':'サブ案件'/);
   assert.match(html, /請求明細 \$\{invoiceRows\.length\}件・合計/);
   assert.match(html, /選択した明細で請求書を作成/);
   assert.match(html, /index===-1&&_invoiceSubtasks\(_withOwnerJobFinance\(j\)\)\.some\(x=>x\.index===-1\)/);
-  assert.match(html, /const APP_VERSION='20260917-01'/);
+  assert.match(html, /const APP_VERSION='20260917-02'/);
   const sw = fs.readFileSync(path.join(__dirname, '..', 'sw.js'), 'utf8');
-  assert.match(sw, /const CACHE='mcshanai-20260917-01'/);
+  assert.match(sw, /const CACHE='mcshanai-20260917-02'/);
 });
