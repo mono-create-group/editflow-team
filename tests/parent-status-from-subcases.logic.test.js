@@ -88,7 +88,7 @@ test('a brand-new subcase starts at 未着手 so adding one does not demote the 
   assert.equal(vm.runInContext("_jobSubDefaultStatus('edit')", ctx), '未着手');
   // 編集者派遣は掲載から始まるため従来どおり先頭のまま。
   assert.equal(vm.runInContext("_jobSubDefaultStatus('haken')", ctx), '案件掲載中');
-  assert.match(index, /const st=s\.status\|\|_jobSubDefaultStatus\(_bk\);/);
+  assert.match(index, /const st=s\.done\?'完了':\(s\.status\|\|_jobSubDefaultStatus\(_bk\)\);/);
   // 折りたたみカード・読み出し・保存の既定と揃っている。
   assert.match(index, /videoStatusLabel\(record\?\.status\|\|'未着手'\)/);
   assert.match(index, /requestedSubStatus=el\.querySelector\('\.j-sub-status'\)\?\.value\|\|'未着手'/);

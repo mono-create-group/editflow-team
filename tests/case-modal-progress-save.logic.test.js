@@ -46,15 +46,19 @@ test('subcase detail exposes a read-only status and routes changes to the progre
   assert.match(saver, /fromStatus:previousStatus/);
 });
 
-test('the progress board is the only visible status-change entry point', () => {
+test('legacy subcase status can be changed in the case editor while portal status stays workflow-controlled', () => {
   const board = functionSource('_videoProgressBoard');
   assert.match(board, /進捗を変更できる場所はここだけです/);
   assert.match(board, /video-progress-change/);
   assert.match(board, /_videoProgressBoardAction\(parent,row\)/);
   assert.doesNotMatch(index, /id="j-stat"/);
-  assert.doesNotMatch(index, /class="j-sub-status"[^>]*<\/select>/);
   assert.match(index, /function mkSubRow\(s,ph,bk,originalIndex=-1,financeLocked=false\)/);
-  assert.match(functionSource('mkSubRowReadOnly'), /readonly aria-readonly/);
+  const row = functionSource('mkSubRow');
+  assert.match(row, /class="j-sub-status"/);
+  assert.match(row, /syncJobSubStatus\(this\)/);
+  assert.match(row, /このサブ案件のステータスをここで変更できます/);
+  assert.match(row, /statusControl=portalStatusLocked[\s\S]*readonly aria-readonly/);
+  assert.match(functionSource('syncJobSubStatus'), /classList\.toggle\('done',select\.value==='完了'\)/);
 });
 
 // 行ごと作り直すと、入力途中の日程・単価まで消える（§11 データを壊さない）。触るのはステータス欄と理由欄だけにする。

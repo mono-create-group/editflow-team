@@ -47,5 +47,7 @@ test('profit page renders parent and subcase financial rows', () => {
   assert.match(html, /親案件 \/ サブ案件/);
   assert.match(html, /_profitSubcaseRows\(j,curM\)/);
   assert.match(html, /入金予定日はサブ案件ごと/);
+  assert.match(html, /class="video-subcase-list profit-subcase-details"/);
+  assert.match(html, /↳ サブ案件明細/);
   assert.match(html, /_profitGroupedHtml\(jobs,groupMode,curM\)/);
 });
