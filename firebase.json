@@ -12,6 +12,8 @@
       "tests/**",
       "scripts/**",
       "push-worker/**",
+      "node_modules/**",
+      ".firebase/**",
       "OPERATIONS.md",
       ".git/**",
       ".gitignore"
