@@ -46,16 +46,21 @@ test('subcase detail exposes a read-only status and routes changes to the progre
   assert.match(saver, /fromStatus:previousStatus/);
 });
 
-test('ordinary owner cases can change status in the case form while subcase progress stays on the board', () => {
+test('owner standalone and unlinked legacy subcase statuses can be changed in the case editor while portal status stays workflow-controlled', () => {
   const board = functionSource('_videoProgressBoard');
   assert.match(board, /進捗を変更できる場所はここだけです/);
   assert.match(board, /video-progress-change/);
   assert.match(board, /_videoProgressBoardAction\(parent,row\)/);
   assert.match(index, /ownerCanEditStandaloneStatus\s*\n\s*\?`<select id="j-stat" onchange="jobStatusChanged\(this\)">/);
   assert.match(index, /サブ案件がある場合、親案件はサブ案件から自動集計します。/);
-  assert.doesNotMatch(index, /class="j-sub-status"[^>]*<\/select>/);
+  assert.match(index, /class="j-sub-status"[^>]*onchange="syncJobSubStatus\(this\)"/);
   assert.match(index, /function mkSubRow\(s,ph,bk,originalIndex=-1,financeLocked=false\)/);
-  assert.match(functionSource('mkSubRowReadOnly'), /readonly aria-readonly/);
+  const row = functionSource('mkSubRow');
+  assert.match(row, /class="j-sub-status"/);
+  assert.match(row, /syncJobSubStatus\(this\)/);
+  assert.match(row, /このサブ案件のステータスをここで変更できます/);
+  assert.match(row, /statusControl=portalStatusLocked[\s\S]*readonly aria-readonly/);
+  assert.match(functionSource('syncJobSubStatus'), /classList\.toggle\('done',select\.value==='完了'\)/);
 });
 
 // 行ごと作り直すと、入力途中の日程・単価まで消える（§11 データを壊さない）。触るのはステータス欄と理由欄だけにする。

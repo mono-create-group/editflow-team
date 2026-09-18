@@ -8712,8 +8712,23 @@ function jobMainProfit(j){return jobTotalIn(j)-jobTotalOut(j);}
 // 【2026-07-23改定】入金済み判定は paidAt(実際に入金があってボタンで設定)。
 // paymentDate は「入金予定日」であり、記入しても入金済みにはならない。
 function _jobPaymentDate(j){
-  const subDates=(j?.subtasks||[]).map(s=>s.paymentDate).filter(Boolean).sort();
-  return j?.paymentDate||subDates[0]||'';
+  const subtasks=Array.isArray(j?.subtasks)?j.subtasks:[];
+  if(subtasks.length)return subtasks.map(s=>s.paymentDate).filter(Boolean).sort()[0]||'';
+  return j?.paymentDate||'';
+}
+function _profitSubcaseDate(j,sub,index){
+  if(index>=0)return sub?.paymentDate||sub?.invoiceDate||sub?.completedDeliveryDate||sub?.deliveryDate||'';
+  return j?.paymentDate||j?.invoiceDate||j?.completedDeliveryDate||j?.deliveryDate||String(j?.createdAt||'').slice(0,10)||'';
+}
+function _profitSubcaseRows(j,month=''){
+  const subtasks=Array.isArray(j?.subtasks)?j.subtasks:[];
+  const priced=subtasks.map((sub,index)=>({sub,index})).filter(({sub})=>(+sub.unitPrice||0)>0||(+sub.workerPay||0)>0);
+  const rows=priced.length?priced.map(({sub,index})=>({
+    index,title:sub.title||`サブ案件${index+1}`,inAmount:+sub.unitPrice||0,
+    outAmount:sub.workerId===SELF_WID?0:(+sub.workerPay||0),
+    paymentDate:_profitSubcaseDate(j,sub,index),status:sub.status||j.status||''
+  })):[{index:-1,title:j.title||'案件',inAmount:jobMainIn(j),outAmount:jobMainOut(j),paymentDate:_profitSubcaseDate(j,j,-1),status:j.status||''}];
+  return month?rows.filter(row=>String(row.paymentDate||'').startsWith(month)):rows;
 }
 function isJobPaid(j){
   const subs=Array.isArray(j?.subtasks)?j.subtasks:[];
@@ -9271,32 +9286,35 @@ function _profitWorkerKey(workerId){
   if(workerId===SELF_WID)return SELF_WID;
   return workerId&&S.workers.some(w=>w.id===workerId)?workerId:'__none';
 }
-function _profitGroupEntries(jobs,mode){
+function _profitGroupEntries(jobs,mode,month=''){
   const entries=[];
   jobs.forEach(j=>{
+    const financeRows=_profitSubcaseRows(j,month);
     const base={jobId:j.id,jobTitle:j.title,paymentDate:_jobPaymentDate(j),status:j.status||'',job:j};
     if(mode==='client'){
       const cl=S.clients.find(c=>c.id===j.clientId);
       const label=cl?.name||j.clientName||'クライアント未設定';
-      entries.push({...base,key:j.clientId||`name:${label}`,label,inAmount:jobMainIn(j),outAmount:jobMainOut(j),detail:''});
+      entries.push({...base,key:j.clientId||`name:${label}`,label,inAmount:financeRows.reduce((sum,row)=>sum+row.inAmount,0),outAmount:financeRows.reduce((sum,row)=>sum+row.outAmount,0),detail:''});
       return;
     }
     const subs=j.subtasks||[],pricedSubs=subs.filter(s=>(+s.unitPrice||0)>0||(+s.workerPay||0)>0);
     if(pricedSubs.length){
-      pricedSubs.forEach((s,i)=>{
+      financeRows.forEach(row=>{
+        const s=subs[row.index],i=row.index;
         const recipient=_paymentRecipientForRecord(s,s.workerId),wid=recipient.ok?_profitWorkerKey(recipient.payeeWorkerId):'__unresolved',assignee=_paymentWorkerName(s.workerId),detailTitle=s.title||`サブ案件${i+1}`,detail=recipient.payeeWorkerId!==s.workerId?`${detailTitle} ／ 作業担当 ${assignee}`:detailTitle;
-        entries.push({...base,key:wid,label:_profitWorkerLabel(wid),inAmount:+s.unitPrice||0,outAmount:wid===SELF_WID?0:(+s.workerPay||0),detail});
+        entries.push({...base,paymentDate:row.paymentDate,key:wid,label:_profitWorkerLabel(wid),inAmount:row.inAmount,outAmount:row.outAmount,detail});
       });
       return;
     }
     const recipient=_paymentRecipientForRecord(j,j.workerId),key=recipient.ok?_profitWorkerKey(recipient.payeeWorkerId):'__unresolved',assignee=_paymentWorkerName(j.workerId),detail=recipient.payeeWorkerId!==j.workerId?`作業担当 ${assignee}`:'';
-    entries.push({...base,key,label:_profitWorkerLabel(key),inAmount:jobMainIn(j),outAmount:key===SELF_WID?0:jobMainOut(j),detail});
+    const row=financeRows[0];
+    entries.push({...base,paymentDate:row?.paymentDate||base.paymentDate,key,label:_profitWorkerLabel(key),inAmount:row?.inAmount||0,outAmount:row?.outAmount||0,detail});
   });
   return entries;
 }
-function _profitGroups(jobs,mode){
+function _profitGroups(jobs,mode,month=''){
   const groups=new Map();
-  _profitGroupEntries(jobs,mode).forEach(e=>{
+  _profitGroupEntries(jobs,mode,month).forEach(e=>{
     if(!groups.has(e.key))groups.set(e.key,{key:e.key,label:e.label,entries:[]});
     groups.get(e.key).entries.push(e);
   });
@@ -9315,7 +9333,8 @@ function _profitGroups(jobs,mode){
   }).sort((a,b)=>b.totalProfit-a.totalProfit||a.label.localeCompare(b.label,'ja'));
 }
 function _profitGroupedHtml(jobs,mode){
-  const groups=_profitGroups(jobs,mode);
+  const month=arguments.length>2?arguments[2]:'';
+  const groups=_profitGroups(jobs,mode,month);
   if(!groups.length)return'';
   return`<div class="profit-group-list">${groups.map(g=>`<details class="profit-group-card" open>
     <summary class="profit-group-head">
@@ -9341,18 +9360,18 @@ function rProjProfit(){
   // 【2026-07-23改定】利益タブ=「入金予定日(paymentDate)」の月でグルーピング。
   // 入金予定日を入れても入金済みにはならない。入金済み(paidAt=ボタンで確定)の案件はこのタブに表示しない。
   // 対象=「完了案件」または「入金予定日が入っている案件」（＝回収予定）。キャンセルは除外。
-  const done=BJOBS().filter(j=>!j.deleted&&j.status!=='キャンセル'&&jobMainIn(j)>0&&(j.status==='完了'||_jobPaymentDate(j)));
-  const monthOf=j=>String(_jobPaymentDate(j)||j.invoiceDate||j.deliveryDate||(j.createdAt||'').slice(0,10)||'').slice(0,7);
+  const done=BJOBS().filter(j=>!j.deleted&&j.status!=='キャンセル'&&jobMainIn(j)>0&&(j.status==='完了'||_profitSubcaseRows(j).some(row=>row.paymentDate)));
   const now=new Date();const selDefault=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  const months=[...new Set(done.map(monthOf).filter(Boolean))].sort().reverse();
+  const months=[...new Set(done.flatMap(j=>_profitSubcaseRows(j).map(row=>String(row.paymentDate||'').slice(0,7))).filter(Boolean))].sort().reverse();
   if(!months.includes(selDefault))months.unshift(selDefault);
   const curM=(window._profitMonth&&months.includes(window._profitMonth))?window._profitMonth:(months[0]||selDefault);
-  const monthJobs=done.filter(j=>monthOf(j)===curM);
+  const monthJobs=done.filter(j=>_profitSubcaseRows(j,curM).length);
   const jobs=monthJobs.filter(j=>!isJobPaid(j))            // 入金済みは非表示
-    .sort((a,b)=>String(a.paymentDate||'zzz').localeCompare(String(b.paymentDate||'zzz')));
+    .sort((a,b)=>String(_profitSubcaseRows(a,curM)[0]?.paymentDate||'zzz').localeCompare(String(_profitSubcaseRows(b,curM)[0]?.paymentDate||'zzz')));
   const paidHidden=monthJobs.filter(j=>isJobPaid(j)).length;
-  const totalIn=jobs.reduce((s,j)=>s+jobMainIn(j),0);
-  const totalPay=jobs.reduce((s,j)=>s+jobMainOut(j),0);
+  const visibleRows=jobs.flatMap(j=>_profitSubcaseRows(j,curM));
+  const totalIn=visibleRows.reduce((s,row)=>s+row.inAmount,0);
+  const totalPay=visibleRows.reduce((s,row)=>s+row.outAmount,0);
   const totalProfit=totalIn-totalPay;
   const groupMode=['job','worker','client'].includes(window._profitGroup)?window._profitGroup:'job';
   if(LEGACY_FINANCE_CORRECTION_WARNINGS.length)return _ownerFinanceLedgerStop('💰 売上（入金予定月・回収予定）',LEGACY_FINANCE_CORRECTION_WARNINGS.slice(0,3).join(' / '));
@@ -9362,7 +9381,7 @@ function rProjProfit(){
   <select style="width:150px" onchange="window._profitMonth=this.value;render()">
     ${months.map(m=>`<option value="${m}" ${m===curM?'selected':''}>${m}</option>`).join('')}
   </select>
-  <span style="font-size:12px;color:var(--t2)">回収予定 ${jobs.length}件${paidHidden?` ・ 入金済み ${paidHidden}件は非表示`:''}</span>
+  <span style="font-size:12px;color:var(--t2)">回収予定 ${jobs.length}親案件・${visibleRows.length}明細${paidHidden?` ・ 入金済み ${paidHidden}親案件は非表示`:''}</span>
 </div>
 <div class="rev-tabs" style="margin-bottom:14px" aria-label="利益のまとめ方">
   <button class="rev-tab ${groupMode==='job'?'act':''}" onclick="window._profitGroup='job';render()">案件別</button>
@@ -9379,17 +9398,26 @@ function rProjProfit(){
 </div>
 ${jobs.length?(groupMode==='job'?`<div class="card" style="padding:0;overflow:hidden">
   <div class="profit-row" style="font-weight:700;font-size:12px;color:var(--t2);background:var(--card2)">
-    <span>案件名</span><span>売上</span><span>支払</span><span>利益</span><span>状態</span>
+    <span>親案件 / サブ案件</span><span>売上</span><span>支払</span><span>利益</span><span>状態</span>
   </div>
-  ${jobs.map(j=>{const pr=jobMainProfit(j);const cl=S.clients.find(c=>c.id===j.clientId);
-  return`<div class="profit-row">
-    <span style="font-weight:600;cursor:pointer" onclick="openJobModal('${j.id}')">${esc(j.title)}${j.status!=='完了'?` <span class="badge ba" style="font-size:9px">${esc(j.status)}</span>`:''}<br><span style="font-size:11px;color:var(--t2)">${cl?esc(cl.name):''}${_jobPaymentDate(j)?` | 入金予定 ${_jobPaymentDate(j)}`:' | 入金予定日未設定'}</span></span>
-    <span style="font-weight:700;color:var(--blue)">¥${jobMainIn(j).toLocaleString()}</span>
-    <span style="color:var(--amber)">¥${jobMainOut(j).toLocaleString()}</span>
-    <span style="${pr>=0?'color:var(--green)':'color:var(--red)'}">¥${pr.toLocaleString()}</span>
-    <span><button class="btn btn-xs" onclick="event.stopPropagation();markJobPaid('${j.id}')" style="border:1px solid var(--green);color:var(--green);background:transparent;padding:2px 7px;border-radius:100px;font-size:10px;cursor:pointer;white-space:nowrap">入金済みにする</button></span>
+  ${jobs.map(j=>{const rows=_profitSubcaseRows(j,curM),inTotal=rows.reduce((s,row)=>s+row.inAmount,0),outTotal=rows.reduce((s,row)=>s+row.outAmount,0),pr=inTotal-outTotal,cl=S.clients.find(c=>c.id===j.clientId),hasSubcases=rows.some(row=>row.index>=0);
+  return`<div style="border-bottom:1px solid var(--border)">
+    <div class="profit-row" style="background:var(--card2)">
+      <span style="font-weight:700;cursor:pointer" onclick="openJobModal('${j.id}')">${esc(j.title)}${hasSubcases?` <span class="badge bc" style="font-size:9px">サブ案件 ${rows.length}件</span>`:''}${j.status!=='完了'?` <span class="badge ba" style="font-size:9px">${esc(j.status)}</span>`:''}<br><span style="font-size:11px;color:var(--t2)">${cl?esc(cl.name):''}${rows.length===1&&rows[0].paymentDate?` | 入金予定 ${esc(rows[0].paymentDate)}`:hasSubcases?' | 入金予定日はサブ案件ごと':''}</span></span>
+      <span style="font-weight:700;color:var(--blue)">¥${inTotal.toLocaleString()}</span>
+      <span style="color:var(--amber)">¥${outTotal.toLocaleString()}</span>
+      <span style="font-weight:700;color:${pr>=0?'var(--green)':'var(--red)'}">¥${pr.toLocaleString()}</span>
+      <span><button class="btn btn-xs" onclick="event.stopPropagation();markJobPaid('${j.id}')" style="border:1px solid var(--green);color:var(--green);background:transparent;padding:2px 7px;border-radius:100px;font-size:10px;cursor:pointer;white-space:nowrap">入金済みにする</button></span>
+    </div>
+    ${hasSubcases?`<details class="video-subcase-list profit-subcase-details" onclick="event.stopPropagation()"><summary class="video-subcase-head"><span>↳ サブ案件明細</span><span>${rows.length}件</span></summary><div style="background:var(--surface);border-top:1px solid var(--border)">${rows.map(row=>{const subPr=row.inAmount-row.outAmount;return`<div class="profit-row" style="padding-left:28px;font-size:12px">
+      <span style="cursor:pointer" onclick="openJobModal('${j.id}')"><span style="color:var(--t2)">↳</span> ${esc(row.title)}<br><span style="font-size:10px;color:var(--t2)">${row.paymentDate?`入金予定 ${esc(row.paymentDate)}`:'入金予定日未設定'}${row.status?` ・ ${esc(row.status)}`:''}</span></span>
+      <span style="color:var(--blue)">¥${row.inAmount.toLocaleString()}</span>
+      <span style="color:var(--amber)">¥${row.outAmount.toLocaleString()}</span>
+      <span style="font-weight:700;color:${subPr>=0?'var(--green)':'var(--red)'}">¥${subPr.toLocaleString()}</span>
+      <span style="font-size:10px;color:var(--t3)">親で管理</span>
+    </div>`;}).join('')}</div></details>`:''}
   </div>`;}).join('')}
-</div>`:_profitGroupedHtml(jobs,groupMode))
+</div>`:_profitGroupedHtml(jobs,groupMode,curM))
 :`<div class="empty" style="padding:30px 0"><div class="empty-icon">💰</div><div>${curM} の回収予定案件はありません${paidHidden?`（入金済み ${paidHidden}件は非表示）`:''}</div></div>`}`;
 }
 
@@ -15023,10 +15051,16 @@ async function advanceLegacyPortalSubcaseWorkflow(portalUid,jobId,controlKey){
   const images=document.getElementById(`${controlKey}-images`)?.value||'';
   await advancePortalWorkflow(portalUid,jobId,action,reason,completionDate,images,{keepOpen:true});
 }
+function syncJobSubStatus(select){
+  const row=select?.closest('.j-sub-row');if(!row)return;
+  const checkbox=row.querySelector('.chk');
+  if(checkbox)checkbox.classList.toggle('done',select.value==='完了');
+  updateJobInternalScheduleRules();
+}
 function mkSubRow(s,ph,bk,originalIndex=-1,financeLocked=false){
   const _bk=bk||_curJobBiz();
   const _bc=bizCfgOf(_bk);
-  const st=s.status||_jobSubDefaultStatus(_bk);
+  const st=s.done?'完了':(s.status||_jobSubDefaultStatus(_bk));
   const portalStatusLocked=_legacyPortalStatusLocked(s);
   const portalProgressAction=portalStatusLocked?`openPortalJobModal(${JSON.stringify(String(s.portalUid))},${JSON.stringify(String(s.portalJobId))})`:'';
   const portalJob=portalStatusLocked?(PORTAL_JOBS||[]).find(job=>String(job._portalUid)===String(s.portalUid)&&String(job.id)===String(s.portalJobId)):null;
@@ -15034,6 +15068,10 @@ function mkSubRow(s,ph,bk,originalIndex=-1,financeLocked=false){
   const portalControlKey=`j-sub-progress-${String(s.portalUid||'')}-${String(s.portalJobId||'')}`.replace(/[^a-zA-Z0-9_-]/g,'_');
   const portalConfirmAction=portalStatusLocked?`advanceLegacyPortalSubcaseWorkflow(${JSON.stringify(String(s.portalUid))},${JSON.stringify(String(s.portalJobId))},${JSON.stringify(portalControlKey)})`:'';
   const portalInlineWorkflow='';
+  const statusOptions=[...new Set([st,..._bc.statuses])].map(status=>`<option value="${esc(status)}"${status===st?' selected':''}>${esc(bizStatusLabel(_bk,status))}</option>`).join('');
+  const statusControl=portalStatusLocked
+    ?`<input id="${esc(portalControlKey)}-status" class="j-sub-status" value="${esc(st)}" readonly aria-readonly="true" style="font-size:12px;padding:4px 6px">`
+    :`<select class="j-sub-status" style="font-size:12px;padding:4px 6px" onchange="syncJobSubStatus(this)">${statusOptions}</select>`;
   const draftSetter=Object.keys(s||{}).length?_editorDraftDateSetter(s):'creator';
   const isNew=!Object.keys(s||{}).length,internal=s.workerId===SELF_WID,editorCompletes=_bk==='haken'&&!internal,managerCompletesPortal=!!portalJob&&!_editorOwnsPortalCompletion(portalJob),managerCanSetCompletion=internal||managerCompletesPortal||(_bk==='edit'&&!portalStatusLocked),masterPrice=isNew?_ownerMasterClientUnitPrice(document.getElementById('j-cl')?.value||''):null,subPrice=s.unitPrice||(masterPrice===null?'':masterPrice);
   return`<div class="j-sub-row" data-sub-id="${esc(s.id||'')}" data-original-index="${Number.isInteger(originalIndex)?originalIndex:-1}" style="background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);padding:10px;margin-bottom:8px">
@@ -15046,7 +15084,7 @@ function mkSubRow(s,ph,bk,originalIndex=-1,financeLocked=false){
   </div>
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:5px">
     <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">ステータス</div>
-      <input ${portalStatusLocked?`id="${esc(portalControlKey)}-status"`:''} class="j-sub-status" value="${esc(st)}" readonly aria-readonly="true" style="font-size:12px;padding:4px 6px"><div class="fhint">進捗の変更は「編集進行ボード」で行います。</div>
+      ${statusControl}<div class="fhint">${portalStatusLocked?'進捗の変更は「編集進行ボード」で行います。':'このサブ案件のステータスをここで変更できます。親案件のステータスは自動集計されます。'}</div>
     </div>
     <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">担当者</div>
       <select class="j-sub-worker" data-selected-worker-id="${esc(s.workerId||'')}" data-hydrated="0" style="font-size:12px;padding:4px 6px" onpointerdown="hydrateJobSubWorkerSelect(this)" onfocus="hydrateJobSubWorkerSelect(this)" onchange="updSubPaymentRecipients()">
@@ -15113,8 +15151,7 @@ function mkSubRow(s,ph,bk,originalIndex=-1,financeLocked=false){
 	</div>`;
 }
 function mkSubRowReadOnly(s,ph,bk,originalIndex=-1,financeLocked=false){
-  const portalStatusLocked=_legacyPortalStatusLocked(s),portalControlKey=`j-sub-progress-${String(s?.portalUid||'')}-${String(s?.portalJobId||'')}`.replace(/[^a-zA-Z0-9_-]/g,'_'),status=videoStatusLabel(s?.done?'完了':s?.status||_jobSubDefaultStatus(bk));
-  return mkSubRow(s,ph,bk,originalIndex,financeLocked).replace(/<select[^>]*class="j-sub-status"[^>]*>[\s\S]*?<\/select>/,`<input ${portalStatusLocked?`id="${esc(portalControlKey)}-status"`:''} class="j-sub-status" value="${esc(status)}" readonly aria-readonly="true">`).replace('オーナーは一覧から進捗を変更できます。理由は省略でき、入力すると履歴に残ります。','進捗の変更は「編集進行ボード」で行います。').replace('現在の工程で選べる進捗だけを表示します。','進捗の変更は「編集進行ボード」で行います。');
+  return mkSubRow(s,ph,bk,originalIndex,financeLocked);
 }
 function addWorkerInline(){
   const name=document.getElementById('j-new-worker-inp')?.value.trim();
