@@ -21,7 +21,8 @@ test('video owner options keep pre-assignment flow and expose the nine official 
 
 test('linked subcases expose status as read-only outside the progress board', () => {
   assert.match(index, /function _legacyPortalStatusLocked\(record\)\{return !!\(record&&String\(record\.portalUid\|\|''\)\.trim\(\)&&String\(record\.portalJobId\|\|''\)\.trim\(\)\);\}/);
-  assert.doesNotMatch(index, /id="j-stat"/);
+  assert.match(index, /ownerCanEditStandaloneStatus=!!j&&!hasSubcaseStructure&&!linkedPortalParent&&_isActualOwner\(\)&&!_rolePreviewActive\(\)/);
+  assert.match(index, /<input id="j-stat" value="\$\{esc\(bizStatusLabel\(jbiz,currentModalStatus\)\)\}" readonly aria-readonly="true">/);
   assert.match(index, /function mkSubRow\(s,ph,bk,originalIndex=-1,financeLocked=false\)/);
   assert.match(index, /class="j-sub-status" value="\$\{esc\(status\)\}" readonly aria-readonly="true"/);
   assert.match(index, /function _portalSubcaseStatusOptions\(job\)/);

@@ -44,16 +44,16 @@ test('portal child documents are grouped under a display-only parent and keep a 
   vm.createContext(context);
   vm.runInContext(`${sourceBetween('_videoPortalGroupKey', '_videoPortalParentLead')}${sourceBetween('_videoPortalParentLead', '_videoGroupPortalJobs')}${sourceBetween('_videoGroupPortalJobs', '_videoJobs')}this.groupPortal=_videoGroupPortalJobs;`, context);
   const result = context.groupPortal([
-    { _portalUid: 'editor-1', id: 'child-a', _raw: { parentCaseId: 'parent-9', parentCaseName: '9月分' }, title: '動画A', clientDisplay: 'クライアント', deadline: '2026-09-01', status: '進行中', assignee: '編集者A', biz: 'haken', updatedAt: 1 },
-    { _portalUid: 'editor-1', id: 'child-b', _raw: { parentCaseId: 'parent-9', parentCaseName: '9月分' }, title: '動画B', clientDisplay: 'クライアント', deadline: '2026-09-02', status: '確認待ち', assignee: '編集者B', biz: 'haken', updatedAt: 2 },
+    { _portalUid: 'editor-1', id: 'child-a', _raw: { parentCaseId: 'parent-9', parentCaseName: '9月分', subtaskIndex: 1 }, title: '動画A', clientDisplay: 'クライアント', deadline: '2026-09-01', status: '進行中', assignee: '編集者A', biz: 'haken', updatedAt: 1 },
+    { _portalUid: 'editor-1', id: 'child-b', _raw: { parentCaseId: 'parent-9', parentCaseName: '9月分', subtaskIndex: 0 }, title: '動画B', clientDisplay: 'クライアント', deadline: '2026-09-02', status: '確認待ち', assignee: '編集者B', biz: 'haken', updatedAt: 2 },
     { _portalUid: 'editor-1', id: 'single', _raw: { parentCaseId: 'single', parentCaseName: '単発案件' }, title: '単発案件', clientDisplay: 'クライアント', deadline: '2026-09-03', status: '進行中', assignee: '編集者A', biz: 'edit', updatedAt: 3 },
   ]);
   const parent = result.find(job => job._aggregateParent);
   assert.equal(parent.title, '9月分');
   assert.equal(parent._portalChildCount, 2);
   assert.deepEqual(JSON.parse(JSON.stringify(parent.subtasks.map(job => [job.id, job._portalChildPortalUid, job._portalChildJobId]))), [
-    ['child-a', 'editor-1', 'child-a'],
     ['child-b', 'editor-1', 'child-b'],
+    ['child-a', 'editor-1', 'child-a'],
   ]);
   assert.equal(result.find(job => job.id === 'single')._aggregateParent, undefined);
   const card = sourceBetween('_videoCard', 'openVideoLegacySafeModal');

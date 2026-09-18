@@ -58,22 +58,26 @@ test('an unknown status never wins over a known one', () => {
   assert.equal(aggregate([{ status: '謎ステータス' }]), '謎ステータス');
 });
 
-test('the case form does not show a parent status field', () => {
-  assert.doesNotMatch(index, /id="jf-parent-status"/);
-  assert.doesNotMatch(index, /id="jf-stat"/);
+test('the case form shows parent status for ordinary cases and hides it for subcase parents', () => {
+  assert.match(index, /id="jf-parent-status"/);
+  assert.match(index, /const ownerCanEditStandaloneStatus=!!j&&!hasSubcaseStructure&&!linkedPortalParent&&_isActualOwner\(\)&&!_rolePreviewActive\(\)/);
+  assert.match(index, /ownerCanEditStandaloneStatus\s*\n\s*\?`<select id="j-stat" onchange="jobStatusChanged\(this\)">/);
+  assert.match(index, /通常案件の全ステータスを変更できます。/);
+  assert.match(index, /<input id="j-stat" value="\$\{esc\(bizStatusLabel\(jbiz,currentModalStatus\)\)\}" readonly aria-readonly="true">/);
   assert.doesNotMatch(index, /id="jf-stat-auto"/);
   assert.doesNotMatch(index, /id="j-stat-auto"/);
-  assert.doesNotMatch(index, /updateJobParentStatusRule/);
+  assert.match(index, /'jf-parent-status'.*'jf-parent-worker'/);
 });
 
 test('saveJob writes the derived status and does not lock the save behind the ops checklist', () => {
   const save = functionSource(index, 'saveJob');
   assert.match(save, /let parentStatusAuto=subtasks\.length>0&&!_legacyPortalStatusLocked\(current\);/);
   assert.match(save, /const finalStatus=parentStatusAuto\?_aggregateSubcaseStatus\(currentBiz,subtasks,_jobSubDefaultStatus\(currentBiz\)\):requestedStatus;/);
-  assert.match(save, /const requestedStatus=String\(current\?\.status\|\|JOB_MODAL_PRE_STATUS\|\|_jobSubDefaultStatus\(currentBiz\)\);/);
+  assert.match(save, /const requestedStatus=ownerCanEditStandaloneStatus\?String\(statusField\?\.value\|\|current\.status\|\|JOB_MODAL_PRE_STATUS\|\|_jobSubDefaultStatus\(currentBiz\)\):String\(current\?\.status\|\|JOB_MODAL_PRE_STATUS\|\|_jobSubDefaultStatus\(currentBiz\)\);/);
+  assert.match(save, /type:'owner_modal_status_update'/);
   assert.match(save, /status:finalStatus,/);
   assert.match(save, /const entersOperationalCompletion=!parentStatusAuto&&opsRequiresChecklist/);
-  assert.doesNotMatch(save, /getElementById\('j-stat'\)/);
+  assert.match(save, /const statusField=document\.getElementById\('j-stat'\)/);
 });
 
 // 実アプリで駆動して判明: 新規サブ案件の既定が「案件掲載中」（編集者募集の掲載中）だったため、

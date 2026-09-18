@@ -30,6 +30,23 @@ test('calendar entries are draggable and every day cell accepts a drop for the d
   assert.match(css,/\.case-calendar-item\[draggable="true"\][^{]*\{cursor:grab\}/);
 });
 
+test('calendar and priority rows keep parent order before subcase order',()=>{
+  const context={PBIZ:'edit',source:[
+    {id:'parent-a',biz:'edit',status:'進行中',subtasks:[
+      {id:'c',title:'C',status:'進行中',editorDraftDate:'2026-09-18'},
+      {id:'d',title:'D',status:'進行中',editorDraftDate:'2026-09-18'},
+    ]},
+    {id:'parent-b',biz:'edit',status:'進行中',subtasks:[
+      {id:'e',title:'E',status:'進行中',editorDraftDate:'2026-09-18'},
+      {id:'f',title:'F',status:'進行中',editorDraftDate:'2026-09-18'},
+    ]},
+  ]};
+  vm.createContext(context);
+  vm.runInContext(`${functionSource('_caseScheduleRows')}\n${functionSource('_caseScheduleSortRows')}\nthis.rows=_caseScheduleSortRows(_caseScheduleRows('editorDraftDate','edit',source));`,context);
+  assert.deepEqual(JSON.parse(JSON.stringify(context.rows.map(row=>row.sub.title))),['C','D','E','F']);
+  assert.deepEqual(JSON.parse(JSON.stringify(context.rows.map(row=>row._parentOrder))),[0,0,1,1]);
+});
+
 function makeContext({owner=true}={}){
   const calls=[];
   const context={
@@ -130,7 +147,7 @@ test('setting the parent job progress to 完了 fills the owner-recorded deliver
   context.completed={disabled:false,value:''};
   context.changed({value:'進行中'});
   assert.equal(context.completed.value,'');
-  assert.doesNotMatch(html,/<select id="j-stat"/);
+  assert.match(html,/ownerCanEditStandaloneStatus=!!j&&!hasSubcaseStructure&&!linkedPortalParent&&_isActualOwner\(\)&&!_rolePreviewActive\(\)/);
 });
 
 test('saving a job or subcase as 完了 without a delivery date falls back to today',()=>{
@@ -152,8 +169,8 @@ test('the calendar and priority views can be limited to mono.create internal edi
     {type:'job',job:{id:'e',workerIds:[],assignee:'mono.create社内対応'}},
   ]};
   vm.createContext(context);
-  vm.runInContext(`${functionSource('_caseScheduleRowInternal')}\n${functionSource('_caseScheduleScopedRows')}\nthis.scoped=_caseScheduleScopedRows;`,context);
-  assert.deepEqual(context.scoped('editorDraftDate').map(r=>r.sub?r.sub.id:r.job.id),['a','d1','e']);
+  vm.runInContext(`${functionSource('_caseScheduleRowInternal')}\n${functionSource('_caseScheduleSortRows')}\n${functionSource('_caseScheduleScopedRows')}\nthis.scoped=_caseScheduleScopedRows;`,context);
+  assert.deepEqual(JSON.parse(JSON.stringify(context.scoped('editorDraftDate').map(r=>r.sub?r.sub.id:r.job.id))),['a','d1','e']);
   context.CASE_CAL_SCOPE='all';
   assert.equal(context.scoped('editorDraftDate').length,6);
 });

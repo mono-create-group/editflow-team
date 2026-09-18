@@ -46,12 +46,13 @@ test('subcase detail exposes a read-only status and routes changes to the progre
   assert.match(saver, /fromStatus:previousStatus/);
 });
 
-test('the progress board is the only visible status-change entry point', () => {
+test('ordinary owner cases can change status in the case form while subcase progress stays on the board', () => {
   const board = functionSource('_videoProgressBoard');
   assert.match(board, /進捗を変更できる場所はここだけです/);
   assert.match(board, /video-progress-change/);
   assert.match(board, /_videoProgressBoardAction\(parent,row\)/);
-  assert.doesNotMatch(index, /id="j-stat"/);
+  assert.match(index, /ownerCanEditStandaloneStatus\s*\n\s*\?`<select id="j-stat" onchange="jobStatusChanged\(this\)">/);
+  assert.match(index, /サブ案件がある場合、親案件はサブ案件から自動集計します。/);
   assert.doesNotMatch(index, /class="j-sub-status"[^>]*<\/select>/);
   assert.match(index, /function mkSubRow\(s,ph,bk,originalIndex=-1,financeLocked=false\)/);
   assert.match(functionSource('mkSubRowReadOnly'), /readonly aria-readonly/);
