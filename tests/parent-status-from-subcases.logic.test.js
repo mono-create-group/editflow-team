@@ -60,7 +60,7 @@ test('an unknown status never wins over a known one', () => {
 
 test('the case form shows parent status for ordinary cases and hides it for subcase parents', () => {
   assert.match(index, /id="jf-parent-status"/);
-  assert.match(index, /const ownerCanEditStandaloneStatus=!!j&&!hasSubcaseStructure&&!linkedPortalParent&&_isActualOwner\(\)&&!_rolePreviewActive\(\)/);
+  assert.match(index, /const ownerCanEditStandaloneStatus=!hasSubcaseStructure&&!linkedPortalParent&&_isActualOwner\(\)&&!_rolePreviewActive\(\)/);
   assert.match(index, /ownerCanEditStandaloneStatus\s*\n\s*\?`<select id="j-stat" onchange="jobStatusChanged\(this\)">/);
   assert.match(index, /通常案件の全ステータスを変更できます。/);
   assert.match(index, /<input id="j-stat" value="\$\{esc\(bizStatusLabel\(jbiz,currentModalStatus\)\)\}" readonly aria-readonly="true">/);
@@ -73,7 +73,7 @@ test('saveJob writes the derived status and does not lock the save behind the op
   const save = functionSource(index, 'saveJob');
   assert.match(save, /let parentStatusAuto=subtasks\.length>0&&!_legacyPortalStatusLocked\(current\);/);
   assert.match(save, /const finalStatus=parentStatusAuto\?_aggregateSubcaseStatus\(currentBiz,subtasks,_jobSubDefaultStatus\(currentBiz\)\):requestedStatus;/);
-  assert.match(save, /const requestedStatus=ownerCanEditStandaloneStatus\?String\(statusField\?\.value\|\|current\.status\|\|JOB_MODAL_PRE_STATUS\|\|_jobSubDefaultStatus\(currentBiz\)\):String\(current\?\.status\|\|JOB_MODAL_PRE_STATUS\|\|_jobSubDefaultStatus\(currentBiz\)\);/);
+  assert.match(save, /const requestedStatus=ownerCanEditStandaloneStatus\?String\(statusField\?\.value\|\|current\?\.status\|\|JOB_MODAL_PRE_STATUS\|\|_jobSubDefaultStatus\(currentBiz\)\):String\(current\?\.status\|\|JOB_MODAL_PRE_STATUS\|\|_jobSubDefaultStatus\(currentBiz\)\);/);
   assert.match(save, /type:'owner_modal_status_update'/);
   assert.match(save, /status:finalStatus,/);
   assert.match(save, /const entersOperationalCompletion=!parentStatusAuto&&opsRequiresChecklist/);
@@ -96,4 +96,40 @@ test('a brand-new subcase starts at 未着手 so adding one does not demote the 
   // 折りたたみカード・読み出し・保存の既定と揃っている。
   assert.match(index, /videoStatusLabel\(record\?\.status\|\|'未着手'\)/);
   assert.match(index, /requestedSubStatus=el\.querySelector\('\.j-sub-status'\)\?\.value\|\|'未着手'/);
+});
+
+// 新規追加でも既存編集と同じ判定・保存値を使い、権限と親子集計は維持する。
+test('new standalone status is selectable and read for save only for the owner', () => {
+  const modal = functionSource(index, 'openJobModal');
+  const display = modal.slice(modal.indexOf('  const ownerCanEditStandaloneStatus='), modal.indexOf('  JOB_MODAL_SUB_RECORDS='));
+  const save = functionSource(index, 'saveJob');
+  const selection = save.slice(save.indexOf('  const ownerCanEditStandaloneStatus='), save.indexOf('  const selWorkerIds='));
+  const check = ({current = null, owner = true, preview = false, children = false, selected = '進行中', preStatus = ''} = {}) => {
+    const ctx = vm.createContext({
+      j: current, current, hasSubcaseStructure: children, linkedPortalParent: !!current?.portalJobId,
+      jbiz: 'edit', currentBiz: 'edit', preStatus, JOB_MODAL_PRE_STATUS: preStatus,
+      _isActualOwner: () => owner, _rolePreviewActive: () => preview,
+      _legacyPortalStatusLocked: record => !!record?.portalJobId,
+      _jobSubDefaultStatus: () => '未着手', bizCfgOf: () => ({statuses: EDIT_STATUSES}),
+      bizStatOpts: (_biz, status) => `<option>${status}</option>`, bizStatusLabel: (_biz, status) => status, esc: String,
+      document: {getElementById: () => ({value: selected})}, toast: () => 'rejected',
+    });
+    const field = vm.runInContext(`(() => {${display}; return standaloneStatusField;})()`, ctx);
+    const value = vm.runInContext(`(() => {${selection}; return requestedStatus;})()`, ctx);
+    return {field, value};
+  };
+  for (const selected of EDIT_STATUSES) {
+    const result = check({selected});
+    assert.match(result.field, /<select id="j-stat"/);
+    assert.equal(result.value, selected);
+  }
+  assert.equal(check({selected: ''}).value, '未着手');
+  assert.equal(check({selected: '', preStatus: '修正中'}).value, '修正中');
+  assert.equal(check({selected: 'invalid'}).value, 'rejected');
+  assert.equal(check({current: {status: '未着手'}}).value, '進行中');
+  for (const scenario of [{owner: false}, {preview: true}, {children: true}, {current: {status: '未着手', portalJobId: 'linked'}}]) {
+    const result = check(scenario);
+    assert.match(result.field, /readonly/);
+    assert.equal(result.value, '未着手');
+  }
 });

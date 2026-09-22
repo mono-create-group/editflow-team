@@ -21,7 +21,7 @@ test('video owner options keep pre-assignment flow and expose the nine official 
 
 test('linked subcases keep status read-only while ordinary subcases use the case editor control', () => {
   assert.match(index, /function _legacyPortalStatusLocked\(record\)\{return !!\(record&&String\(record\.portalUid\|\|''\)\.trim\(\)&&String\(record\.portalJobId\|\|''\)\.trim\(\)\);\}/);
-  assert.match(index, /ownerCanEditStandaloneStatus=!!j&&!hasSubcaseStructure&&!linkedPortalParent&&_isActualOwner\(\)&&!_rolePreviewActive\(\)/);
+  assert.match(index, /ownerCanEditStandaloneStatus=!hasSubcaseStructure&&!linkedPortalParent&&_isActualOwner\(\)&&!_rolePreviewActive\(\)/);
   assert.match(index, /<input id="j-stat" value="\$\{esc\(bizStatusLabel\(jbiz,currentModalStatus\)\)\}" readonly aria-readonly="true">/);
   assert.match(index, /function mkSubRow\(s,ph,bk,originalIndex=-1,financeLocked=false\)/);
   const row = index.slice(index.indexOf('function mkSubRow('), index.indexOf('\nfunction addWorkerInline'));
