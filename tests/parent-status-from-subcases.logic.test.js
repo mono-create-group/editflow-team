@@ -106,7 +106,7 @@ test('new standalone status is selectable and read for save only for the owner',
   const selection = save.slice(save.indexOf('  const ownerCanEditStandaloneStatus='), save.indexOf('  const selWorkerIds='));
   const check = ({current = null, owner = true, preview = false, children = false, selected = '進行中', preStatus = ''} = {}) => {
     const ctx = vm.createContext({
-      j: current, current, hasSubcaseStructure: children, linkedPortalParent: !!current?.portalJobId,
+      j: current, rawJob: current, current, PORTAL_JOBS: [], _ownerPortalInlineHtml: () => '', hasSubcaseStructure: children, linkedPortalParent: !!current?.portalJobId,
       jbiz: 'edit', currentBiz: 'edit', preStatus, JOB_MODAL_PRE_STATUS: preStatus,
       _isActualOwner: () => owner, _rolePreviewActive: () => preview,
       _legacyPortalStatusLocked: record => !!record?.portalJobId,

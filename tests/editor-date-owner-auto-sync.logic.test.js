@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const {extract} = require('./helpers/owner-progress-source.cjs');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const applyStart = html.indexOf('function _applyPortalToLegacy(');
@@ -41,6 +42,7 @@ test('an editor draft date updates only the linked legacy child and is idempoten
     _videoUpdatedMillis: value => value?.toMillis?.() || Number(value || 0),
     _myEmail: () => 'owner@example.test',
     _isOwner: () => true,
+    jobBiz: () => 'edit', bizCfgOf: () => ({statuses:['進行中','先方確認中','完了']}), _jobSubDefaultStatus: () => '進行中',
     Date,
     JSON,
     Object,
@@ -49,7 +51,7 @@ test('an editor draft date updates only the linked legacy child and is idempoten
     Array,
   };
   vm.createContext(context);
-  vm.runInContext(`${applySource}\nthis.applyPortal=_applyPortalToLegacy;`, context);
+  vm.runInContext(`${extract('_legacyPortalStatusLocked')}\n${extract('_aggregateSubcaseStatus')}\n${applySource}\nthis.applyPortal=_applyPortalToLegacy;`, context);
 
   const portal = {
     id: 'legacy_legacy-parent_WD-S086',
@@ -69,6 +71,11 @@ test('an editor draft date updates only the linked legacy child and is idempoten
   assert.equal(linked.statusHistory.at(-1).subId, 'WD-S086');
   assert.equal(context.applyPortal(portal, false), false, 'same portal snapshot must not create a write loop');
 
+  assert.equal(context.applyPortal({...portal,status:'完了',completedDeliveryDate:'2026-09-18'},false),true);
+  assert.equal(linked.subtasks[0].done,true);
+  assert.equal(linked.status,'進行中','unfinished sibling prevents premature parent completion');
+  assert.equal(context.applyPortal({...portal,id:'legacy_legacy-parent_WD-S087',legacySubtaskId:'WD-S087',status:'完了',completedDeliveryDate:'2026-09-18'},false),true);
+  assert.equal(linked.status,'完了');
   const before = context.S.jobs.length;
   assert.equal(context.applyPortal({ ...portal, id: 'unlinked', legacyParentId: 'missing-parent' }, false), false);
   assert.equal(context.S.jobs.length, before, 'automatic sync never creates an unlinked legacy case');
@@ -100,10 +107,11 @@ test('a snapshot from the former assignee cannot revert a freshly reassigned chi
     _videoUpdatedMillis: value => Number(value || 0),
     _myEmail: () => 'owner@example.test',
     _isOwner: () => true,
+    jobBiz: () => 'edit', bizCfgOf: () => ({statuses:['進行中','先方確認中','完了']}), _jobSubDefaultStatus: () => '進行中',
     Date, JSON, Object, String, Number, Array,
   };
   vm.createContext(context);
-  vm.runInContext(`${applySource}\nthis.applyPortal=_applyPortalToLegacy;`, context);
+  vm.runInContext(`${extract('_legacyPortalStatusLocked')}\n${extract('_aggregateSubcaseStatus')}\n${applySource}\nthis.applyPortal=_applyPortalToLegacy;`, context);
 
   const staleMiuraPortal = {
     id: 'legacy_legacy-parent_WD-S083',

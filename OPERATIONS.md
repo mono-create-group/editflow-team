@@ -172,3 +172,24 @@ owner/core-staff tabs can fail closed; do not weaken the rules to keep them open
    dedicated editor portal is corrected. Do not grant editors access to the legacy
    shared workspace as a workaround.
 4. Re-run the read-only QA and local rules dry-run before attempting the next release.
+
+## Owner status entry points (2026-09-23)
+
+Owners can change progress in case editors, linked subcase details, portal details,
+project lists/cards, calendar, priority, profit, client/worker views and the submission queue.
+Do not restore a board-only owner restriction. Other roles and readonly role previews
+retain their existing permissions. Aggregate parents are changed through their children.
+
+Linked records always use the audited portal writer (`setPortalWorkflowStatus`), not a
+raw legacy status write. `_ownerPortalInlineHtml` is shared across modal entry points;
+a successful inline save preserves unrelated unsaved fields and updates status, done,
+completion date and the parent aggregate. Completion confirmation and finalized billing
+protections still apply. Escape the entire generated onclick attribute: unescaped JSON
+quotes previously broke the subcase-detail and ordinary-progress save buttons.
+
+Regression verification: `npm run test:unit`, `npm run test:release`. For isolated browser
+checks run `node scripts/build-owner-progress-fixture.cjs`, serve the repository locally,
+and open `tests/owner-progress-everywhere.visual.html`. This generated fixture uses fake
+records/local storage, a fake Firestore batch and no production authentication. Verify
+completion/reload, ordinary status save, preservation of draft inputs, failure/retry and
+readonly role previews. Never use live case writes as regression fixtures.

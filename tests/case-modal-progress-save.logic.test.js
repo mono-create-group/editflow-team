@@ -37,11 +37,11 @@ test('subcase detail lets the owner edit ordinary statuses while linked portal s
   const modal = index.slice(index.indexOf('function _videoSubcaseDetailHtml'), index.indexOf('\nfunction openLegacySubcaseDetail'));
   assert.match(modal, /ownerCanEditStatus=!portalDetail&&!!canEdit&&_isActualOwner\(\)&&!_rolePreviewActive\(\)&&!_legacyPortalStatusLocked\(sub\)/);
   assert.match(index, /function _legacySubcasePortalDetailStatus\(parent,sub,canEdit\)/);
-  assert.match(index, /toggleLegacySubcasePortalDetail\(this\)/);
-  assert.match(index, /連携済みサブ案件の全ステータスを変更できます/);
+  assert.match(index, /toggleOwnerInlineProgress\(this\)/);
+  assert.match(index, /この画面から連携先の進捗を変更できます/);
   assert.match(modal, /<select id="vs-status" onchange="jobStatusChanged\(this\)">/);
   assert.match(modal, /ownerCanEditStatus\?'オーナーはこの社内アプリから、サブ案件の全ステータスを変更できます。/);
-  assert.match(modal, /進捗の変更は「編集進行ボード」で行います。/);
+  assert.match(modal, /オーナーはこの画面から変更できます。その他の担当者は「編集進行ボード」を利用してください。/);
   assert.match(modal, /statusControl=portalDetail\?\.statusControl\|\|\(ownerCanEditStatus\?/);
   assert.match(index, /function openVideoProgressModal\(source,id,subId\)/);
   assert.match(index, /_videoWorkflowHtml\(job,portalUid,\{controls:true\}\)/);
@@ -57,7 +57,7 @@ test('subcase detail lets the owner edit ordinary statuses while linked portal s
 
 test('owner standalone and unlinked legacy subcase statuses can be changed in the case editor while portal status stays workflow-controlled', () => {
   const board = functionSource('_videoProgressBoard');
-  assert.match(board, /進捗を変更できる場所はここだけです/);
+  assert.match(board, /オーナーは案件編集・詳細・一覧からもステータスを変更できます/);
   assert.match(board, /video-progress-change/);
   assert.match(board, /_videoProgressBoardAction\(parent,row\)/);
   assert.match(index, /ownerCanEditStandaloneStatus\s*\n\s*\?`<select id="j-stat" onchange="jobStatusChanged\(this\)">/);

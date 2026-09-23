@@ -29,7 +29,7 @@ test('linked subcases keep status read-only while ordinary subcases use the case
   assert.match(row, /readonly aria-readonly="true"/);
   assert.match(row, /<select class="j-sub-status"/);
   assert.match(index, /function _portalSubcaseStatusOptions\(job\)/);
-  assert.match(index, /進捗の変更は「編集進行ボード」で行います。/);
+  assert.match(index, /オーナーはこの画面から変更できます。その他の担当者は「編集進行ボード」を利用してください。/);
   const esc = value => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const action = `openPortalJobModal(${JSON.stringify('uid"with-quote')},${JSON.stringify('job"with-quote')})`;
   const rendered = `<button onclick="${esc(action)}">進捗を開く</button>`;
@@ -42,7 +42,7 @@ test('portal job administration displays status only and rejects tampered raw st
   const save = index.slice(index.indexOf('async function savePortalJobAdmin'), index.indexOf('\nfunction _portalLegacyId'));
   assert.match(modal, /<input id="vp-status" value="\$\{esc\(bizStatusLabel\(portalBiz,j\.status\)\)\}" data-status="\$\{esc\(j\.status\)\}" readonly aria-readonly="true">/);
   assert.doesNotMatch(modal, /<select id="vp-status"/);
-  assert.match(modal, /進捗の変更は「編集進行ボード」で行います。/);
+  assert.match(modal, /オーナーはこの画面から変更できます。その他の担当者は「編集進行ボード」を利用してください。/);
   assert.match(save, /const statusField=document\.getElementById\('vp-status'\),requestedStatus=String\(statusField\?\.dataset\.status\|\|j\.status\);/);
   assert.match(save, /if\(String\(statusField\?\.value\|\|''\)!==bizStatusLabel\(_portalVideoBiz\(j\),j\.status\)\|\|requestedStatus!==j\.status\)return toast\('進捗は「進捗共有」の操作から更新してください','warn'\);/);
   assert.match(index, /function advancePortalWorkflow\(portalUid,id,action,providedReason,providedCompletionDate,providedImages,options\)/);
