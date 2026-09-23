@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260923-01"></script>
+<script src="./billing-terms.js?v=20260923-02"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -1002,7 +1002,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 .owner-inline-progress>button{justify-self:start;white-space:nowrap}.owner-inline-progress input[type="checkbox"]{width:auto}.owner-progress-action{margin:4px;white-space:nowrap}.owner-inline-progress [hidden]{display:none}
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260923-01">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260923-02">
 </head>
 <body class="owner-yellow-ui">
 
@@ -1062,8 +1062,8 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="./ai-bridge-client.js"></script>
-<script src="./owner-video-performance.js?v=20260923-01"></script>
-<script src="./feedback-workflow.js?v=20260923-01"></script>
+<script src="./owner-video-performance.js?v=20260923-02"></script>
+<script src="./feedback-workflow.js?v=20260923-02"></script>
 <script>/* lz-string 1.5.0 (MIT) — CDN非依存でオフライン/圧縮チーム同期を保証するためインライン化 */
 var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",e={};function t(r,o){if(!e[r]){e[r]={};for(var n=0;n<r.length;n++)e[r][r.charAt(n)]=n}return e[r][o]}var i={compressToBase64:function(r){if(null==r)return"";var n=i._compress(r,6,function(r){return o.charAt(r)});switch(n.length%4){default:case 0:return n;case 1:return n+"===";case 2:return n+"==";case 3:return n+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(n){return t(o,r.charAt(n))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(r){return null==r?"":""==r?null:i._decompress(r.length,16384,function(o){return r.charCodeAt(o)-32})},compressToUint8Array:function(r){for(var o=i.compress(r),n=new Uint8Array(2*o.length),e=0,t=o.length;e<t;e++){var s=o.charCodeAt(e);n[2*e]=s>>>8,n[2*e+1]=s%256}return n},decompressFromUint8Array:function(o){if(null==o)return i.decompress(o);for(var n=new Array(o.length/2),e=0,t=n.length;e<t;e++)n[e]=256*o[2*e]+o[2*e+1];var s=[];return n.forEach(function(o){s.push(r(o))}),i.decompress(s.join(""))},compressToEncodedURIComponent:function(r){return null==r?"":i._compress(r,6,function(r){return n.charAt(r)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),i._decompress(r.length,32,function(o){return t(n,r.charAt(o))}))},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(r,o,n){if(null==r)return"";var e,t,i,s={},u={},a="",p="",c="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<r.length;i+=1)if(a=r.charAt(i),Object.prototype.hasOwnProperty.call(s,a)||(s[a]=f++,u[a]=!0),p=c+a,Object.prototype.hasOwnProperty.call(s,p))c=p;else{if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++),s[p]=f++,c=String(a)}if(""!==c){if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++)}for(t=2,e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;for(;;){if(m<<=1,v==o-1){d.push(n(m));break}v++}return d.join("")},decompress:function(r){return null==r?"":""==r?null:i._decompress(r.length,32768,function(o){return r.charCodeAt(o)})},_decompress:function(o,n,e){var t,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:e(0),position:n,index:1};for(t=0;t<3;t+=1)l[t]=t;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return i}();"function"==typeof define&&define.amd?define(function(){return LZString}):"undefined"!=typeof module&&null!=module?module.exports=LZString:"undefined"!=typeof angular&&null!=angular&&angular.module("LZString",[]).factory("LZString",function(){return LZString});
 </script>
@@ -6982,7 +6982,8 @@ function _ownerProgressButton(parent,row=null,label='ステータス変更'){
   return`<button type="button" class="btn btn-g btn-xs owner-progress-action" onclick="event.stopPropagation();${esc(_ownerProgressAction(parent,row))}">${esc(label)}</button>`;
 }
 function _ownerStatusBadge(parent,row=null){
-  const record=row||parent||{},status=record.done?'完了':String(record.status||'未着手'),label=bizStatusLabel(jobBiz(parent),status);
+  const record=row||parent||{},raw=record._raw||record,portal=(PORTAL_JOBS||[]).find(job=>String(job._portalUid)===String(raw.portalUid||'')&&String(job.id)===String(raw.portalJobId||''));
+  const status=portal?.status||(record.done?'完了':String(record.status||'未着手')),label=bizStatusLabel(jobBiz(parent),status);
   const badge=`<span class="badge ${SCOLBG[status]||'bk'}">${esc(label)}</span>`;
   return _ownerCanEditProgress()?`${badge}${_ownerProgressButton(parent,row,'変更')}`:badge;
 }
@@ -10666,7 +10667,7 @@ const DOCLINK_SEEDS=[
    url:'https://mono-create-group.github.io/editflow-team/dm-manual.html?v=20260816-01',
    category:'マニュアル',notes:'新メンバー向け。アイコン・アカウント名の予約(早い者勝ち)・DM文章の作成・営業リストでの送付と記録まで1ページで完結',ver:3},
   {id:'doclink_invoice_manual',title:'請求書の作り方（編集者向けマニュアル・見本つき）',
-   url:'https://mono-create-group.github.io/editflow-team/invoice-manual.html?v=20260923-01',
+   url:'https://mono-create-group.github.io/editflow-team/invoice-manual.html?v=20260923-02',
    category:'マニュアル',notes:'編集者へ共有する。請求者情報の登録→完了案件を選んで明細（1案件＝1行）→確認して提出、締切と支払日、NG例/見本、FAQ',ver:1},
   {id:'doclink_dm_entry_form',title:'DM営業スタッフ 登録フォーム（応募者に送るURL）',
    url:'https://mono-create-group.github.io/editflow-team/dm-entry.html',
@@ -14658,9 +14659,10 @@ function _jobModalSubCompactHtml(record,index,biz,financeLocked=false){
   return`<div class="j-sub-shell" data-state-index="${index}">${_jobModalSubCompactBodyHtml(record,index,biz,financeLocked)}</div>`;
 }
 function _jobModalSubCompactBodyHtml(record,index,biz,financeLocked=false){
+  const portal=typeof PORTAL_JOBS==='undefined'?null:PORTAL_JOBS.find(job=>String(job._portalUid)===String(record?.portalUid||'')&&String(job.id)===String(record?.portalJobId||''));
   const workerId=String(record?.workerId||''),workerName=workerId?_jobModalWorkerLabel(workerId):'未割当';
   const dates=[record?.editorDraftDate?`編集者初稿 ${record.editorDraftDate}`:'',record?.clientDraftDate?`クライアント初稿 ${record.clientDraftDate}`:'',record?.deliveryDate?`納期 ${record.deliveryDate}`:'',record?.completedDeliveryDate?`納品日 ${record.completedDeliveryDate}`:'',record?.invoiceDate?`請求書 ${record.invoiceDate}`:'',record?.dueDate?`支払期日 ${record.dueDate}`:'',record?.paymentDate?`入金予定 ${record.paymentDate}`:''].filter(Boolean);
-  return`<div class="job-sub-compact"><div class="job-sub-compact-main"><b class="job-sub-compact-title">${esc(record?.title||`サブ案件 ${index+1}`)}</b><div class="job-sub-compact-meta"><span>${esc(videoStatusLabel(record?.status||'未着手'))}</span><span>担当 ${esc(workerName)}</span>${dates.map(value=>`<span>${esc(value)}</span>`).join('')}</div></div><div class="job-sub-compact-actions"><button type="button" class="btn btn-g btn-xs" onclick="expandJobSubEditor(this)">編集</button>${financeLocked?'':`<button type="button" class="btn btn-g btn-xs" onclick="removeJobSubEditor(this)" aria-label="${esc(record?.title||'サブ案件')}を削除">✕</button>`}</div></div>`;
+  return`<div class="job-sub-compact"><div class="job-sub-compact-main"><b class="job-sub-compact-title">${esc(record?.title||`サブ案件 ${index+1}`)}</b><div class="job-sub-compact-meta"><span>${esc(videoStatusLabel(portal?.status||record?.status||'未着手'))}</span><span>担当 ${esc(workerName)}</span>${dates.map(value=>`<span>${esc(value)}</span>`).join('')}</div></div><div class="job-sub-compact-actions"><button type="button" class="btn btn-g btn-xs" onclick="expandJobSubEditor(this)">編集</button>${financeLocked?'':`<button type="button" class="btn btn-g btn-xs" onclick="removeJobSubEditor(this)" aria-label="${esc(record?.title||'サブ案件')}を削除">✕</button>`}</div></div>`;
 }
 function _readJobSubEditorState(shell){
   const row=shell?.querySelector('.j-sub-row');if(!row)return{record:null,error:''};
@@ -15136,10 +15138,10 @@ function syncJobSubStatus(select){
 function mkSubRow(s,ph,bk,originalIndex=-1,financeLocked=false){
   const _bk=bk||_curJobBiz();
   const _bc=bizCfgOf(_bk);
-  const st=s.done?'完了':(s.status||_jobSubDefaultStatus(_bk));
   const portalStatusLocked=_legacyPortalStatusLocked(s);
   const portalProgressAction=portalStatusLocked?`openPortalJobModal(${JSON.stringify(String(s.portalUid))},${JSON.stringify(String(s.portalJobId))})`:'';
   const portalJob=portalStatusLocked?(PORTAL_JOBS||[]).find(job=>String(job._portalUid)===String(s.portalUid)&&String(job.id)===String(s.portalJobId)):null;
+  const st=portalJob?.status||(s.done?'完了':(s.status||_jobSubDefaultStatus(_bk)));
   const portalActions=portalJob?_portalWorkflowActionsForJob(portalJob):[],portalStatusOptions=portalJob?_portalSubcaseStatusOptions(portalJob):[];
   const portalControlKey=`j-sub-progress-${String(s.portalUid||'')}-${String(s.portalJobId||'')}`.replace(/[^a-zA-Z0-9_-]/g,'_');
   const portalConfirmAction=portalStatusLocked?`advanceLegacyPortalSubcaseWorkflow(${JSON.stringify(String(s.portalUid))},${JSON.stringify(String(s.portalJobId))},${JSON.stringify(portalControlKey)})`:'';
@@ -15152,7 +15154,7 @@ function mkSubRow(s,ph,bk,originalIndex=-1,financeLocked=false){
   const isNew=!Object.keys(s||{}).length,internal=s.workerId===SELF_WID,editorCompletes=_bk==='haken'&&!internal,managerCompletesPortal=!!portalJob&&!_editorOwnsPortalCompletion(portalJob),managerCanSetCompletion=internal||managerCompletesPortal||(_bk==='edit'&&!portalStatusLocked),masterPrice=isNew?_ownerMasterClientUnitPrice(document.getElementById('j-cl')?.value||''):null,subPrice=s.unitPrice||(masterPrice===null?'':masterPrice);
   return`<div class="j-sub-row" data-sub-id="${esc(s.id||'')}" data-original-index="${Number.isInteger(originalIndex)?originalIndex:-1}" style="background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);padding:10px;margin-bottom:8px">
   <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
-    <div class="chk${s.done?' done':''}" onclick="this.classList.toggle('done');updSubPrices()" style="flex-shrink:0"></div>
+    <div class="chk${st==='完了'?' done':''}" onclick="this.classList.toggle('done');updSubPrices()" style="flex-shrink:0"></div>
     <input class="j-sub-inp" value="${esc(s.title||'')}" placeholder="${ph||'サブタスク'}" style="flex:1" oninput="updSubPrices()">
     ${portalStatusLocked?`<button type="button" class="btn btn-g btn-xs" onclick="${esc(portalProgressAction)}">進捗を開く</button>`:''}
     <button type="button" class="btn btn-g btn-xs" onclick="collapseJobSubEditor(this.closest('.j-sub-shell'))">閉じる</button>
@@ -19109,7 +19111,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260923-01';
+const APP_VERSION='20260923-02';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -19186,13 +19188,13 @@ window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});  
 checkServerVersion();                                                              // 初回表示でも旧版を即時検出
   </script>
 <script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
-<script src="./editor-push.js?v=20260923-01"></script>
-<script src="./bulletin.js?v=20260923-01"></script>
-<script src="./direct-messages.js?v=20260923-01"></script>
+<script src="./editor-push.js?v=20260923-02"></script>
+<script src="./bulletin.js?v=20260923-02"></script>
+<script src="./direct-messages.js?v=20260923-02"></script>
 <script>
   try{if(V==='directmessages')render();else renderNav();}catch(error){console.warn('owner dm init',error);}
 </script>
-<script src="./manager-features.js?v=20260923-01"></script>
-<script src="./sales-video-leads.js?v=20260923-01"></script>
+<script src="./manager-features.js?v=20260923-02"></script>
+<script src="./sales-video-leads.js?v=20260923-02"></script>
 </body>
 </html>

@@ -88,3 +88,14 @@ test('all management entry surfaces have owner progress actions or the shared in
   assert.doesNotMatch(source,/進捗を変更できる場所はここだけです/);
   assert.doesNotMatch(source,/onclick="(?:advanceLegacyPortalSubcaseWorkflow|saveLegacyProgressFromBoard)\(\$\{JSON\.stringify/);
 });
+
+
+test('linked status badges use persisted portal progress over stale legacy done flags',()=>{
+  const c=context({PORTAL_JOBS:[{_portalUid:'u',id:'p',status:'先方確認中'}]});
+  const html=c._ownerStatusBadge({id:'legacy',status:'完了',done:true,portalUid:'u',portalJobId:'p'});
+  assert.match(html,/先方確認中/);assert.doesNotMatch(html,/>完了</);
+  assert.match(c._ownerStatusBadge({id:'ordinary',status:'進行中',done:true}),/>完了</);
+  vm.runInContext(extract('_jobModalSubCompactBodyHtml'),c);
+  const compact=c._jobModalSubCompactBodyHtml({title:'child',status:'完了',portalUid:'u',portalJobId:'p'},0,'edit');
+  assert.match(compact,/先方確認中/);assert.doesNotMatch(compact,/>完了</);
+});
