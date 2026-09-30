@@ -218,7 +218,7 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
     document.body.classList.toggle('signed-in',Boolean(state.user));
     $('environment').innerHTML=state.config?.mode==='fixture'?'<div class="fixture">ローカル検証用 · テスト用アカウントと保存データを使用しています。</div>':'';
     $('account').innerHTML=state.user?`<span>${admin()?'管理者':'お客様'}</span>${button(embedded?'社内アプリへ戻る':'ログアウト','logout')}`:'';
-    $('navigation').innerHTML=state.user?`<div class="nav-label">${admin()?'案件管理':'ご依頼の状況'}</div>${button('案件一覧','list')}${!admin()?button('新しい相談','new'):''}${embedded&&admin()?button('素材保管先の接続確認','drive-health'):''}${lineLink}`:'';
+    $('navigation').innerHTML=state.user?`<div class="nav-label">${admin()?'案件管理':'ご依頼の状況'}</div>${button('案件一覧','list')}${!admin()?button('新しい相談','new'):''}${embedded&&admin()?button('素材保管先の接続確認','drive-health'):''}${embedded&&admin()&&state.config?.driveRootProvisionAvailable===true?button('非公開の素材保管先を準備','drive-root-provision'):''}${lineLink}`:'';
   }
   async function checkDriveHealth() {
     if(!embedded||!admin())throw Error('社内アプリの管理者のみ確認できます。');
@@ -226,6 +226,12 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
     if(result.connectionVerified!==true||typeof result.canAddChildren!=='boolean'||typeof result.broadAccess!=='boolean')throw Error('接続確認の結果を取得できませんでした。');
     const message=result.canAddChildren?'素材保管先への接続とフォルダ追加権限を確認しました。':'接続できましたが、フォルダ追加権限がありません。';
     notice(message+(result.broadAccess?' 保管先には広い共有権限があります。非公開の保管先を確認してください。':'')+' お客様の共有アクセスは別途確認が必要です。',!result.canAddChildren||result.broadAccess);
+  }
+  async function provisionDriveRoot() {
+    if(!embedded||!admin()||state.config?.driveRootProvisionAvailable!==true)throw Error('この操作は現在利用できません。');
+    const result=await api('/api/maintenance/drive-root',{method:'POST',body:JSON.stringify({})});
+    if(typeof result.rootFolderId!=='string'||!/^[A-Za-z0-9_-]{1,120}$/.test(result.rootFolderId))throw Error('保管先の確認結果を取得できませんでした。');
+    notice('非公開の素材保管先を確認しました。保管先ID: '+result.rootFolderId+'。受付先の切り替えはまだ行っていません。');
   }
   async function loginScreen() {
     state.user=null;state.csrf=null;state.orders=[];state.order=null;state.materials=null;state.search='';state.filter='active';state.pageMeta=null;state.pageCursor=null;state.previousCursors=[];state.nextCursor=null;inquiryDraft=null;hearingDrafts.clear();listLoadGeneration++;state.view='login';chrome();
@@ -721,6 +727,7 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
     if(action==='remove-video'){const rows=$('inquiry-videos');if(rows.children.length===1){notice('相談する動画を1本以上入力してください。',true);return;}target.closest('[data-video-row]').remove();[...rows.children].forEach((row,i)=>row.querySelector('legend').textContent=`動画 ${i+1}`);syncVideoCount(target.closest('form'));return;}
     run(async()=>{
       if(action==='drive-health'){await checkDriveHealth();}
+      else if(action==='drive-root-provision'){await provisionDriveRoot();}
       else if(action==='notifications'){await loadNotifications();heading();}
       else if(action==='notify-send'){
         const i=Number(target.dataset.index),n=notificationItems[i];
