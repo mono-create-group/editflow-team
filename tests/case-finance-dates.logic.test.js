@@ -46,3 +46,10 @@ test('both detail routes use the section; shortcut reuses existing saves and cre
   assert.ok(extract('_readJobSubEditorState').includes(field));assert.ok(extract('saveJob').includes(field));
  }
 });
+test('legacy_sync standalone uses parent ID as its subtask ID and needs no promotion',()=>{
+ const {c,parent,job}=fixture();parent.subtasks=[];parent.portalUid='editor';parent.portalJobId='portal';
+ const standalone={...job,source:'legacy_sync',legacySubtaskId:parent.id};
+ const target=c._portalFinanceDateTarget(standalone);assert.ok(target);assert.equal(target.record,parent);assert.equal(target.index,-1);
+ assert.match(c._caseFinanceDatesHtml(target),/1999-01-01/);
+ assert.equal(c._portalFinanceDateTarget({...standalone,legacySubtaskId:'different'}),null);
+});
