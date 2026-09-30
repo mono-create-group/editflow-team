@@ -58,7 +58,9 @@ test('video director has a visible route to the editor self-service portal', () 
   assert.match(portalRenderer, /rolePreviewOpenEditor\('\$\{esc\(previewUid\)\}'\)/);
   assert.match(index, /GUIDE_PAGE_DEFS=\{\s*editorportal:/);
   assert.match(index, /GUIDE_PAGE_CHECKS=\{\s*editorportal:/);
-  assert.match(index, /id:'video',label:'動画編集事業',views:\['editorportal','videoedit'/);
+  const videoViews = index.match(/id:'video',label:'動画編集事業',views:\[([^\]]+)\]/)?.[1] || '';
+  assert.match(videoViews, /'editorportal'/);
+  assert.match(videoViews, /'videoedit'/);
   const directorViews = index.match(/'動画編集ディレクター':\[([^\]]+)\]/)?.[1] || '';
   assert.match(directorViews, /'editorportal'/);
   assert.match(index, /editorportal:rEditorPortal/);
