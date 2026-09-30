@@ -1,41 +1,33 @@
+import contextlib
 import importlib.util
-import json
+import io
+import os
+import subprocess
+import sys
 import unittest
 from pathlib import Path
-
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
-SPEC = importlib.util.spec_from_file_location(
-    "notify_system_update", ROOT / "scripts" / "notify-system-update.py"
-)
-MODULE = importlib.util.module_from_spec(SPEC)
-assert SPEC.loader is not None
-SPEC.loader.exec_module(MODULE)
+SCRIPT = ROOT / "scripts" / "notify-system-update.py"
 
 
-class NotificationHistoryTest(unittest.TestCase):
-    def test_finds_marker_in_json_escaped_japanese(self):
-        marker = "システム更新 20260825-02"
-        raw = json.dumps([{"body": f"[title]{marker}[/title]"}], ensure_ascii=True)
-        self.assertTrue(MODULE.history_has_marker(raw, marker))
+class RetiredChatworkSenderTest(unittest.TestCase):
+    def test_import_and_main_never_open_a_connection_or_read_credentials(self):
+        spec = importlib.util.spec_from_file_location("retired_sender", SCRIPT)
+        module = importlib.util.module_from_spec(spec)
+        with mock.patch("socket.socket.connect", side_effect=AssertionError("network forbidden")), mock.patch.dict(os.environ, {"CHATWORK_API_TOKEN": "fixture-not-a-secret"}), mock.patch("os.getenv", side_effect=AssertionError("credential lookup forbidden")):
+            spec.loader.exec_module(module)
+            with contextlib.redirect_stderr(io.StringIO()) as result:
+                self.assertEqual(module.main(["--send", "--version", "fixture"]), 0)
+            self.assertIn("no message sent", result.getvalue())
+        self.assertFalse(hasattr(module, "request"))
+        self.assertFalse(hasattr(module, "notify_all"))
 
-    def test_rejects_empty_or_invalid_history(self):
-        self.assertFalse(MODULE.history_has_marker("", "システム更新 1"))
-        self.assertFalse(MODULE.history_has_marker("not-json", "システム更新 1"))
-
-    def test_verified_notice_requires_marker_and_ai_disclosure_in_same_message(self):
-        marker = "システム更新 20260828-06"
-        valid = json.dumps([{"body": f"{marker}\n{MODULE.AI_DISCLOSURE}"}], ensure_ascii=False)
-        split = json.dumps([{"body": marker}, {"body": MODULE.AI_DISCLOSURE}], ensure_ascii=False)
-        self.assertTrue(MODULE.history_has_verified_notice(valid, marker))
-        self.assertFalse(MODULE.history_has_verified_notice(split, marker))
-
-    def test_fixed_release_message_has_marker_url_and_ai_disclosure(self):
-        message = MODULE.build_message("20260828-06", "https://example.com/app/")
-        self.assertIn("[title]システム更新 20260828-06[/title]", message)
-        self.assertIn("https://example.com/app/", message)
-        self.assertEqual(message.count(MODULE.AI_DISCLOSURE), 1)
-        self.assertTrue(message.endswith(f"{MODULE.AI_DISCLOSURE}\n[/info]"))
+    def test_legacy_cli_arguments_cannot_restore_sending(self):
+        result = subprocess.run([sys.executable, str(SCRIPT), "--send", "--version", "fixture", "--room-ids", "0"], capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("no message sent", result.stderr)
 
 
 if __name__ == "__main__":

@@ -154,13 +154,18 @@ owner/core-staff tabs can fail closed; do not weaken the rules to keep them open
 10. HP, AI advisory, and AI app work cannot enter their public/operational/completed
    milestones until their business-specific acceptance checklist is complete.
 
-## System-update notice
+## Chatwork automation retired (2026-09-30)
 
-1. Every app release must change `APP_VERSION` and the `sw.js` cache version together.
-2. The GitHub Actions workflow waits until that exact version is live, checks the
-   existing Chatwork room history, and posts one `システム更新` notice per version.
-3. It never creates a room. A missing API token, invalid existing room ID, or a Pages
-   timeout fails closed without sending a partial or duplicate notice.
+The user revoked all automated Chatwork messages, including system-update,
+weekly availability, and previously approved recovery notices. Their GitHub
+Actions workflows are disabled and removed. The three old script entrypoints
+are inert and cannot send, even when called with old arguments or credentials.
+Do not restore the former system-update notification exception.
+
+App releases still change `APP_VERSION` and `sw.js` cache versions together when
+client assets change. Disabling server-side notification tooling does not change
+those assets. Manual conversations, message history, inbound/pull integrations,
+and in-app Chatwork display-name checks remain intact.
 
 ## Rollback
 

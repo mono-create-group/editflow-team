@@ -456,9 +456,12 @@ def release_preflight() -> None:
         return
     required = [
         "firestore.rules", "firebase.json", "editor.html", "editor-features.js",
-        "manager-features.js", "scripts/notify-system-update.py",
-        ".github/workflows/system-update-notify.yml",
+        "manager-features.js",
     ]
+    retired_senders = ("system-update-notify.yml", "weekly-editor-schedule-reminder.yml", "approved-recovery-chatwork-announcements.yml")
+    for name in retired_senders:
+        if (ROOT / ".github" / "workflows" / name).exists():
+            fail(f"retired Chatwork sender workflow must not be restored: {name}")
     missing = []
     for name in required:
         tracked = subprocess.run(["git", "ls-files", "--error-unmatch", name],
@@ -468,7 +471,7 @@ def release_preflight() -> None:
     if missing:
         fail(f"release preflight: required files are untracked: {', '.join(missing)}")
     else:
-        ok("release preflight: rules, portal, and update notification tracked")
+        ok("release preflight: rules and portal tracked; retired Chatwork workflows absent")
 
 
 def main() -> int:
