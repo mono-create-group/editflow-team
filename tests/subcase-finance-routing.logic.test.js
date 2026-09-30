@@ -70,7 +70,8 @@ test('invoice listing and editor use subcase billing dates without parent fallba
 
   const jobDate = functionSource('_jobInvDate');
   assert.match(jobDate, /if\(subtasks\.length\)/);
-  assert.match(jobDate, /s\.invoiceDate\|\|s\.completedDeliveryDate\|\|s\.deliveryDate/);
+  assert.match(jobDate, /s=>s\.invoiceDate/);
+  assert.doesNotMatch(jobDate, /completedDeliveryDate|deliveryDate/);
 
   const editor = functionSource('openInvoiceEditor');
   assert.match(editor, /sub\.dueDate/);

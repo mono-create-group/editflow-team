@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20260930-04"></script>
+<script src="./billing-terms.js?v=20260930-05"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -1002,7 +1002,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 .owner-inline-progress>button{justify-self:start;white-space:nowrap}.owner-inline-progress input[type="checkbox"]{width:auto}.owner-progress-action{margin:4px;white-space:nowrap}.owner-inline-progress [hidden]{display:none}
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20260930-04">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20260930-05">
 </head>
 <body class="owner-yellow-ui">
 
@@ -1061,10 +1061,10 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script src="./firestore-pressure-guard.js?v=20260930-04"></script>
+<script src="./firestore-pressure-guard.js?v=20260930-05"></script>
 <script src="./ai-bridge-client.js"></script>
-<script src="./owner-video-performance.js?v=20260930-04"></script>
-<script src="./feedback-workflow.js?v=20260930-04"></script>
+<script src="./owner-video-performance.js?v=20260930-05"></script>
+<script src="./feedback-workflow.js?v=20260930-05"></script>
 <script>/* lz-string 1.5.0 (MIT) — CDN非依存でオフライン/圧縮チーム同期を保証するためインライン化 */
 var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",e={};function t(r,o){if(!e[r]){e[r]={};for(var n=0;n<r.length;n++)e[r][r.charAt(n)]=n}return e[r][o]}var i={compressToBase64:function(r){if(null==r)return"";var n=i._compress(r,6,function(r){return o.charAt(r)});switch(n.length%4){default:case 0:return n;case 1:return n+"===";case 2:return n+"==";case 3:return n+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(n){return t(o,r.charAt(n))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(r){return null==r?"":""==r?null:i._decompress(r.length,16384,function(o){return r.charCodeAt(o)-32})},compressToUint8Array:function(r){for(var o=i.compress(r),n=new Uint8Array(2*o.length),e=0,t=o.length;e<t;e++){var s=o.charCodeAt(e);n[2*e]=s>>>8,n[2*e+1]=s%256}return n},decompressFromUint8Array:function(o){if(null==o)return i.decompress(o);for(var n=new Array(o.length/2),e=0,t=n.length;e<t;e++)n[e]=256*o[2*e]+o[2*e+1];var s=[];return n.forEach(function(o){s.push(r(o))}),i.decompress(s.join(""))},compressToEncodedURIComponent:function(r){return null==r?"":i._compress(r,6,function(r){return n.charAt(r)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),i._decompress(r.length,32,function(o){return t(n,r.charAt(o))}))},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(r,o,n){if(null==r)return"";var e,t,i,s={},u={},a="",p="",c="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<r.length;i+=1)if(a=r.charAt(i),Object.prototype.hasOwnProperty.call(s,a)||(s[a]=f++,u[a]=!0),p=c+a,Object.prototype.hasOwnProperty.call(s,p))c=p;else{if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++),s[p]=f++,c=String(a)}if(""!==c){if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++)}for(t=2,e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;for(;;){if(m<<=1,v==o-1){d.push(n(m));break}v++}return d.join("")},decompress:function(r){return null==r?"":""==r?null:i._decompress(r.length,32768,function(o){return r.charCodeAt(o)})},_decompress:function(o,n,e){var t,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:e(0),position:n,index:1};for(t=0;t<3;t+=1)l[t]=t;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return i}();"function"==typeof define&&define.amd?define(function(){return LZString}):"undefined"!=typeof module&&null!=module?module.exports=LZString:"undefined"!=typeof angular&&null!=angular&&angular.module("LZString",[]).factory("LZString",function(){return LZString});
 </script>
@@ -1766,6 +1766,7 @@ function mergeTeamArr(local,remote,key){
   return Object.values(by);
 }
 function _teamSave(){
+  if(_invoiceStatusSaving){_teamSaveQueued=true;return;}
   if(!FB_USER||TEAM_SHARE_OK===false||_fbQuotaBlocked)return;
   if(!_teamCloudLoaded){console.warn('team share save skipped: cloud snapshot is not loaded');return;}
   // salesLeads は別 shard。親ドキュメントが不変でも shard のみ変更されるため先に判定する。
@@ -8970,28 +8971,35 @@ function rProjDeadline(){
 // ===請求書ページ===
 // サブ案件がある場合は、単価が設定されたサブタスクを請求の最小単位にする。
 // サブ案件が1件もない場合だけ親案件の単価を採用し、親子の二重計上を防ぐ。
+function _clientInvoiceJobs(){
+  const scope=window._clientInvoiceBiz||'all';
+  if(!['edit','haken'].includes(PBIZ))return BJOBS();
+  return(S.jobs||[]).filter(j=>['edit','haken'].includes(jobBiz(j))&&(scope==='all'||jobBiz(j)===scope)).map(_withOwnerJobFinance);
+}
+function _invoicePrepaid(j,sub){return(sub.paymentTerms||j.paymentTerms)==='prepaid';}
+function _invoiceBusinessLabel(j){return jobBiz(j)==='haken'?'編集者派遣':jobBiz(j)==='edit'?'編集代行':bizCfgOf(jobBiz(j)).label||jobBiz(j);}
 function _invoiceSubtasks(j,month=''){
   const subtasks=Array.isArray(j.subtasks)?j.subtasks:[];
-  const rows=subtasks.map((sub,index)=>({sub,index})).filter(x=>Number(x.sub.unitPrice)>0&&(!month||_subInvoiceDate(j,x.sub).startsWith(month)));
+  const rows=subtasks.map((sub,index)=>({sub,index})).filter(x=>Number(x.sub.unitPrice)>0&&(!month||(month==='unset'?!_subInvoiceDate(j,x.sub):month==='dated'?!!_subInvoiceDate(j,x.sub):_subInvoiceDate(j,x.sub).startsWith(month))));
   if(rows.length)return rows;
   if(!month&&(!subtasks.length||j._ownerFinance)&&Number(j.unitPrice)>0)return[{sub:{...j,title:j.title||'案件',unitPrice:Number(j.unitPrice),invoicedAt:j.invoicedAt||null},index:-1}];
-  if(month&&!subtasks.length&&Number(j.unitPrice)>0&&_subInvoiceDate(j,j).startsWith(month))return[{sub:{...j,title:j.title||'案件',unitPrice:Number(j.unitPrice),invoicedAt:j.invoicedAt||null},index:-1}];
+  if(month&&!subtasks.length&&Number(j.unitPrice)>0&&(month==='unset'?!_subInvoiceDate(j,j):month==='dated'?!!_subInvoiceDate(j,j):_subInvoiceDate(j,j).startsWith(month)))return[{sub:{...j,title:j.title||'案件',unitPrice:Number(j.unitPrice),invoicedAt:j.invoicedAt||null},index:-1}];
   return[];
 }
 function _invAmt(j,month=''){return _invoiceSubtasks(j,month).reduce((sum,x)=>sum+Number(x.sub.unitPrice||0),0);}
 function _invoiceLineName(j,sub,index){return index===-1?(j.title||sub.title||'案件'):(j.title||'親案件')+'（'+(sub.title||`サブタスク${index+1}`)+'）';}
 function _subInvoiceDate(j,sub){
   // サブ案件がある場合は、請求日を親案件から継承しない。
-  return sub.invoiceDate||sub.completedDeliveryDate||sub.deliveryDate||(!Array.isArray(j.subtasks)||!j.subtasks.length?(j.invoiceDate||j.completedDeliveryDate||j.deliveryDate||''):'');
+  return sub.invoiceDate||(!Array.isArray(j.subtasks)||!j.subtasks.length?(j.invoiceDate||''):'');
 }
-function _subInvoicedAt(j,sub){return sub.invoicedAt||(!Array.isArray(j.subtasks)||!j.subtasks.length?j.invoicedAt||null:null);}
+function _subInvoicedAt(j,sub){return sub.invoicedAt||(_invoicePrepaid(j,sub)?'先払い・自動':null)||(!Array.isArray(j.subtasks)||!j.subtasks.length?j.invoicedAt||null:null);}
 function _jobInvDate(j){
   const subtasks=Array.isArray(j.subtasks)?j.subtasks:[];
   if(subtasks.length){
-    const sd=subtasks.map(s=>s.invoiceDate||s.completedDeliveryDate||s.deliveryDate).filter(Boolean).sort();
+    const sd=subtasks.map(s=>s.invoiceDate).filter(Boolean).sort();
     return sd.length?sd[sd.length-1]:'';
   }
-  return j.invoiceDate||j.completedDeliveryDate||j.deliveryDate||'';
+  return j.invoiceDate||'';
 }
 function _invMonthMatch(j,m){if(!m)return true;const d=_jobInvDate(j);return !!d&&d.startsWith(m);}
 function _invFmt(n){return '¥'+Math.round(n||0).toLocaleString();}
@@ -9012,7 +9020,7 @@ function _issuer(){
 }
 function _endNextMonth(iso){const d=iso?new Date(iso):new Date();const last=new Date(d.getFullYear(),d.getMonth()+2,0);return `${last.getFullYear()}-${String(last.getMonth()+1).padStart(2,'0')}-${String(last.getDate()).padStart(2,'0')}`;}
 function _invoiceJobs(cid,m){
-  return BJOBS().filter(j=>!j.deleted&&j.status!=='キャンセル'&&_invAmt(j,m)>0&&((j.clientId||'')===(cid||'')));
+  return _clientInvoiceJobs().filter(j=>!j.deleted&&j.status!=='キャンセル'&&_invAmt(j,m)>0&&((j.clientId||'')===(cid||'')));
 }
 function rProjInvoice(){
   if(!_canViewFinancials())return _financialAccessDenied('請求書');
@@ -9020,11 +9028,12 @@ function rProjInvoice(){
   LEGACY_FINANCE_CORRECTION_WARNINGS=[];
   const now=new Date();
   const nowM=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  const months=[...new Set(BJOBS().filter(j=>!j.deleted).flatMap(j=>_invoiceSubtasks(j).map(({sub})=>_subInvoiceDate(j,sub))).filter(Boolean).map(d=>d.slice(0,7)))].sort().reverse();
+  const months=[...new Set(_clientInvoiceJobs().filter(j=>!j.deleted).flatMap(j=>_invoiceSubtasks(j).map(({sub})=>_subInvoiceDate(j,sub))).filter(Boolean).map(d=>d.slice(0,7)))].sort().reverse();
   if(!months.includes(nowM))months.unshift(nowM);
-  const curM=(window._invMonth!==undefined)?window._invMonth:nowM;
-  const mLabel=curM||'すべての期間';
-  const jobs=BJOBS().filter(j=>!j.deleted&&j.status!=='キャンセル'&&_invAmt(j,curM)>0);
+  const curM=(window._invMonth!==undefined)?(window._invMonth||'dated'):nowM;
+  const unset=curM==='unset',mLabel=unset?'提出日未設定':curM==='dated'?'すべての期間':curM;
+  const unsetCount=_clientInvoiceJobs().filter(j=>!j.deleted&&j.status!=='キャンセル').reduce((sum,j)=>sum+_invoiceSubtasks(j,'unset').length,0);
+  const jobs=_clientInvoiceJobs().filter(j=>!j.deleted&&j.status!=='キャンセル'&&_invAmt(j,curM)>0);
   const byClient={};
   jobs.forEach(j=>{const k=j.clientId||'';(byClient[k]=byClient[k]||[]).push(j);});
   const clientName=cid=>cid?(S.clients.find(c=>c.id===cid)?.name||'不明'):'クライアント未設定';
@@ -9033,30 +9042,31 @@ function rProjInvoice(){
   if(LEGACY_FINANCE_CORRECTION_WARNINGS.length)return _ownerFinanceLedgerStop('🧾 請求書',LEGACY_FINANCE_CORRECTION_WARNINGS.slice(0,3).join(' / '));
   return`${secTitle('🧾 請求書')}
 <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap">
-  <select style="width:190px" onchange="window._invMonth=this.value;render()"><option value="" ${curM===''?'selected':''}>すべての期間</option>${months.map(m=>`<option value="${m}" ${m===curM?'selected':''}>${m} 提出予定</option>`).join('')}</select>
+  <select aria-label="請求書提出日の絞り込み" style="width:260px;max-width:100%" onchange="window._invMonth=this.value;render()"><option value="dated" ${curM==='dated'?'selected':''}>すべての期間（提出日登録済み）</option><option value="unset" ${unset?'selected':''}>提出日未設定（${unsetCount}件）</option>${months.map(m=>`<option value="${m}" ${m===curM?'selected':''}>${m} 提出日登録分</option>`).join('')}</select>
   <button class="btn btn-g btn-sm" onclick="openInvoiceInfo()">✏️ 請求元情報</button>
   <span style="font-size:13px;color:var(--t2)">対象 ¥${grand.toLocaleString()}・${Object.keys(byClient).length}社</span>
 </div>
 ${!iss.name?`<div class="card" style="background:#fff7ed;border:2px solid #c2410c;color:#7c2d12;margin-bottom:10px;font-size:12px;font-weight:700">⚠️ まず「✏️ 請求元情報」に屋号・振込先などを設定してください（請求書に自動で差し込まれます）。</div>`:''}
-<div style="font-size:11px;color:var(--t3);margin-bottom:12px">請求書提出日が <b>${mLabel}</b> の請求明細を表示中。サブ案件がある場合は単価を設定したサブ案件を、サブ案件がない場合は親案件の単価を採用します。☑ で選び「請求書を作成」→ 編集 → PDF保存します。</div>
-${!Object.keys(byClient).length?`<div class="empty"><div class="empty-icon">🧾</div><div class="empty-title">${mLabel} に請求予定の明細はありません</div><div style="color:var(--t2);font-size:12px;margin-top:4px">案件に「請求書提出日」と単価を設定すると表示されます。サブ案件がある場合はサブ案件の単価を使用します</div></div>`:Object.entries(byClient).map(([cid,js])=>{
+<div style="font-size:11px;color:var(--t3);margin-bottom:12px">${unset?'請求書提出日が未設定の明細です。納品日・納期から請求月を推定しません。':curM!=='dated'?`請求書提出日が <b>${mLabel}</b> の請求明細を表示中。`:'請求書提出日が登録済みの明細を全期間表示中。'}サブ案件がある場合は単価を設定したサブ案件を、サブ案件がない場合は親案件の単価を採用します。${unset?'請求書提出日を設定すると、その月の請求書作成に使えます。':'☑ で選び「請求書を作成」→ 編集 → PDF保存します。'}</div>
+${!unset&&unsetCount?`<div class="notice" style="margin-bottom:12px">請求書提出日が未設定の明細が ${unsetCount}件あります。月別の提出日登録分には含めていません。<button type="button" class="btn btn-g btn-sm" onclick="window._invMonth='unset';render()">提出日未設定を確認</button></div>`:''}
+${!Object.keys(byClient).length?`<div class="empty"><div class="empty-icon">🧾</div><div class="empty-title">${unset?'提出日未設定の明細はありません':mLabel+' の提出日登録分はありません'}</div><div style="color:var(--t2);font-size:12px;margin-top:4px">案件に「請求書提出日」と単価を設定すると表示されます。サブ案件がある場合はサブ案件の単価を使用します</div></div>`:Object.entries(byClient).map(([cid,js])=>{
   const sub=js.reduce((s,j)=>s+_invAmt(j,curM),0);
   const invoiceRows=js.flatMap(j=>_invoiceSubtasks(j,curM).map(x=>({j,...x})));
   const allInvoiced=invoiceRows.length&&invoiceRows.every(x=>_subInvoicedAt(x.j,x.sub));
   return`<div class="card" style="margin-bottom:12px">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:8px">
       <div style="font-weight:700;font-size:15px">${esc(clientName(cid))} <span style="font-size:11px;font-weight:500;color:var(--t2)">御中</span></div>
-      ${allInvoiced?`<span class="badge bg" style="font-size:10px">🧾 請求済</span>`:`<span class="badge ba" style="font-size:10px">⏳ 未請求</span>`}
+      ${allInvoiced?`<span class="badge bg" style="font-size:10px">🧾 請求済</span>`:`<span class="badge ba" style="font-size:10px">${invoiceRows.some(x=>_subInvoicedAt(x.j,x.sub))?'一部の請求記録なし':'請求記録なし'}</span>`}
     </div>
-    ${js.map(j=>{const rows=_invoiceSubtasks(j,curM),parentOnly=rows.length===1&&rows[0].index===-1;return`<details style="border-bottom:1px solid var(--border);padding:5px 0"><summary class="video-subcase-head"><span>${esc(j.title||'親案件')}</span><span>${parentOnly?'親案件':'サブ案件'} ${rows.length}件</span></summary><div>${rows.map(({sub,index})=>`<label style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:7px 0;border-top:1px solid var(--border);cursor:pointer;gap:10px">
-      <span style="display:flex;align-items:center;gap:8px;min-width:0"><input type="checkbox" class="inv-sel" data-cid="${cid}" data-jid="${j.id}" data-sidx="${index}" checked><span><b>${esc(sub.title||`サブタスク${index+1}`)}</b> <span style="font-size:10px;color:var(--t3)">🧾${_subInvoiceDate(j,sub)||'-'}</span>${_subInvoicedAt(j,sub)?` <span style="font-size:10px;color:var(--green)">✅請求済 ${_subInvoicedAt(j,sub)}</span>`:''}</span></span>
-      <span style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span style="font-weight:600">¥${Number(sub.unitPrice||0).toLocaleString()}</span><button class="btn btn-g btn-xs" onclick="event.preventDefault();event.stopPropagation();openJobModal('${j.id}')">詳細</button></span>
+    ${js.map(j=>{const rows=_invoiceSubtasks(j,curM),parentOnly=rows.length===1&&rows[0].index===-1;return`<details style="border-bottom:1px solid var(--border);padding:5px 0"><summary class="video-subcase-head"><span>${esc(j.title||'親案件')}</span><span>${parentOnly?'親案件':'サブ案件'} ${rows.length}件</span></summary><div>${rows.map(({sub,index})=>`<label style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:7px 0;border-top:1px solid var(--border);cursor:pointer;gap:10px;flex-wrap:wrap">
+      <span style="display:flex;align-items:center;gap:8px;min-width:0"><input type="checkbox" class="inv-sel" style="width:16px;height:16px;flex:0 0 16px;padding:0" data-cid="${cid}" data-jid="${j.id}" data-sidx="${index}" ${unset?'disabled':'checked'}><span><b>${esc(sub.title||`サブタスク${index+1}`)}</b> <span class="badge bk">${esc(_invoiceBusinessLabel(j))}</span> <span style="font-size:10px;color:var(--t3)">${_subInvoiceDate(j,sub)?'提出日 '+esc(_subInvoiceDate(j,sub)):'提出日未設定'}</span>${_subInvoicedAt(j,sub)?` <span style="font-size:10px;color:var(--green)">✅請求済 ${_subInvoicedAt(j,sub)}</span>`:''} <span style="font-size:10px;color:var(--t2)">${sub.paidAt?'入金済み '+esc(sub.paidAt):'入金未記録'}</span></span></span>
+      <span style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span style="font-weight:600">¥${Number(sub.unitPrice||0).toLocaleString()}</span><button class="btn btn-g btn-xs" onclick="event.preventDefault();event.stopPropagation();openCaseFinanceDates('${j.id}',${index})">日付・記録を確認</button></span>
     </label>`).join('')}</div></details>`;}).join('')}
     <div style="text-align:right;margin-top:8px;font-size:13px">請求明細 ${invoiceRows.length}件・合計 <span style="font-weight:800;font-size:16px;color:var(--green)">¥${sub.toLocaleString()}</span></div>
     <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
-      <button class="btn btn-p btn-sm" onclick="openInvoiceEditorFromSelection('${cid}','${curM}')">🧾 選択した明細で請求書を作成</button>
+      ${unset?'<span style="font-size:12px;color:var(--t2)">「日付・記録を確認」から請求書提出日を設定してください。入金済みと請求済みは別々の記録です。</span>':`<button class="btn btn-p btn-sm" onclick="openInvoiceEditorFromSelection('${cid}','${curM}')">🧾 選択した明細で請求書を作成</button>
       <button class="btn btn-g btn-sm" onclick="copyInvoiceText('${cid}','${curM}')">📋 テキストでコピー</button>
-      ${allInvoiced?`<button class="btn btn-g btn-sm" onclick="markClientInvoiced('${cid}','${curM}',false)">請求済を取消</button>`:`<button class="btn btn-g btn-sm" onclick="markClientInvoiced('${cid}','${curM}',true)">✅ 全サブタスクを請求済みに</button>`}
+      ${invoiceRows.every(x=>_invoicePrepaid(x.j,x.sub))?'<span style="font-size:12px">先払いの明細は自動で請求済みになります。</span>':allInvoiced?`<button class="btn btn-g btn-sm" onclick="markClientInvoiced('${cid}','${curM}',false)">請求済を取消</button>`:`<button class="btn btn-g btn-sm" onclick="markClientInvoiced('${cid}','${curM}',true)">✅ 全サブタスクを請求済みに</button>`}`}
     </div>
   </div>`;}).join('')}`;
 }
@@ -9075,8 +9085,8 @@ function openInvoiceEditor(cid,m,subtaskRefs){
   js.forEach(j=>{
     _invoiceSubtasks(j,m).forEach(({sub,index})=>{
       if(selected&&!selected.some(x=>x.jobId===j.id&&Number(x.subtaskIndex)===index))return;
-      items.push({name:_invoiceLineName(j,sub,index),qty:1,unit:Number(sub.unitPrice),amount:Number(sub.unitPrice)});
-      refs.push({jobId:j.id,subtaskIndex:index});
+      items.push({name:'【'+_invoiceBusinessLabel(j)+'】'+_invoiceLineName(j,sub,index),qty:1,unit:Number(sub.unitPrice),amount:Number(sub.unitPrice)});
+      refs.push({jobId:j.id,subtaskIndex:index,subtaskId:index>=0?String(sub.id||''):'',title:String(sub.title||'')});
     });
   });
   if(!items.length){toast('単価が設定された請求明細を選んでください','warn');return;}
@@ -9089,11 +9099,10 @@ function openInvoiceEditorFromSelection(cid,m){
   if(!refs.length){toast('請求する明細を1件以上選んでください','warn');return;}
   openInvoiceEditor(cid,m,refs);
 }
-function markDraftInvoiced(){
+async function markDraftInvoiced(){
   const d=window._invDraft;if(!d)return;
-  const at=today();
-  (d.subtaskRefs||[]).forEach(ref=>{const j=S.jobs.find(x=>x.id===ref.jobId),index=Number(ref.subtaskIndex),sub=j?.subtasks?.[index];if(!j)return;if(index===-1&&_invoiceSubtasks(_withOwnerJobFinance(j)).some(x=>x.index===-1)){j.invoicedAt=at;j.updatedAt=Date.now();return;}if(sub){sub.invoicedAt=at;j.updatedAt=Date.now();if(_invoiceSubtasks(_withOwnerJobFinance(j)).every(x=>_subInvoicedAt(j,x.sub)))j.invoicedAt=at;}});
-  save();closeInvoiceEditor();render();toast('🧾 請求済みにしました');
+  const refs=d.subtaskRefs||[];
+  if(await _persistInvoiceMarks(refs,true)){closeInvoiceEditor();render();toast('請求済みをクラウドへ保存しました');}
 }
 function _invItemRow(it){
   return `<tr data-item style="border-bottom:1px solid #ddd">
@@ -9243,7 +9252,7 @@ function genInvoiceText(cid,m){
   const wh=i.defaultWithholding?_calcWithholding(sub):0;
   const total=sub+tax-wh;
   let t=`請求書\n\n${name} 御中\n\nご請求日：${today()}\n下記の通りご請求申し上げます。\n\n────────────────\n`;
-  js.forEach(j=>_invoiceSubtasks(j,m).forEach(({sub,index})=>{t+=`${_invoiceLineName(j,sub,index)}　¥${Number(sub.unitPrice||0).toLocaleString()}\n`;}));
+  js.forEach(j=>_invoiceSubtasks(j,m).forEach(({sub,index})=>{t+=`【${_invoiceBusinessLabel(j)}】${_invoiceLineName(j,sub,index)}　¥${Number(sub.unitPrice||0).toLocaleString()}\n`;}));
   t+=`────────────────\n小計　¥${sub.toLocaleString()}\n`;
   if(tax)t+=`消費税(10%)　¥${tax.toLocaleString()}\n`;
   if(wh)t+=`源泉徴収税　-¥${wh.toLocaleString()}\n`;
@@ -9260,11 +9269,46 @@ function copyInvoiceText(cid,m){
   const fb=()=>{const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');ok();}catch(e){toast('コピーに失敗しました','warn');}ta.remove();};
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(ok).catch(fb);}else{fb();}
 }
-function markClientInvoiced(cid,m,on){
-  if(!_canViewFinancials())return toast('財務操作の権限がありません','err');
-  const at=on?today():null;
-  _invoiceJobs(cid,m).forEach(j=>{const source=S.jobs.find(row=>row.id===j.id);if(!source)return;if(j._ownerFinance){source.invoicedAt=at;source.updatedAt=Date.now();return;}_invoiceSubtasks(source,m).forEach(({sub})=>{sub.invoicedAt=at;});source.invoicedAt=at;source.updatedAt=Date.now();});
-  save();render();toast(on?'🧾 請求済みにしました':'請求済を取り消しました');
+let _invoiceStatusSaving=false;
+function _invoiceMarkRefs(jobs,month){
+  return jobs.flatMap(j=>_invoiceSubtasks(j,month).map(({sub,index})=>({jobId:j.id,subtaskIndex:index,subtaskId:index>=0?String(sub.id||''):'',title:String(sub.title||'')})));
+}
+function _applyInvoiceMarks(jobs,refs,at,stamp){
+  const next=JSON.parse(JSON.stringify(jobs));
+  refs.forEach(ref=>{
+    const job=next.find(j=>j.id===ref.jobId&&!j.deleted);if(!job)throw Error('案件が変更されています。再読み込みしてください');
+    const index=Number(ref.subtaskIndex),sub=index<0?job:ref.subtaskId?(job.subtasks||[]).find(s=>String(s.id||'')===ref.subtaskId):job.subtasks?.[index];
+    if(!sub||index>=0&&!ref.subtaskId&&String(sub.title||'')!==ref.title)throw Error('明細が変更されています。再読み込みしてください');
+    sub.invoicedAt=at;job.updatedAt=stamp;
+    // A parent marker must not turn other months' children into invoiced rows.
+    if(index>=0)job.invoicedAt=null;
+  });
+  return next;
+}
+async function _persistInvoiceMarks(refs,on){
+  if(!_isOwner()||!_canViewFinancials())return false;
+  if(_invoiceStatusSaving)return false;
+  if(!FB_USER||!fbDb||!_teamCloudLoaded||_fbQuotaBlocked||TEAM_SHARE_OK===false||!_ownerFinanceLedgersReady()||navigator.onLine===false){toast('クラウドへ保存できないため、請求状態は変更していません','warn');return false;}
+  if(_teamSaveInFlight){toast('ほかの保存処理中です。完了後にもう一度お試しください','warn');return false;}
+  if(!refs.length)return false;
+  _invoiceStatusSaving=true;
+  try{
+    const at=on?today():null,stamp=Date.now(),ref=fbDb.collection('shared').doc('mcapp');
+    await fbDb.runTransaction(async tx=>{
+      const snap=await tx.get(ref),data=snap.exists?snap.data():null,rows=data?_teamDecode(data.jobs):null;
+      if(!Array.isArray(rows))throw Error('案件台帳を確認できません');
+      if(String(data.ledgerRestoreToken||'')!==String(_teamLedgerRestoreAck||''))throw Error('案件台帳が更新されています。再読み込みしてください');
+      const jobs=_applyInvoiceMarks(rows,refs,at,stamp),nonce=`${_teamLedgerRestoreAck}:${crypto.randomUUID()}`;
+      tx.set(ref,{jobs:_teamEncode('jobs',jobs),legacyFinanceRestoreAck:_teamLedgerRestoreAck,legacyFinanceWriteNonce:nonce,ts:firebase.firestore.FieldValue.serverTimestamp(),by:FB_USER.uid},{merge:true});
+    });
+    S.jobs=_applyInvoiceMarks(S.jobs,refs,at,stamp);_lsSaveState(S);
+    return true;
+  }catch(e){_fbFailClosed(e,'invoice status');toast('請求状態を保存できませんでした。再読み込みして確認してください','err');return false;}
+  finally{_invoiceStatusSaving=false;if(_teamSaveQueued&&!_fbQuotaBlocked){_teamSaveQueued=false;_teamSave();}}
+}
+async function markClientInvoiced(cid,m,on){
+  const refs=_invoiceMarkRefs(_invoiceJobs(cid,m),m);
+  if(await _persistInvoiceMarks(refs,on)){render();toast(on?'請求済みをクラウドへ保存しました':'請求済みの記録を取り消しました');}
 }
 function openInvoiceInfo(){
   if(!_canViewFinancials())return toast('財務操作の権限がありません','err');
@@ -10760,7 +10804,7 @@ const DOCLINK_SEEDS=[
    url:'https://mono-create-group.github.io/editflow-team/dm-manual.html?v=20260816-01',
    category:'マニュアル',notes:'新メンバー向け。アイコン・アカウント名の予約(早い者勝ち)・DM文章の作成・営業リストでの送付と記録まで1ページで完結',ver:3},
   {id:'doclink_invoice_manual',title:'請求書の作り方（編集者向けマニュアル・見本つき）',
-   url:'https://mono-create-group.github.io/editflow-team/invoice-manual.html?v=20260930-04',
+   url:'https://mono-create-group.github.io/editflow-team/invoice-manual.html?v=20260930-05',
    category:'マニュアル',notes:'編集者へ共有する。請求者情報の登録→完了案件を選んで明細（1案件＝1行）→確認して提出、締切と支払日、NG例/見本、FAQ',ver:1},
   {id:'doclink_dm_entry_form',title:'DM営業スタッフ 登録フォーム（応募者に送るURL）',
    url:'https://mono-create-group.github.io/editflow-team/dm-entry.html',
@@ -19204,7 +19248,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20260930-04';
+const APP_VERSION='20260930-05';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -19281,13 +19325,13 @@ window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});  
 checkServerVersion();                                                              // 初回表示でも旧版を即時検出
   </script>
 <script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
-<script src="./editor-push.js?v=20260930-04"></script>
-<script src="./bulletin.js?v=20260930-04"></script>
-<script src="./direct-messages.js?v=20260930-04"></script>
+<script src="./editor-push.js?v=20260930-05"></script>
+<script src="./bulletin.js?v=20260930-05"></script>
+<script src="./direct-messages.js?v=20260930-05"></script>
 <script>
   try{if(V==='directmessages')render();else renderNav();}catch(error){console.warn('owner dm init',error);}
 </script>
-<script src="./manager-features.js?v=20260930-04"></script>
-<script src="./sales-video-leads.js?v=20260930-04"></script>
+<script src="./manager-features.js?v=20260930-05"></script>
+<script src="./sales-video-leads.js?v=20260930-05"></script>
 </body>
 </html>
