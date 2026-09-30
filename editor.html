@@ -19,7 +19,7 @@
     @media(max-width:420px){.metric{grid-column:span 12}.who{max-width:46%}.btn{width:100%}.nav .btn,.actions .btn,.topbar .btn{width:auto}.actions .job-primary{width:100%}}
   </style>
   <link rel="stylesheet" href="app-ui.css">
-  <link rel="stylesheet" href="editor-yellow-ui.css?v=20260930-01">
+  <link rel="stylesheet" href="editor-yellow-ui.css?v=20260930-02">
 </head>
 <body class="editor-yellow-ui">
   <a class="app-skip-link" href="#app">メイン画面へ移動</a>
@@ -30,7 +30,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" onerror="portalSdkLoadFailed()"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js" onerror="portalSdkLoadFailed()"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js" onerror="portalSdkLoadFailed()"></script>
-  <script src="./billing-terms.js?v=20260930-01"></script>
+  <script src="./firestore-pressure-guard.js?v=20260930-02"></script>
+  <script src="./billing-terms.js?v=20260930-02"></script>
   <!-- PDF libraries are loaded only when an editor creates a PDF. -->
   <script>
   const PAGE_PARAMS=new URLSearchParams(location.search);
@@ -78,7 +79,7 @@
     if(document.getElementById('portal-quota-maintenance'))return;
     const el=document.createElement('section');el.id='portal-quota-maintenance';el.className='card notice warn';el.setAttribute('role','alert');
     el.style.cssText='position:fixed;z-index:100100;inset:0;display:grid;place-items:center;padding:14px;background:rgba(17,24,39,.58)';
-    el.innerHTML='<div class="card notice warn" style="width:min(620px,100%);box-shadow:0 14px 36px rgba(0,0,0,.28)"><b>クラウド接続を一時停止しました</b><p style="margin:5px 0 0">Firestoreの無料枠上限により、案件・進捗・DMの保存状況は確認できません。この画面からの保存・提出・送信は行いません。無料枠の回復後に再読み込みしてください。</p><button class="btn small" type="button" style="margin-top:9px" onclick="retryPortalFirestoreAfterQuota()">再読み込みして再接続</button></div>';
+    el.innerHTML='<div class="card notice warn" style="width:min(620px,100%);box-shadow:0 14px 36px rgba(0,0,0,.28)"><b>クラウド接続を一時停止しました</b><p style="margin:5px 0 0">Firestoreへの書き込み混雑、または利用上限を検知しました。案件・進捗・DMの保存状況は確認できません。この画面からの保存・提出・送信は停止しています。時間を置いて再読み込みしてください。</p><button class="btn small" type="button" style="margin-top:9px" onclick="retryPortalFirestoreAfterQuota()">再読み込みして再接続</button></div>';
     document.body.appendChild(el);
   }
   function retryPortalFirestoreAfterQuota(){const u=new URL(location.href);u.searchParams.set('firestoreRetry',String(Date.now()));location.assign(u.href)}
@@ -785,6 +786,7 @@
       if(typeof firebase==='undefined'||!firebase.initializeApp||!firebase.auth||!firebase.firestore)throw new Error('Firebase SDK unavailable');
       if(!firebase.apps?.length)firebase.initializeApp(FIREBASE_CONFIG);
       auth=firebase.auth();db=firebase.firestore();
+      window.EditflowFirestorePressure?.install(firebase,portalEnterQuotaCircuit);
       authStateWatchdog=setTimeout(()=>{if(!authStateSettled)renderAuthRecovery('サインイン状態の確認に時間がかかっています。通信状態を確認し、ページを再読み込みしてください。')},waitMs);
       auth.onAuthStateChanged(handlePortalAuthState,error=>{console.warn('auth state',error?.code||error);authStateSettled=true;if(authStateWatchdog)clearTimeout(authStateWatchdog);renderAuthRecovery('サインイン状態を確認できませんでした。ページを再読み込みして、もう一度お試しください。')});
       if(typeof auth.getRedirectResult==='function')auth.getRedirectResult().catch(error=>{const state=authErrorMessage(error);authUiState={busy:false,startupError:false,...state};if(!user)loginScreen()});
@@ -794,10 +796,10 @@
   if(!DEMO&&'serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(error=>console.warn('service worker',error));
   </script>
   <script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
-  <script src="./editor-push.js?v=20260930-01"></script>
-  <script src="./bulletin.js?v=20260930-01"></script>
-  <script src="./direct-messages.js?v=20260930-01"></script>
-  <script src="./feedback-workflow.js?v=20260930-01"></script>
-  <script src="./editor-features.js?v=20260930-01"></script>
+  <script src="./editor-push.js?v=20260930-02"></script>
+  <script src="./bulletin.js?v=20260930-02"></script>
+  <script src="./direct-messages.js?v=20260930-02"></script>
+  <script src="./feedback-workflow.js?v=20260930-02"></script>
+  <script src="./editor-features.js?v=20260930-02"></script>
 </body>
 </html>

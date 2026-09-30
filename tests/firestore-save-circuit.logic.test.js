@@ -30,7 +30,7 @@ test('personal saves are locally safe, coalesced, and stop after a quota failure
   assert.match(source, /if\(_fbPersonalSaveInFlight\)\{_fbPersonalSaveQueued=true;return;\}/);
   assert.match(source, /if\(initialPayload===_fbPersonalLastPayload\)return;/);
   assert.match(source, /_fbFailClosed\(e,'personal'\)/);
-  assert.match(source, /if\(queued&&!_fbQuotaBlocked\)fbSave\(\)/);
+  assert.match(source, /if\(queued&&personalSaved&&!_fbQuotaBlocked\)fbSave\(\)/);
   assert.match(index, /function _personalCloudState\(source\)/);
   assert.match(index, /const EXCL=\{bizBoard:1,_savedAt:1\}/);
 });
@@ -43,7 +43,7 @@ test('shared writes and lead shards are payload-deduplicated and quota fail-clos
   assert.match(source, /if\(payloadSignature===_teamLastPayload\)return;/);
   assert.match(source, /if\(_teamSaveInFlight\)\{_teamSaveQueued=true;return;\}/);
   assert.match(source, /_fbFailClosed\(e,'team share'\)/);
-  assert.match(source, /if\(queued&&!_fbQuotaBlocked\)_teamSave\(\)/);
+  assert.match(source, /if\(queued&&teamSaved&&!_fbQuotaBlocked\)_teamSave\(\)/);
   const shards = sourceBetween('_slShardsSave', '_stampTeamChanges');
   assert.match(shards, /\|\|_fbQuotaBlocked\)return;/);
   assert.match(shards, /if\(!_slCloudLoaded\)return;/);

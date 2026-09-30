@@ -33,6 +33,7 @@ test('quota read circuit unsubscribes once, pauses network, and preserves the cu
     fbDb: { disableNetwork() { disableCount += 1; return Promise.resolve(); } },
     _fbShowQuotaMaintenanceNotice() { noticeCount += 1; },
     _fbInstallQuotaWriteBlock() { writeBlockCount += 1; },
+    _fbCancelPendingSaves() {},
     _fbQuotaBlocked: false,
     _fbQuotaNoticeShown: false,
     _fbQuotaReadCircuitOpen: false,
