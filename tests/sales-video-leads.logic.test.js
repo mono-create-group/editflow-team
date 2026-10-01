@@ -182,8 +182,8 @@ test('Threads cards expose the source filter and never invent a take-home amount
 test('owner shell and service worker load the video-lead extension on the same release',()=>{
   const index=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
   const sw=fs.readFileSync(path.join(__dirname,'..','sw.js'),'utf8');
-  assert.match(index,/const APP_VERSION='20260930-06';/);
-  assert.match(index,/<script src="\.\/sales-video-leads\.js\?v=20260930-06"><\/script>/);
-  assert.match(sw,/const CACHE='mcshanai-20260930-06';/);
+  const version=index.match(/const APP_VERSION='([^']+)'/)[1];
+  assert.ok(index.includes(`<script src="./sales-video-leads.js?v=${version}"></script>`));
+  assert.ok(sw.includes(`const CACHE='mcshanai-${version}';`));
   assert.match(sw,/'\.\/sales-video-leads\.js'/);
 });

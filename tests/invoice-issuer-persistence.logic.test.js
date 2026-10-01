@@ -55,7 +55,7 @@ test('late save acknowledgement cannot copy issuer into a different account',asy
 });
 test('legacy cloud issuer restores even when sanitized local timestamp is newer',()=>{
   const h=harness();let snapshot;
-  Object.assign(h.c,{_fbUnsubscribe:null,_fbPersonalLastPayload:'',migrate:s=>s,renderSyncSafe:()=>{},_lsSaveState:()=>{},fbSave:()=>{},localStorage:{},console,
+  Object.assign(h.c,{_fbUnsubscribe:null,_fbQuotaBlocked:false,_fbPersonalLastPayload:'',migrate:s=>s,renderSyncSafe:()=>{},_lsSaveState:()=>{},fbSave:()=>{},localStorage:{},console,
     fbDb:{collection:()=>({doc:()=>({onSnapshot:callback=>{snapshot=callback;return()=>{}}})})}});
   h.c.S={settings:{},_uid:'owner-a',_savedAt:9000};
   // Limit extraction to this function, before the TEAM_KEYS declaration.
