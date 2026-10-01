@@ -1,8 +1,8 @@
 {
   "source": "chatwork/lp/editing-intake-app/public",
   "sha256": {
-    "app.js": "637cf2abbea7ae5ddfd13baa08beace94e0c4f660f5d2cea6b93ef8b8f9a7e37",
-    "app.css": "6131c2b79ec68118dabe5cfe9f554d54a1eedc56abdd2a840dc41ba32afcafd5",
+    "app.js": "34567b13dc47093cf927e0c61f9dc089b6f27732f96731e51d24b88257e54060",
+    "app.css": "30b7f0ce6dc99225db4d824b01e658d5373ead5937a9b383336fea6167d53a4a",
     "app.html": "d666a90588fe559dd73aef9083226077af7215ae27df4ecbca9dda03ba4ff0ac"
   }
 }
