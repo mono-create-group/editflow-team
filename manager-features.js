@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  const state={editors:[],catalog:new Map(),catalogRepairing:new Set(),assignmentSyncing:new Set(),invoiceActionPending:new Set(),board:[],boardFormOpen:false,manuals:[],schedules:[],suggestions:[],invoices:[],authorizations:[],profiles:[],clientPricing:new Map(),clientPricingReady:false,clientRates:[],clientRatesReady:false,clientRatesUnsub:null,clientRatesLoadPromise:null,portalJobsByEditor:new Map(),loaded:{editors:false,portalJobs:new Set()},unsubs:[],nested:[],started:'',portalSignature:null,renderFrame:null,lifecycleTimer:null};
+  const state={editors:[],catalog:new Map(),catalogRepairing:new Set(),assignmentSyncing:new Set(),invoiceActionPending:new Set(),board:[],boardFormOpen:false,manuals:[],schedules:[],suggestions:[],invoices:[],authorizations:[],profiles:[],clientPricing:new Map(),clientPricingReady:false,clientRates:[],clientRatesReady:false,clientRatesUnsub:null,clientRatesLoadPromise:null,portalJobsByEditor:new Map(),loaded:{editors:false,portalJobs:new Set()},unsubs:[],viewUnsubs:new Map(),nested:[],started:'',portalSignature:null,renderFrame:null,lifecycleTimer:null};
   const originalVideoOperations=rVideoOperations;
   const originalWorkers=rWorkers;
   // index.html の既存クライアント操作を安全に拡張する。案件・履歴はこの処理で触らない。
@@ -155,7 +155,7 @@
     if(resetPricing){state.clientPricing.clear();state.clientPricingReady=false}
   }
   function cancelManagerRender(){if(state.renderFrame===null)return;if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(state.renderFrame);else clearTimeout(state.renderFrame);state.renderFrame=null}
-  function stop(){state.unsubs.forEach(x=>{try{x()}catch(_){}});state.unsubs=[];stopClientRates();stopNested();state.loaded.editors=false;state.started='';state.portalSignature=null;cancelManagerRender()}
+  function stop(){state.viewUnsubs.forEach(stop=>{try{stop()}catch(_){}});state.viewUnsubs.clear();state.unsubs.forEach(x=>{try{x()}catch(_){}});state.unsubs=[];stopClientRates();stopNested();state.loaded.editors=false;state.started='';state.portalSignature=null;cancelManagerRender()}
   window.EditflowFirestoreQuota?.registerStop?.(stop);
   function renderSafe(){
     if(state.renderFrame!==null)return;
@@ -220,14 +220,23 @@
       const aq=fbDb.collection('access').where('directorUid','==',FB_USER.uid);
       state.unsubs.push(aq.onSnapshot(q=>{const nextEditors=q.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.approved===true&&rolesGrantVideoEditor(x.roles||[])),nextSignature=portalSubscriptionSignature(nextEditors);state.editors=nextEditors;state.loaded.editors=true;if(nextSignature!==state.portalSignature){state.portalSignature=nextSignature;subscribePortals()}renderSafe()},e=>quotaSnapshotError(e,'editor relations',err=>{state.loaded.editors=false;console.warn('editor relations',err?.code||err);renderSafe()})));
     }
-    const bq=_isOwner()?fbDb.collection('editor_job_board'):fbDb.collection('editor_job_board').where('directorUid','==',FB_USER.uid);
-    state.unsubs.push(bq.onSnapshot(q=>{state.board=q.docs.map(d=>({id:d.id,...d.data()}));renderSafe()},e=>quotaSnapshotError(e,'manager board')));
+    // state.board was never consumed; publishing writes explicitly without a board listener.
     const mq=_isOwner()?fbDb.collection('editor_manuals'):fbDb.collection('editor_manuals').where('directorUid','==',FB_USER.uid);
     state.unsubs.push(mq.onSnapshot(q=>{state.manuals=q.docs.map(d=>({id:d.id,...d.data()}));renderSafe()},e=>quotaSnapshotError(e,'manager manuals')));
     if(_isOwner())state.unsubs.push(fbDb.collection('owner_client_pricing').onSnapshot(q=>{state.clientPricing=new Map(q.docs.map(d=>[d.id,{id:d.id,...d.data()}]));state.clientPricingReady=true;renderSafe()},e=>quotaSnapshotError(e,'owner client pricing',err=>{state.clientPricing.clear();state.clientPricingReady=false;console.warn('owner client pricing',err?.code||err);renderSafe()})));
-    state.unsubs.push(fbDb.collection('editor_schedules').onSnapshot(q=>{state.schedules=q.docs.map(d=>({id:d.id,...d.data()}));renderSafe()},e=>quotaSnapshotError(e,'manager schedules')));
-    if(_isOwner())state.unsubs.push(fbDb.collection('editor_suggestions').orderBy('createdAt','desc').limit(100).onSnapshot(q=>{state.suggestions=q.docs.map(d=>({id:d.id,...d.data()}));renderSafe()},e=>quotaSnapshotError(e,'suggestions')));
+    syncViewSubscriptions();
   }
+
+  function syncViewSubscriptions(){
+    if(!state.started||window.EditflowFirestoreQuota?.isOpen?.())return;
+    const wanted=new Set();
+    if(V==='videoschedules')wanted.add('schedules');
+    if(V==='videosuggestions'&&_isOwner())wanted.add('suggestions');
+    state.viewUnsubs.forEach((stop,key)=>{if(!wanted.has(key)){stop();state.viewUnsubs.delete(key);}});
+    if(wanted.has('schedules')&&!state.viewUnsubs.has('schedules'))state.viewUnsubs.set('schedules',fbDb.collection('editor_schedules').onSnapshot(q=>{state.schedules=q.docs.map(d=>({id:d.id,...d.data()}));renderSafe()},e=>quotaSnapshotError(e,'manager schedules')));
+    if(wanted.has('suggestions')&&!state.viewUnsubs.has('suggestions'))state.viewUnsubs.set('suggestions',fbDb.collection('editor_suggestions').orderBy('createdAt','desc').limit(100).onSnapshot(q=>{state.suggestions=q.docs.map(d=>({id:d.id,...d.data()}));renderSafe()},e=>quotaSnapshotError(e,'suggestions')));
+  }
+  window.managerSyncViewSubscriptions=syncViewSubscriptions;
 
   const activeManagerUid=()=>typeof rolePreviewUid==='function'?rolePreviewUid():(FB_USER?.uid||'');
   const managedEditors=()=>state.editors.filter(x=>rolesGrantVideoEditor(x.roles||[])).filter(x=>!isDirector()||x.id===activeManagerUid()||x.directorUid===activeManagerUid());

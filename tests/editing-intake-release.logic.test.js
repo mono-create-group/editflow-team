@@ -13,6 +13,12 @@ test('generated UI files correspond exactly to current intake source fingerprint
  const manifest=JSON.parse(read('editing-intake/manifest.json'));
  for(const [name,hash]of Object.entries(manifest.sha256)){const source=fs.readFileSync(path.resolve(root,'../chatwork/lp/editing-intake-app/public',name));assert.equal(crypto.createHash('sha256').update(source).digest('hex'),hash);}
  assert.equal(read('editing-intake/app.js'),fs.readFileSync(path.resolve(root,'../chatwork/lp/editing-intake-app/public/app.js'),'utf8'));
+ for(const [name,hash]of Object.entries(manifest.sha256).filter(([name])=>name.startsWith('assets/'))){
+  assert.equal(crypto.createHash('sha256').update(fs.readFileSync(path.join(root,'editing-intake',name))).digest('hex'),hash);
+ }
+ const presentation={};vm.runInNewContext(read('editing-intake/presentation.js'),presentation);
+ assert.doesNotMatch(presentation.MonoEditingIntakePresentation.css,/url\("assets\//);
+ assert.match(presentation.MonoEditingIntakePresentation.css,/url\("editing-intake\/assets\/rpg-hero-v6.png"\)/);
 });
 test('bridge can retry failed bundle loads instead of preserving a permanently failed host',async()=>{
  const scripts=[];const parent={append(){}};const placeholder={textContent:'',replaceWith(){},parentNode:parent};
