@@ -38,7 +38,7 @@ test('distinct children of one parent are independent, but duplicate links to on
   plan=fixture.c._portalLegacySyncPlan([a,{...b,legacySubtaskId:'s1'}]);assert.equal(plan.safe.length,0);assert.equal(plan.conflicts.length,1);
 });
 test('quota interaction gate permits only the owner D1 shadow host and recovery controls',()=>{
-  const c=vm.createContext({_fbQuotaReadCircuitOpen:true,V:'editingintake',FB_USER:{uid:'owner'},_isOwner:()=>true});
+  const c=vm.createContext({_authSettled:true,_fbQuotaReadCircuitOpen:true,V:'editingintake',FB_USER:{uid:'owner'},_isOwner:()=>true});
   vm.runInContext(extract('_fbQuotaIntakeAllowed')+'\n'+extract('_fbQuotaEventAllowed'),c);
   const event=id=>({composedPath:()=>[{id:'inner-control'},{id}]});
   assert.equal(c._fbQuotaEventAllowed(event('editing-intake-native')),true);
@@ -46,11 +46,12 @@ test('quota interaction gate permits only the owner D1 shadow host and recovery 
   for(const id of ['view','sidebar','modal'])assert.equal(c._fbQuotaEventAllowed(event(id)),false);
   c.V='videoedit';assert.equal(c._fbQuotaEventAllowed(event('editing-intake-native')),false);
   c.V='editingintake';c._isOwner=()=>false;assert.equal(c._fbQuotaEventAllowed(event('editing-intake-native')),false);
+  c._authSettled=false;assert.equal(c._fbQuotaEventAllowed(event('editing-intake-native')),false);
   c._fbQuotaReadCircuitOpen=false;assert.equal(c._fbQuotaEventAllowed(event('view')),true);
 });
 test('quota D1 opening leaves the Firestore circuit closed and does not reconnect it',()=>{
   let destination='',refresh=0;
-  const c=vm.createContext({_fbQuotaReadCircuitOpen:true,FB_USER:{uid:'owner'},_isOwner:()=>true,setV:v=>{destination=v},_fbRefreshQuotaNotice:()=>refresh++});
+  const c=vm.createContext({_authSettled:true,_fbQuotaReadCircuitOpen:true,FB_USER:{uid:'owner'},_isOwner:()=>true,setV:v=>{destination=v},_fbRefreshQuotaNotice:()=>refresh++});
   vm.runInContext(extract('openIntakeDuringFirestoreQuota'),c);
   assert.equal(c.openIntakeDuringFirestoreQuota(),true);assert.equal(destination,'editingintake');assert.equal(refresh,1);assert.equal(c._fbQuotaReadCircuitOpen,true);
   c._isOwner=()=>false;assert.equal(c.openIntakeDuringFirestoreQuota(),false);
@@ -79,4 +80,11 @@ test('quota-only intake route bypasses daily gates that would require unavailabl
 test('render releases view listeners even when an access or daily gate returns early',()=>{
   const render=extract('render');
   assert.match(render,/finally\{\s*window\.managerSyncViewSubscriptions\?\.\(\);/);
+});
+
+test('cooldown owner D1 rendering does not fabricate Firestore access readiness',()=>{
+ const render=extract('render');
+ assert.ok(render.includes('(!ACCESS_RESOLVED&&!_fbQuotaIntakeAllowed())'));
+ assert.ok(render.includes('if(FB_USER&&!ACCESS_RESOLVED&&!_fbQuotaIntakeAllowed())'));
+ assert.doesNotMatch(extract('openIntakeDuringFirestoreQuota'),/ACCESS_RESOLVED\s*=|APP_ACCESS\s*=/);
 });

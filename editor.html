@@ -19,7 +19,7 @@
     @media(max-width:420px){.metric{grid-column:span 12}.who{max-width:46%}.btn{width:100%}.nav .btn,.actions .btn,.topbar .btn{width:auto}.actions .job-primary{width:100%}}
   </style>
   <link rel="stylesheet" href="app-ui.css">
-  <link rel="stylesheet" href="editor-yellow-ui.css?v=20260930-08">
+  <link rel="stylesheet" href="editor-yellow-ui.css?v=20261001-04">
 </head>
 <body class="editor-yellow-ui">
   <a class="app-skip-link" href="#app">メイン画面へ移動</a>
@@ -30,8 +30,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" onerror="portalSdkLoadFailed()"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js" onerror="portalSdkLoadFailed()"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js" onerror="portalSdkLoadFailed()"></script>
-  <script src="./firestore-pressure-guard.js?v=20260930-08"></script>
-  <script src="./billing-terms.js?v=20260930-08"></script>
+  <script src="./firestore-pressure-guard.js?v=20261001-04"></script>
+  <script src="./billing-terms.js?v=20261001-04"></script>
   <!-- PDF libraries are loaded only when an editor creates a PDF. -->
   <script>
   const PAGE_PARAMS=new URLSearchParams(location.search);
@@ -73,6 +73,7 @@
   }
   let portalQuotaCircuitOpen=false,portalQuotaNoticeShown=false,portalQuotaWriteBlockInstalled=false;
   const portalQuotaStops=new Set();
+  const portalCooldown=window.EditflowFirestorePressure?.browserCooldown?.();
   function portalIsQuotaError(error){const code=String(error?.code||'').toLowerCase(),message=String(error?.message||error||'').toLowerCase();return code.includes('resource-exhausted')||message.includes('quota exceeded')||message.includes('resource-exhausted')}
   function portalSaveVisibleDrafts(){try{if($('#new-title'))saveCaseDraft();jobs.forEach(job=>{if($('#job-status-'+job.id))saveJobDraft(job.id)})}catch(error){console.warn('portal draft backup',error)}}
   function portalQuotaNotice(){
@@ -80,9 +81,11 @@
     const el=document.createElement('section');el.id='portal-quota-maintenance';el.className='card notice warn';el.setAttribute('role','alert');
     el.style.cssText='position:fixed;z-index:100100;inset:0;display:grid;place-items:center;padding:14px;background:rgba(17,24,39,.58)';
     el.innerHTML='<div class="card notice warn" style="width:min(620px,100%);box-shadow:0 14px 36px rgba(0,0,0,.28)"><b>クラウド接続を一時停止しました</b><p style="margin:5px 0 0">Firestoreへの書き込み混雑、または利用上限を検知しました。案件・進捗・DMの保存状況は確認できません。この画面からの保存・提出・送信は停止しています。時間を置いて再読み込みしてください。</p><button class="btn small" type="button" style="margin-top:9px" onclick="retryPortalFirestoreAfterQuota()">再読み込みして再接続</button></div>';
+    const until=portalCooldown?.read()?.until;
+    if(until){const p=document.createElement('p');p.textContent=`再接続を試せる目安は ${new Date(until).toLocaleString('ja-JP')} 以降です（回復の保証ではありません）。待機中は再読み込みしても接続しません。`;el.firstElementChild.appendChild(p);}
     document.body.appendChild(el);
   }
-  function retryPortalFirestoreAfterQuota(){const u=new URL(location.href);u.searchParams.set('firestoreRetry',String(Date.now()));location.assign(u.href)}
+  function retryPortalFirestoreAfterQuota(){if(portalCooldown?.read()){toast('無料枠の回復待ちです。表示された時刻以降にお試しください');return}const u=new URL(location.href);u.searchParams.set('firestoreRetry',String(Date.now()));location.assign(u.href)}
   function portalStopRealtime(){const stop=new Set([...(unsubs||[]),...(portalUnsubs||[])]);stop.forEach(unsub=>{try{unsub?.()}catch(_){}});unsubs=[];portalUnsubs=[]}
   function portalRegisterQuotaStop(fn){if(typeof fn!=='function')return()=>{};portalQuotaStops.add(fn);if(portalQuotaCircuitOpen){try{fn()}catch(err){console.warn('quota stop failed',err)}}return()=>portalQuotaStops.delete(fn)}
   function portalWriteBlocked(){if(!portalQuotaCircuitOpen)return false;toast('クラウド接続停止中。再読み込み後に操作してください');return true}
@@ -95,6 +98,7 @@
   function portalEnterQuotaCircuit(error,scope){
     if(!portalIsQuotaError(error))return false;
     if(portalQuotaCircuitOpen)return true;
+    if(typeof portalCooldown!=='undefined')portalCooldown?.pause();
     portalQuotaCircuitOpen=true;portalSaveVisibleDrafts();portalBlockFirestoreWritePrimitives();
     portalQuotaStops.forEach(stop=>{try{stop()}catch(err){console.warn('quota stop failed',err)}});
     try{window.dispatchEvent(new Event('editor-quota-circuit'))}catch(_){}
@@ -778,7 +782,7 @@
     user=nextUser;access=null;accessRequest=null;profile={};jobs=[];portalJobsSource=[];previewLegacyJobs=[];invoices=[];authorizations=[];driveToken=null;ADMIN_PREVIEW=false;PORTAL_UID='';
     authInFlight=false;authUiState={busy:false,message:'',kind:'',browserHelp:false,startupError:false};
     if(!nextUser)return loginScreen();
-    portalAuthLoadingScreen();observeAccess();
+    portalAuthLoadingScreen();if(!portalCooldown?.restore(portalEnterQuotaCircuit))observeAccess();
   }
   function initializePortalFirebase(){
     const waitMs=15*1000;
@@ -787,6 +791,7 @@
       if(!firebase.apps?.length)firebase.initializeApp(FIREBASE_CONFIG);
       auth=firebase.auth();db=firebase.firestore();
       window.EditflowFirestorePressure?.install(firebase,portalEnterQuotaCircuit);
+      portalCooldown?.listen(portalEnterQuotaCircuit);
       authStateWatchdog=setTimeout(()=>{if(!authStateSettled)renderAuthRecovery('サインイン状態の確認に時間がかかっています。通信状態を確認し、ページを再読み込みしてください。')},waitMs);
       auth.onAuthStateChanged(handlePortalAuthState,error=>{console.warn('auth state',error?.code||error);authStateSettled=true;if(authStateWatchdog)clearTimeout(authStateWatchdog);renderAuthRecovery('サインイン状態を確認できませんでした。ページを再読み込みして、もう一度お試しください。')});
       if(typeof auth.getRedirectResult==='function')auth.getRedirectResult().catch(error=>{const state=authErrorMessage(error);authUiState={busy:false,startupError:false,...state};if(!user)loginScreen()});
@@ -796,10 +801,10 @@
   if(!DEMO&&'serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(error=>console.warn('service worker',error));
   </script>
   <script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
-  <script src="./editor-push.js?v=20260930-08"></script>
-  <script src="./bulletin.js?v=20260930-08"></script>
-  <script src="./direct-messages.js?v=20260930-08"></script>
-  <script src="./feedback-workflow.js?v=20260930-08"></script>
-  <script src="./editor-features.js?v=20261001-03"></script>
+  <script src="./editor-push.js?v=20261001-04"></script>
+  <script src="./bulletin.js?v=20261001-04"></script>
+  <script src="./direct-messages.js?v=20261001-04"></script>
+  <script src="./feedback-workflow.js?v=20261001-04"></script>
+  <script src="./editor-features.js?v=20261001-04"></script>
 </body>
 </html>

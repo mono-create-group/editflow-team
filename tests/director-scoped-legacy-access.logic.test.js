@@ -48,7 +48,7 @@ test('owner and non-director core staff retain the legacy workspace', () => {
 });
 
 test('director authentication starts only scoped portal listeners and clears legacy browser copies', () => {
-  assert.match(source, /if\(_appAccessAllowed\(\)\)\{\s*if\(_coreAccessAllowed\(\)\)\{fbSetupRealtimeSync\(\);fbSetupTeamSync\(\);\}\s*fbSetupPortalOpsSync\(\)/);
+  assert.match(source, /if\(!_fbQuotaBlocked&&_appAccessAllowed\(\)\)\{\s*if\(_coreAccessAllowed\(\)\)\{fbSetupRealtimeSync\(\);fbSetupTeamSync\(\);\}\s*fbSetupPortalOpsSync\(\)/);
   assert.match(source, /_clearSensitiveLocalState\(true\);\s*_purgeLegacyDirectorLocalCopies\(\)/);
   assert.match(source, /ef_team_v5_backup_/);
   assert.match(source, /mcapp_paid_cleanup_bak_/);

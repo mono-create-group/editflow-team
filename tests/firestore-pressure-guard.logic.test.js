@@ -6,7 +6,7 @@ const path=require('node:path');
 const guard=require('../firestore-pressure-guard');
 const {extract}=require('./helpers/owner-progress-source.cjs');
 test('a hidden retrying SDK stream error stops once even though its write promise never rejects',async()=>{
-  let logger,stops=0;const sdk={onLog(fn,options){assert.equal(options.level,'error');logger=fn}};
+  let logger,stops=0;const sdk={onLog(fn,options){assert.equal(options.level,'warn');logger=fn}};
   guard.install(sdk,()=>stops++);
   assert.equal(guard.install(sdk,()=>assert.fail('must not replace handler')),false);
   const unresolved=new Promise(()=>{});let writeFailed=false;unresolved.catch(()=>writeFailed=true);

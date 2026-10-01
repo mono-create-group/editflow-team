@@ -2,6 +2,7 @@
   'use strict';
   const state={editors:[],catalog:new Map(),catalogRepairing:new Set(),assignmentSyncing:new Set(),invoiceActionPending:new Set(),board:[],boardFormOpen:false,manuals:[],schedules:[],suggestions:[],invoices:[],authorizations:[],profiles:[],clientPricing:new Map(),clientPricingReady:false,clientRates:[],clientRatesReady:false,clientRatesUnsub:null,clientRatesLoadPromise:null,portalJobsByEditor:new Map(),loaded:{editors:false,portalJobs:new Set()},unsubs:[],viewUnsubs:new Map(),nested:[],started:'',portalSignature:null,renderFrame:null,lifecycleTimer:null};
   const originalVideoOperations=rVideoOperations;
+  const ownerCatalogStops=new Map();
   const originalWorkers=rWorkers;
   // index.html の既存クライアント操作を安全に拡張する。案件・履歴はこの処理で触らない。
   const originalSaveClient=window.saveClient;
@@ -150,6 +151,7 @@
   function clientsForEditor(uid){const rows=catalogsFor(uid).map(c=>({...c,catalogId:c.id,id:c.sourceClientId||c.id,accounts:visibleAccounts(c.accounts||[])}));if(_isOwner())legacyClients().forEach(c=>{const found=rows.find(x=>(x.sourceClientId&&x.sourceClientId===c.id)||nameKey(x.name)===nameKey(c.name)),accounts=masterAccounts(c);if(found)found.accounts=accounts;else rows.push({id:c.id,sourceClientId:c.id,name:c.name,accounts})});return rows}
 
   function stopNested({preserveOwnerPortalData=false,resetPricing=true}={}){
+    ownerCatalogStops.forEach(stop=>{try{stop()}catch(_){}});ownerCatalogStops.clear();
     state.nested.forEach(x=>{try{x()}catch(_){}});state.nested=[];state.catalog.clear();state.catalogRepairing.clear();state.assignmentSyncing.clear();
     if(!preserveOwnerPortalData){state.invoices=[];state.authorizations=[];state.profiles=[];state.portalJobsByEditor.clear();state.loaded.portalJobs.clear()}
     if(resetPricing){state.clientPricing.clear();state.clientPricingReady=false}
@@ -184,6 +186,7 @@
   }
   function subscribePortals(){
     const owner=_isOwner();
+    if(owner){reconcileOwnerCatalogs();return;}
     // オーナーは index.html の collection-group 購読結果を使う。ここで残すのは
     // 各編集者へ公開する client_catalog だけで、jobs/invoices/profile/auth は再購読しない。
     stopNested({preserveOwnerPortalData:owner,resetPricing:false});
@@ -208,6 +211,22 @@
       state.nested.push(root.collection('invoice_authorizations').onSnapshot(q=>{state.authorizations=state.authorizations.filter(x=>x._portalUid!==uid).concat(q.docs.map(d=>({id:d.id,_portalUid:uid,...d.data()})));renderSafe()},x=>quotaSnapshotError(x,'director authorization')));
       state.nested.push(root.collection('editor_profile').doc('self').onSnapshot(d=>{state.profiles=state.profiles.filter(x=>x._portalUid!==uid);if(d.exists)state.profiles.push({id:d.id,_portalUid:uid,...d.data()});renderSafe()},x=>quotaSnapshotError(x,'director profile')));
     }
+  }
+  function reconcileOwnerCatalogs(){
+    // Adding/removing one editor must not re-read every other editor's catalog.
+    // Account changes, sign-out, and quota stops still clear all subscriptions.
+    const wanted=new Set(state.editors.map(editor=>String(editor.id)));
+    ownerCatalogStops.forEach((stop,uid)=>{
+      if(wanted.has(uid))return;
+      try{stop()}catch(_){}ownerCatalogStops.delete(uid);state.catalog.delete(uid);
+    });
+    wanted.forEach(uid=>{
+      if(ownerCatalogStops.has(uid))return;
+      const stop=fbDb.collection('editor_portals').doc(uid).collection('client_catalog').onSnapshot(q=>{
+        state.catalog.set(uid,q.docs.map(d=>({id:d.id,...d.data()})));renderSafe();
+      },error=>quotaSnapshotError(error,'owner catalog'));
+      ownerCatalogStops.set(uid,stop);
+    });
   }
   function start(){
     if(window.EditflowFirestoreQuota?.isOpen?.()||!FB_USER||!ACCESS_RESOLVED||!canManage()||state.started===FB_USER.uid)return;

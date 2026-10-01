@@ -39,7 +39,7 @@ test('shared writes and lead shards are payload-deduplicated and quota fail-clos
   const source = sourceBetween('_teamSave', 'fbSetupTeamSync');
   assert.match(source, /if\(!FB_USER\|\|TEAM_SHARE_OK===false\|\|_fbQuotaBlocked\)return;/);
   assert.match(source, /_slShardsSave\(\);/);
-  assert.match(source, /const payloadSignature=JSON\.stringify\(data\);/);
+  assert.match(source, /const payloadSignature=_teamPayloadSignature\(data\);/);
   assert.match(source, /if\(payloadSignature===_teamLastPayload\)return;/);
   assert.match(source, /if\(_teamSaveInFlight\)\{_teamSaveQueued=true;return;\}/);
   assert.match(source, /_fbFailClosed\(e,'team share'\)/);
