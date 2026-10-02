@@ -12,7 +12,7 @@ if(location.protocol==='file:')location.replace('https://mono-create-group.githu
 <meta name="theme-color" content="#f6c90e">
 <meta name="ai-bridge-url" content="">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png">
-<script src="./billing-terms.js?v=20261001-05"></script>
+<script src="./billing-terms.js?v=20261003-01"></script>
 <title>mono.create 社内連絡アプリ</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -1002,7 +1002,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 .owner-inline-progress>button{justify-self:start;white-space:nowrap}.owner-inline-progress input[type="checkbox"]{width:auto}.owner-progress-action{margin:4px;white-space:nowrap}.owner-inline-progress [hidden]{display:none}
 </style>
 <link rel="stylesheet" href="app-ui.css">
-<link rel="stylesheet" href="owner-yellow-ui.css?v=20261001-05">
+<link rel="stylesheet" href="owner-yellow-ui.css?v=20261003-01">
 </head>
 <body class="owner-yellow-ui">
 
@@ -1061,11 +1061,11 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script src="./firestore-pressure-guard.js?v=20261001-05"></script>
+<script src="./firestore-pressure-guard.js?v=20261003-01"></script>
 <script src="./ai-bridge-client.js"></script>
-<script src="./owner-video-performance.js?v=20261001-05"></script>
-<script src="./feedback-workflow.js?v=20261001-05"></script>
-<script src="./editing-intake-integration.js?v=20261001-05"></script>
+<script src="./owner-video-performance.js?v=20261003-01"></script>
+<script src="./feedback-workflow.js?v=20261003-01"></script>
+<script src="./editing-intake-integration.js?v=20261003-01"></script>
 <script>/* lz-string 1.5.0 (MIT) — CDN非依存でオフライン/圧縮チーム同期を保証するためインライン化 */
 var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",e={};function t(r,o){if(!e[r]){e[r]={};for(var n=0;n<r.length;n++)e[r][r.charAt(n)]=n}return e[r][o]}var i={compressToBase64:function(r){if(null==r)return"";var n=i._compress(r,6,function(r){return o.charAt(r)});switch(n.length%4){default:case 0:return n;case 1:return n+"===";case 2:return n+"==";case 3:return n+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(n){return t(o,r.charAt(n))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(r){return null==r?"":""==r?null:i._decompress(r.length,16384,function(o){return r.charCodeAt(o)-32})},compressToUint8Array:function(r){for(var o=i.compress(r),n=new Uint8Array(2*o.length),e=0,t=o.length;e<t;e++){var s=o.charCodeAt(e);n[2*e]=s>>>8,n[2*e+1]=s%256}return n},decompressFromUint8Array:function(o){if(null==o)return i.decompress(o);for(var n=new Array(o.length/2),e=0,t=n.length;e<t;e++)n[e]=256*o[2*e]+o[2*e+1];var s=[];return n.forEach(function(o){s.push(r(o))}),i.decompress(s.join(""))},compressToEncodedURIComponent:function(r){return null==r?"":i._compress(r,6,function(r){return n.charAt(r)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),i._decompress(r.length,32,function(o){return t(n,r.charAt(o))}))},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(r,o,n){if(null==r)return"";var e,t,i,s={},u={},a="",p="",c="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<r.length;i+=1)if(a=r.charAt(i),Object.prototype.hasOwnProperty.call(s,a)||(s[a]=f++,u[a]=!0),p=c+a,Object.prototype.hasOwnProperty.call(s,p))c=p;else{if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++),s[p]=f++,c=String(a)}if(""!==c){if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++)}for(t=2,e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;for(;;){if(m<<=1,v==o-1){d.push(n(m));break}v++}return d.join("")},decompress:function(r){return null==r?"":""==r?null:i._decompress(r.length,32768,function(o){return r.charCodeAt(o)})},_decompress:function(o,n,e){var t,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:e(0),position:n,index:1};for(t=0;t<3;t+=1)l[t]=t;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return i}();"function"==typeof define&&define.amd?define(function(){return LZString}):"undefined"!=typeof module&&null!=module?module.exports=LZString:"undefined"!=typeof angular&&null!=angular&&angular.module("LZString",[]).factory("LZString",function(){return LZString});
 </script>
@@ -10876,7 +10876,7 @@ const DOCLINK_SEEDS=[
    url:'https://mono-create-group.github.io/editflow-team/dm-manual.html?v=20260816-01',
    category:'マニュアル',notes:'新メンバー向け。アイコン・アカウント名の予約(早い者勝ち)・DM文章の作成・営業リストでの送付と記録まで1ページで完結',ver:3},
   {id:'doclink_invoice_manual',title:'請求書の作り方（編集者向けマニュアル・見本つき）',
-   url:'https://mono-create-group.github.io/editflow-team/invoice-manual.html?v=20261001-05',
+   url:'https://mono-create-group.github.io/editflow-team/invoice-manual.html?v=20261003-01',
    category:'マニュアル',notes:'編集者へ共有する。請求者情報の登録→完了案件を選んで明細（1案件＝1行）→確認して提出、締切と支払日、NG例/見本、FAQ',ver:1},
   {id:'doclink_dm_entry_form',title:'DM営業スタッフ 登録フォーム（応募者に送るURL）',
    url:'https://mono-create-group.github.io/editflow-team/dm-entry.html',
@@ -17567,17 +17567,19 @@ function _slAssignees(){
 }
 
 // ─── 事業切替(店舗は分割せず1レコードに事業別の営業状態を持たせる) ───
-// キーは Firestore 1MiB制約に配慮し短縮(hp/consult/app/shift)。状態は biz[キー]={s,n,m} で保持。
+// キーは Firestore 1MiB制約に配慮し短縮(hp/consult/app/shift/edit)。状態は biz[キー]={s,n,m} で保持。
 // 2026-07-11 会長決定: Instagram運用代行は事業廃止のためタブから外す。
 // biz.ig フィールド自体は削除しない(後方互換優先・既存データは温存)。
 // 2026-07-13 会長決定: 飲食店はHP営業対象にせずシフトさん営業対象にする。
 //   → シフトさんタブを新設。飲食はシフトさんタブにだけ表示、他事業タブは非飲食のみ表示(slInPool)。
 //   店舗レコードは共通(物理移動なし)。振り分けは業種ベースの表示ロジックのみで完全可逆。
+// 2026-10-03 会長指示: 動画編集代行の営業先(個人のインスタ発信者・segment==='編集代行')専用の「編集代行」タブを新設。
 const SL_BIZ=[
   {k:'hp',label:'HP制作',short:'HP'},
   {k:'consult',label:'AI顧問',short:'AI顧問'},
   {k:'app',label:'自動化ツール',short:'自動化'},
   {k:'shift',label:'シフトさん',short:'シフト'},
+  {k:'edit',label:'編集代行',short:'編集'},
 ];
 const SL_BIZ_KEYS=SL_BIZ.map(b=>b.k);
 function slBizLabel(k){const b=SL_BIZ.find(x=>x.k===k);return b?b.label:k;}
@@ -17632,11 +17634,15 @@ function slBeautyService(genre){
   if(/整体|整骨|接骨|鍼灸|リラク|アロマ|リンパ|ヘッドスパ|リフレ|タイ古式|カイロ|ストレッチ|フットケア/.test(g))return 'リラク・ボディケア';
   return 'その他美容';
 }
-// この店がこの事業タブのプールに属するか。シフトさん=飲食のみ／他事業=非飲食のみ
+// この店がこの事業タブのプールに属するか。シフトさん=飲食のみ／他事業=非飲食のみ／編集代行=segment==='編集代行'のみ
 // srcKey: 'store'/'threads'/'any'(区分を問わない・タブ件数用)。省略時は現在のビューに従う。
 function slInPool(l,bizKey,srcKey){
   const bk=bizKey||_slBiz;
   const sk=srcKey!==undefined?srcKey:((bk==='hp')?_slSrc:'store');
+  // 編集代行事業(2026-10-03): 個人のインスタ発信者(segment==='編集代行')だけを表示する専用プール。
+  // このリードは他事業タブ・店舗/スレッズ区分には出さず、編集代行タブには他のリードを出さない(他リードの振り分けは従来どおり)。
+  if(l.segment==='編集代行')return bk==='edit'&&sk!=='threads';
+  if(bk==='edit')return false;
   // スレッズ発リードはHP制作の「スレッズ」区分にのみ属する(他事業・店舗区分には出さない)
   if(slSrcOf(l)==='threads')return bk==='hp'&&(sk==='threads'||sk==='any');
   if(sk==='threads')return false;
@@ -17704,11 +17710,15 @@ function slPushContact(l,biz,channel,assignee,status){
   }
   l.contacts.push({d:td,b:biz,c:channel||'',a:a,s:status||''});
 }
+// Instagramの予約パス(投稿・リール・ストーリー等)。プロフィールではないためハンドル扱いしない(2026-10-03)
+const SL_IG_RESERVED=new Set(['p','reel','reels','tv','stories','explore','accounts','direct','share','s']);
 function slIgHandle(v){
   // Instagram値からハンドルを抽出。フルURL/@付き/素ハンドルいずれにも対応。
   // 抽出できなければnullを返す(呼び出し側でプレーン表示にフォールバック)。
   v=(v||'').trim();
   if(!v)return null;
+  // https:// の無いURL(instagram.com/xxx 等)はURLとして読む。ドメイン名をハンドルと誤認してDM先を間違えないため(2026-10-03)
+  if(!/^https?:\/\//i.test(v)&&(/^(?:www\.|m\.)?instagram\.com(?:[\/?#]|$)/i.test(v)||/^[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+\//.test(v)))v='https://'+v;
   let h=v;
   if(/^https?:\/\//i.test(v)){
     try{
@@ -17719,11 +17729,17 @@ function slIgHandle(v){
   }
   h=h.replace(/^@/,'').split('?')[0].split('/')[0].trim();
   if(!h||!/^[A-Za-z0-9._]{1,30}$/.test(h))return null;
+  if(SL_IG_RESERVED.has(h.toLowerCase()))return null;  // /p/・/reel/ 等のURLを 'p'・'reel' 宛てのDMにしない
   return h;
 }
 function slIgUrl(v){
   const h=slIgHandle(v);
   return h?('https://www.instagram.com/'+h+'/'):'#';
+}
+// 編集代行タブの検索用: 保存値(URL/@ID)と正規化した@IDのどちらで入力しても引けるようにする
+function slIgSearchKey(v){
+  const h=slIgHandle(v);
+  return (v||'')+(h?(' @'+h):'');
 }
 function slIgDmComposeUrl(v){
   // Instagramの標準Web導線。ログイン状態に応じてDM作成画面またはログイン画面へ遷移する。
@@ -17889,8 +17905,8 @@ function slFilteredLeads(){
     if(_slFilterApproach==='__none__'){if(l.approach)return false;}
     else if(_slFilterApproach!=='all'&&l.approach!==_slFilterApproach)return false;
     if(q){
-      // スレッズ区分は住所を持たないため、@ハンドルと投稿本文も検索対象にする
-      const hay=[l.name,l.address,l.threads,l.postText].map(v=>(v||'').toLowerCase());
+      // スレッズ区分は住所を持たないため、@ハンドルと投稿本文も検索対象にする(編集代行タブはInstagramの@IDも)
+      const hay=[l.name,l.address,l.threads,l.postText,_slBiz==='edit'?slIgSearchKey(l.instagram):''].map(v=>(v||'').toLowerCase());
       if(!hay.some(v=>v.includes(q)))return false;
     }
     return true;
@@ -18555,7 +18571,10 @@ function rSalesLeads(){
   const total=all.length;
   const thisMonth=new Date().toISOString().slice(0,7);
   const q=_slSearch.toLowerCase();
-  const _searchHit=l=>{ if(!q)return true; return [l.name,l.address,l.threads,l.postText].some(v=>(v||'').toLowerCase().includes(q)); };
+  // 編集代行タブ(個人のインスタ発信者)は住所・HP有無を持たないため、@IDで検索でき、店舗向けの表示(HP・地域)を出さない。
+  // 店舗形式のCSV取込欄も出さない(segmentが付かず他事業タブへ混ざるため。編集代行の一括取込はleads_ioで行う)
+  const isEditV=_slBiz==='edit';
+  const _searchHit=l=>{ if(!q)return true; return [l.name,l.address,l.threads,l.postText,isEditV?slIgSearchKey(l.instagram):''].some(v=>(v||'').toLowerCase().includes(q)); };
   // ─── ファセット集計(2026-07-24) ───
   // 各フィルタ次元の件数は「自分以外の絞り込みを適用した集合」で数える(faceted search)。
   // これにより業種や地域を選ぶと、他のフィルタの数字がその絞り込みに追従してリアルタイムに変わる。
@@ -18686,6 +18705,7 @@ function rSalesLeads(){
       <span class="sl-summary-chip" style="background:var(--card2);border-color:var(--border);color:var(--t2)">総数 <strong style="color:var(--text)">${viewTotal}</strong></span>
       ${slIsThreadsView()
         ?`<span class="sl-summary-chip" style="background:var(--card2);border:1.5px solid var(--purple);color:var(--purple)" title="投稿URLがあり、まだ未接触＝これからワンタップで開いて営業できる投稿">未接触の投稿 <strong>${thFreshCount}</strong></span>`
+        :isEditV?''
         :`<span class="sl-summary-chip" style="background:rgba(214,41,118,0.08);border:1.5px solid rgba(214,41,118,0.35);color:#d62976" title="Instagramあり×自社HPなし＝DM営業の本命ターゲット">IGあり・HPなし <strong>${igNoHpCount}</strong></span>`}
       <span class="sl-summary-chip sl-未接触" style="border:1.5px solid var(--border)">未接触 <strong>${sum['未接触']}</strong></span>
       <span class="sl-summary-chip sl-架電予定" style="border:1.5px solid var(--blue)">架電予定 <strong>${sum['架電予定']}</strong></span>
@@ -18793,7 +18813,7 @@ function rSalesLeads(){
   </div>`;
 
   const searchHtml=`<div style="margin-bottom:14px;display:flex;gap:8px;align-items:center">
-    <input type="search" id="sl-search" placeholder="${slIsThreadsView()?'投稿者・@id・投稿本文で検索…':'店名・住所で検索…'}" value="${esc(_slSearch)}" oninput="slSearchInput(this)" oncompositionstart="_slComposing=true" oncompositionend="_slComposing=false;slSearchInput(this)" style="max-width:280px">
+    <input type="search" id="sl-search" placeholder="${slIsThreadsView()?'投稿者・@id・投稿本文で検索…':isEditV?'アカウント名・@IDで検索…':'店名・住所で検索…'}" value="${esc(_slSearch)}" oninput="slSearchInput(this)" oncompositionstart="_slComposing=true" oncompositionend="_slComposing=false;slSearchInput(this)" style="max-width:280px">
     <span style="font-size:12px;color:var(--t2)">${filtered.length}件</span>
   </div>`;
 
@@ -18831,7 +18851,7 @@ function rSalesLeads(){
             ${l.phone?`<a href="tel:${esc(l.phone)}" style="color:var(--blue);font-size:11px">📞 ${esc(l.phone)}</a>`:''}
             ${l.instagram&&l.instagram.trim()?slIgLink(l.instagram):''}
             ${l.email&&l.email.trim()?`<a href="mailto:${esc(l.email)}" style="color:var(--green);font-size:11px">✉️ ${esc(l.email)}</a>`:''}
-            <span style="font-size:11px;color:var(--t3)">HP: ${esc(l.hp||'未確認')}</span>
+            ${isEditV?'':`<span style="font-size:11px;color:var(--t3)">HP: ${esc(l.hp||'未確認')}</span>`}
           </div>
           ${l.address?`<div style="font-size:11px;color:var(--t3);margin-top:2px">${esc(l.address)}</div>`:''}`;
       // 連絡先の直接編集欄。スレッズ区分は Threads/投稿URL、店舗は Instagram/メール
@@ -18914,13 +18934,13 @@ function rSalesLeads(){
   ${srcTabHtml}
   ${counterHtml}
   ${summaryHtml}
-  ${isThV?'':regionSummaryHtml}
-  ${importHtml}
+  ${isThV||isEditV?'':regionSummaryHtml}
+  ${isEditV?'':importHtml}
   <div class="sl-filters">
   ${statusFilterHtml}
   ${isThV?'':genreFilterHtml}
   ${isThV?'':detailFilterHtml}
-  ${isThV?'':regionFilterHtml}
+  ${isThV||isEditV?'':regionFilterHtml}
   ${isThV?'':contactFilterHtml}
   ${isThV?'':approachFilterHtml}
   ${assigneeFilterHtml}
@@ -18960,12 +18980,33 @@ function slSetBizField(id,field,val){
   save();
 }
 
+// 編集代行(segment==='編集代行')のDM本文。2026-10-03 会長確定文面(改変禁止・1文字も変えない)。
+const SL_EDIT_DM_TEXT=[
+  '初めまして！',
+  '',
+  '動画編集を行なっている',
+  'mono.create 中村と申します。',
+  '',
+  'もし現在',
+  '「編集に使う時間がない」',
+  '「クオリティが安定しない」',
+  '「投稿本数を上げたい」',
+  'などのお悩みがあれば、一度お話をお聞かせください！',
+  '',
+  'お問い合わせは以下のサイトからお願いいたします！',
+  '単価やポートフォリオ等がご覧になれます。',
+  'https://mono-create-group.github.io/lp/sample-hp/creators-list/client.html',
+  '',
+  'ご検討のほどよろしくお願いいたします！'
+].join('\n');
 // オーナー専用のDM補助フロー。Instagramへの最終送信は自動化せず、本人がInstagram上で行う。
 function slPrepareOwnerDm(id){
   if(!_isOwner()){toast('この操作はオーナー専用です','err');return;}
   const l=(S.salesLeads||[]).find(x=>x.id===id&&!x.deleted);
   if(!l||slStatusOf(l)!=='未接触'||!slIgHandle(l.instagram)){toast('未接触かつInstagram登録済みのリードのみ準備できます','warn');return;}
-  const existing=String(l.dmDraft||'');
+  // 編集代行は会長確定文面を初期表示(本人がコピー済みの下書きがあればそれを優先)。他segmentは従来どおり下書きのみ。
+  const isEditAgency=l.segment==='編集代行';
+  const existing=String(l.dmDraft||'')||(isEditAgency?SL_EDIT_DM_TEXT:'');
   openModal(`<div class="mhdr"><div class="mtitle">✉️ DMを準備</div><button class="mclose" onclick="closeModal()">✕</button></div>
     <div style="font-size:13px;color:var(--t2);line-height:1.75;margin-bottom:10px"><b>${esc(l.name)}</b> 宛て。本文を確認・編集してコピーしてください。Instagramでの最終「送信」はオーナー本人が行います。</div>
     <textarea id="sl-owner-dm-text" placeholder="承認済みの個別DM本文を入力…" style="width:100%;min-height:160px;resize:vertical">${esc(existing)}</textarea>
@@ -18978,7 +19019,7 @@ function slPrepareOwnerDm(id){
         <button class="btn btn-p btn-sm" onclick="slOpenOwnerDm('${id}')">② DM送信画面を開く</button>
         <button class="btn btn-g btn-sm" onclick="slConfirmOwnerDmSent('${id}')">③ 本人送信済みとして記録</button>
         <button class="btn btn-sm" style="color:var(--red);border-color:rgba(220,38,38,.35)" onclick="slExcludeOwnerDm('${id}','Instagramアカウントなし')">Instagramなし→削除</button>
-        <button class="btn btn-sm" style="color:var(--red);border-color:rgba(220,38,38,.35)" onclick="slExcludeOwnerDm('${id}','公式サイトあり')">公式サイトあり→削除</button>
+        ${isEditAgency?'':`<button class="btn btn-sm" style="color:var(--red);border-color:rgba(220,38,38,.35)" onclick="slExcludeOwnerDm('${id}','公式サイトあり')">公式サイトあり→削除</button>`}
       </div>
     </div>`);
 }
@@ -19074,10 +19115,31 @@ function slDelete(id){
 function slAddManual(){
   if(!S.salesLeads)S.salesLeads=[];
   if(slIsThreadsView())return slAddThreadsLead();
+  if(_slBiz==='edit')return slAddEditAgencyLead();
   const name=prompt('店名を入力:');
   if(!name)return;
   S.salesLeads.push({id:uid(),name:name.trim(),status:'未接触',biz:{hp:{s:'未接触',n:'',m:''}},contacts:[],createdAt:new Date().toISOString()});
   save();render();
+}
+
+// 編集代行タブの追加(2026-10-03): segment と biz.edit を付けて作る。
+// 付けないと編集代行タブに出ず、自動化ツール等の他事業タブへ混ざるため。
+function slAddEditAgencyLead(){
+  const name=(prompt('アカウント名を入力:')||'').trim();
+  if(!name)return;
+  const ig=prompt('Instagramの@ID またはプロフィールURL（任意）:');
+  if(ig===null)return;
+  const h=slIgHandle(ig);
+  if(ig.trim()&&!h){toast('InstagramのプロフィールID/URLとして読めません(投稿・リールのURLは不可)','warn');return;}
+  const dup=h&&(S.salesLeads||[]).find(l=>!l.deleted&&(slIgHandle(l.instagram)||'').toLowerCase()===h.toLowerCase());
+  if(dup){toast(`そのInstagramは既にリストにあります(${dup.name||'名称未設定'})`,'warn');return;}
+  S.salesLeads.push({
+    id:uid(),name,instagram:h?('@'+h):'',segment:'編集代行',region:'全国',
+    status:'未接触',biz:{edit:{s:'未接触',n:'',m:''}},contacts:[],
+    createdAt:new Date().toISOString()
+  });
+  save();render();
+  toast('編集代行のリードを追加しました');
 }
 
 // スレッズ区分の追加: 投稿URLを貼るだけで @ハンドルと投稿者名を自動で埋める
@@ -19323,7 +19385,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20261001-05';
+const APP_VERSION='20261003-01';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
@@ -19400,13 +19462,13 @@ window.addEventListener('pageshow',e=>{if(e.persisted)checkServerVersion();});  
 checkServerVersion();                                                              // 初回表示でも旧版を即時検出
   </script>
 <script>window.EDITOR_PUSH_CONFIG=Object.freeze({enabled:true,endpoint:'https://editflow-editor-push.mono-create-group.workers.dev',vapidPublicKey:'BFk-LdogMDmkmzKgEMN4Hb8xY32co5OQ3OXDCfGrswUNnxpgITXhiNsGpWpJS1gAzybVqcHaLJvyl_4faEBM-L8'});</script>
-<script src="./editor-push.js?v=20261001-05"></script>
-<script src="./bulletin.js?v=20261001-05"></script>
-<script src="./direct-messages.js?v=20261001-05"></script>
+<script src="./editor-push.js?v=20261003-01"></script>
+<script src="./bulletin.js?v=20261003-01"></script>
+<script src="./direct-messages.js?v=20261003-01"></script>
 <script>
   try{if(V==='directmessages')render();else renderNav();}catch(error){console.warn('owner dm init',error);}
 </script>
-<script src="./manager-features.js?v=20261001-05"></script>
-<script src="./sales-video-leads.js?v=20261001-05"></script>
+<script src="./manager-features.js?v=20261003-01"></script>
+<script src="./sales-video-leads.js?v=20261003-01"></script>
 </body>
 </html>
