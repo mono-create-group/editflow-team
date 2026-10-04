@@ -6,7 +6,7 @@ const vm=require('node:vm');
 
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
 const videoJs=fs.readFileSync(path.join(__dirname,'..','sales-video-leads.js'),'utf8');
-// 2026-10-03 会長確定文面(改変禁止)。index.html の SL_EDIT_DM_TEXT と1文字でも違えば失敗させる。
+// 2026-10-03 会長確定文面(改変禁止)。2026-10-04 会長指示で「最初の1本は無料トライアル」の3行を追加。index.html の SL_EDIT_DM_TEXT と1文字でも違えば失敗させる。
 const CONFIRMED_DM=`初めまして！
 
 動画編集を行なっている
@@ -17,6 +17,10 @@ mono.create 中村と申します。
 「クオリティが安定しない」
 「投稿本数を上げたい」
 などのお悩みがあれば、一度お話をお聞かせください！
+
+最初の1本は
+トライアルとして
+無料で編集させていただきます！
 
 お問い合わせは以下のサイトからお願いいたします！
 単価やポートフォリオ等がご覧になれます。
