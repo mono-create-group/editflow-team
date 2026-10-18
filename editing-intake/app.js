@@ -221,7 +221,7 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
     document.body.classList.toggle('signed-in',Boolean(state.user));
     $('environment').innerHTML=state.config?.mode==='fixture'?'<div class="fixture">ローカル検証用 · テスト用アカウントと保存データを使用しています。</div>':'';
     $('account').innerHTML=state.user?`<span>${admin()?'管理者':'お客様'}</span>${button(embedded?'社内アプリへ戻る':'ログアウト','logout')}`:'';
-    $('navigation').innerHTML=state.user?`<div class="nav-label">${admin()?'案件管理':'ご依頼の状況'}</div>${button('案件一覧','list')}${!admin()?button('素材を提出','entry',false,'data-entry="materials"')+button('修正・質問','entry',false,'data-entry="support"')+button('追加発注','entry',false,'data-entry="additional"')+button('新規相談','new'):''}${embedded&&admin()?button('素材保管先の接続確認','drive-health'):''}${embedded&&admin()&&state.config?.driveRootProvisionAvailable===true?button('非公開の素材保管先を準備','drive-root-provision'):''}${lineLink}`:'';
+    $('navigation').innerHTML=state.user?`<div class="nav-label">${admin()?'案件管理':'ご依頼の状況'}</div>${button('案件一覧','list')}${admin()?button('お客様台帳','customers'):''}${!admin()?button('素材を提出','entry',false,'data-entry="materials"')+button('修正・質問','entry',false,'data-entry="support"')+button('追加発注','entry',false,'data-entry="additional"')+button('新規相談','new'):''}${embedded&&admin()?button('素材保管先の接続確認','drive-health'):''}${embedded&&admin()&&state.config?.driveRootProvisionAvailable===true?button('非公開の素材保管先を準備','drive-root-provision'):''}${lineLink}`:'';
   }
   async function checkDriveHealth() {
     if(!embedded||!admin())throw Error('社内アプリの管理者のみ確認できます。');
@@ -565,6 +565,41 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
     const draft=inquiryDraft||{customerName:previous?.customerName||'',brief:'',requestedDueDate:'',bulkType:'',bulkCount:'1',videos:[{}],hearing:{}};
     $('content').innerHTML=`<h1>新しい動画のご相談</h1><p class="muted">まずは、わかる範囲でお知らせください。編集内容と料金は、ご希望を確認してから決めます。</p><form class="panel" data-form="inquiry"><h2>今回のご相談</h2><div class="grid">${input('customerName','会社名・お名前','text',draft.customerName,true,'maxlength="150" autocomplete="name"')}${input('requestedDueDate','今回の希望納品日（未定なら空欄）','date',draft.requestedDueDate,false)}${referenceField(draft.hearing?.referenceUrl)}</div><div class="batch-videos grid"><label class="field"><span>主な動画の種類</span><select name="bulkType" required><option value="">選んでください</option>${['short','long','opening','ending'].map(k=>`<option value="${k}" ${draft.bulkType===k?'selected':''}>${videoTypeLabel(k)}</option>`).join('')}</select></label>${input('bulkCount','今回の本数','number',draft.bulkCount||draft.videos.length,true,'min="1" max="1000" step="1"')}<div class="actions">${button('この本数の動画を用意する','video-batch')}</div></div><details ${draft.brief?'open':''}><summary>今回のご希望を伝える（任意・後からでも大丈夫です）</summary>${area('brief','今回お伝えしたいこと（任意・後から相談できます）',draft.brief,false)}</details><p class="hint">種類から相談したい方は、公式LINEへお知らせください。</p>${lineLink}<p class="hint">同じ種類なら、まとめて入力欄を用意できます。企画や動画名が未定でも、種類と本数で相談できます。動画名は自動で付けます。</p><details data-video-details><summary>動画ごとの名前・種類・完成尺（任意・${draft.videos.length}本）</summary><div id="inquiry-videos">${draft.videos.map((v,i)=>inquiryRow(i+1,v)).join('')}</div>${button('動画をもう1本追加','add-video')}</details><details data-hearing-details ${draft.detailsOpen?'open':''}><summary>素材・編集の希望を追加する（任意）</summary><p class="hint">決まっている項目だけで大丈夫です。まだわからないことは、相談後にも追加できます。</p>${hearingFields(draft.hearing,false)}</details><p class="hint">下書きは、この画面を開いている間だけ保持します。再読み込みやログアウトをすると未送信の内容は消えます。1000本を超えるご依頼は、公式LINEで個別に受け付けます。</p><p class="hint">ご相談だけで注文や請求が確定することはありません。</p>${portfolioField(draft.portfolioPermission)}${legalLinks()}${submit('相談を送る')}</form>`;
   }
+  // ---- お客様への連絡（LINE）・請求書・お客様台帳 ----
+  const lineStatusLabels={accepted:'送信済み',no_line:'LINE未連携',quota_blocked:'無料枠のため未送信',rejected:'LINEが受け付けず',failed:'送信できず',disabled:'送信設定オフ'};
+  const lineKindLabels={manual:'手動メッセージ',inquiry_created:'受付のご案内',issue_quote:'見積もりのご案内',verify_payment:'入金確認のご案内',deliver:'納品のご案内',invoice:'請求書のご案内'};
+  const jstDate=value=>{try{return new Date(value).toLocaleDateString('ja-JP',{timeZone:'Asia/Tokyo',year:'numeric',month:'long',day:'numeric'});}catch{return '';}};
+  const jstTime=value=>{try{return new Date(value).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});}catch{return '';}};
+  function commsCard(o){
+    const c=state.comms&&state.comms.orderId===o.id?state.comms:null;
+    if(!c)return '';
+    const inv=c.invoice,canIssue=admin()&&o.acceptedQuote&&!inv;
+    const invoicePart=inv?`<p>請求書番号 ${esc(inv.number)}（${esc(jstDate(inv.issuedAt))}発行）</p><div class="actions">${button('請求書を表示','invoice-view')}</div>`:canIssue?`<p class="hint">お客様が見積もりに同意済みです。発行すると、お客様のLINEにも知らせます。</p><div class="actions">${button('請求書を発行してLINEで知らせる','invoice-issue',true)}</div>`:admin()?`<p class="hint">お客様が見積もりに同意すると、請求書を発行できます。</p>`:'';
+    const invoiceBlock=inv||admin()?`<section class="panel" id="invoice-panel"><h2>請求書</h2>${invoicePart}</section>`:'';
+    if(!admin())return invoiceBlock;
+    const history=(c.messages||[]).slice(0,10).map(m=>`<li><span class="hint">${esc(jstTime(m.createdAt))}</span> ${esc(lineKindLabels[m.kind]||m.kind)} <span class="badge">${esc(lineStatusLabels[m.status]||m.status)}</span>${m.detail?`<br><span class="hint">${esc(m.detail)}</span>`:''}<br><span class="preserve">${esc(m.text)}</span></li>`).join('');
+    return `${invoiceBlock}<section class="panel" id="line-panel"><h2>お客様への連絡（LINE）</h2><p class="hint">見積もり・入金確認・納品・請求書は、自動でお客様のLINEに届きます。ここからは自由な文章を送れます。</p><form data-form="line-message">${area('text','お客様に送る文章（1000文字以内）','',true).replace('maxlength="10000"','maxlength="1000"')}<label class="check"><input type="checkbox" name="confirm" required><span>宛先（${esc(customerDisplayName(o))}さん）と全文を確認しました。</span></label>${submit('LINEで送る')}</form>${history?`<h3>送信の記録</h3><ul class="line-history">${history}</ul>`:'<p class="hint">送信の記録はまだありません。</p>'}</section>`;
+  }
+  async function loadComms(id){
+    state.comms={orderId:id,invoice:null,messages:[]};
+    try{
+      const [invoice,messages]=await Promise.all([api(`/api/orders/${encodeURIComponent(id)}/invoice`),admin()?api(`/api/orders/${encodeURIComponent(id)}/line-messages`):Promise.resolve({messages:[]})]);
+      state.comms={orderId:id,invoice:invoice.invoice,messages:messages.messages||[]};
+    }catch{state.comms=null;}
+    const card=$('comms-card');if(card&&state.view==='detail'&&state.order?.id===id&&state.comms)card.innerHTML=commsCard(state.order);
+  }
+  function invoiceSheet(inv){
+    const p=inv.payload;
+    return `<div class="toolbar no-print"><div><p class="eyebrow id">請求書番号 ${esc(inv.number)}</p><h1>請求書</h1></div><div class="actions">${button('印刷・PDFで保存','invoice-print',true)}${button('案件に戻る','invoice-back')}</div></div><section class="panel invoice-sheet"><p class="invoice-to"><strong>${esc(p.customerName)}</strong> 御中</p>${dl([['請求書番号',p.number],['発行日',jstDate(p.issuedAt)],['件名',p.subject],['受付番号',p.receipt]])}<table class="invoice-table"><thead><tr><th>品目</th><th class="num">単価（税込）</th><th class="num">数量</th><th class="num">金額（税込）</th></tr></thead><tbody>${p.items.map(i=>`<tr><td>${esc(i.name)}</td><td class="num">${money(i.unitYen)}</td><td class="num">${i.count}本</td><td class="num">${money(i.amountYen)}</td></tr>`).join('')}${p.discountYen?`<tr><td colspan="3">割引${p.discountReason?'（'+esc(p.discountReason)+'）':''}</td><td class="num">−${money(p.discountYen)}</td></tr>`:''}<tr class="total"><td colspan="3"><strong>ご請求金額（税込）</strong></td><td class="num"><strong>${money(p.totalYen)}</strong></td></tr></tbody></table>${dl([['お支払い期日',p.paymentDueDate],['お振込先',p.bankText||'個別にご案内します'],['発行者',p.issuerText||''],...(p.registrationNumber?[['登録番号',p.registrationNumber]]:[])])}<p class="hint">振込手数料はお客様のご負担でお願いいたします。</p></section>`;
+  }
+  async function loadCustomers(){const data=await api('/api/customers');state.customers=data.customers||[];state.view='customers';renderCustomers();}
+  function customerRow(c){
+    return `<details class="panel customer-row"><summary><strong>${esc(c.name||'お名前未登録')}</strong> <span class="kind-chip ${c.linked?'repeat':''}">${c.linked?'LINE連携あり':'LINE未連携'}</span> <span class="hint">注文 ${c.orders}件${c.lastOrderAt?' · 最終 '+esc(String(c.lastOrderAt).slice(0,10)):''}</span></summary>${dl([['お客様ID',c.customerId],['最終ログイン',c.lastLoginAt?jstTime(c.lastLoginAt):'未ログイン'],['メール',c.email||'未登録']])}<form data-form="customer-edit" data-customer="${esc(c.customerId)}"><div class="grid">${input('email','メールアドレス','email',c.email||'',false,'maxlength="320"')}${area('memo','メモ（割引の取り決め・連絡の好みなど）',c.memo||'',false).replace('maxlength="10000"','maxlength="4000"')}</div>${submit('保存する')}</form></details>`;
+  }
+  function renderCustomers(){
+    const list=state.customers||[];
+    $('content').innerHTML=`<div class="toolbar page-heading"><div><p class="eyebrow">管理者用</p><h1>お客様台帳</h1><p class="muted">ご注文のあるお客様と、LINEの連携状況です。LINE未連携のお客様には、LINEの自動案内が届きません（お客様がアプリにログインすると連携されます）。</p></div><div class="heading-actions">${button('案件一覧へ戻る','list')}</div></div>${list.length?list.map(customerRow).join(''):'<section class="panel empty"><h2>お客様はまだいません</h2></section>'}`;
+  }
   function repeatMarkControl(o){
     if(!admin()||['completed','cancelled'].includes(orderStatus(o))||cancellationLocked(o))return '';
     const info=repeatInfo(o);
@@ -589,7 +624,7 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
   async function loadOrder(id) {
     // Fetch the independent materials card in parallel. A missing integration
     // or failed materials read must never hide an otherwise readable order.
-    void loadMaterials(id);
+    void loadMaterials(id);void loadComms(id);
     const data=await api(`/api/orders/${encodeURIComponent(id)}`);state.order=data.order;state.view='detail';renderDetail();
   }
   function materialsIdentity() {return `${state.user?.role||''}:${state.user?.id||''}:${state.user?.customerId||''}`;}
@@ -705,7 +740,7 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
   }
   function renderDetail() {
     const o=state.order,q=latest(o.quotes),isComplete=o.status==='completed'||cancellationLocked(o);
-    $('content').innerHTML=`<div class="toolbar"><div><p class="eyebrow id" title="${esc(o.id)}">受付番号 ${esc(receiptNumber(o.id))}</p><h1>${admin()?esc(orderTitle(o)):'ご依頼中の動画'}</h1>${admin()?badge(orderStatus(o))+(repeatInfo(o)?'<span class="kind-chip repeat">追加発注</span>':''):'<p class="muted">制作と納品の進行状況をご確認いただけます。</p>'}</div>${button('最新情報に更新','refresh')}</div>${!admin()?customerWorkspace(o):`<div class="detail-shortcuts" role="navigation" aria-label="案件内の操作">${button('見積もり・支払い','jump',false,'data-target="case-information"')}${button('素材','jump',false,'data-target="materials-card"')}${button('制作・納品','jump',false,'data-target="video-progress"')}</div><p class="inline-note">${esc(!latest(o.quotes)&&repeatInfo(o)?'追加発注です。前回と同じ編集内容で、今回の本数を確認して見積もりを作成してください':nextAction(o))}</p>`}${!admin()?'<details class="case-tools"><summary>見積もり・お支払い・素材などのお手続き</summary>':''}${cancellationLocked(o)?cancellationPanel(o):''}${!admin()?'<details class="panel case-accordion"><summary>ご相談・見積もり・お支払い</summary>':''}${consultationPanel(o)}${hearingPanel(o)}${q?`<section class="panel" id="quote-panel" tabindex="-1">${quoteSummary(q,o)}${!admin()&&!o.acceptedQuote&&!isComplete?`<form data-form="accept">${legalLinks()}<label class="check"><input type="checkbox" name="agreement" required><span>第${q.version}版の料金・編集範囲・日付・キャンセル条件を確認しました。</span></label>${submit('この見積もりで依頼する')}<p class="hint">この操作で決済は行われません。</p></form>`:o.acceptedQuote?'<p class="badge">お客様確認済み</p>':!isComplete?'<p>お客様の確認をお待ちしています。</p>':''}</section>`:''}${admin()&&!o.acceptedQuote&&!isComplete?quoteEditor(o):''}${q?paymentPanel(o,q):''}${!admin()?'</details>':''}<div id="materials-card" tabindex="-1">${materialsPanel(o)}</div><h2 id="video-progress" tabindex="-1">動画ごとの進行・手続き</h2>${!admin()?button('すべての動画の手続きを表示','all-video-tools'):""}${o.videos.map(v=>admin()?videoPanel(v,o):`<details class="video-accordion"><summary>${esc(v.title)}<span class="badge">${esc(videoProgress(v))}</span></summary>${videoPanel(v,o)}</details>`).join('')}${!cancellationLocked(o)?cancellationPanel(o):''}${o.quotes.length>1?`<details class="panel"><summary>以前の見積もり（${o.quotes.length-1}件）</summary>${o.quotes.slice(0,-1).reverse().map(old=>`<section class="panel">${quoteSummary(old,o)}</section>`).join('')}</details>`:''}${admin()?`<details class="panel"><summary>操作履歴</summary><ol class="history">${(o.history||[]).slice().reverse().map(h=>`<li>${esc(new Date(h.at).toLocaleString('ja-JP'))} · ${esc(commandLabels[h.type]||h.type)} · ${esc(h.actorId)}</li>`).join('')}</ol></details>`:''}${!admin()?'</details>':''}`;
+    $('content').innerHTML=`<div class="toolbar"><div><p class="eyebrow id" title="${esc(o.id)}">受付番号 ${esc(receiptNumber(o.id))}</p><h1>${admin()?esc(orderTitle(o)):'ご依頼中の動画'}</h1>${admin()?badge(orderStatus(o))+(repeatInfo(o)?'<span class="kind-chip repeat">追加発注</span>':''):'<p class="muted">制作と納品の進行状況をご確認いただけます。</p>'}</div>${button('最新情報に更新','refresh')}</div>${!admin()?customerWorkspace(o):`<div class="detail-shortcuts" role="navigation" aria-label="案件内の操作">${button('見積もり・支払い','jump',false,'data-target="case-information"')}${button('素材','jump',false,'data-target="materials-card"')}${button('制作・納品','jump',false,'data-target="video-progress"')}</div><p class="inline-note">${esc(!latest(o.quotes)&&repeatInfo(o)?'追加発注です。前回と同じ編集内容で、今回の本数を確認して見積もりを作成してください':nextAction(o))}</p>`}${!admin()?'<details class="case-tools"><summary>見積もり・お支払い・素材などのお手続き</summary>':''}${cancellationLocked(o)?cancellationPanel(o):''}${!admin()?'<details class="panel case-accordion"><summary>ご相談・見積もり・お支払い</summary>':''}${consultationPanel(o)}${hearingPanel(o)}${q?`<section class="panel" id="quote-panel" tabindex="-1">${quoteSummary(q,o)}${!admin()&&!o.acceptedQuote&&!isComplete?`<form data-form="accept">${legalLinks()}<label class="check"><input type="checkbox" name="agreement" required><span>第${q.version}版の料金・編集範囲・日付・キャンセル条件を確認しました。</span></label>${submit('この見積もりで依頼する')}<p class="hint">この操作で決済は行われません。</p></form>`:o.acceptedQuote?'<p class="badge">お客様確認済み</p>':!isComplete?'<p>お客様の確認をお待ちしています。</p>':''}</section>`:''}${admin()&&!o.acceptedQuote&&!isComplete?quoteEditor(o):''}${q?paymentPanel(o,q):''}<div id="comms-card" tabindex="-1">${commsCard(o)}</div>${!admin()?'</details>':''}<div id="materials-card" tabindex="-1">${materialsPanel(o)}</div><h2 id="video-progress" tabindex="-1">動画ごとの進行・手続き</h2>${!admin()?button('すべての動画の手続きを表示','all-video-tools'):""}${o.videos.map(v=>admin()?videoPanel(v,o):`<details class="video-accordion"><summary>${esc(v.title)}<span class="badge">${esc(videoProgress(v))}</span></summary>${videoPanel(v,o)}</details>`).join('')}${!cancellationLocked(o)?cancellationPanel(o):''}${o.quotes.length>1?`<details class="panel"><summary>以前の見積もり（${o.quotes.length-1}件）</summary>${o.quotes.slice(0,-1).reverse().map(old=>`<section class="panel">${quoteSummary(old,o)}</section>`).join('')}</details>`:''}${admin()?`<details class="panel"><summary>操作履歴</summary><ol class="history">${(o.history||[]).slice().reverse().map(h=>`<li>${esc(new Date(h.at).toLocaleString('ja-JP'))} · ${esc(commandLabels[h.type]||h.type)} · ${esc(h.actorId)}</li>`).join('')}</ol></details>`:''}${!admin()?'</details>':''}`;
     updatePrices();updateSettlementPreview();
   }
   const needsRevisionQuote = v => v.activeRevision?.kind==='major_change'||(v.activeRevision?.kind==='customer'&&v.customerRevisionRounds>=2);
@@ -799,6 +834,11 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
       const result=await mutation('/api/orders',{input:{customerName,brief:inquiryBrief(d.brief.trim(),videos,d.reference.receipt),requestedDueDate:d.requestedDueDate||null,hearing:repeatHearing(d.hearing),portfolioPermission:'unanswered',videos}},'new-order');
       repeatDraft=null;await showSaved(result,`追加発注を受け付けました。受付番号：${receiptNumber(result.order.id)}`);return;
     }
+    if(type==='customer-edit'){await api('/api/customers/'+encodeURIComponent(form.dataset.customer),{method:'POST',body:JSON.stringify({email:get('email'),memo:get('memo')})});await loadCustomers();notice('お客様の情報を保存しました。');return;}
+    if(type==='line-message'){
+      const result=await api(`/api/orders/${encodeURIComponent(state.order.id)}/line-message`,{method:'POST',body:JSON.stringify({text:get('text')})});
+      await loadComms(state.order.id);notice(result.status==='accepted'?'お客様のLINEに送りました。':'送れませんでした：'+(result.detail||lineStatusLabels[result.status]||result.status),result.status!=='accepted');return;
+    }
     if(type==='inquiry') {
       if(!get('customerName')||get('customerName').length>150)throw Error('会社名・お名前を150文字以内で入力してください。');
       if(!safeUrl(get('hearing_referenceUrl')))throw Error('参考動画または過去動画の https:// URLを入力してください。');
@@ -880,6 +920,11 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
       else if(action==='page-previous'&&state.previousCursors.length){const previous=state.previousCursors.slice();const cursor=previous.pop();await loadList({cursor,previous});heading();}
       else if(action==='repeat-order'){const data=await api(`/api/orders/${encodeURIComponent(target.dataset.id)}`);prepareRepeatDraft(data.order);heading();}
       else if(action==='unmark-repeat'){await mutateOrder('mark_repeat_order',{repeat:false});}
+      else if(action==='customers'){await loadCustomers();heading();}
+      else if(action==='invoice-issue'){const id=state.order.id,r=await api(`/api/orders/${encodeURIComponent(id)}/invoice`,{method:'POST',body:'{}'});await loadComms(id);notice(r.created?`請求書 ${r.invoice.number} を発行しました。${r.notice?.status==='accepted'?'お客様のLINEにも知らせました。':'お客様へのLINE通知は送れませんでした（'+(r.notice?.detail||'設定を確認してください')+'）。'}`:'この見積もりの請求書は発行済みです。',r.created&&r.notice?.status!=='accepted');}
+      else if(action==='invoice-view'){if(state.comms?.invoice){state.view='invoice';$('content').innerHTML=invoiceSheet(state.comms.invoice);heading();}}
+      else if(action==='invoice-print'){globalThis.print?.();}
+      else if(action==='invoice-back'){await loadOrder(state.order.id);heading();}
       else if(action==='repeat-pick'){listPurpose='additional';state.filter='all';await loadList();heading();}
       else if(action==='open'){await loadOrder(target.dataset.id);heading();}
       else if(action==='materials-refresh'){await loadMaterials(state.order.id);}
