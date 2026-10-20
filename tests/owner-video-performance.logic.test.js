@@ -271,3 +271,92 @@ test('portal finance prefers the corrected client unit price over the original s
   const joined = logic.joinOwnerFinance(units, [{ portalUid: 'u', portalJobId: 'h', clientUnitPrice: 4000, currentClientUnitPrice: 4500 }]);
   assert.equal(joined[0].amount, 4500);
 });
+
+// ---- 実績ペース（今月の1日あたり・週ごとの納品本数） ----
+const rhythmFixture = () => {
+  const job = (id, date, workerId, businessType) => ({ id, _portalUid: 'u', status: '完了', completedDeliveryDate: date, workerId, businessType });
+  const portalJobs = [
+    job('before', '2026-09-30', 'w', 'edit_agency'), // 第1週の月曜(9/28)以降だが10月ではない
+    job('i1', '2026-10-01', '__self', 'edit_agency'),
+    job('a1', '2026-10-04', 'w', 'edit_agency'),
+    job('a2', '2026-10-05', 'w', 'edit_agency'),
+    job('h1', '2026-10-07', 'w2', 'dispatch'), // 単価なし = 金額未登録
+    job('i2', '2026-10-19', '__self', 'edit_agency'),
+    job('i3', '2026-10-19', '__self', 'edit_agency'),
+    job('a3', '2026-10-21', 'w', 'edit_agency'),
+    job('after', '2026-11-02', 'w', 'edit_agency'),
+  ];
+  const price = { before: 4000, i1: 5000, a1: 4000, a2: 4000, i2: 5000, i3: 5000, a3: 4000, after: 4000 };
+  const finance = Object.entries(price).map(([id, clientUnitPrice]) => ({ portalUid: 'u', portalJobId: id, clientUnitPrice }));
+  return logic.dashboard({ portalJobs, finance, goal: { month: '2026-10', internalTargetCount: 100, internalTargetAmount: 400000 }, today: '2026-10-21', month: '2026-10' });
+};
+
+test('delivery rhythm splits the month into Monday-Sunday weeks clipped to the month and counts only real deliveries', () => {
+  const { rhythm } = rhythmFixture();
+  assert.deepEqual(rhythm.weeks.map(week => [week.start, week.end, week.days]), [
+    ['2026-10-01', '2026-10-04', 4], ['2026-10-05', '2026-10-11', 7], ['2026-10-12', '2026-10-18', 7],
+    ['2026-10-19', '2026-10-25', 7], ['2026-10-26', '2026-10-31', 6],
+  ]);
+  // 9/30 は第1週(月曜=9/28)の範囲に入るが10月ではないので数えない。11/2 も数えない。
+  assert.deepEqual(rhythm.weeks.map(week => week.count), [2, 2, 0, 3, 0]);
+  assert.deepEqual(rhythm.weeks.map(week => [week.internal, week.agency, week.dispatch]), [[1, 1, 0], [0, 1, 1], [0, 0, 0], [2, 1, 0], [0, 0, 0]]);
+  assert.equal(rhythm.count, 7);
+  assert.equal(rhythm.weeks.reduce((total, week) => total + week.count, 0), rhythm.count);
+  assert.equal(rhythm.amount, 5000 + 4000 + 4000 + 5000 + 5000 + 4000);
+  assert.equal(rhythm.missingAmountCount, 1);
+  assert.equal(rhythm.weeks[1].missingAmountCount, 1);
+});
+
+test('delivery rhythm divides by elapsed calendar days and leaves unstarted weeks empty instead of zero', () => {
+  const { rhythm } = rhythmFixture();
+  assert.equal(rhythm.elapsedDays, 21);
+  assert.equal(rhythm.daysInMonth, 31);
+  assert.ok(Math.abs(rhythm.daily.count - 7 / 21) < 1e-9);
+  assert.ok(Math.abs(rhythm.daily.amount - 27000 / 21) < 1e-9);
+  assert.deepEqual(rhythm.weeks.map(week => week.elapsedDays), [4, 7, 7, 3, 0]);
+  assert.deepEqual(rhythm.weeks.map(week => week.current), [false, false, false, true, false]);
+  assert.ok(Math.abs(rhythm.weeks[0].daily.count - 0.5) < 1e-9);
+  assert.ok(Math.abs(rhythm.weeks[3].daily.count - 1) < 1e-9); // 今週は今日(水)までの3日で割る
+  assert.equal(rhythm.weeks[4].future, true);
+  assert.equal(rhythm.weeks[4].daily, null);
+});
+
+test('delivery rhythm handles a past month, a future month and a month that starts on Sunday', () => {
+  const units = [];
+  const past = logic.deliveryRhythm(units, { month: '2026-09', today: '2026-10-21' });
+  assert.equal(past.elapsedDays, 30);
+  assert.equal(past.daily.count, 0);
+  assert.ok(past.weeks.every(week => !week.current && !week.future));
+  const future = logic.deliveryRhythm(units, { month: '2026-12', today: '2026-10-21' });
+  assert.equal(future.elapsedDays, 0);
+  assert.equal(future.daily, null);
+  assert.ok(future.weeks.every(week => week.future));
+  const sunday = logic.deliveryRhythm(units, { month: '2026-11', today: '2026-11-15' }); // 11/1 は日曜
+  assert.deepEqual(sunday.weeks[0].days, 1);
+  assert.equal(sunday.weeks[0].start, '2026-11-01');
+  assert.equal(sunday.weeks.length, 6);
+  assert.equal(sunday.weeks.at(-1).end, '2026-11-30');
+  assert.equal(sunday.weeks.reduce((total, week) => total + week.days, 0), 30);
+  const feb = logic.deliveryRhythm(units, { month: '2027-02', today: '2027-02-10' }); // 2/1 は月曜・平年
+  assert.equal(feb.weeks.length, 4);
+  assert.equal(feb.weeks.at(-1).end, '2027-02-28');
+});
+
+test('the performance page renders the weekly delivery table and labels the old pace as the required pace', () => {
+  const data = rhythmFixture();
+  const html = logic.rhythmHtml(data);
+  assert.match(html, /納品の実績ペース/);
+  assert.match(html, /今月の1日あたり（実績）<\/small><b>0\.33本<\/b>/);
+  assert.match(html, /7本 ÷ 21日経過/);
+  assert.match(html, /<tr class="is-current"><td>第4週・今週<small>10\/19〜10\/25<\/small><\/td><td><b>3本<\/b><\/td><td>1\.00本<\/td><td class="owner-rhythm-amount">14,000円<\/td><td>2本<\/td><td>1本<\/td><td>0本<\/td>/);
+  assert.match(html, /<tr class=" is-future"><td>第5週<small>10\/26〜10\/31<\/small><\/td><td>—<\/td>/);
+  assert.match(html, /未登録1件除く/);
+  assert.match(html, /<tfoot><tr><td>今月の合計<\/td><td><b>7本<\/b><\/td><td>0\.33本<\/td><td class="owner-rhythm-amount">27,000円<\/td><td>3本<\/td><td>3本<\/td><td>1本<\/td>/);
+  assert.match(html, /<thead><tr><th>週<\/th><th>合計<\/th><th>1日あたり<\/th><th>報酬額<\/th>/); // 見たい列を左に置く（スマホで右に隠れない）
+  assert.match(html, /目標までに必要な1日あたり<\/small><b>/);
+  const source = fs.readFileSync(path.join(__dirname, '..', 'owner-video-performance.js'), 'utf8');
+  assert.match(source, /\$\{missingAmountListHtml\(data\.monthSummary\.rows\)\}\$\{rhythmHtml\(data\)\}<div class="card"><b>残り/);
+  assert.match(source, /目標までに必要な1日あたり：/);
+  assert.match(source, /目標までに必要な1週間あたり：/);
+  assert.doesNotMatch(source, /1日平均：|1週間平均：/);
+});

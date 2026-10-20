@@ -272,6 +272,40 @@
     return { month, targetCount, targetAmount, actualCount, actualAmount, remainingCount, remainingAmount, remainingDays, remainingWeekDays, daily, weekly: { count: daily.count * 7, amount: daily.amount * 7 } };
   }
 
+  // 実際に納めた本数のリズム（今月の1日あたり・週ごと）。monthlyPace は「目標までに必要な」ペース、
+  // こちらは「完了・実納品日が入った」実績だけから数える。週は月曜〜日曜で、月の初め・終わりの週は月内に切る。
+  function deliveryRhythm(units, { month = '', today = '' } = {}) {
+    const todayKey = dateOnly(today) || ymd(new Date());
+    const monthKey = monthOf(month || todayKey);
+    const [year, monthNumber] = monthKey.split('-').map(Number);
+    const monthStart = `${monthKey}-01`;
+    const monthEnd = `${monthKey}-${String(new Date(year, monthNumber, 0).getDate()).padStart(2, '0')}`;
+    // 経過日数：当月は今日まで、過去の月は月末まで、これから来る月は0。
+    const elapsedOf = (start, end) => todayKey < start ? 0 : daysBetweenInclusive(start, todayKey < end ? todayKey : end);
+    const perDay = (row, days) => days ? { count: row.count / days, amount: row.amount / days } : null;
+    const monthRows = summarizeDelivery(units, { month: monthKey });
+    const elapsedDays = elapsedOf(monthStart, monthEnd);
+    const weeks = [];
+    for (let weekStart = mondayOf(monthStart); weekStart <= monthEnd; weekStart = addDays(weekStart, 7)) {
+      const start = weekStart < monthStart ? monthStart : weekStart;
+      const weekEnd = addDays(weekStart, 6), end = weekEnd > monthEnd ? monthEnd : weekEnd;
+      const week = summarizeDelivery(units, { month: monthKey, weekStart });
+      const elapsed = elapsedOf(start, end);
+      weeks.push({
+        weekStart, start, end, days: daysBetweenInclusive(start, end), elapsedDays: elapsed,
+        current: todayKey >= start && todayKey <= end, future: todayKey < start,
+        count: week.all.count, amount: week.all.amount, missingAmountCount: week.all.missingAmountCount,
+        internal: week.internal.count, agency: week.agency.count, dispatch: week.dispatch.count,
+        daily: perDay(week.all, elapsed),
+      });
+    }
+    return {
+      month: monthKey, monthStart, monthEnd, elapsedDays, daysInMonth: daysBetweenInclusive(monthStart, monthEnd),
+      count: monthRows.all.count, amount: monthRows.all.amount, missingAmountCount: monthRows.all.missingAmountCount,
+      daily: perDay(monthRows.all, elapsedDays), weeks,
+    };
+  }
+
   function weeklyEditorRanking(units, qualityReviews = [], { weekStart, selfWid = '__self' } = {}) {
     const start = dateOnly(weekStart); const end = start ? addDays(start, 6) : '';
     const rows = completedWorkUnits(units).filter(unit => !start || (unit.completedDeliveryDate >= start && unit.completedDeliveryDate <= end));
@@ -308,7 +342,7 @@
     const currentMonth = monthOf(month || goal?.month || todayKey);
     const monthSummary = summarizeDelivery(financed, { month: currentMonth });
     const todaySummary = summarizeDelivery(financed, { date: todayKey });
-    return { units: financed, monthSummary, todaySummary, pace: monthlyPace({ ...(goal || {}), month: currentMonth }, monthSummary.all, todayKey), ranking: weeklyEditorRanking(financed, qualityReviews || [], { weekStart: weekStart || mondayOf(todayKey), selfWid: selfWid || g.selfWid }) };
+    return { units: financed, monthSummary, todaySummary, rhythm: deliveryRhythm(financed, { month: currentMonth, today: todayKey }), pace: monthlyPace({ ...(goal || {}), month: currentMonth }, monthSummary.all, todayKey), ranking: weeklyEditorRanking(financed, qualityReviews || [], { weekStart: weekStart || mondayOf(todayKey), selfWid: selfWid || g.selfWid }) };
   }
 
   function mondayOf(date) { const d = new Date(`${dateOnly(date)}T12:00:00`); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return ymd(d); }
@@ -437,6 +471,29 @@
     if (target && typeof target === 'object') target.innerHTML = html;
     return html;
   }
+  const yen = value => `${Math.round(value).toLocaleString('ja-JP')}円`;
+  const perDayText = value => value ? `${value.count.toFixed(2)}本` : '—';
+  const monthDay = date => `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`;
+  // 今日・今月の1日あたり・今週・週ごとの納品本数。実績だけを数える（必要ペースは別カード）。
+  function rhythmHtml(data) {
+    const rhythm = data.rhythm, today = data.todaySummary.all, pace = data.pace;
+    const thisWeek = rhythm.weeks.find(week => week.current);
+    const missingNote = count => count ? `<small>金額未登録 ${count}件を除く</small>` : '';
+    const stats = [
+      ['今日の納品', `${today.count}本`, `<small>${yen(today.amount)}</small>`],
+      ['今月の1日あたり（実績）', perDayText(rhythm.daily), `<small>${rhythm.count}本 ÷ ${rhythm.elapsedDays}日経過${rhythm.daily ? ` ・ ${yen(rhythm.daily.amount)}/日` : ''}</small>${missingNote(rhythm.missingAmountCount)}`],
+      ['今週の納品（月〜日）', thisWeek ? `${thisWeek.count}本` : '—', thisWeek ? `<small>1日あたり ${perDayText(thisWeek.daily)} ・ ${yen(thisWeek.amount)}</small>` : '<small>当月に含まれない週です</small>'],
+      ['目標までに必要な1日あたり', `${pace.daily.count.toFixed(2)}本`, `<small>残り ${pace.remainingCount}本 ÷ 残り${pace.remainingDays}日</small>`],
+    ].map(([label, value, note]) => `<article><small>${escapeHtml(label)}</small><b>${value}</b>${note}</article>`).join('');
+    const rows = rhythm.weeks.map((week, index) => {
+      const cells = week.future
+        ? '<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>'
+        : `<td><b>${week.count}本</b></td><td>${perDayText(week.daily)}</td><td class="owner-rhythm-amount">${yen(week.amount)}${week.missingAmountCount ? `<small>（未登録${week.missingAmountCount}件除く）</small>` : ''}</td><td>${week.internal}本</td><td>${week.agency}本</td><td>${week.dispatch}本</td>`;
+      return `<tr class="${week.current ? 'is-current' : ''}${week.future ? ' is-future' : ''}"><td>第${index + 1}週${week.current ? '・今週' : ''}<small>${monthDay(week.start)}〜${monthDay(week.end)}</small></td>${cells}</tr>`;
+    }).join('');
+    const total = data.monthSummary;
+    return `<div class="card owner-rhythm"><div class="section-title"><h3>納品の実績ペース</h3><span>${escapeHtml(rhythm.month)} ・ ${rhythm.elapsedDays}/${rhythm.daysInMonth}日経過</span></div><div class="owner-rhythm-stats">${stats}</div><h4>週ごとの納品本数</h4><div class="owner-rhythm-scroll"><table class="owner-rhythm-table"><thead><tr><th>週</th><th>合計</th><th>1日あたり</th><th>報酬額</th><th>社内編集</th><th>編集代行</th><th>編集者派遣</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td>今月の合計</td><td><b>${rhythm.count}本</b></td><td>${perDayText(rhythm.daily)}</td><td class="owner-rhythm-amount">${yen(rhythm.amount)}</td><td>${total.internal.count}本</td><td>${total.agency.count}本</td><td>${total.dispatch.count}本</td></tr></tfoot></table></div><p class="muted">週は月曜〜日曜で、月の初めと終わりの週はその月の日付だけを数えます。1日あたりは、暦の日数（今日まで）で割っています。</p></div>`;
+  }
   function renderPage(target, options = {}) {
     state.lastOptions = { ...options, includeQuality: true }; lazyStart({ ...options, includeQuality: true, onChange: () => { if (target?.isConnected) renderPage(target, options); else options.onChange?.(); } });
     if (!allReady(options)) {
@@ -459,7 +516,7 @@
     const ranking = data.ranking.map(row => `<li><b>${row.rank}位 ${escapeHtml(row.editorName)}</b> — ${row.delivered}本 / ${row.score === null ? '集計対象なし' : row.score.toFixed(1) + '点'} / 納期遵守 ${row.onTimeRate === null ? '対象なし' : Math.round(row.onTimeRate * 100) + '%'} / 品質評価 ${Math.round(row.qualityEvaluationRate * 100)}%</li>`).join('') || '<li>今週の納品はありません</li>';
     const weekUnits = data.units.filter(unit => unit.completed && unit.completedDeliveryDate >= weekStart && unit.completedDeliveryDate <= addDays(weekStart, 6));
     const quality = weekUnits.map(unit => { const review = state.qualityReviews.find(row => row.unitKey === unit.key && row.active !== false), id = safeKey(unit.key), action = `ownerPerformanceSaveQuality(${JSON.stringify(unit.key)},${JSON.stringify(unit.editorUid || unit.workerId || unit.editorName || '')})`; return `<article class="card"><b>${escapeHtml(unit.title || unit.jobTitle || unit.key)}</b><div class="muted">${escapeHtml(unit.editorName || '担当者未設定')} ・ ${unit.completedDeliveryDate}</div><div class="form-grid"><label>品質<select id="owner-quality-${id}">${[1,2,3,4,5].map(score => `<option value="${score}" ${Number(review?.score || 0) === score ? 'selected' : ''}>${score}</option>`).join('')}</select></label><label>コメント（任意）<input id="owner-quality-note-${id}" maxlength="2000" value="${escapeHtml(review?.note || '')}"></label></div><button class="btn btn-g btn-sm" onclick="${escapeHtml(action)}">品質評価を保存</button></article>`; }).join('') || '<div class="card">今週の納品はありません。</div>';
-    const html = `<section class="owner-video-performance"><div class="ph"><div><div class="ph-title">納品・目標</div><div class="muted">完了案件とオーナー専用の確定単価から自動集計</div></div></div><div class="card owner-goal-editor"><h3>${month} の目標</h3><p class="muted">3つの編集形態ごとに、目標本数と目標報酬額を設定します。</p><div class="owner-goal-category-grid">${goalInputs}</div><aside class="owner-goal-total" aria-live="polite"><span>合計目標</span><b><strong id="owner-goal-total-count">${targets.targetCount}</strong>本</b><b><strong id="owner-goal-total-amount">${targets.targetAmount.toLocaleString('ja-JP')}</strong>円</b><small>3区分の入力から自動計算</small></aside>${targets.migratedFromLegacy ? '<p class="notice">旧形式の月目標は「編集代行」へ引き継いで表示しています。3区分を確認して保存してください。</p>' : ''}<div class="actions"><button class="btn btn-p" onclick="ownerPerformanceSaveGoal()">3区分の月目標を保存</button>${state.goal?.active ? '<button class="btn btn-g" onclick="ownerPerformanceDeactivateGoal()">目標を無効化</button>' : ''}</div></div><div class="owner-performance-cards">${cards}</div>${missingAmountListHtml(data.monthSummary.rows)}<div class="card"><b>残り ${data.pace.remainingCount}本・${data.pace.remainingAmount.toLocaleString('ja-JP')}円</b><p>1日平均：${data.pace.daily.count.toFixed(2)}本・${Math.ceil(data.pace.daily.amount).toLocaleString('ja-JP')}円</p><p>1週間平均：${data.pace.weekly.count.toFixed(2)}本・${Math.ceil(data.pace.weekly.amount).toLocaleString('ja-JP')}円</p></div><h3>今週の品質評価</h3><div class="feature-grid two">${quality}</div><div class="card"><div class="section-title"><h3>編集者ランキング</h3><span>${weekStart} から7日間</span></div><ol>${ranking}</ol><button class="btn btn-p btn-sm" onclick="ownerPerformancePublishRanking()">このランキングを編集者へ公開</button></div>${renderGate(null, { ...options, date: options.today || ymd(new Date()), skipStart: true })}</section>`;
+    const html = `<section class="owner-video-performance"><div class="ph"><div><div class="ph-title">納品・目標</div><div class="muted">完了案件とオーナー専用の確定単価から自動集計</div></div></div><div class="card owner-goal-editor"><h3>${month} の目標</h3><p class="muted">3つの編集形態ごとに、目標本数と目標報酬額を設定します。</p><div class="owner-goal-category-grid">${goalInputs}</div><aside class="owner-goal-total" aria-live="polite"><span>合計目標</span><b><strong id="owner-goal-total-count">${targets.targetCount}</strong>本</b><b><strong id="owner-goal-total-amount">${targets.targetAmount.toLocaleString('ja-JP')}</strong>円</b><small>3区分の入力から自動計算</small></aside>${targets.migratedFromLegacy ? '<p class="notice">旧形式の月目標は「編集代行」へ引き継いで表示しています。3区分を確認して保存してください。</p>' : ''}<div class="actions"><button class="btn btn-p" onclick="ownerPerformanceSaveGoal()">3区分の月目標を保存</button>${state.goal?.active ? '<button class="btn btn-g" onclick="ownerPerformanceDeactivateGoal()">目標を無効化</button>' : ''}</div></div><div class="owner-performance-cards">${cards}</div>${missingAmountListHtml(data.monthSummary.rows)}${rhythmHtml(data)}<div class="card"><b>残り ${data.pace.remainingCount}本・${data.pace.remainingAmount.toLocaleString('ja-JP')}円</b><p>目標までに必要な1日あたり：${data.pace.daily.count.toFixed(2)}本・${Math.ceil(data.pace.daily.amount).toLocaleString('ja-JP')}円</p><p>目標までに必要な1週間あたり：${data.pace.weekly.count.toFixed(2)}本・${Math.ceil(data.pace.weekly.amount).toLocaleString('ja-JP')}円</p></div><h3>今週の品質評価</h3><div class="feature-grid two">${quality}</div><div class="card"><div class="section-title"><h3>編集者ランキング</h3><span>${weekStart} から7日間</span></div><ol>${ranking}</ol><button class="btn btn-p btn-sm" onclick="ownerPerformancePublishRanking()">このランキングを編集者へ公開</button></div>${renderGate(null, { ...options, date: options.today || ymd(new Date()), skipStart: true })}</section>`;
     if (target && typeof target === 'object') target.innerHTML = html;
     return html;
   }
@@ -506,5 +563,5 @@
   global.ownerPerformanceOpenUnit = openUnitFromPage;
   global.ownerPerformanceSaveQuality = saveQualityFromPage;
   global.ownerPerformancePublishRanking = publishFromPage;
-  global.EditflowOwnerPerformance = { logic: { goalBreakdown, goalTotals, normalizeWorkUnits, completedWorkUnits, joinOwnerFinance, missingAmountUnits, missingAmountListHtml, summarizeDelivery, monthlyPace, weeklyEditorRanking, dashboard, mondayOf, sourceHash }, lazyStart, stop, saveGoal, confirmDailyCheck, saveQualityReview, publishWeeklyRanking, gatePassed, allReady, renderGate, renderPage };
+  global.EditflowOwnerPerformance = { logic: { goalBreakdown, goalTotals, normalizeWorkUnits, completedWorkUnits, joinOwnerFinance, missingAmountUnits, missingAmountListHtml, summarizeDelivery, monthlyPace, deliveryRhythm, rhythmHtml, weeklyEditorRanking, dashboard, mondayOf, sourceHash }, lazyStart, stop, saveGoal, confirmDailyCheck, saveQualityReview, publishWeeklyRanking, gatePassed, allReady, renderGate, renderPage };
 })(typeof window !== 'undefined' ? window : globalThis);
