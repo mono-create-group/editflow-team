@@ -251,7 +251,7 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
   async function initialize() {
     try {
       state.config=await api('/api/config');if(embedded)state.config.adminNotificationsAvailable=false;
-      try { const session=await api('/api/session');if(embedded&&session.user?.role!=='admin')throw Error('オーナー権限を確認できません。');state.user=session.user;state.csrf=session.csrfToken;chrome();await applyEntry({initializing:true}); }
+      try { const session=await api('/api/session');if(embedded&&session.user?.role!=='admin')throw Error('オーナー権限を確認できません。');state.user=session.user;state.csrf=session.csrfToken;chrome();await applyEntry({initializing:true});if(admin())loadOpsStatus(); }
       catch(error) {if(error.status===401) await loginScreen(); else throw error;}
     } catch(error) { if(disposed)return;$('content').innerHTML='<h1>案件管理を読み込めませんでした</h1><p>接続先を確認してから、ページを再読み込みしてください。</p>'; notice(errorText(error),true); }
   }
@@ -470,10 +470,23 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
     const counts=listCounts();
     const purpose=!admin()&&['materials','support','additional'].includes(listPurpose)?listPurpose:null;
     const introduction=purpose?`<section class="entry-introduction"><h2>${purpose==='additional'?'参考にする案件を選ぶ':purpose==='materials'?'素材を提出する案件を選んでください':'修正・質問する案件を選んでください'}</h2><p>${purpose==='additional'?'参考にする前回の案件を選んでください。編集の希望を引き継ぎ、今回の動画の種類と本数だけ選べます。料金と納期は、今回の内容で改めてお見積もりします。':purpose==='materials'?'お支払い済みの本数の中から、今回提出する動画を選べます。素材は何回かに分けて提出できます。':'案件を開いて、対象の動画をお選びください。まだ納品前のご相談や、案件に関係のないご質問はLINEへお送りください。'}</p>${purpose==='support'?lineLink:purpose==='additional'?button('別の編集内容で新規相談','new')+button('支払済みの案件に素材を提出','entry',false,'data-entry="materials"'):''}${legacyOrderHelp()}</section>`:'';
-    const tiles=admin()?`<div class="summary-tiles">${[['attention','対応が必要',counts.action],['waiting','お客様待ち',counts.waiting],['working','制作中',counts.working]].map(([key,label,count])=>`<button class="summary-tile ${key}" data-action="filter" data-filter="${key}"><span>${label}</span><strong id="count-${key}">${count}</strong><span class="tile-arrow" aria-hidden="true">›</span></button>`).join('')}</div>`:'';
+    const tiles=admin()?`<div class="summary-tiles">${[['attention','対応が必要',counts.action],['waiting','お客様待ち',counts.waiting],['working','制作中',counts.working]].map(([key,label,count])=>`<button class="summary-tile ${key}" data-action="filter" data-filter="${key}"><span>${label}</span><strong id="count-${key}">${count}</strong><span class="tile-arrow" aria-hidden="true">›</span></button>`).join('')}</div><p id="ops-status" class="ops-status" role="status" hidden></p>`:'';
     $('content').innerHTML=`<div class="toolbar page-heading"><div><p class="eyebrow">${admin()?'管理者用':'EDITING WORKSPACE'}</p><h1>${admin()?'案件一覧':purpose?entryDescriptions[purpose][0]:'ご依頼中の動画'}</h1><p class="muted">${admin()?'次に対応する案件を確認できます。':'見積もり・素材・納品をまとめて確認できます。'}</p></div><div class="heading-actions">${button('最新情報に更新','refresh')}${admin()&&state.config?.adminNotificationsAvailable?button('LINE通知を確認','notifications'):''}${!admin()?button('＋ 新しい相談','new',true):''}</div></div>${introduction}${tiles}<div class="workspace-columns ${admin()?'admin-columns':'customer-columns'}"><section class="list-workspace"><div class="list-tools"><label class="field search-field"><span>案件を検索</span><input id="search" type="search" placeholder="動画名・受付番号${admin()?'・お名前':''}" value="${esc(state.search)}"></label><label class="field filter-field"><span>表示する状態</span><select id="filter" aria-label="表示する状態"><option value="active" ${state.filter==='active'?'selected':''}>進行中</option><option value="all" ${state.filter==='all'?'selected':''}>すべて</option>${admin()?`<option value="attention" ${state.filter==='attention'?'selected':''}>対応が必要</option><option value="waiting" ${state.filter==='waiting'?'selected':''}>お客様待ち</option><option value="working" ${state.filter==='working'?'selected':''}>制作中</option>`:''}${Object.entries(labels).filter(([k])=>['inquiry','quoted','accepted','cancellation_pending','completed','cancelled'].includes(k)).map(([k,v])=>`<option value="${k}" ${state.filter===k?'selected':''}>${v}</option>`).join('')}</select></label></div>${admin()?'<p id="list-summary" class="sr-only" aria-live="polite"></p>':''}<div id="order-list"></div><div id="list-pagination" class="list-pagination" aria-label="案件一覧のページ切り替え"></div><p id="list-updated" class="hint" role="status"></p>${!admin()?`<details class="legacy-help"><summary>以前にLINEでご依頼いただいた案件</summary>${legacyOrderHelp()}</details>`:'<p class="hint reconciliation-note">振込報告だけでは入金確認済みになりません。</p>'}</section>${admin()?'<aside id="order-preview" class="order-preview"></aside>':customerGuide()}</div>`;
     renderCards();renderListStatus();
+    if(admin())paintOpsStatus();
   }
+  // Owner-only line under the tiles: the remaining LINE budget and messages LINE refused this month.
+  // Fetched on first load and on 最新情報に更新 only; list redraws reuse the last answer.
+  function opsStatusHtml(s){
+    if(!s)return '';
+    const line=s.line?.ok?`LINE通知の残り：<strong>${esc(s.line.remaining)}通</strong>（今月 ${esc(s.line.used)}/${esc(s.line.limit)}通）${s.line.low?'　残りが少なくなっています。お客様への案内が止まる前にプランをご確認ください':''}`:'LINE通知の残りを確認できませんでした';
+    return line+(s.blocked>0?`<br>今月、上限で送れなかった案内：<strong>${esc(s.blocked)}件</strong>`:'');
+  }
+  function paintOpsStatus(){
+    const box=$('ops-status'),s=state.ops;if(!box||!s)return;
+    box.innerHTML=opsStatusHtml(s);box.setAttribute('class','ops-status'+(!s.line?.ok||s.line.low||s.blocked>0?' warn':''));box.hidden=false;
+  }
+  async function loadOpsStatus(){try{state.ops=await api('/api/ops-status');paintOpsStatus();}catch{}}
   function renderCards() {
     const query=state.search.trim().toLocaleLowerCase();
     const orders=state.pageMeta?state.orders:state.orders.filter(o=>(state.filter==='all'||(admin()&&['attention','waiting','working'].includes(state.filter)?adminTask(o).category===(state.filter==='attention'?'action':state.filter):state.filter==='active'?!['completed','cancelled'].includes(orderStatus(o)):orderStatus(o)===state.filter))&&[o.id,receiptNumber(o.id),o.customerName||'',...o.videos.map(v=>v.title),...(admin()?[o.customerId]:[])].join(' ').toLocaleLowerCase().includes(query));
@@ -928,7 +941,7 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
       else if(action==='repeat-pick'){listPurpose='additional';state.filter='all';await loadList();heading();}
       else if(action==='open'){await loadOrder(target.dataset.id);heading();}
       else if(action==='materials-refresh'){await loadMaterials(state.order.id);}
-      else if(action==='refresh'){if(state.view==='detail')await loadOrder(state.order.id);else await loadList();notice('最新情報を表示しました。');}
+      else if(action==='refresh'){if(state.view==='detail')await loadOrder(state.order.id);else{await loadList();if(admin())loadOpsStatus();}notice('最新情報を表示しました。');}
       else if(action==='logout'){if(embedded){mountOptions.onClose?.();return;}await api('/api/logout',{method:'POST',body:'{}'});requests.clear();state.orders=[];state.order=null;state.materials=null;materialsGeneration++;await loginScreen();notice('ログアウトしました。');}
       else if(action==='command'){const type=target.dataset.command,payload={};if(target.dataset.video)payload.videoId=target.dataset.video;if(type==='report_payment')payload.quoteVersion=latest(state.order.quotes).version;await mutateOrder(type,payload);}
     });
