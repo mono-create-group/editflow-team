@@ -749,7 +749,9 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
     if(closed)content='<p>この案件の素材受付は終了、または停止しています。</p>';
     // Folders in the owner's Drive (クライアント様_素材 / お客様 / 今回の依頼): anyone with the link can add files.
     if(m.system==='request-folder') {
-      if(!closed&&!folderUrl)content=admin()?'<p class="muted">まだこの依頼の素材フォルダはありません。お客様が見積もりに同意すると自動で作ります。</p>':'<p>素材の提出先は、お見積もりにご同意いただくと、ここに表示されます。</p>';
+      // Agreed but no folder means Drive failed when the quote was accepted.
+      const agreed=o.status==='accepted';
+      if(!closed&&!folderUrl)content=admin()?(agreed?'<p class="inline-note danger-note">お客様は見積もりに同意済みですが、素材フォルダをまだ作れていません。下のボタンで作ってください。</p>':'<p class="muted">まだこの依頼の素材フォルダはありません。お客様が見積もりに同意すると自動で作ります。</p>'):(agreed?'<p>素材フォルダを準備しています。少し時間をおいて、このページを開き直してください。</p>':'<p>素材の提出先は、お見積もりにご同意いただくと、ここに表示されます。</p>');
       if(admin()&&folderUrl&&m.clientFolderName)content+=dl([['作った場所',`クライアント様_素材 / ${m.clientFolderName} / ${m.folderName||''}`]]);
       if(admin()&&!closed&&!folderUrl)content+=`<form data-form="materials-prepare"><p class="hint">会長のDriveの「クライアント様_素材」に、このお客様のフォルダ（初めてなら新しく作る）と、今回の依頼のフォルダを作ります。</p>${submit('今回の素材フォルダを作る')}</form>`;
       return `<section class="panel">${title}${content}</section>`;
