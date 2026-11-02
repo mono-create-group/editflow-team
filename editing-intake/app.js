@@ -789,7 +789,10 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
   function trialPicker(o,q) {
     const used=o.trial?.usedByOrderId,current=q?.lines?.find(l=>l.trial)?.videoId||'';
     if(used)return `<p class="inline-note">このお客様は無料トライアルを使用済みです（受付番号 ${esc(receiptNumber(used))}）。</p><input type="hidden" name="trialVideo" value="">`;
-    return `<div class="grid"><label>無料トライアルにする動画（基本料金を0円にします・1人1本）<select name="trialVideo"><option value="">しない</option>${o.videos.map((v,i)=>`<option value="${esc(v.id)}"${v.id===current?' selected':''}>${i+1}. ${esc(v.title)}</option>`).join('')}</select></label></div><p class="hint">このお客様はまだ無料トライアルを使っていません。初めてのご依頼なら、最初の1本を選んでください。</p>`;
+    // A repeat customer (other orders here, or marked as an additional order from before the app) is not a first-time customer.
+    const others=o.trial?.otherOrders||0,repeat=Boolean(o.repeatOrder||repeatOfBrief(o.brief));
+    const note=others||repeat?`<p class="inline-note danger-note">このお客様は${others?`ほかに注文があります（${others}件）`:'以前からのお客様（追加発注）です'}。無料トライアルは初めてのお客様の最初の1本だけです。</p>`:'<p class="hint">このお客様はまだ無料トライアルを使っていません。初めてのご依頼なら、最初の1本を選んでください。</p>';
+    return `<div class="grid"><label>無料トライアルにする動画（基本料金を0円にします・1人1本）<select name="trialVideo"><option value="">しない</option>${o.videos.map((v,i)=>`<option value="${esc(v.id)}"${v.id===current?' selected':''}>${i+1}. ${esc(v.title)}</option>`).join('')}</select></label></div>${note}`;
   }
   const agreedTier=o=>pricingTier(o.customerPricing,o.videos.length);
   const agreedReason=o=>{const t=agreedTier(o);return `${o.customerPricing.reason}（${t.min}〜${t.max}本${t.percent}%）`;};
