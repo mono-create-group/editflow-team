@@ -745,8 +745,15 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
     if(current.error)return `<section class="panel">${title}<p class="inline-note danger-note" role="alert">${esc(current.error)}</p>${button('素材提出先を再取得','materials-refresh')}</section>`;
     const closed=m.status==='closed'||o.status==='completed'||cancellationLocked(o);
     const folderUrl=!closed&&m.status==='ready'?materialsFolderUrl(m.folderUrl):null;
-    let content=folderUrl?`<a class="button primary" href="${esc(folderUrl)}" target="_blank" rel="noopener noreferrer">この依頼の素材フォルダを開く</a>${m.folderName?`<p class="folder-path">${esc(m.folderName)}</p>`:''}<p class="hint">フォルダを開くだけでは提出完了になりません。アップロード後、動画ごとに素材の提出完了をご報告ください。</p>`:m.status==='ready'?`<p class="inline-note danger-note">素材フォルダのURLを確認できません。提出先を再取得してください。</p>${button('素材提出先を再取得','materials-refresh')}`:admin()?'<p>素材フォルダの共有準備が完了すると、提出先を案内できます。</p>':'<p>素材の提出先は個別にご案内します。案内をお待ちください。</p>';
+    let content=folderUrl?`<a class="button primary" href="${esc(folderUrl)}" target="_blank" rel="noopener noreferrer">この依頼の素材フォルダを開く</a>${m.folderName?`<p class="folder-path">${esc(m.folderName)}</p>`:''}<p class="hint">このフォルダに素材をアップロードしてください。フォルダを開くだけでは提出完了になりません。アップロード後、動画ごとに素材の提出完了をご報告ください。</p>`:m.status==='ready'?`<p class="inline-note danger-note">素材フォルダのURLを確認できません。提出先を再取得してください。</p>${button('素材提出先を再取得','materials-refresh')}`:admin()?'<p>素材フォルダの共有準備が完了すると、提出先を案内できます。</p>':'<p>素材の提出先は個別にご案内します。案内をお待ちください。</p>';
     if(closed)content='<p>この案件の素材受付は終了、または停止しています。</p>';
+    // Folders in the owner's Drive (クライアント様_素材 / お客様 / 今回の依頼): anyone with the link can add files.
+    if(m.system==='request-folder') {
+      if(!closed&&!folderUrl)content=admin()?'<p class="muted">まだこの依頼の素材フォルダはありません。お客様が見積もりに同意すると自動で作ります。</p>':'<p>素材の提出先は、お見積もりにご同意いただくと、ここに表示されます。</p>';
+      if(admin()&&folderUrl&&m.clientFolderName)content+=dl([['作った場所',`クライアント様_素材 / ${m.clientFolderName} / ${m.folderName||''}`]]);
+      if(admin()&&!closed&&!folderUrl)content+=`<form data-form="materials-prepare"><p class="hint">会長のDriveの「クライアント様_素材」に、このお客様のフォルダ（初めてなら新しく作る）と、今回の依頼のフォルダを作ります。</p>${submit('今回の素材フォルダを作る')}</form>`;
+      return `<section class="panel">${title}${content}</section>`;
+    }
     if(admin()) {
       const canManage=!closed,locked=m.identityLocked!==false;
       if(m.verifiedEmail)content+=dl([['確認済みの共有先',m.verifiedEmail]]);
