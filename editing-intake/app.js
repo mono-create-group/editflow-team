@@ -221,7 +221,7 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
     document.body.classList.toggle('signed-in',Boolean(state.user));
     $('environment').innerHTML=state.config?.mode==='fixture'?'<div class="fixture">ローカル検証用 · テスト用アカウントと保存データを使用しています。</div>':'';
     $('account').innerHTML=state.user?`<span>${admin()?'管理者':'お客様'}</span>${button(embedded?'社内アプリへ戻る':'ログアウト','logout')}`:'';
-    $('navigation').innerHTML=state.user?`<div class="nav-label">${admin()?'案件管理':'ご依頼の状況'}</div>${button('案件一覧','list')}${admin()?button('お客様台帳','customers'):''}${!admin()?button('素材を提出','entry',false,'data-entry="materials"')+button('修正・質問','entry',false,'data-entry="support"')+button('追加発注','entry',false,'data-entry="additional"')+button('新規相談','new'):''}${embedded&&admin()?button('素材保管先の接続確認','drive-health'):''}${embedded&&admin()&&state.config?.driveRootProvisionAvailable===true?button('非公開の素材保管先を準備','drive-root-provision'):''}${lineLink}`:'';
+    $('navigation').innerHTML=state.user?`<div class="nav-label">${admin()?'案件管理':'ご依頼の状況'}</div>${button('案件一覧','list')}${admin()?button('お客様台帳','customers')+button('入金明細の照合','reconcile'):''}${!admin()?button('素材を提出','entry',false,'data-entry="materials"')+button('修正・質問','entry',false,'data-entry="support"')+button('追加発注','entry',false,'data-entry="additional"')+button('新規相談','new'):''}${embedded&&admin()?button('素材保管先の接続確認','drive-health'):''}${embedded&&admin()&&state.config?.driveRootProvisionAvailable===true?button('非公開の素材保管先を準備','drive-root-provision'):''}${lineLink}`:'';
   }
   async function checkDriveHealth() {
     if(!embedded||!admin())throw Error('社内アプリの管理者のみ確認できます。');
@@ -606,8 +606,77 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
     return `<div class="toolbar no-print"><div><p class="eyebrow id">請求書番号 ${esc(inv.number)}</p><h1>請求書</h1></div><div class="actions">${button('印刷・PDFで保存','invoice-print',true)}${button('案件に戻る','invoice-back')}</div></div><section class="panel invoice-sheet"><p class="invoice-to"><strong>${esc(p.customerName)}</strong> 御中</p>${dl([['請求書番号',p.number],['発行日',jstDate(p.issuedAt)],['件名',p.subject],['受付番号',p.receipt]])}<table class="invoice-table"><thead><tr><th>品目</th><th class="num">単価（税込）</th><th class="num">数量</th><th class="num">金額（税込）</th></tr></thead><tbody>${p.items.map(i=>`<tr><td>${esc(i.name)}</td><td class="num">${money(i.unitYen)}</td><td class="num">${i.count}本</td><td class="num">${money(i.amountYen)}</td></tr>`).join('')}${p.discountYen?`<tr><td colspan="3">割引${p.discountReason?'（'+esc(p.discountReason)+'）':''}</td><td class="num">−${money(p.discountYen)}</td></tr>`:''}${p.trialYen?`<tr><td colspan="3">無料トライアル（最初の1本）</td><td class="num">−${money(p.trialYen)}</td></tr>`:''}<tr class="total"><td colspan="3"><strong>ご請求金額（税込）</strong></td><td class="num"><strong>${money(p.totalYen)}</strong></td></tr></tbody></table>${dl([['お支払い期日',p.paymentDueDate],['お振込先',p.bankText||'個別にご案内します'],['発行者',p.issuerText||''],...(p.registrationNumber?[['登録番号',p.registrationNumber]]:[])])}<p class="hint">振込手数料はお客様のご負担でお願いいたします。</p></section>`;
   }
   async function loadCustomers(){const data=await api('/api/customers');state.customers=data.customers||[];state.view='customers';renderCustomers();}
+  // "1-10:5, 11-16:10" <-> [{min:1,max:10,percent:5},...]
+  function pricingText(p){return p?.tiers?.map(t=>`${t.min}-${t.max}:${t.percent}`).join(', ')||'';}
+  function parseTiers(text){
+    const value=text.replace(/[０-９]/g,d=>String.fromCharCode(d.charCodeAt(0)-0xFEE0)).replace(/[－〜～]/g,'-').replace(/[：]/g,':').replace(/[、，]/g,',').replace(/[%％本\s]/g,'');
+    if(!value)return null;
+    return value.split(',').filter(Boolean).map(part=>{const m=/^(\d+)-(\d+):(\d+)$/.exec(part);if(!m)throw Error('本数ごとの割引は「1-10:5, 11-16:10」の形で入力してください。');return {min:Number(m[1]),max:Number(m[2]),percent:Number(m[3])};});
+  }
+  // The agreed rate for this many videos, or null when no tier covers it.
+  function pricingTier(p,count){return p?.tiers?.find(t=>count>=t.min&&count<=t.max)||null;}
+  // ---- 入金明細の照合（管理者）----
+  // The bank statement is read in this browser only and never uploaded. Deposits are matched to orders
+  // waiting for payment by exact amount, and more surely by the receipt code customers put in the transfer name.
+  const transferCode=id=>receiptNumber(id).split('-').at(-1);
+  const halfWidth=v=>String(v??'').replace(/[！-～]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/　/g,' ');
+  function decodeStatement(buffer){const bytes=new Uint8Array(buffer);try{return new TextDecoder('utf-8',{fatal:true}).decode(bytes);}catch{return new TextDecoder('shift_jis').decode(bytes);}}
+  function csvRows(text){
+    const rows=[];let row=[],cell='',quoted=false;
+    for(let i=0;i<text.length;i++){const c=text[i];
+      if(quoted){if(c==='"'){if(text[i+1]==='"'){cell+='"';i++;}else quoted=false;}else cell+=c;}
+      else if(c==='"')quoted=true;else if(c===','){row.push(cell);cell='';}
+      else if(c==='\n'||c==='\r'){if(c==='\r'&&text[i+1]==='\n')i++;row.push(cell);rows.push(row);row=[];cell='';}
+      else cell+=c;}
+    if(cell||row.length){row.push(cell);rows.push(row);}
+    return rows.map(r=>r.map(x=>x.replace(/^\uFEFF/,'').trim())).filter(r=>r.some(Boolean));
+  }
+  function parseStatement(text){
+    const rows=csvRows(text),at=rows.findIndex(r=>r.some(c=>/お預り|預入|入金|金額/.test(c)));
+    if(at<0)throw Error('明細の見出し（日付・摘要・お預り金額など）が見つかりません。銀行の入出金明細のCSVを選んでください。');
+    const h=rows[at],col=re=>h.findIndex(c=>re.test(c));
+    const y=col(/\(年\)/),m=col(/\(月\)/),d=col(/\(日\)/),one=col(/日付|取引日|年月日|操作日|入金日/);
+    const deposit=col(/お預り|預入|入金額|入金金額|^入金$/),amountCol=deposit>=0?deposit:col(/金額/),textCol=col(/摘要|取引内容|お取引内容|内容|振込依頼人|依頼人/);
+    if(amountCol<0||(y<0&&one<0))throw Error('明細の「日付」と「お預り金額（入金額）」の列が見つかりません。');
+    const pad=n=>String(n).padStart(2,'0');
+    return rows.slice(at+1).map(r=>{
+      const amount=Number(halfWidth(r[amountCol]).replace(/[,円¥\\\s]/g,''));
+      let date='';
+      if(y>=0&&m>=0&&d>=0)date=`${halfWidth(r[y])}-${pad(halfWidth(r[m]))}-${pad(halfWidth(r[d]))}`;
+      else{const v=halfWidth(r[one]).match(/(\d{4})\D?(\d{1,2})\D?(\d{1,2})/);if(v)date=`${v[1]}-${pad(v[2])}-${pad(v[3])}`;}
+      return {date,amount,text:textCol>=0?r[textCol]||'':r.filter((_,i)=>i!==amountCol).join(' ')};
+    }).filter(x=>Number.isSafeInteger(x.amount)&&x.amount>0&&/^\d{4}-\d{2}-\d{2}$/.test(x.date));
+  }
+  // Orders accepted but not yet verified: summaries at progress stage 2 carry the quote total.
+  async function paymentWaiting(){
+    const out=[];let cursor=null;
+    for(let i=0;i<20;i++){const data=await api('/api/orders?limit=100&status=all'+(cursor?'&cursor='+encodeURIComponent(cursor):''));out.push(...(data.orders||[]));cursor=data.nextCursor;if(!cursor)break;}
+    return out.filter(o=>o.progressStage===2&&Number.isSafeInteger(o.latestQuoteTotalYen)&&o.latestQuoteTotalYen>0);
+  }
+  function matchDeposits(deposits,orders){
+    const matches=[];
+    for(const dep of deposits){const text=halfWidth(dep.text).toUpperCase();
+      for(const o of orders){if(o.latestQuoteTotalYen!==dep.amount)continue;
+        matches.push({deposit:dep,order:o,sure:text.includes(transferCode(o.id).toUpperCase())});}}
+    return matches.sort((a,b)=>Number(b.sure)-Number(a.sure)||b.deposit.date.localeCompare(a.deposit.date));
+  }
+  function renderReconcile(){
+    const r=state.reconcile;
+    const rows=r?.matches?.length?r.matches.map((x,i)=>`<section class="panel reconcile-row"><p><span class="kind-chip ${x.sure?'trial':''}">${x.sure?'受付番号と金額が一致':'金額だけ一致（名義を確認）'}</span></p>${dl([['入金',`${x.deposit.date} · ${money(x.deposit.amount)}`],['明細の摘要',x.deposit.text||'（なし）'],['案件',`${customerDisplayName(x.order)} · 受付番号 ${receiptNumber(x.order.id)}`],['見積もり合計',money(x.order.latestQuoteTotalYen)]])}${x.done?'<p class="inline-note">照合を記録しました。</p>':button('この入金で照合を記録','reconcile-apply',x.sure,`data-index="${i}"`)}</section>`).join(''):r?'<section class="panel empty"><h2>一致する入金はありませんでした</h2><p class="hint">お支払い待ちの案件と、金額が同じ入金が見つかりません。</p></section>':'';
+    $('content').innerHTML=`<div class="toolbar page-heading"><div><p class="eyebrow">管理者用</p><h1>入金明細の照合</h1><p class="muted">銀行の入出金明細（CSV）を選ぶと、お支払い待ちの案件と金額・受付番号で突き合わせます。明細はこの画面の中だけで読み、どこにも送りません。</p></div><div class="heading-actions">${button('案件一覧へ戻る','list')}</div></div><form class="panel" data-form="statement"><label class="field full"><span>入出金明細のCSV（PayPay銀行など）</span><input name="statement" type="file" accept=".csv,text/csv" required></label>${submit('照合する')}</form>${r?`<p class="hint">明細の入金 ${r.deposits}件 · お支払い待ちの案件 ${r.waiting}件 · 候補 ${r.matches.length}件</p>`:''}${rows}`;
+  }
+  async function applyReconcile(index){
+    const x=state.reconcile?.matches?.[index];if(!x||x.done)return;
+    const data=await api('/api/orders/'+encodeURIComponent(x.order.id)),o=data.order,q=latest(o.quotes);
+    if(!q||o.payment?.verified||q.totalYen!==x.deposit.amount)throw Error('この案件の状態が変わっています。案件を開いて確認してください。');
+    const evidence=`入出金明細 ${x.deposit.date} 摘要「${x.deposit.text}」 ${x.deposit.amount}円（明細の照合で${x.sure?'受付番号と金額':'金額'}が一致）`.slice(0,1000);
+    const result=await mutation(`/api/orders/${encodeURIComponent(o.id)}/commands`,{expectedRevision:o.revision,command:{type:'verify_payment',payload:{quoteVersion:q.version,amountYen:x.deposit.amount,receivedDate:x.deposit.date,evidence}}},`${o.id}:verify_payment:`);
+    state.reconcile.matches.forEach(m=>{if(m.order.id===o.id||m.deposit===x.deposit)m.done=m===x;});
+    state.reconcile.matches=state.reconcile.matches.filter(m=>m===x||(m.order.id!==o.id&&m.deposit!==x.deposit));
+    renderReconcile();notice(`${customerDisplayName(o)}様の入金を照合しました（${money(x.deposit.amount)}）。${result.replayed?' 前回の保存結果を確認しました。':''}`);
+  }
   function customerRow(c){
-    return `<details class="panel customer-row"><summary><strong>${esc(c.name||'お名前未登録')}</strong> <span class="kind-chip ${c.linked?'repeat':''}">${c.linked?'LINE連携あり':'LINE未連携'}</span> <span class="hint">注文 ${c.orders}件${c.lastOrderAt?' · 最終 '+esc(String(c.lastOrderAt).slice(0,10)):''}</span></summary>${dl([['お客様ID',c.customerId],['最終ログイン',c.lastLoginAt?jstTime(c.lastLoginAt):'未ログイン'],['メール',c.email||'未登録']])}<form data-form="customer-edit" data-customer="${esc(c.customerId)}"><div class="grid">${input('email','メールアドレス','email',c.email||'',false,'maxlength="320"')}${area('memo','メモ（割引の取り決め・連絡の好みなど）',c.memo||'',false).replace('maxlength="10000"','maxlength="4000"')}</div>${submit('保存する')}</form></details>`;
+    return `<details class="panel customer-row"><summary><strong>${esc(c.name||'お名前未登録')}</strong> <span class="kind-chip ${c.linked?'repeat':''}">${c.linked?'LINE連携あり':'LINE未連携'}</span> <span class="hint">注文 ${c.orders}件${c.lastOrderAt?' · 最終 '+esc(String(c.lastOrderAt).slice(0,10)):''}</span></summary>${dl([['お客様ID',c.customerId],['最終ログイン',c.lastLoginAt?jstTime(c.lastLoginAt):'未ログイン'],['メール',c.email||'未登録']])}<form data-form="customer-edit" data-customer="${esc(c.customerId)}"><div class="grid">${input('email','メールアドレス','email',c.email||'',false,'maxlength="320"')}${area('memo','メモ（割引の取り決め・連絡の好みなど）',c.memo||'',false).replace('maxlength="10000"','maxlength="4000"')}${input('tiers','本数ごとの割引（例：1-10:5, 11-16:10, 17-20:15・無ければ空欄）','text',pricingText(c.pricing),false,'maxlength="400"')}${input('pricingReason','割引の理由（見積もりに表示・例：横井様の本数割引）','text',c.pricing?.reason||'',false,'maxlength="200"')}</div><p class="hint">登録すると、このお客様の見積もりを作る時に、本数に合う割引率と理由が自動で入ります。</p>${submit('保存する')}</form></details>`;
   }
   function renderCustomers(){
     const list=state.customers||[];
@@ -722,18 +791,20 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
     if(used)return `<p class="inline-note">このお客様は無料トライアルを使用済みです（受付番号 ${esc(receiptNumber(used))}）。</p><input type="hidden" name="trialVideo" value="">`;
     return `<div class="grid"><label>無料トライアルにする動画（基本料金を0円にします・1人1本）<select name="trialVideo"><option value="">しない</option>${o.videos.map((v,i)=>`<option value="${esc(v.id)}"${v.id===current?' selected':''}>${i+1}. ${esc(v.title)}</option>`).join('')}</select></label></div><p class="hint">このお客様はまだ無料トライアルを使っていません。初めてのご依頼なら、最初の1本を選んでください。</p>`;
   }
+  const agreedTier=o=>pricingTier(o.customerPricing,o.videos.length);
+  const agreedReason=o=>{const t=agreedTier(o);return `${o.customerPricing.reason}（${t.min}〜${t.max}本${t.percent}%）`;};
   function quoteEditor(o) {
     const q=latest(o.quotes);
     return `<details class="panel" ${!q?'open':''}><summary>${q?'見積もりを改訂する':'見積もりを作成する'}</summary><form data-form="quote"><p class="hint">全動画の編集範囲と具体的な日付を確定して提示します。祝日は自動計算しません。</p>${o.videos.map((v,i)=>{
       const l=q?.lines.find(line=>line.videoId===v.id);
       return `<fieldset data-quote-video="${esc(v.id)}" data-type="${v.type}"><legend>${i+1}. ${esc(v.title)} · ${esc(videoTypeLabel(v.type))}</legend><div class="grid">${input('durationSeconds','確定する完成尺（秒）','number',l?.durationSeconds??v.durationSeconds??'',true,'min="1" step="1"')}${input('extraYen','内容による追加料金（税込円）','number',l?.extraYen??0,true,'min="0" step="1"')}${area('scope','今回行う編集',l?.scope||'')}${area('excludedScope','今回の料金に含まない作業',l?.excludedScope||'')}${area('extraReason','追加料金の理由（追加がある場合は必須）',l?.extraReason||'',false)}${input('dueDate','納品日','date',l?.dueDate||o.requestedDueDate||'')}${input('materialsDueDate','素材提出期限','date',l?.materialsDueDate||'')}</div><div class="price-preview" data-price></div></fieldset>`;
-    }).join('')}${trialPicker(o,q)}<div class="grid">${input('discountPercent','割引率（％・割引がなければ0）','number',quoteDiscountPercent(q),true,'min="0" max="100" step="1"')}${input('discountReason','割引の理由（割引がある場合は必須・例：横井様の11〜16本10%オフ）','text',q?.lines?.find(l=>l.discountYen&&!l.trial)?.discountReason||'',false,'maxlength="200"')}</div><div class="grid">${input('paymentDueDate','支払期日','date',q?.paymentDueDate||'')}${area('paymentInstructions','振込先・手数料などのお支払い案内（任意・4,000文字以内）',q?.paymentInstructions||'',false).replace('maxlength="10000"','maxlength="4000"')}${area('cancellationBasis','事前に提示するキャンセル・精算基準',q?.cancellationBasis||'')}</div><p id="quote-total" class="amount"></p>${submit(q?'新しい版として見積もりを提示':'見積もりを提示する')}</form></details>`;
+    }).join('')}${trialPicker(o,q)}<div class="grid">${input('discountPercent','割引率（％・割引がなければ0）','number',q?quoteDiscountPercent(q):(agreedTier(o)?.percent||0),true,'min="0" max="100" step="1"')}${input('discountReason','割引の理由（割引がある場合は必須・例：横井様の11〜16本10%オフ）','text',q?(q.lines?.find(l=>l.discountYen&&!l.trial)?.discountReason||''):agreedTier(o)?.percent?agreedReason(o):'',false,'maxlength="200"')}</div>${o.customerPricing?`<p class="hint">台帳の割引の決まり：${esc(pricingText(o.customerPricing))}（${esc(o.customerPricing.reason)}）。${agreedTier(o)?`今回の${o.videos.length}本は${agreedTier(o).percent}%です。`:`今回の${o.videos.length}本に合う段がありません。`}</p>`:''}<div class="grid">${input('paymentDueDate','支払期日','date',q?.paymentDueDate||'')}${area('paymentInstructions','振込先・手数料などのお支払い案内（任意・4,000文字以内）',q?.paymentInstructions||'',false).replace('maxlength="10000"','maxlength="4000"')}${area('cancellationBasis','事前に提示するキャンセル・精算基準',q?.cancellationBasis||'')}</div><p id="quote-total" class="amount"></p>${submit(q?'新しい版として見積もりを提示':'見積もりを提示する')}</form></details>`;
   }
   function paymentPanel(o,q) {
     if(!o.acceptedQuote)return '';
     const verified=o.payment.verified,locked=cancellationLocked(o);
     if(verified?.waived)return `<section class="panel" id="payment-panel" tabindex="-1"><h2>お支払い</h2><p>無料トライアルのため、お支払いはありません。</p></section>`;
-    return `<section class="panel" id="payment-panel" tabindex="-1"><h2>お支払い</h2>${dl([['見積もりの確認',`第${q.version}版を確認済み`],['振込先・お支払いのご案内',q.paymentInstructions||'振込先と手数料は個別にご案内します。'],['振込の報告',reported(o.payment)?'報告済み':'未報告'],['実入金の確認',verified?'確認済み':'未確認'],...(verified?[['入金額',money(verified.amountYen)],['入金日',verified.receivedDate]]:[])])}${verified?.late&&!locked?'<p class="inline-note danger-note">支払期日後の入金です。制作開始前に納品日の再確認が必要です。</p>':''}${!locked&&!verified&&!admin()?`<p class="hint">ご案内した振込先へお振り込み後にご報告ください。入金の確認は制作側で行います。</p>${!reported(o.payment)?button('振込を報告する','command',true,'data-command="report_payment"'):''}`:''}${!locked&&!verified&&admin()?`<form data-form="payment"><h3>実入金を照合</h3><div class="grid">${input('amountYen','実際の入金額（税込円）','number','',true,'min="1" step="1"')}${input('receivedDate','入金日','date')}${area('evidence','照合した入金の根拠（管理者のみ）')}</div>${submit('入金の照合結果を記録')}</form>`:''}</section>`;
+    return `<section class="panel" id="payment-panel" tabindex="-1"><h2>お支払い</h2>${dl([['見積もりの確認',`第${q.version}版を確認済み`],['振込先・お支払いのご案内',q.paymentInstructions||'振込先と手数料は個別にご案内します。'],['振込の報告',reported(o.payment)?'報告済み':'未報告'],['実入金の確認',verified?'確認済み':'未確認'],...(verified?[['入金額',money(verified.amountYen)],['入金日',verified.receivedDate]]:[])])}${verified?.late&&!locked?'<p class="inline-note danger-note">支払期日後の入金です。制作開始前に納品日の再確認が必要です。</p>':''}${!locked&&!verified&&!admin()?`<p class="hint">ご案内した振込先へお振り込み後にご報告ください。入金の確認は制作側で行います。</p><p class="inline-note">お振込みの際は、振込名義の前に受付番号の末尾4文字「<strong>${esc(transferCode(o.id))}</strong>」を入れてください（例：${esc(transferCode(o.id))} ヤマダタロウ）。確認が早くなります。</p>${!reported(o.payment)?button('振込を報告する','command',true,'data-command="report_payment"'):''}`:''}${!locked&&!verified&&admin()?`<form data-form="payment"><h3>実入金を照合</h3><div class="grid">${input('amountYen','実際の入金額（税込円）','number','',true,'min="1" step="1"')}${input('receivedDate','入金日','date')}${area('evidence','照合した入金の根拠（管理者のみ）')}</div>${submit('入金の照合結果を記録')}</form>`:''}</section>`;
   }
   function videoProgress(v){
     if(v.status==='completed')return '確認完了';
@@ -854,7 +925,8 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
       const result=await mutation('/api/orders',{input:{customerName,brief:inquiryBrief(d.brief.trim(),videos,d.reference.receipt),requestedDueDate:d.requestedDueDate||null,hearing:repeatHearing(d.hearing),portfolioPermission:'unanswered',videos}},'new-order');
       repeatDraft=null;await showSaved(result,`追加発注を受け付けました。受付番号：${receiptNumber(result.order.id)}`);return;
     }
-    if(type==='customer-edit'){await api('/api/customers/'+encodeURIComponent(form.dataset.customer),{method:'POST',body:JSON.stringify({email:get('email'),memo:get('memo')})});await loadCustomers();notice('お客様の情報を保存しました。');return;}
+    if(type==='statement'){const file=form.querySelector('[name=statement]')?.files?.[0];if(!file)throw Error('明細のCSVを選んでください。');if(file.size>5e6)throw Error('明細のファイルが大きすぎます（5MBまで）。');const deposits=parseStatement(decodeStatement(await file.arrayBuffer())),waiting=await paymentWaiting();state.reconcile={deposits:deposits.length,waiting:waiting.length,matches:matchDeposits(deposits,waiting)};renderReconcile();notice(`入金 ${deposits.length}件を読み、候補を${state.reconcile.matches.length}件見つけました。`);return;}
+    if(type==='customer-edit'){const tiers=parseTiers(get('tiers'));if(tiers&&!get('pricingReason'))throw Error('割引の理由を入力してください。');await api('/api/customers/'+encodeURIComponent(form.dataset.customer),{method:'POST',body:JSON.stringify({email:get('email'),memo:get('memo'),pricing:tiers?{tiers,reason:get('pricingReason')}:null})});await loadCustomers();notice('お客様の情報を保存しました。');return;}
     if(type==='line-message'){
       const result=await api(`/api/orders/${encodeURIComponent(state.order.id)}/line-message`,{method:'POST',body:JSON.stringify({text:get('text')})});
       await loadComms(state.order.id);notice(result.status==='accepted'?'お客様のLINEに送りました。':'送れませんでした：'+(result.detail||lineStatusLabels[result.status]||result.status),result.status!=='accepted');return;
@@ -941,6 +1013,8 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
       else if(action==='repeat-order'){const data=await api(`/api/orders/${encodeURIComponent(target.dataset.id)}`);prepareRepeatDraft(data.order);heading();}
       else if(action==='unmark-repeat'){await mutateOrder('mark_repeat_order',{repeat:false});}
       else if(action==='customers'){await loadCustomers();heading();}
+      else if(action==='reconcile'){state.view='reconcile';state.reconcile=null;renderReconcile();heading();}
+      else if(action==='reconcile-apply'){await applyReconcile(Number(target.dataset.index));}
       else if(action==='invoice-issue'){const id=state.order.id,r=await api(`/api/orders/${encodeURIComponent(id)}/invoice`,{method:'POST',body:'{}'});await loadComms(id);notice(r.created?`請求書 ${r.invoice.number} を発行しました。${r.notice?.status==='accepted'?'お客様のLINEにも知らせました。':'お客様へのLINE通知は送れませんでした（'+(r.notice?.detail||'設定を確認してください')+'）。'}`:'この見積もりの請求書は発行済みです。',r.created&&r.notice?.status!=='accepted');}
       else if(action==='invoice-view'){if(state.comms?.invoice){state.view='invoice';$('content').innerHTML=invoiceSheet(state.comms.invoice);heading();}}
       else if(action==='invoice-print'){globalThis.print?.();}
