@@ -1,7 +1,7 @@
 {
   "source": "chatwork/lp/editing-intake-app/public",
   "sha256": {
-    "app.js": "9c1f4f212d5527ff5206a4478049ca3c0b9ba0aa295b2e9600c215cbc470dfe2",
+    "app.js": "5c0cf6787ad21bcfdcc0489bd2e94c195c823e417449196105202874d192c7fa",
     "app.css": "489ebd7d5bd6720e04b09010af1a58a4e9ac5bcd9a797934d85763f087c9711d",
     "app.html": "5a0d66040b92b17b8ae71f2f941430c5e5cbcf460ffcfc727cc20e4d57e11b3b",
     "assets/rpg-hero-v6.png": "cea660e244468c3b3a96a25627c96a5b07e0f1891d83479df7186fe04467776c",
