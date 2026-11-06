@@ -586,8 +586,8 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
   function commsCard(o){
     const c=state.comms&&state.comms.orderId===o.id?state.comms:null;
     if(!c)return '';
-    const inv=c.invoice,canIssue=admin()&&o.acceptedQuote&&!inv;
-    const invoicePart=inv?`<p>請求書番号 ${esc(inv.number)}（${esc(jstDate(inv.issuedAt))}発行）</p><div class="actions">${button('請求書を表示','invoice-view')}</div>`:canIssue?`<p class="hint">お客様が見積もりに同意済みです。発行すると、お客様のLINEにも知らせます。</p><div class="actions">${button('請求書を発行してLINEで知らせる','invoice-issue',true)}</div>`:admin()?`<p class="hint">お客様が見積もりに同意すると、請求書を発行できます。</p>`:'';
+    const inv=c.invoice,waived=Boolean(o.payment?.verified?.waived),canIssue=admin()&&o.acceptedQuote&&!inv&&!waived;
+    const invoicePart=inv?`<p>請求書番号 ${esc(inv.number)}（${esc(jstDate(inv.issuedAt))}発行）</p><div class="actions">${button('請求書を表示','invoice-view')}</div>`:waived?`<p class="hint">お支払いがないご依頼のため、請求書は発行しません。</p>`:canIssue?`<p class="hint">お客様が見積もりに同意済みです。発行すると、お客様のLINEにも知らせます。</p><div class="actions">${button('請求書を発行してLINEで知らせる','invoice-issue',true)}</div>`:admin()?`<p class="hint">お客様が見積もりに同意すると、請求書を発行できます。</p>`:'';
     const invoiceBlock=inv||admin()?`<section class="panel" id="invoice-panel"><h2>請求書</h2>${invoicePart}</section>`:'';
     if(!admin())return invoiceBlock;
     const history=(c.messages||[]).slice(0,10).map(m=>`<li><span class="hint">${esc(jstTime(m.createdAt))}</span> ${esc(lineKindLabels[m.kind]||m.kind)} <span class="badge">${esc(lineStatusLabels[m.status]||m.status)}</span>${m.detail?`<br><span class="hint">${esc(m.detail)}</span>`:''}<br><span class="preserve">${esc(m.text)}</span></li>`).join('');
