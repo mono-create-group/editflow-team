@@ -63,7 +63,7 @@ test('the job modal offers the terms, recomputes on date changes, and the save p
   assert.match(html,/id="j-completed-delivery"[^>]*onchange="applyPaymentTerms\(\)"/);
   assert.match(functionSource('jobStatusChanged'),/applyPaymentTerms\(\)/);
   assert.match(functionSource('saveJob'),/paymentTerms:_isOwner\(\)\?_paymentTermsValue\(/);
-  assert.match(functionSource('saveJob'),/if\(!data\.invoiceDate&&auto\.invoiceDate\)data\.invoiceDate=auto\.invoiceDate;if\(!data\.dueDate&&auto\.dueDate\)data\.dueDate=auto\.dueDate;/);
+  assert.match(functionSource('saveJob'),/if\(!data\.invoiceDate&&!data\.invoiceNotRequired&&auto\.invoiceDate\)data\.invoiceDate=auto\.invoiceDate;if\(!data\.dueDate&&auto\.dueDate\)data\.dueDate=auto\.dueDate;/);
   assert.match(functionSource('saveJob'),/!\['on_delivery','month_end','next_month_end'\]\.includes\(paymentTermsChoice\)\)\{toast\('請求書提出日を入力してください/);
   const apply=functionSource('applyPaymentTerms');
   assert.match(apply,/if\(terms==='custom'\)return;/,'manual dates are left alone');
