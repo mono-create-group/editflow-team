@@ -59,7 +59,7 @@ test('subcase finance dates auto-calculate and persist on the subcase', () => {
   const saver = functionSource('saveJob');
   assert.match(saver, /const paymentTerms=el\.querySelector\('\.j-sub-payment-terms'\)/);
   assert.match(saver, /paidAt=el\.querySelector\('\.j-sub-paid-val'\)/);
-  assert.match(saver, /data\.paymentTerms='custom';data\.invoiceDate=null;data\.dueDate=null;data\.paymentDate=null;data\.paidAt=null;data\.payoutDate=null/);
+  assert.match(saver, /data\.paymentTerms='custom';data\.invoiceDate=null;data\.dueDate=null;data\.paymentDate=null;data\.paymentNotRequired=false;data\.paidAt=null;data\.payoutDate=null/);
 });
 
 test('invoice listing and editor use subcase billing dates without parent fallback', () => {

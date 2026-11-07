@@ -9642,7 +9642,7 @@ function rProjProfit(){
   // 【2026-07-23改定】利益タブ=「入金予定日(paymentDate)」の月でグルーピング。
   // 入金予定日を入れても入金済みにはならない。入金済み(paidAt=ボタンで確定)の案件はこのタブに表示しない。
   // 対象=「完了案件」または「入金予定日が入っている案件」（＝回収予定）。キャンセルは除外。
-  const done=BJOBS().filter(j=>!j.deleted&&j.status!=='キャンセル'&&jobMainIn(j)>0&&(j.status==='完了'||_profitSubcaseRows(j).some(row=>row.paymentDate)));
+  const done=BJOBS().filter(j=>!j.deleted&&j.status!=='キャンセル'&&jobMainIn(j)>0&&!j.paymentNotRequired&&(j.status==='完了'||_profitSubcaseRows(j).some(row=>row.paymentDate)));
   const now=new Date();const selDefault=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const months=[...new Set(done.flatMap(j=>_profitSubcaseRows(j).map(row=>String(row.paymentDate||'').slice(0,7))).filter(Boolean))].sort().reverse();
   if(!months.includes(selDefault))months.unshift(selDefault);
@@ -15087,9 +15087,14 @@ function openJobModal(id,preStatus,preClientId){
   <div class="fg"><div class="fl">支払期日</div><input type="date" id="j-due" value="${j?.dueDate||''}"></div>
 </div>
 <div class="frow">
-  <div class="fg"><div class="fl">入金予定日</div>
-    <input type="date" id="j-payin" value="${j?.paymentDate||''}" style="width:100%">
-    <div style="font-size:10px;color:var(--t3);margin-top:3px">入金が予定される日付。入れても入金済みにはなりません（「💰 利益」タブの月分けに使います）。</div>
+  <div class="fg"><div class="fl">入金予定日 <span id="j-payin-required" style="color:var(--red)"${j?.paymentNotRequired?' hidden':''}>*</span></div>
+    <input type="date" id="j-payin" value="${j?.paymentNotRequired?'':(j?.paymentDate||'')}" style="width:100%"${j?.paymentNotRequired?' disabled':''}>
+    <input type="hidden" id="j-payin-skip" value="${j?.paymentNotRequired?'1':'0'}">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px">
+      <button type="button" id="j-payin-skip-btn" class="btn btn-sm" onclick="togglePayinSkip()" style="white-space:nowrap"></button>
+      <span id="j-payin-skip-lbl" style="font-size:12px"></span>
+    </div>
+    <div style="font-size:10px;color:var(--t3);margin-top:3px">入金が予定される日付（必須）。入れても入金済みにはなりません（「💰 利益」タブの月分けに使います）。トライアルなど入金がない案件は「トライアルのため不要」を押してください。</div>
   </div>
   <div class="fg" id="jf-parent-payout"><div class="fl">支払予定日</div><input type="date" id="j-payout" value="${j?.payoutDate||''}"></div>
 </div>
@@ -15132,6 +15137,30 @@ function openJobModal(id,preStatus,preClientId){
   setJobSubcaseMode(subs.length||j?.subcaseMode==='with_subcases'||j?.hasSubcases===true?'with_subcases':'without_subcases',true);
   if(!j)applyOwnerClientPriceFromMaster();
   updPaidBtn();
+  updPayinSkipBtn();
+}
+// 入金予定日の「トライアルのため不要」(paymentNotRequired)。ONの間は入力欄を無効化して必須チェックを免除する。
+function updPayinSkipBtn(){
+  const skip=document.getElementById('j-payin-skip'),btn=document.getElementById('j-payin-skip-btn'),lbl=document.getElementById('j-payin-skip-lbl'),input=document.getElementById('j-payin'),star=document.getElementById('j-payin-required');
+  if(!skip||!btn)return;
+  const on=skip.value==='1';
+  if(input){input.disabled=on;if(on)input.value='';}
+  if(star)star.hidden=on;
+  if(on){
+    btn.textContent='不要を取り消す';
+    btn.style.cssText='white-space:nowrap;border:1px solid var(--border);color:var(--t2);background:transparent';
+    if(lbl){lbl.textContent='🔶 トライアルのため入金予定日は不要';lbl.style.color='var(--amber)';}
+  }else{
+    btn.textContent='トライアルのため不要';
+    btn.style.cssText='white-space:nowrap;border:1px solid var(--amber);color:var(--amber);background:transparent';
+    if(lbl){lbl.textContent='';}
+  }
+}
+function togglePayinSkip(){
+  const skip=document.getElementById('j-payin-skip');
+  if(!skip)return;
+  skip.value=skip.value==='1'?'0':'1';
+  updPayinSkipBtn();
 }
 // 入金状態(入金済み=paidAt)のトグル。入金予定日(j-payin)とは別物。保存はj-paid-valの値を保存ボタンで確定。
 function updPaidBtn(){
@@ -15490,6 +15519,8 @@ async function saveJob(){
   const hasSubcaseStructureBeforeFinance=document.getElementById('j-case-structure')?.value==='with_subcases'||!!(currentBeforeFinance?.subtasks||[]).length;
   // 納品日で決まる形態（納品時請求・当月末・翌月末）は納品前は空でよく、納品日が入った時に自動で埋める。
   if(_isOwner()&&!hasSubcaseStructureBeforeFinance&&!document.getElementById('j-invoice')?.value&&!['on_delivery','month_end','next_month_end'].includes(paymentTermsChoice)){toast('請求書提出日を入力してください（請求書ページで使います）','warn');return;}
+  // 入金予定日は必須。トライアルなど入金がない案件は「トライアルのため不要」で免除する（サブ案件ありは各サブ案件側で管理）。
+  if(_isOwner()&&!hasSubcaseStructureBeforeFinance&&document.getElementById('j-payin')&&document.getElementById('j-payin-skip')?.value!=='1'&&!document.getElementById('j-payin')?.value){toast('入金予定日を入力してください（入金がないトライアル案件は「トライアルのため不要」を押してください）','warn');return;}
   const current=EID?S.jobs.find(j=>j.id===EID):null;
   const currentFinance=current?_ownerFinanceForLegacyJob(current):null,financeProtected=!!(currentFinance||current?.ownerFinanceId);
   if(current?.ownerFinanceId&&!currentFinance){toast('金額台帳を確認できないため保存を中止しました。読み込み完了後にもう一度お試しください','warn');return;}
@@ -15590,12 +15621,12 @@ async function saveJob(){
   const isTrial=document.getElementById('j-trial-val')?.value==='1';
   const primaryWorkerId=parentWorkerIds[0]||null,billingSnapshot=_paymentRecipientSnapshot(primaryWorkerId,current||{});
   const accountSelect=document.getElementById('j-account'),accountId=accountSelect?.value||null,accountName=accountId?(accountSelect?.selectedOptions?.[0]?.textContent||current?.accountName||''):null;
-  const data={title,biz:document.getElementById('j-biz')?.value||'edit',subcaseMode:hasSubcaseStructure?'with_subcases':'without_subcases',hasSubcases:hasSubcaseStructure,monthlyFee:_isOwner()?(parseInt(document.getElementById('j-monthly')?.value)||0):(Number(current?.monthlyFee)||0),jobType:document.getElementById('j-type')?.value||'edit',clientId:document.getElementById('j-cl').value||null,accountId,accountName,workerIds:parentWorkerIds,workerId:primaryWorkerId,...billingSnapshot,scope:document.getElementById('j-scope').value||null,status:finalStatus,isTrial,unitPrice,profit:_isOwner()?unitPrice:(Number(current?.profit)||unitPrice),workerPay,sharedDate:hasSubcaseStructure?null:(document.getElementById('j-shared')?.value||null),editorDraftDateSetter:aggregateDraftSetter,editorDraftDate:aggregateDraftDate,clientDraftDate:hasSubcaseStructure?null:(document.getElementById('j-client-draft')?.value||null),thumbnailDate:hasSubcaseStructure?null:(document.getElementById('j-thumbnail')?.value||null),deliveryDate:hasSubcaseStructure?null:(document.getElementById('j-deliver')?.value||null),completedDeliveryDate:!hasSubtasks&&parentInternalOnly?(document.getElementById('j-completed-delivery')?.value||(requestedStatus==='完了'?today():null)):(current?.completedDeliveryDate||null),manualIds:canManageMaterials?_selectedJobCaseManualIds(document.getElementById('j-manuals')):_caseManualIds(current?.manualIds),caution:canManageMaterials?String(document.getElementById('j-caution')?.value||'').trim().slice(0,2000):String(current?.caution||''),requestUrl:canManageMaterials?parentRequestUrl:(current?.requestUrl||''),sourceUrl:canManageMaterials?parentSourceUrl:(current?.sourceUrl||''),paymentTerms:_isOwner()?_paymentTermsValue(document.getElementById('j-payment-terms')?.value||current?.paymentTerms||'custom'):(current?.paymentTerms||'custom'),invoiceDate:_isOwner()?(document.getElementById('j-invoice')?.value||null):(current?.invoiceDate||null),dueDate:_isOwner()?(document.getElementById('j-due')?.value||null):(current?.dueDate||null),paymentDate:_isOwner()?(document.getElementById('j-payin')?.value||null):(current?.paymentDate||null),paidAt:_isOwner()?(document.getElementById('j-paid-val')?.value||null):(current?.paidAt||null),payoutDate:_isOwner()?(hasSubcaseStructure?null:(document.getElementById('j-payout')?.value||null)):(current?.payoutDate||null),salesRep:_isOwner()?(document.getElementById('j-sales-rep')?.value||null):(current?.salesRep||null),salesPay:_isOwner()?(parseInt(document.getElementById('j-sales-pay')?.value)||0):(Number(current?.salesPay)||0),notes:document.getElementById('j-notes').value.trim(),opsChecklist:readOpsChecklist(),subtasks,attachments:canManageMaterials?parentAttachmentRead.items:_videoAttachments(current?.attachments),updatedAt:Date.now(),updatedBy:_myEmail()};
+  const data={title,biz:document.getElementById('j-biz')?.value||'edit',subcaseMode:hasSubcaseStructure?'with_subcases':'without_subcases',hasSubcases:hasSubcaseStructure,monthlyFee:_isOwner()?(parseInt(document.getElementById('j-monthly')?.value)||0):(Number(current?.monthlyFee)||0),jobType:document.getElementById('j-type')?.value||'edit',clientId:document.getElementById('j-cl').value||null,accountId,accountName,workerIds:parentWorkerIds,workerId:primaryWorkerId,...billingSnapshot,scope:document.getElementById('j-scope').value||null,status:finalStatus,isTrial,unitPrice,profit:_isOwner()?unitPrice:(Number(current?.profit)||unitPrice),workerPay,sharedDate:hasSubcaseStructure?null:(document.getElementById('j-shared')?.value||null),editorDraftDateSetter:aggregateDraftSetter,editorDraftDate:aggregateDraftDate,clientDraftDate:hasSubcaseStructure?null:(document.getElementById('j-client-draft')?.value||null),thumbnailDate:hasSubcaseStructure?null:(document.getElementById('j-thumbnail')?.value||null),deliveryDate:hasSubcaseStructure?null:(document.getElementById('j-deliver')?.value||null),completedDeliveryDate:!hasSubtasks&&parentInternalOnly?(document.getElementById('j-completed-delivery')?.value||(requestedStatus==='完了'?today():null)):(current?.completedDeliveryDate||null),manualIds:canManageMaterials?_selectedJobCaseManualIds(document.getElementById('j-manuals')):_caseManualIds(current?.manualIds),caution:canManageMaterials?String(document.getElementById('j-caution')?.value||'').trim().slice(0,2000):String(current?.caution||''),requestUrl:canManageMaterials?parentRequestUrl:(current?.requestUrl||''),sourceUrl:canManageMaterials?parentSourceUrl:(current?.sourceUrl||''),paymentTerms:_isOwner()?_paymentTermsValue(document.getElementById('j-payment-terms')?.value||current?.paymentTerms||'custom'):(current?.paymentTerms||'custom'),invoiceDate:_isOwner()?(document.getElementById('j-invoice')?.value||null):(current?.invoiceDate||null),dueDate:_isOwner()?(document.getElementById('j-due')?.value||null):(current?.dueDate||null),paymentDate:_isOwner()?(document.getElementById('j-payin-skip')?.value==='1'?null:(document.getElementById('j-payin')?.value||null)):(current?.paymentDate||null),paymentNotRequired:_isOwner()?(document.getElementById('j-payin-skip')?.value==='1'):!!current?.paymentNotRequired,paidAt:_isOwner()?(document.getElementById('j-paid-val')?.value||null):(current?.paidAt||null),payoutDate:_isOwner()?(hasSubcaseStructure?null:(document.getElementById('j-payout')?.value||null)):(current?.payoutDate||null),salesRep:_isOwner()?(document.getElementById('j-sales-rep')?.value||null):(current?.salesRep||null),salesPay:_isOwner()?(parseInt(document.getElementById('j-sales-pay')?.value)||0):(Number(current?.salesPay)||0),notes:document.getElementById('j-notes').value.trim(),opsChecklist:readOpsChecklist(),subtasks,attachments:canManageMaterials?parentAttachmentRead.items:_videoAttachments(current?.attachments),updatedAt:Date.now(),updatedBy:_myEmail()};
   if(ownerCanEditStandaloneStatus&&String(current?.status||'')!==finalStatus)data.statusHistory=[...(current?.statusHistory||[]).slice(-99),{at:data.updatedAt,by:_myEmail(),type:'owner_modal_status_update',fromStatus:String(current?.status||''),status:finalStatus}];
   if(hasSubcaseStructure){
     data.editorDraftDateSetter=null;data.editorDraftDate=null;data.completedDeliveryDate=null;
     // 請求・入金状態はサブ案件単位で管理し、親案件には残さない。
-    data.paymentTerms='custom';data.invoiceDate=null;data.dueDate=null;data.paymentDate=null;data.paidAt=null;data.payoutDate=null;
+    data.paymentTerms='custom';data.invoiceDate=null;data.dueDate=null;data.paymentDate=null;data.paymentNotRequired=false;data.paidAt=null;data.payoutDate=null;
   }
   // 支払い形態が日付を決める場合、未入力の請求書提出日・支払期日を保存時に埋める（入力済みの値は尊重する）。
   if(_isOwner()&&data.paymentTerms&&data.paymentTerms!=='custom'){
@@ -19389,7 +19420,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20261107-02';
+const APP_VERSION='20261107-03';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
