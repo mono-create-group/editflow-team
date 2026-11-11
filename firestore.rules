@@ -1,18 +1,31 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() {
-      return request.auth != null;
-    }
-
-    function owner() {
-      return signedIn()
+    // BEGIN OWNER LOCK
+    // ===== 会長だけログインできる状態（2026-11-11 会長指示） =====
+    // 会長のアカウント（ownerEmail）以外は、サインインしていても Firestore を一切
+    // 読み書きできない（承認済みのスタッフ・編集者・ディレクターも含む）。
+    // 他の関数はすべて signedIn() を通して「誰か」を判定するので、ここで止めれば
+    // 会長以外の経路（self・editor・coreStaff・approved・hasRole など）がまとめて閉じる。
+    // access/ や accessRequests/ などの記録は消していない。
+    // 解除: node scripts/owner-lock.cjs off → ルールをデプロイ（OPERATIONS.md 参照）
+    function ownerEmail() {
+      return request.auth != null
         && request.auth.token.email_verified == true
         && request.auth.token.email in [
           'nakamurakouta512@gmail.com',
           'mono.create.group@gmail.com'
         ];
     }
+
+    function signedIn() {
+      return ownerEmail();
+    }
+
+    function owner() {
+      return ownerEmail();
+    }
+    // END OWNER LOCK
 
     function accessPath(uid) {
       return /databases/$(database)/documents/access/$(uid);

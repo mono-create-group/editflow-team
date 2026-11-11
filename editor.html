@@ -41,6 +41,15 @@
   const GOOGLE_CLIENT_ID='280142126082-6nar25qaki0im5fgu42u6uibn15lsd8m.apps.googleusercontent.com';
   const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.file';
   const OWNER_EMAILS=['mono.create.group@gmail.com','nakamurakouta512@gmail.com'];
+  // 会長だけログインできる状態（2026-11-11 会長指示）。true の間、会長以外はサインインしても即サインアウトし、
+  // アクセス申請・プロフィール作成・通知など書き込みにつながる処理を一切走らせない。firestore.rules の同じロックと対。
+  // 切り替え: node scripts/owner-lock.cjs on|off
+  const OWNER_ONLY_LOCK=true;
+  let ownerLockNotice=false;
+  function ownerOnlyLocked(nextUser){
+    if(!OWNER_ONLY_LOCK||!nextUser)return false;
+    return !(nextUser.emailVerified===true&&OWNER_EMAILS.includes(String(nextUser.email||'').trim().toLowerCase()));
+  }
   const HAKEN_STATUSES=['案件掲載中','募集中','編集者決定','アサイン済み','受注済み','進行中','編集者進行中','初稿提出済み','修正中','修正稿提出済み','D確認OK','先方確認中','完了','キャンセル','初稿完成','確認待ち'];
   // 編集者が選べるのは、アサイン後の開始と提出だけ。進行中はmono.create内の管理状態。
   const EDITOR_STATUSES=['アサイン済み','編集者進行中','初稿提出済み','修正中','修正稿提出済み'];
@@ -222,7 +231,7 @@
     const embedded=isEmbeddedAuthBrowser(),state=authUiState||{},mobile=isMobilePortal(),status=state.message?`<div id="auth-status" class="auth-status ${esc(state.kind||'')}" role="status" aria-live="polite">${state.busy?'<div class="spinner" aria-hidden="true"></div>':''}${esc(state.message)}</div>`:'',help=embedded||state.browserHelp?authBrowserHelpHtml():'',ready=!!auth&&!state.startupError;
     const action=embedded?'' : ready?`<button id="google-login-button" class="btn primary auth-login-button" type="button" onclick="googleLogin()" ${state.busy?'disabled':''} aria-busy="${state.busy?'true':'false'}">${state.busy?'Googleの画面を確認中…':'Googleでサインイン'}</button>${canUseRedirectAuth()&&mobile?`<button id="google-redirect-login-button" class="btn" style="width:100%;margin-top:8px" type="button" onclick="googleLogin('redirect')" ${state.busy?'disabled':''}>この端末で続ける</button>`:''}`:`<button id="auth-retry-button" class="btn primary auth-retry" type="button" onclick="location.reload()">ページを再読み込み</button>`;
     const mobileNote=mobile?`<span class="auth-note">${isStandalonePortal()?'ホーム画面から開いた場合も、このボタンからサインインできます。':'iPhoneではSafariまたはホーム画面に追加したアプリから開いてください。'}</span>`:'';
-    $('#app').innerHTML=`<div class="login-wrap"><div class="card login-card"><div class="brand" style="font-size:22px">mono.create</div><h1>編集者ポータル</h1><p>担当案件とご自身の請求情報を確認できます。</p>${status}${help}${action}${mobileNote}<span class="auth-note">初回は管理者の承認が必要です。サインインしても案件が表示されない場合は、承認状況をご確認ください。</span></div></div>`;
+    $('#app').innerHTML=`<div class="login-wrap"><div class="card login-card"><div class="brand" style="font-size:22px">mono.create</div><h1>編集者ポータル</h1>${OWNER_ONLY_LOCK?`<p>現在、このポータルは管理者のみ利用できます。</p>${ownerLockNotice?'<div class="auth-status danger" role="alert">このアカウントではログインできません。</div>':''}`:'<p>担当案件とご自身の請求情報を確認できます。</p>'}${status}${help}${action}${mobileNote}${OWNER_ONLY_LOCK?'':'<span class="auth-note">初回は管理者の承認が必要です。サインインしても案件が表示されない場合は、承認状況をご確認ください。</span>'}</div></div>`;
   }
   function renderAuthRecovery(message='サインインの準備が完了しませんでした。ページを再読み込みして、もう一度お試しください。'){
     authInFlight=false;
@@ -781,6 +790,12 @@
     try{window.EditflowUnread?.reset?.();window.EditorPush?.syncBadge?.(0);}catch(_){}
     user=nextUser;access=null;accessRequest=null;profile={};jobs=[];portalJobsSource=[];previewLegacyJobs=[];invoices=[];authorizations=[];driveToken=null;ADMIN_PREVIEW=false;PORTAL_UID='';
     authInFlight=false;authUiState={busy:false,message:'',kind:'',browserHelp:false,startupError:false};
+    if(ownerOnlyLocked(nextUser)){
+      ownerLockNotice=true;user=null;
+      try{Promise.resolve(auth.signOut()).catch(error=>console.warn('owner lock sign-out',error?.code||error))}catch(error){console.warn('owner lock sign-out',error?.code||error)}
+      return loginScreen();
+    }
+    if(nextUser)ownerLockNotice=false;
     if(!nextUser)return loginScreen();
     portalAuthLoadingScreen();if(!portalCooldown?.restore(portalEnterQuotaCircuit))observeAccess();
   }

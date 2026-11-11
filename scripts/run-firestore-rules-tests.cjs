@@ -18,7 +18,7 @@ const result = spawnSync(firebaseBin, [
   'emulators:exec',
   '--only', 'firestore',
   '--project', 'demo-editflow',
-  'node tests/firestore-rules.test.cjs',
+  `node ${process.argv[2] || 'tests/firestore-rules.test.cjs'}`,
 ], {
   cwd: root,
   env: process.env,

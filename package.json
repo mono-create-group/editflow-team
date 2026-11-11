@@ -4,11 +4,12 @@
   "version": "1.0.0",
   "description": "Deterministic local QA for the EditFlow static application.",
   "scripts": {
-    "test": "npm run test:unit && npm run test:rules && npm run test:release",
+    "test": "npm run test:unit && npm run test:rules:lock && npm run test:rules && npm run test:release",
     "test:unit": "node scripts/run-unit-tests.cjs",
     "test:dm-backend": "node scripts/run-unit-tests.cjs --only-dm-backend",
     "test:rules": "node scripts/run-firestore-rules-tests.cjs",
-    "test:release": "python3 scripts/operational-qa.py --release && scripts/firestore-rules-dry-run.sh --check"
+    "test:release": "python3 scripts/operational-qa.py --release && scripts/firestore-rules-dry-run.sh --check",
+    "test:rules:lock": "node scripts/run-firestore-rules-tests.cjs tests/firestore-owner-lock.test.cjs"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "5.0.2",

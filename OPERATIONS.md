@@ -40,6 +40,26 @@ Firestore emulator option is local-only and must never be replaced with a live t
    table is complete. Only then enable access enforcement. If anyone is blocked,
    use the emergency compatibility rollback; do not delete their records.
 
+## 会長だけログインできる状態（2026-11-11 会長指示）
+
+会長（`nakamurakouta512@gmail.com` と `mono.create.group@gmail.com`）以外は、誰もログインできない状態。
+スタッフ・編集者・ディレクターの承認記録（`access/`・`accessRequests/`）は一切消していない。
+
+- 仕組み：`firestore.rules` の `OWNER LOCK` 区間で `signedIn()` を会長のメールに限定（サーバー側の強制）。
+  社内アプリ（`index.html`）と編集者ポータル（`editor.html`）は、会長以外がサインインした瞬間にサインアウトして、
+  アクセス申請の作成・同期・通知につながる処理に入れない（`OWNER_ONLY_LOCK`）。
+- ロックはルールを共有する全アプリに効く（EditFlow のクラウド同期 `users/` と `shared/team` も、会長以外は止まる）。
+- 状態確認・切り替え（ファイルを書き換えるだけ。公開・送信・通知はしない）：
+  `node scripts/owner-lock.cjs status | on | off`
+- **解除する手順**：
+  1. `node scripts/owner-lock.cjs off`（ルールは元の定義に戻り、`index.html`/`editor.html` のスイッチも `false` になる）
+  2. `index.html` の `APP_VERSION` と `sw.js` の `CACHE` を同じ値で進める
+  3. `git push`（GitHub Pages）→ `npx firebase deploy --only firestore:rules --project editflow-mono-create`
+  4. 反映確認：`automation/scripts/live_check.py <プレーンURL> --must … --ban …`
+- 検査：`npm run test:rules:lock`（会長以外が全 match で全操作を拒否されることと、会長が通ることを自動で確認。
+  match を足しても自動で対象になる）。ロックを外した状態の役割別の権限は `npm run test:rules` で確認する
+  （こちらはロックを外したルールで動かす）。
+
 ## v29 strict privacy release and legacy-finance migration
 
 This release intentionally differs from the no-downtime path above. Deploy the

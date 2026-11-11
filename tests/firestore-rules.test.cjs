@@ -27,6 +27,15 @@ const root = path.resolve(__dirname, '..');
 const projectId = 'demo-editflow';
 const claims = (email) => ({ email, email_verified: true });
 
+// 会長だけログインできるロック（firestore.rules の ownerOnlyLock）は、別のテスト
+// （tests/firestore-owner-lock.test.cjs）で検証する。このテストは役割ごとの権限
+// （編集者・ディレクター・スタッフ）を検証するので、ロックを外した状態のルールで動かし、
+// ロックを解除した時に元の権限どおりに戻ることを保証する。
+function rulesWithoutOwnerLock() {
+  const { applyRules } = require('../scripts/owner-lock.cjs');
+  return applyRules(fs.readFileSync(path.join(root, 'firestore.rules'), 'utf8'), 'off');
+}
+
 function portalJob(uid, overrides = {}) {
   return {
     recordType: 'editor_portal_job', businessType: 'dispatch', title: '案件1', caseName: '9月分',
@@ -239,7 +248,7 @@ async function expectAllowed(label, promise) {
 (async () => {
   const env = await initializeTestEnvironment({
     projectId,
-    firestore: { rules: fs.readFileSync(path.join(root, 'firestore.rules'), 'utf8') },
+    firestore: { rules: rulesWithoutOwnerLock() },
   });
   try {
     await env.withSecurityRulesDisabled(async (ctx) => {
