@@ -1131,7 +1131,7 @@ const BIZ_CFG={
     lbl:{scope:'担当範囲',shared:'共有日',deliver:'納期（予定）',d1:'編集者 初稿',d2:'クライアント提出 初稿',unit:'単価（円）',wpay:'ワーカー支払額（円）',profit:'利益（自動計算）',monthly:'',member:'👤 編集者別',d1s:'✏️ 編集者初稿',d2s:'📋 クライアント提出',deliverS:'📅 納期（予定）'},
     show:{scope:1,d1:1,d2:1,thumb:1,wpay:1,subs:1,monthly:0},
     tabs:['board','calendar','deadline','listing','list','clients','profit','payment','completed','worker','priority'],
-    prio:[['clientDraftDate','クライアント初稿'],['editorDraftDate','編集者初稿']]
+    prio:[['clientDraftDate','クライアント初稿'],['editorDraftDate','編集者初稿'],['revisionDate','修正日']]
   },
   haken:{
     // 募集・受注の導線は派遣案件だけで保持し、担当開始後は正式な9状態を使用する。
@@ -1141,7 +1141,7 @@ const BIZ_CFG={
     lbl:{scope:'案件種別',shared:'受注日',deliver:'納期（予定）',d1:'編集者 初稿',d2:'クライアント提出 初稿',unit:'クライアント請求額（円）',wpay:'編集者支払額（円）',profit:'手数料（自動計算）',monthly:'',member:'👤 編集者別',d1s:'✏️ 編集者初稿',d2s:'📋 クライアント提出',deliverS:'📅 納期（予定）'},
     show:{scope:1,d1:1,d2:1,thumb:1,wpay:1,subs:1,monthly:0},
     tabs:['board','calendar','deadline','listing','list','clients','profit','payment','completed','worker','priority'],
-    prio:[['clientDraftDate','クライアント初稿'],['editorDraftDate','編集者初稿']]
+    prio:[['clientDraftDate','クライアント初稿'],['editorDraftDate','編集者初稿'],['revisionDate','修正日']]
   },
   hp:{
     statuses:['商談中','受注','ヒアリング','制作中','初稿提出','修正中','公開準備','公開済み','運用中','完了','キャンセル'],
@@ -6651,6 +6651,7 @@ function _videoSubtasks(raw,fallbackRaw,workerNames){
     editorDraftDate:s.editorDraftDate||'',
     editorDraftDateSetter:_editorDraftDateSetter(s),
     clientDraftDate:s.clientDraftDate||'',
+    revisionDate:s.revisionDate||'',
     completedDeliveryDate:s.completedDeliveryDate||'',
     status:s.done?'完了':(s.status||'未着手'),
     assignee:_videoSubtaskAssignee(s.workerId,workerNames),
@@ -6696,7 +6697,7 @@ function _videoGroupPortalJobs(portal){
     }).map(item=>item.child);
     const lead=_videoPortalParentLead(orderedChildren),parentCaseId=String(lead?._raw?.parentCaseId||''),parentCaseName=String(lead?._raw?.parentCaseName||lead?._raw?.caseName||lead?.title||'親案件').trim()||'親案件';
     const assignees=[...new Set(orderedChildren.map(job=>String(job.assignee||'未割当')).filter(Boolean))],deadlines=orderedChildren.map(job=>job.deadline).filter(Boolean).sort(),updatedAt=orderedChildren.reduce((latest,job)=>Math.max(latest,_videoUpdatedMillis(job.updatedAt)),0);
-    return{_source:'portal-parent',_aggregateParent:true,_portalUid:lead._portalUid,_portalParentCaseId:parentCaseId,id:`parent:${key}`,biz:lead.biz,title:parentCaseName,clientDisplay:lead.clientDisplay||'',deadline:deadlines[0]||'',editorDraftDate:'',clientDraftDate:'',completedDeliveryDate:'',status:lead.status||'受注済み',assignee:assignees.length===1?assignees[0]:`${assignees.length}名の担当者`,subtasks:orderedChildren.map(job=>({...job,_portalChildJobId:job.id,_portalChildPortalUid:job._portalUid})),attachments:[],urgent:orderedChildren.some(job=>job.urgent),progress:'',progressMilestones:[],evidenceUrl:'',blocker:orderedChildren.some(job=>job.blocker)?'停止理由あり':'',history:[],updatedAt,_portalChildCount:orderedChildren.length};
+    return{_source:'portal-parent',_aggregateParent:true,_portalUid:lead._portalUid,_portalParentCaseId:parentCaseId,id:`parent:${key}`,biz:lead.biz,title:parentCaseName,clientDisplay:lead.clientDisplay||'',deadline:deadlines[0]||'',editorDraftDate:'',clientDraftDate:'',revisionDate:'',completedDeliveryDate:'',status:lead.status||'受注済み',assignee:assignees.length===1?assignees[0]:`${assignees.length}名の担当者`,subtasks:orderedChildren.map(job=>({...job,_portalChildJobId:job.id,_portalChildPortalUid:job._portalUid})),attachments:[],urgent:orderedChildren.some(job=>job.urgent),progress:'',progressMilestones:[],evidenceUrl:'',blocker:orderedChildren.some(job=>job.blocker)?'停止理由あり':'',history:[],updatedAt,_portalChildCount:orderedChildren.length};
   });
   return[...standalone,...parents];
 }
@@ -6706,10 +6707,10 @@ function _videoJobs(){
   if(_videoJobsMemoEpoch===_renderEpoch)return _videoJobsMemo;
   const jobs=_isScopedVideoDirectorAccess()?[]:(S.jobs||[]),clientNames=new Map((_isScopedVideoDirectorAccess()?[]:(S.clients||[])).map(c=>[c.id,c.name||''])),workerNames=new Map((_isScopedVideoDirectorAccess()?[]:(S.workers||[])).map(w=>[w.id,w.name||''])),legacyById=new Map(),legacyByPortal=new Map();
   jobs.forEach(j=>{if(j?.deleted)return;legacyById.set(j.id,j);if(j.portalUid&&j.portalJobId)legacyByPortal.set(`${j.portalUid}:${j.portalJobId}`,j)});
-  const legacy=jobs.filter(j=>!j.deleted&&['edit','haken'].includes(jobBiz(j))&&!j.portalJobId).map(j=>({_source:'legacy',_raw:j,biz:jobBiz(j),id:j.id,title:j.title||'',clientDisplay:clientNames.get(j.clientId)||'',deadline:j.deliveryDate||j.clientDraftDate||j.editorDraftDate||'',editorDraftDate:j.editorDraftDate||'',editorDraftDateSetter:_editorDraftDateSetter(j),clientDraftDate:j.clientDraftDate||'',completedDeliveryDate:j.completedDeliveryDate||'',status:j.status||'未着手',assignee:getJobWorkerNames(j)||'未割当',subtasks:_videoSubtasks(j,null,workerNames),attachments:_videoCaseMaterials(j.attachments,j),urgent:!!j.urgent,progress:j.progressNote||j.notes||'',progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:[],evidenceUrl:j.evidenceUrl||'',blocker:j.blocker||'',history:j.statusHistory||[],updatedAt:j.updatedAt||0}));
+  const legacy=jobs.filter(j=>!j.deleted&&['edit','haken'].includes(jobBiz(j))&&!j.portalJobId).map(j=>({_source:'legacy',_raw:j,biz:jobBiz(j),id:j.id,title:j.title||'',clientDisplay:clientNames.get(j.clientId)||'',deadline:j.deliveryDate||j.clientDraftDate||j.editorDraftDate||'',editorDraftDate:j.editorDraftDate||'',editorDraftDateSetter:_editorDraftDateSetter(j),clientDraftDate:j.clientDraftDate||'',revisionDate:j.revisionDate||'',completedDeliveryDate:j.completedDeliveryDate||'',status:j.status||'未着手',assignee:getJobWorkerNames(j)||'未割当',subtasks:_videoSubtasks(j,null,workerNames),attachments:_videoCaseMaterials(j.attachments,j),urgent:!!j.urgent,progress:j.progressNote||j.notes||'',progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:[],evidenceUrl:j.evidenceUrl||'',blocker:j.blocker||'',history:j.statusHistory||[],updatedAt:j.updatedAt||0}));
   const portal=(PORTAL_JOBS||[]).map(j=>{
     const linked=legacyById.get(j.linkedLegacyJobId)||legacyByPortal.get(`${j._portalUid}:${j.id}`);
-    return{_source:'portal',_raw:j,_portalUid:j._portalUid,biz:_portalVideoBiz(j),id:j.id,title:j.title||'',clientDisplay:j.clientDisplay||'',deadline:j.deliveryDate||j.deadline||j.clientDraftDate||j.editorDraftDate||'',editorDraftDate:j.editorDraftDate||'',editorDraftDateSetter:_editorDraftDateSetter(j),clientDraftDate:j.clientDraftDate||'',completedDeliveryDate:j.completedDeliveryDate||'',status:j.status||'案件掲載中',assignee:j.editorName||j.editorEmail||'編集者直接入力',subtasks:_videoSubtasks(j,linked,workerNames),attachments:_videoCaseMaterials(j.attachments,j),urgent:!!j.urgent,progress:j.progress||'',progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:[],progressEvents:Array.isArray(j.progressEvents)?j.progressEvents:[],workflow:j.workflow||null,evidenceUrl:j.evidenceUrl||'',blocker:j.blocker||'',history:j.history||[],updatedAt:j.updatedAt||0};
+    return{_source:'portal',_raw:j,_portalUid:j._portalUid,biz:_portalVideoBiz(j),id:j.id,title:j.title||'',clientDisplay:j.clientDisplay||'',deadline:j.deliveryDate||j.deadline||j.clientDraftDate||j.editorDraftDate||'',editorDraftDate:j.editorDraftDate||'',editorDraftDateSetter:_editorDraftDateSetter(j),clientDraftDate:j.clientDraftDate||'',revisionDate:_revisionDateOfPortalJob(j._portalUid,j.id),completedDeliveryDate:j.completedDeliveryDate||'',status:j.status||'案件掲載中',assignee:j.editorName||j.editorEmail||'編集者直接入力',subtasks:_videoSubtasks(j,linked,workerNames),attachments:_videoCaseMaterials(j.attachments,j),urgent:!!j.urgent,progress:j.progress||'',progressMilestones:Array.isArray(j.progressMilestones)?j.progressMilestones:[],progressEvents:Array.isArray(j.progressEvents)?j.progressEvents:[],workflow:j.workflow||null,evidenceUrl:j.evidenceUrl||'',blocker:j.blocker||'',history:j.history||[],updatedAt:j.updatedAt||0};
   });
   const legacyIds=new Set(legacy.map(job=>String(job.id||''))),legacyBoardIds=new Set(legacy.map(job=>String(job._raw?.boardParentCaseId||'')).filter(Boolean)),unrepresentedPortal=portal.filter(job=>!_videoPortalIsRepresentedByLegacy(job,legacyIds,legacyBoardIds));
   _videoJobsMemo=[...legacy,..._videoGroupPortalJobs(unrepresentedPortal)];_videoJobsMemoEpoch=_renderEpoch;return _videoJobsMemo;
@@ -8677,6 +8678,7 @@ function rProjListing(){
           ${swName?`<span>🛠 ${swName}</span>`:''}
           ${s.sharedDate?`<span>📤 共有: ${s.sharedDate}</span>`:''}
           ${s.editorDraftDate?`<span>✏️ 初稿: ${s.editorDraftDate}</span>`:''}
+          ${s.revisionDate?`<span class="${urgCls(s.revisionDate)}">🔧 修正日: ${s.revisionDate} (${fmt(s.revisionDate)})</span>`:''}
           ${s.deliveryDate?`<span class="${urgCls(s.deliveryDate)}">📅 納期（予定）: ${s.deliveryDate} (${fmt(s.deliveryDate)})</span>`:''}
           ${s.payoutDate?`<span>💸 支払予定: ${s.payoutDate}</span>`:''}
         </div>
@@ -8999,6 +9001,7 @@ function rProjCard(j){
   ${_boardMixedStatusSummaryHtml(j)}
   ${j.editorDraftDate&&cbz.lbl.d1s?`<div class="proj-due-label ${urgCls(j.editorDraftDate)}">${cbz.lbl.d1s}: ${j.editorDraftDate} (${fmt(j.editorDraftDate)})</div>`:''}
   ${j.clientDraftDate&&cbz.lbl.d2s?`<div class="proj-due-label ${urgCls(j.clientDraftDate)}">${cbz.lbl.d2s}: ${j.clientDraftDate} (${fmt(j.clientDraftDate)})</div>`:''}
+  ${j.revisionDate?`<div class="proj-due-label ${urgCls(j.revisionDate)}">🔧 修正日: ${j.revisionDate} (${fmt(j.revisionDate)})</div>`:''}
   ${_isOwner()&&j.invoiceDate?`<div class="proj-due-label ${urgCls(j.invoiceDate)}">🧾 請求書: ${j.invoiceDate} (${fmt(j.invoiceDate)})</div>`:''}
   ${j.deliveryDate?`<div class="proj-due-label ${uc}">${cbz.lbl.deliverS}: ${j.deliveryDate} (${fmt(j.deliveryDate)})</div>`:''}
   ${(j.subtasks||[]).length?`<details class="subtask-list" onclick="event.stopPropagation()"><summary class="video-subcase-head">↳ サブ案件 <span>${(j.subtasks||[]).length}件</span></summary><div>${(j.subtasks||[]).map((s,i)=>{const subAssignee=s.workerId===SELF_WID?'mono.create社内対応':(S.workers.find(w=>w.id===s.workerId)?.name||s.assignee||'未割当'),subId=String(s.id||i);return`<div class="sub-item subcase-card-item"><button type="button" class="sub-chk ${s.done?'done':''}" onclick="event.stopPropagation();toggleJobSub('${j.id}',${i})" aria-label="${esc(s.title||`サブ案件${i+1}`)}を${s.done?'未完了':'完了'}にする"></button><button type="button" class="subcase-card-link" onclick="event.stopPropagation();${esc(`openLegacySubcaseDetail(${JSON.stringify(j.id)},${JSON.stringify(subId)})`)}" aria-label="${esc(s.title||`サブ案件${i+1}`)}の詳細を開く"><span class="video-subcase-title" style="${s.done?'text-decoration:line-through;color:var(--t3)':''}">${esc(s.title||`サブ案件${i+1}`)}</span><span class="video-subcase-meta"><span>担当者 ${esc(subAssignee)}</span>${_videoDraftMetaHtml('editor',s.editorDraftDate)}${_videoDraftMetaHtml('client',s.clientDraftDate)}</span></button></div>`;}).join('')}</div></details>`:''}
@@ -9947,6 +9950,7 @@ function rProjWorker(){
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:3px;font-size:11px;color:var(--t2)">
           ${sub.editorDraftDate?`<span>✏️ 初稿: <span class="${urgCls(sub.editorDraftDate)}">${sub.editorDraftDate}</span></span>`:''}
+          ${sub.revisionDate?`<span>🔧 修正日: <span class="${urgCls(sub.revisionDate)}">${sub.revisionDate}</span></span>`:''}
           ${sub.deliveryDate?`<span>📅 納品: <span class="${uc}">${sub.deliveryDate}</span></span>`:''}
           ${_isOwner()&&sub.unitPrice?`<span style="color:var(--blue)">¥${sub.unitPrice.toLocaleString()}</span>`:''}
         </div>
@@ -10072,26 +10076,31 @@ function _caseScheduleRowInternal(row){
   return ids.length?ids.every(id=>id===SELF_WID):String(job.assignee||'')===label;
 }
 function _caseScheduleScopedRows(field){
-  const rows=_caseScheduleSortRows(_caseScheduleRows(field));
+  let rows=_caseScheduleSortRows(_caseScheduleRows(field));
+  // 修正日は修正が来た案件だけに入る。日付が無い案件は「修正中」のものだけ残し、全案件が未設定に並ぶのを防ぐ。
+  if(field==='revisionDate')rows=rows.filter(row=>row.date||_caseScheduleRowStatus(row)==='修正中');
   return CASE_CAL_SCOPE==='internal'?rows.filter(_caseScheduleRowInternal):rows;
 }
 function _caseScheduleRowTitle(row){return row.type==='sub'?`${row.job.title||'親案件'} › ${row.sub?.title||'サブ案件'}`:(row.job?.title||'案件名未設定');}
 function _caseScheduleRowStatus(row){return row.type==='sub'?(row.sub?.status||'未着手'):(row.job?.status||'未着手');}
 function _caseScheduleRowAssignee(row){return row.type==='sub'?(row.sub?.assignee||'未割当'):(row.job?.assignee||'未割当');}
 function _caseScheduleRowDelivery(row){return row.type==='sub'?(row.sub?.deadline||''):(row.job?.deadline||'');}
+function _caseRevisionDateOf(row){return String((row?.type==='sub'?row.sub?.revisionDate:row?.job?.revisionDate)||'');}
+function _caseRevisionChip(row){const date=_caseRevisionDateOf(row);return date?`<em class="case-calendar-revision" title="修正日 ${esc(date)}">修正 ${esc(date.slice(5).replace('-','/'))}</em>`:'';}
+function _caseRevisionButton(ref){return _videoCanEdit()?`<button type="button" class="btn btn-g btn-xs case-revision-action" onclick="event.stopPropagation();openRevisionDateModal(${esc(JSON.stringify(ref))})">修正日</button>`:'';}
 function rProjCalendar(){
   const pcfg=bizCfg(),prioOpts=pcfg.prio,pi=Math.min(PRIO_IDX,prioOpts.length-1),field=prioOpts[pi][0],fieldLbl=prioOpts[pi][1];
   const month=/^\d{4}-\d{2}$/.test(CASE_CAL_MONTH)?CASE_CAL_MONTH:today().slice(0,7),cells=_caseCalendarDays(month),rows=_caseScheduleScopedRows(field),td=today();
   const dated=rows.filter(row=>_priorityDateShift(row.date,0)),undated=rows.filter(row=>!_priorityDateShift(row.date,0));
   const byDate=new Map();dated.forEach(row=>{if(!byDate.has(row.date))byDate.set(row.date,[]);byDate.get(row.date).push(row)});
   const [year,monthNumber]=month.split('-').map(Number),monthCount=dated.filter(row=>row.date.startsWith(`${month}-`)).length;
-  const toggle=_caseScheduleToggle(prioOpts,pi,`${fieldLbl}を月ごとに表示します。完了・キャンセル以外の全案件が対象です。案件をドラッグして日付に落とすと${fieldLbl}を変更できます（PC操作）。`);
-  const item=row=>{const status=_caseScheduleRowStatus(row),action=_caseScheduleOpenAction(row),ref=_caseScheduleRowRef(row);return`<div><button type="button" class="case-calendar-item ${row.date<td?'overdue':''}" onclick="${esc(action)}" title="${esc(_caseScheduleRowTitle(row))}" draggable="true" data-case-ref="${esc(ref)}" ondragstart="_caseCalendarDragStart(event)" ondragend="_caseCalendarDragEnd(event)"><b>${esc(_caseScheduleRowTitle(row))}</b><span>${esc(_caseScheduleRowAssignee(row))}</span><i class="badge ${SCOLBG[status]||'bk'}">${esc(videoStatusLabel(status))}</i></button>${_ownerProgressButton(row.job,row.sub||null)}</div>`;};
+  const toggle=_caseScheduleToggle(prioOpts,pi,field==='revisionDate'?'修正日が入っている案件を月ごとに表示します。修正中で修正日が未入力の案件は「日付未設定」に出ます。各案件の「修正日」ボタンで入力でき、ドラッグして日付に落とすと修正日を変更できます（PC操作）。':`${fieldLbl}を月ごとに表示します。完了・キャンセル以外の全案件が対象です。案件をドラッグして日付に落とすと${fieldLbl}を変更できます（PC操作）。`);
+  const item=row=>{const status=_caseScheduleRowStatus(row),action=_caseScheduleOpenAction(row),ref=_caseScheduleRowRef(row);return`<div><button type="button" class="case-calendar-item ${row.date<td?'overdue':''}" onclick="${esc(action)}" title="${esc(_caseScheduleRowTitle(row))}" draggable="true" data-case-ref="${esc(ref)}" ondragstart="_caseCalendarDragStart(event)" ondragend="_caseCalendarDragEnd(event)"><b>${esc(_caseScheduleRowTitle(row))}</b><span>${esc(_caseScheduleRowAssignee(row))}</span><i class="badge ${SCOLBG[status]||'bk'}">${esc(videoStatusLabel(status))}</i>${field!=='revisionDate'?_caseRevisionChip(row):''}</button>${_ownerProgressButton(row.job,row.sub||null)}${_caseRevisionButton(ref)}</div>`;};
   const calendar=`<div class="case-calendar-scroll"><div class="case-calendar" role="grid" aria-label="${year}年${monthNumber}月 ${fieldLbl}カレンダー">
     ${['日','月','火','水','木','金','土'].map((label,index)=>`<div class="case-calendar-weekday ${index===0?'sun':index===6?'sat':''}" role="columnheader">${label}</div>`).join('')}
     ${cells.map(date=>date?`<section class="case-calendar-day ${date===td?'today':''}" role="gridcell" data-calendar-date="${date}" ondragover="_caseCalendarDragOver(event)" ondragleave="_caseCalendarDragLeave(event)" ondrop="_caseCalendarDrop(event,'${date}')"><div class="case-calendar-date"><b>${Number(date.slice(-2))}</b>${date===td?'<span>本日</span>':''}</div><div class="case-calendar-items">${(byDate.get(date)||[]).map(item).join('')}</div></section>`:'<div class="case-calendar-day empty-day" aria-hidden="true"></div>').join('')}
   </div></div>`;
-  const unset=undated.length?`<section class="case-calendar-unset"><div class="case-calendar-unset-head"><b>日付未設定</b><span>${undated.length}件</span></div><div class="case-calendar-unset-list">${undated.map(row=>{const action=_caseScheduleOpenAction(row),ref=_caseScheduleRowRef(row);return`<button type="button" onclick="${esc(action)}" draggable="true" data-case-ref="${esc(ref)}" ondragstart="_caseCalendarDragStart(event)" ondragend="_caseCalendarDragEnd(event)"><b>${esc(_caseScheduleRowTitle(row))}</b><span>${esc(_caseScheduleRowAssignee(row))}</span></button>`;}).join('')}</div></section>`:'';
+  const unset=undated.length?`<section class="case-calendar-unset"><div class="case-calendar-unset-head"><b>日付未設定</b><span>${undated.length}件</span></div><div class="case-calendar-unset-list">${undated.map(row=>{const ref=_caseScheduleRowRef(row),action=field==='revisionDate'?`openRevisionDateModal(${JSON.stringify(ref)})`:_caseScheduleOpenAction(row);return`<button type="button" onclick="${esc(action)}" draggable="true" data-case-ref="${esc(ref)}" ondragstart="_caseCalendarDragStart(event)" ondragend="_caseCalendarDragEnd(event)"><b>${esc(_caseScheduleRowTitle(row))}</b><span>${esc(_caseScheduleRowAssignee(row))}</span></button>`;}).join('')}</div></section>`:'';
   return`${toggle}<div class="case-calendar-toolbar"><button type="button" class="btn btn-g btn-sm" onclick="setCaseCalendarMonth(-1)">← 前月</button><div><b>${year}年${monthNumber}月</b><span>${monthCount}件</span></div><button type="button" class="btn btn-g btn-sm" onclick="CASE_CAL_MONTH=today().slice(0,7);render()">今月</button><button type="button" class="btn btn-g btn-sm" onclick="setCaseCalendarMonth(1)">次月 →</button></div>${calendar}${unset}`;
 }
 // ===CASE CALENDAR DRAG & DROP===
@@ -10119,6 +10128,7 @@ function _caseCalendarDrop(e,date){
 }
 async function _caseScheduleSetDate(ref,field,date){
   if(!_videoCanEdit())return toast('権限がありません','err');
+  if(field==='revisionDate')return _caseScheduleSetRevisionDate(ref,date);
   if(!['editorDraftDate','clientDraftDate'].includes(field))return;
   if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date||'')))return;
   const label=field==='editorDraftDate'?'編集者初稿':'クライアント初稿',at=Date.now(),by=_myEmail();
@@ -10149,6 +10159,72 @@ async function _caseScheduleSetDate(ref,field,date){
     await fbDb.collection('editor_portals').doc(portalUid).collection('editor_jobs').doc(jobId).set({[field]:date,updatedAt:at,updatedBy:by},{merge:true});
     job[field]=date;job.updatedAt=at;render();toast(`${label}を${date}に変更しました`);
   }catch(error){console.warn('calendar date move',error);toast(`${label}を保存できませんでした`,'err');}
+}
+// ===修正日（revisionDate）===
+// 修正が来た案件に「修正を出す日」を入れる。ポータル側(editor_jobs)はFirestoreルールで書けるキーが固定のため、
+// 修正日は常にオーナー台帳(S.jobs)の案件・子案件に保存し、社内アプリだけで完結させる。
+function _revisionLegacyTarget(portalUid,jobId){
+  const uid=String(portalUid||''),id=String(jobId||'');if(!uid||!id)return null;
+  for(const parent of (S.jobs||[])){
+    if(!parent||parent.deleted)continue;
+    if(String(parent.portalUid||'')===uid&&String(parent.portalJobId||'')===id)return{parent,index:-1};
+    const index=(parent.subtasks||[]).findIndex(sub=>sub&&String(sub.portalUid||'')===uid&&String(sub.portalJobId||'')===id);
+    if(index>=0)return{parent,index};
+  }
+  return null;
+}
+function _revisionDateOfPortalJob(portalUid,jobId){
+  if(typeof _isScopedVideoDirectorAccess==='function'&&_isScopedVideoDirectorAccess())return'';
+  const target=_revisionLegacyTarget(portalUid,jobId);if(!target)return'';
+  return String((target.index>=0?target.parent.subtasks[target.index]:target.parent).revisionDate||'');
+}
+function _revisionResolveTarget(ref){
+  if(!ref||!ref.t)return null;
+  if(ref.s==='legacy'){
+    const parent=(S.jobs||[]).find(j=>j.id===ref.j);if(!parent)return null;
+    if(ref.t!=='sub')return{parent,index:-1};
+    const found=_findVideoSubcase(parent,ref.sub);return found?{parent,index:found.index}:null;
+  }
+  if(ref.s==='portal'||ref.s==='portal-parent'){
+    if(ref.t==='sub'&&ref.pj)return _revisionLegacyTarget(ref.pu||ref.u,ref.pj);
+    const linked=_revisionLegacyTarget(ref.u,ref.j);
+    if(ref.t!=='sub')return linked&&linked.index<0?linked:null;
+    if(!linked||linked.index>=0)return null;
+    const found=_findVideoSubcase(linked.parent,ref.sub);return found?{parent:linked.parent,index:found.index}:null;
+  }
+  return null;
+}
+function _caseScheduleSetRevisionDate(ref,date){
+  if(!_videoCanEdit())return toast('権限がありません','err');
+  const value=String(date||''),clearing=value==='';
+  if(!clearing&&!/^\d{4}-\d{2}-\d{2}$/.test(value))return toast('修正日は日付で入力してください','warn');
+  const target=_revisionResolveTarget(ref);
+  if(!target)return toast('この案件は編集者が直接登録したため、修正日を保存できません','warn');
+  const{parent,index}=target,record=index>=0?parent.subtasks[index]:parent;
+  if(String(record.revisionDate||'')===value)return;
+  const at=Date.now(),by=_myEmail();
+  if(index>=0)parent.subtasks=parent.subtasks.map((sub,i)=>i===index?{...sub,revisionDate:clearing?null:value,updatedAt:at,updatedBy:by}:sub);
+  else parent.revisionDate=clearing?null:value;
+  parent.updatedAt=at;parent.updatedBy=by;
+  parent.statusHistory=[...(parent.statusHistory||[]).slice(-99),{at,by,type:'calendar_date_move',field:'revisionDate',date:value,subId:index>=0?String(parent.subtasks[index]?.id??index):''}];
+  save();render();toast(clearing?'修正日を消しました':`修正日を${value}に設定しました`);
+}
+function openRevisionDateModal(refJson){
+  if(!_videoCanEdit())return toast('権限がありません','err');
+  let ref=null;try{ref=JSON.parse(refJson||'null');}catch(_){ref=null;}
+  const target=_revisionResolveTarget(ref);
+  if(!target)return toast('この案件は編集者が直接登録したため、修正日を保存できません','warn');
+  const{parent,index}=target,record=index>=0?parent.subtasks[index]:parent,title=index>=0?`${parent.title||'親案件'} › ${record.title||'サブ案件'}`:(parent.title||'案件名未設定'),current=String(record.revisionDate||'');
+  openModal(`<div class="mhdr"><div class="mtitle">修正日を入力</div><button class="mclose" onclick="closeModal()">✕</button></div>
+    <div class="video-breadcrumb">${esc(title)}</div>
+    <div class="fg"><div class="fl" id="rev-date-label">修正日（修正を出す日）</div><input type="date" id="rev-date" aria-labelledby="rev-date-label" value="${esc(current||today())}"><div class="fhint">修正が来たら入力します。入力すると、カレンダーの「修正日」表示に載ります。ステータスは変わりません。</div></div>
+    <div class="mfooter"><button class="btn btn-g" onclick="closeModal()">キャンセル</button>${current?`<button class="btn btn-g" onclick="saveRevisionDateModal(${esc(JSON.stringify(refJson))},true)">修正日を消す</button>`:''}<button class="btn btn-p" onclick="saveRevisionDateModal(${esc(JSON.stringify(refJson))},false)">保存</button></div>`);
+}
+function saveRevisionDateModal(refJson,clear){
+  let ref=null;try{ref=JSON.parse(refJson||'null');}catch(_){ref=null;}
+  const value=clear?'':String(document.getElementById('rev-date')?.value||'');
+  if(!clear&&!value)return toast('修正日を入力してください','warn');
+  closeModal();_caseScheduleSetRevisionDate(ref,value);
 }
 function rProjPriority(){
   const pcfg=bizCfg();
@@ -14047,6 +14123,7 @@ function rWorkers(){
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:3px;font-size:11px;color:var(--t2)">
           ${sub.editorDraftDate?`<span>✏️ 初稿: ${sub.editorDraftDate}</span>`:''}
+          ${sub.revisionDate?`<span>🔧 修正日: ${sub.revisionDate}</span>`:''}
           ${sub.deliveryDate?`<span>📅 納品: ${sub.deliveryDate}</span>`:''}
         </div>
       </div>
@@ -15045,7 +15122,7 @@ function openJobModal(id,preStatus,preClientId){
 </div>
 <div class="frow" id="jf-client-draft">
   <div class="fg"><div class="fl" id="jl-d2">クライアント提出 初稿</div><input type="date" id="j-client-draft" value="${j?.clientDraftDate||''}"></div>
-  <div class="fg"></div>
+  <div class="fg"><div class="fl" id="jl-revision">修正日</div><input type="date" id="j-revision" aria-labelledby="jl-revision" value="${esc(j?.revisionDate||'')}"><div class="fhint">修正が来たら、修正を出す日を入力します。カレンダーの「修正日」表示に載ります。</div></div>
 </div>
     <div class="frow" id="jf-parent-completed"><div class="fg"><div class="fl" id="j-completed-delivery-label">納品日</div><input id="j-completed-delivery" type="date" value="${j?.completedDeliveryDate||''}" disabled aria-label="実際の納品日" onchange="applyPaymentTerms()"><div id="j-completed-delivery-hint" style="font-size:10px;color:var(--t3);margin-top:3px">案件種別に応じた進捗操作で納品日を記録します。未記録の案件には報酬が発生しません。</div></div><div class="fg"></div></div>
 	<div class="frow" id="jf-parent-thumbnail">
@@ -15468,6 +15545,9 @@ function mkSubRow(s,ph,bk,originalIndex=-1,financeLocked=false){
     <div><div class="j-sub-d2-lbl" style="font-size:10px;color:var(--t3);margin-bottom:2px">${_bc.lbl.d2||'クライアント提出'}</div>
       <input class="j-sub-client" type="date" value="${s.clientDraftDate||''}" style="font-size:12px;padding:4px 6px">
     </div>
+    <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">修正日（修正が来たら）</div>
+      <input class="j-sub-revision" type="date" value="${esc(s.revisionDate||'')}" style="font-size:12px;padding:4px 6px">
+    </div>
 	<div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">納期（予定・任意）</div>
 	  <input class="j-sub-deliver" type="date" value="${s.deliveryDate||''}" style="font-size:12px;padding:4px 6px" onchange="applyJobSubPaymentTerms(this.closest('.j-sub-row')?.querySelector('.j-sub-payment-terms'))">
 	</div>
@@ -15613,6 +15693,7 @@ async function saveJob(){
       editorDraftDateSetter:el.querySelector('.j-sub-editor-setter')?.value||_editorDraftDateSetter(previous),
       editorDraftDate:el.querySelector('.j-sub-editor')?.value||null,
       clientDraftDate:el.querySelector('.j-sub-client')?.value||null,
+      ...(el.querySelector('.j-sub-revision')?{revisionDate:el.querySelector('.j-sub-revision').value||null}:{}),
       deliveryDate:el.querySelector('.j-sub-deliver')?.value||null,
       completedDeliveryDate:requestedCompletionDate,
       ...(paymentTerms!=='custom'||Object.prototype.hasOwnProperty.call(previous,'paymentTerms')?{paymentTerms}:{}),
@@ -15656,6 +15737,8 @@ async function saveJob(){
   const accountSelect=document.getElementById('j-account'),accountId=accountSelect?.value||null,accountName=accountId?(accountSelect?.selectedOptions?.[0]?.textContent||current?.accountName||''):null;
   const data={title,biz:document.getElementById('j-biz')?.value||'edit',subcaseMode:hasSubcaseStructure?'with_subcases':'without_subcases',hasSubcases:hasSubcaseStructure,monthlyFee:_isOwner()?(parseInt(document.getElementById('j-monthly')?.value)||0):(Number(current?.monthlyFee)||0),jobType:document.getElementById('j-type')?.value||'edit',clientId:document.getElementById('j-cl').value||null,accountId,accountName,workerIds:parentWorkerIds,workerId:primaryWorkerId,...billingSnapshot,scope:document.getElementById('j-scope').value||null,status:finalStatus,isTrial,unitPrice,profit:_isOwner()?unitPrice:(Number(current?.profit)||unitPrice),workerPay,sharedDate:hasSubcaseStructure?null:(document.getElementById('j-shared')?.value||null),editorDraftDateSetter:aggregateDraftSetter,editorDraftDate:aggregateDraftDate,clientDraftDate:hasSubcaseStructure?null:(document.getElementById('j-client-draft')?.value||null),thumbnailDate:hasSubcaseStructure?null:(document.getElementById('j-thumbnail')?.value||null),deliveryDate:hasSubcaseStructure?null:(document.getElementById('j-deliver')?.value||null),completedDeliveryDate:!hasSubtasks&&parentInternalOnly?(document.getElementById('j-completed-delivery')?.value||(requestedStatus==='完了'?today():null)):(current?.completedDeliveryDate||null),manualIds:canManageMaterials?_selectedJobCaseManualIds(document.getElementById('j-manuals')):_caseManualIds(current?.manualIds),caution:canManageMaterials?String(document.getElementById('j-caution')?.value||'').trim().slice(0,2000):String(current?.caution||''),requestUrl:canManageMaterials?parentRequestUrl:(current?.requestUrl||''),sourceUrl:canManageMaterials?parentSourceUrl:(current?.sourceUrl||''),paymentTerms:_isOwner()?_paymentTermsValue(document.getElementById('j-payment-terms')?.value||current?.paymentTerms||'custom'):(current?.paymentTerms||'custom'),invoiceDate:_isOwner()?(document.getElementById('j-invoice-skip')?.value==='1'?null:(document.getElementById('j-invoice')?.value||null)):(current?.invoiceDate||null),invoiceNotRequired:_isOwner()?(document.getElementById('j-invoice-skip')?.value==='1'):!!current?.invoiceNotRequired,dueDate:_isOwner()?(document.getElementById('j-due')?.value||null):(current?.dueDate||null),paymentDate:_isOwner()?(document.getElementById('j-payin-skip')?.value==='1'?null:(document.getElementById('j-payin')?.value||null)):(current?.paymentDate||null),paymentNotRequired:_isOwner()?(document.getElementById('j-payin-skip')?.value==='1'):!!current?.paymentNotRequired,paidAt:_isOwner()?(document.getElementById('j-paid-val')?.value||null):(current?.paidAt||null),payoutDate:_isOwner()?(hasSubcaseStructure?null:(document.getElementById('j-payout')?.value||null)):(current?.payoutDate||null),salesRep:_isOwner()?(document.getElementById('j-sales-rep')?.value||null):(current?.salesRep||null),salesPay:_isOwner()?(parseInt(document.getElementById('j-sales-pay')?.value)||0):(Number(current?.salesPay)||0),notes:document.getElementById('j-notes').value.trim(),opsChecklist:readOpsChecklist(),subtasks,attachments:canManageMaterials?parentAttachmentRead.items:_videoAttachments(current?.attachments),updatedAt:Date.now(),updatedBy:_myEmail()};
   if(ownerCanEditStandaloneStatus&&String(current?.status||'')!==finalStatus)data.statusHistory=[...(current?.statusHistory||[]).slice(-99),{at:data.updatedAt,by:_myEmail(),type:'owner_modal_status_update',fromStatus:String(current?.status||''),status:finalStatus}];
+  const revisionInput=document.getElementById('j-revision');
+  if(!hasSubcaseStructure&&revisionInput&&(revisionInput.value||current?.revisionDate))data.revisionDate=revisionInput.value||null;
   if(hasSubcaseStructure){
     data.editorDraftDateSetter=null;data.editorDraftDate=null;data.completedDeliveryDate=null;
     // 請求・入金状態はサブ案件単位で管理し、親案件には残さない。
@@ -19453,7 +19536,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20261107-04';
+const APP_VERSION='20261111-01';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)

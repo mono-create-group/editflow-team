@@ -116,3 +116,5 @@ button:disabled,[aria-disabled="true"]{cursor:not-allowed!important;opacity:.52!
   .app-header h1{font-size:22px}.app-attention-card{padding:12px}.app-attention-card strong{font-size:21px}
   .manager-account-row{grid-template-columns:1fr;align-items:start}.manager-account-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%}.manager-account-actions .btn{width:100%;min-width:0}.manager-account-add{grid-template-columns:1fr}.manager-account-add .btn{width:100%}
 }
+.case-calendar-item .case-calendar-revision{justify-self:start;margin-top:2px;padding:1px 6px;border:1px solid #fdba74;border-radius:100px;background:#fff7ed;color:#9a3412;font-size:8.5px;font-style:normal;font-weight:700}
+.case-revision-action{margin:4px 4px 0 0;white-space:nowrap}
