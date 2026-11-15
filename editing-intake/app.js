@@ -23,7 +23,7 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
   const money = n => new Intl.NumberFormat('ja-JP', {style:'currency',currency:'JPY'}).format(n);
   const labels = {inquiry:'相談内容の確認中',quoted:'見積もり確認待ち',accepted:'お手続き・制作中',awaiting:'制作開始前',editing:'編集中',delivered:'納品確認待ち',revision_requested:'修正内容の確認中',revising:'修正中',completed:'完了',cancellation_pending:'キャンセル手続き中',cancelled:'キャンセル完了'};
   const kinds = {customer:'ご希望による修正',provider_error:'制作側の不備',major_change:'大幅な変更の相談'};
-  const commandLabels = {create_order:'相談を受け付け',mark_repeat_order:'追加発注の扱いを更新',update_hearing:'ヒアリング回答を更新',update_video_material_details:'動画の呼び名・素材メモを更新',issue_quote:'見積もりを提示',accept_quote:'見積もりを承認',report_payment:'振込を報告',verify_payment:'入金を確認',report_materials:'素材提出を報告',verify_materials:'素材を確認',reconfirm_delivery:'納品日の再合意を記録',start_editing:'編集を開始',deliver:'動画を納品',request_revision:'修正を依頼',classify_revision:'修正内容を分類',start_revision:'修正を開始',confirm_delivery:'納品を確認',request_cancellation:'キャンセルの相談を記録',stop_for_cancellation:'作業停止を記録',reconcile_cancellation_payments:'入金総額の照合を記録',issue_cancellation_settlement:'キャンセルの精算案を提示',accept_cancellation_settlement:'精算案への同意を記録',record_cancellation_refund:'返金の実施記録を保存',finalize_cancellation:'キャンセルの完了を記録',issue_revision_quote:'追加見積もりを提示',accept_revision_quote:'追加見積もりへの同意を記録',report_revision_payment:'追加料金の振込を報告',verify_revision_payment:'追加料金の入金確認を記録',reconfirm_revision_delivery:'追加作業の納品日再合意を記録'};
+  const commandLabels = {create_order:'相談を受け付け',mark_repeat_order:'追加発注の扱いを更新',update_hearing:'ヒアリング回答を更新',update_video_material_details:'動画の呼び名・素材メモを更新',issue_quote:'見積もりを提示',accept_quote:'見積もりを承認',report_payment:'振込を報告',verify_payment:'入金を確認',verify_card_payment:'カード決済の入金を確認',report_materials:'素材提出を報告',verify_materials:'素材を確認',reconfirm_delivery:'納品日の再合意を記録',start_editing:'編集を開始',deliver:'動画を納品',request_revision:'修正を依頼',classify_revision:'修正内容を分類',start_revision:'修正を開始',confirm_delivery:'納品を確認',request_cancellation:'キャンセルの相談を記録',stop_for_cancellation:'作業停止を記録',reconcile_cancellation_payments:'入金総額の照合を記録',issue_cancellation_settlement:'キャンセルの精算案を提示',accept_cancellation_settlement:'精算案への同意を記録',record_cancellation_refund:'返金の実施記録を保存',finalize_cancellation:'キャンセルの完了を記録',issue_revision_quote:'追加見積もりを提示',accept_revision_quote:'追加見積もりへの同意を記録',report_revision_payment:'追加料金の振込を報告',verify_revision_payment:'追加料金の入金確認を記録',reconfirm_revision_delivery:'追加作業の納品日再合意を記録'};
   const state = {user:null,csrf:null,config:null,order:null,orders:[],busy:false,view:'list',filter:'active',search:'',materials:null,pageMeta:null,pageCursor:null,previousCursors:[],nextCursor:null};
   let inquiryDraft=null,repeatDraft=null;const hearingDrafts=new Map();
   const entryKey='editing.entry-intent.v1';
@@ -251,7 +251,9 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
   async function initialize() {
     try {
       state.config=await api('/api/config');if(embedded)state.config.adminNotificationsAvailable=false;
-      try { const session=await api('/api/session');if(embedded&&session.user?.role!=='admin')throw Error('オーナー権限を確認できません。');state.user=session.user;state.csrf=session.csrfToken;chrome();await applyEntry({initializing:true});if(admin())loadOpsStatus();else loadPackStatus(); }
+      // Public terms name card payment only while it can actually be used.
+      if(!embedded)(document.querySelectorAll?.('[data-card-terms]')||[]).forEach(el=>{el.hidden=(el.dataset.cardTerms==='on')!==(state.config?.cardPaymentAvailable===true);});
+      try { const session=await api('/api/session');if(embedded&&session.user?.role!=='admin')throw Error('オーナー権限を確認できません。');state.user=session.user;state.csrf=session.csrfToken;chrome();await applyEntry({initializing:true});await cardReturn();if(admin())loadOpsStatus();else loadPackStatus(); }
       catch(error) {if(error.status===401) await loginScreen(); else throw error;}
     } catch(error) { if(disposed)return;$('content').innerHTML='<h1>案件管理を読み込めませんでした</h1><p>接続先を確認してから、ページを再読み込みしてください。</p>'; notice(errorText(error),true); }
   }
@@ -599,7 +601,7 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
   }
   // ---- お客様への連絡（LINE）・請求書・お客様台帳 ----
   const lineStatusLabels={accepted:'送信済み',no_line:'LINE未連携',quota_blocked:'無料枠のため未送信',rejected:'LINEが受け付けず',failed:'送信できず',disabled:'送信設定オフ'};
-  const lineKindLabels={manual:'手動メッセージ',inquiry_created:'受付のご案内',issue_quote:'見積もりのご案内',verify_payment:'入金確認のご案内',deliver:'納品のご案内',invoice:'請求書のご案内'};
+  const lineKindLabels={manual:'手動メッセージ',inquiry_created:'受付のご案内',issue_quote:'見積もりのご案内',verify_payment:'入金確認のご案内',verify_card_payment:'カード入金確認のご案内',deliver:'納品のご案内',invoice:'請求書のご案内'};
   const jstDate=value=>{try{return new Date(value).toLocaleDateString('ja-JP',{timeZone:'Asia/Tokyo',year:'numeric',month:'long',day:'numeric'});}catch{return '';}};
   const jstTime=value=>{try{return new Date(value).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});}catch{return '';}};
   function commsCard(o){
@@ -622,7 +624,7 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
   }
   function invoiceSheet(inv){
     const p=inv.payload;
-    return `<div class="toolbar no-print"><div><p class="eyebrow id">請求書番号 ${esc(inv.number)}</p><h1>請求書</h1></div><div class="actions">${button('印刷・PDFで保存','invoice-print',true)}${button('案件に戻る','invoice-back')}</div></div><section class="panel invoice-sheet"><p class="invoice-to"><strong>${esc(p.customerName)}</strong> 御中</p>${dl([['請求書番号',p.number],['発行日',jstDate(p.issuedAt)],['件名',p.subject],['受付番号',p.receipt]])}<table class="invoice-table"><thead><tr><th>品目</th><th class="num">単価（税込）</th><th class="num">数量</th><th class="num">金額（税込）</th></tr></thead><tbody>${p.items.map(i=>`<tr><td>${esc(i.name)}</td><td class="num">${money(i.unitYen)}</td><td class="num">${i.count}本</td><td class="num">${money(i.amountYen)}</td></tr>`).join('')}${p.discountYen?`<tr><td colspan="3">割引${p.discountReason?'（'+esc(p.discountReason)+'）':''}</td><td class="num">−${money(p.discountYen)}</td></tr>`:''}${p.trialYen?`<tr><td colspan="3">無料トライアル（最初の1本）</td><td class="num">−${money(p.trialYen)}</td></tr>`:''}${p.packYen?`<tr><td colspan="3">回数券パック（${esc(p.packCount)}本）</td><td class="num">−${money(p.packYen)}</td></tr>`:''}<tr class="total"><td colspan="3"><strong>ご請求金額（税込）</strong></td><td class="num"><strong>${money(p.totalYen)}</strong></td></tr></tbody></table>${dl([['お支払い期日',p.paymentDueDate],['お振込先',p.bankText||'個別にご案内します'],['発行者',p.issuerText||''],...(p.registrationNumber?[['登録番号',p.registrationNumber]]:[])])}<p class="hint">振込手数料はお客様のご負担でお願いいたします。</p></section>`;
+    return `<div class="toolbar no-print"><div><p class="eyebrow id">請求書番号 ${esc(inv.number)}</p><h1>請求書</h1></div><div class="actions">${button('印刷・PDFで保存','invoice-print',true)}${button('案件に戻る','invoice-back')}</div></div><section class="panel invoice-sheet"><p class="invoice-to"><strong>${esc(p.customerName)}</strong> 御中</p>${dl([['請求書番号',p.number],['発行日',jstDate(p.issuedAt)],['件名',p.subject],['受付番号',p.receipt]])}<table class="invoice-table"><thead><tr><th>品目</th><th class="num">単価（税込）</th><th class="num">数量</th><th class="num">金額（税込）</th></tr></thead><tbody>${p.items.map(i=>`<tr><td>${esc(i.name)}</td><td class="num">${money(i.unitYen)}</td><td class="num">${i.count}本</td><td class="num">${money(i.amountYen)}</td></tr>`).join('')}${p.discountYen?`<tr><td colspan="3">割引${p.discountReason?'（'+esc(p.discountReason)+'）':''}</td><td class="num">−${money(p.discountYen)}</td></tr>`:''}${p.trialYen?`<tr><td colspan="3">無料トライアル（最初の1本）</td><td class="num">−${money(p.trialYen)}</td></tr>`:''}${p.packYen?`<tr><td colspan="3">回数券パック（${esc(p.packCount)}本）</td><td class="num">−${money(p.packYen)}</td></tr>`:''}<tr class="total"><td colspan="3"><strong>ご請求金額（税込）</strong></td><td class="num"><strong>${money(p.totalYen)}</strong></td></tr></tbody></table>${state.order?.payment?.verified?.method==='card'?dl([['お支払い方法',`クレジットカード（${state.order.payment.verified.receivedDate}お支払い済み）`],['発行者',p.issuerText||''],...(p.registrationNumber?[['登録番号',p.registrationNumber]]:[])]):`${dl([['お支払い期日',p.paymentDueDate],['お振込先',p.bankText||'個別にご案内します'],['発行者',p.issuerText||''],...(p.registrationNumber?[['登録番号',p.registrationNumber]]:[])])}<p class="hint">振込手数料はお客様のご負担でお願いいたします。</p>`}</section>`;
   }
   async function loadCustomers(){const data=await api('/api/customers');state.customers=data.customers||[];state.view='customers';renderCustomers();}
   // "1-10:5, 11-16:10" <-> [{min:1,max:10,percent:5},...]
@@ -886,11 +888,47 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
       return `<fieldset data-quote-video="${esc(v.id)}" data-type="${v.type}"><legend>${i+1}. ${esc(v.title)} · ${esc(videoTypeLabel(v.type))}</legend><div class="grid">${input('durationSeconds','確定する完成尺（秒）','number',l?.durationSeconds??v.durationSeconds??'',true,'min="1" step="1"')}${input('extraYen','内容による追加料金（税込円）','number',l?.extraYen??0,true,'min="0" step="1"')}${area('scope','今回行う編集',l?.scope||'')}${area('excludedScope','今回の料金に含まない作業',l?.excludedScope||'')}${area('extraReason','追加料金の理由（追加がある場合は必須）',l?.extraReason||'',false)}${input('dueDate','納品日','date',l?.dueDate||o.requestedDueDate||'')}${input('materialsDueDate','素材提出期限','date',l?.materialsDueDate||'')}</div>${packCheck(o,v,l)}<div class="price-preview" data-price></div></fieldset>`;
     }).join('')}${o.packs?.packs?.length?packPanel(o.packs,o.packs.availableForOrder):''}${trialPicker(o,q)}<div class="grid">${input('discountPercent','割引率（％・割引がなければ0）','number',q?quoteDiscountPercent(q):(agreedTier(o)?.percent||0),true,'min="0" max="100" step="1"')}${input('discountReason','割引の理由（割引がある場合は必須・例：横井様の11〜16本10%オフ）','text',q?(q.lines?.find(l=>l.discountYen&&!l.trial&&!l.pack)?.discountReason||''):agreedTier(o)?.percent?agreedReason(o):'',false,'maxlength="200"')}</div>${agreedHint(o)}<div class="grid">${input('paymentDueDate','支払期日','date',q?.paymentDueDate||'')}${area('paymentInstructions','振込先・手数料などのお支払い案内（任意・4,000文字以内）',q?.paymentInstructions||'',false).replace('maxlength="10000"','maxlength="4000"')}${area('cancellationBasis','事前に提示するキャンセル・精算基準',q?.cancellationBasis||'')}</div><p id="quote-total" class="amount"></p>${submit(q?'新しい版として見積もりを提示':'見積もりを提示する')}</form></details>`;
   }
+  // Card payments (Stripe Checkout). Shown only when the server says card payment is available.
+  const cardBrands='Visa・Mastercard・JCB・American Express・Diners Club・Discover';
+  const cardStatusLabels={open:'決済画面を表示中（未払い）',paid:'支払い済み',expired:'期限切れ（未払い）',mismatch:'要確認（金額・内容が見積もりと一致しません）'};
+  const cardTime=iso=>iso?new Date(iso).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',year:'numeric',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+  function cardResultText(status){
+    if(status==='paid')return admin()?'カード決済の支払いを確認しました（入金確認に記録済み）。':'クレジットカードでのお支払いを確認しました。ありがとうございます。';
+    if(status==='mismatch')return admin()?'カード決済の内容が見積もりと一致しません。Stripeのダッシュボードで確かめてください。':'お支払いの内容を確認しています。管理者からご連絡します。';
+    if(status==='expired')return admin()?'この決済画面は期限切れです（未払い）。':'カード決済の画面の期限が切れました。もう一度「クレジットカードで支払う」からお進みください。';
+    return admin()?'まだ支払われていません。':'お支払いの確認に少し時間がかかっています。数分後に「最新情報に更新」でご確認ください。';
+  }
+  // Back from Stripe Checkout (success_url / cancel_url). The server reads the page back from Stripe; this
+  // screen only names which page it was. The query is removed so a reload does not repeat it.
+  async function cardReturn(){
+    if(embedded||admin()||!globalThis.location?.search)return;
+    const params=new URLSearchParams(globalThis.location.search),kind=params.get('card'),orderId=params.get('order')||'',sessionId=params.get('session_id')||'';
+    if(!['done','cancel'].includes(kind)||!/^[A-Za-z0-9_-]{1,100}$/.test(orderId))return;
+    try{globalThis.history?.replaceState(null,'',globalThis.location.pathname+(globalThis.location.hash||''));}catch{}
+    try{
+      if(kind==='cancel'){await loadOrder(orderId);heading();notice('カードでのお支払いは完了していません。もう一度お試しいただくか、銀行振込をご利用ください。',false,orderId);return;}
+      if(!/^cs_(?:test|live)_[A-Za-z0-9]{1,250}$/.test(sessionId)){await loadOrder(orderId);heading();return;}
+      const data=await api(`/api/orders/${encodeURIComponent(orderId)}/card-confirm`,{method:'POST',body:JSON.stringify({sessionId})});
+      await loadOrder(orderId);heading();notice(cardResultText(data.status),false,orderId);
+    }catch(error){notice(`${cardResultText('open')}\n${errorText(error)}`,true,orderId);}
+  }
+  function cardOption(o,q){
+    if(admin()||state.config?.cardPaymentAvailable!==true||!(q?.totalYen>=1)||reported(o.payment))return '';
+    return `<div class="card-payment"><h3>クレジットカードで支払う</h3><p>${money(q.totalYen)}（税込）をカードでお支払いいただけます。</p><p class="hint">対応ブランド：${esc(cardBrands)}</p><p class="inline-note">カードでお支払いの場合、振込の報告は不要です。</p>${button('クレジットカードで支払う','card-checkout',true)}</div><h3>銀行振込で支払う</h3>`;
+  }
+  function cardRecords(o){
+    const list=Array.isArray(o.cardPayments)?o.cardPayments:[];
+    if(!admin()||!list.length)return '';
+    const settledBy=o.payment.verified?.card?.sessionId||null;
+    const unrecorded=list.filter(c=>['paid','mismatch'].includes(c.status)&&c.sessionId!==settledBy);
+    return `<h3>カード決済の記録</h3>${unrecorded.length?`<p class="inline-note danger-note">${o.payment.verified?'この案件は別の方法でも入金確認済みです。二重のお支払いの可能性があります。':'カードで支払われましたが、案件の入金確認に記録されていません。'}Stripeのダッシュボードで決済を確かめ、必要なら返金してください。</p>`:''}${list.map(c=>`<div class="card-record">${dl([['状態',cardStatusLabels[c.status]||c.status],['金額',`${money(c.amountYen)}（見積もり第${c.quoteVersion}版）`],['決済画面の作成',cardTime(c.createdAt)],...(c.paidAt?[['支払い',cardTime(c.paidAt)]]:[]),['Stripeの決済ID',c.paymentIntent||'—'],['決済画面のID',c.sessionId],...(c.livemode===false?[['モード','テスト']]:[])])}${c.status==='open'&&state.config?.cardPaymentAvailable===true?button('Stripeで支払い状況を確かめる','card-refresh',false,`data-session="${esc(c.sessionId)}"`):''}</div>`).join('')}<p class="hint">返金はStripeのダッシュボードで行い、キャンセルの精算に記録してください。</p>`;
+  }
   function paymentPanel(o,q) {
     if(!o.acceptedQuote)return '';
     const verified=o.payment.verified,locked=cancellationLocked(o);
     if(verified?.waived)return `<section class="panel" id="payment-panel" tabindex="-1"><h2>お支払い</h2><p>${esc(waiverText(q))}のため、お支払いはありません。</p></section>`;
-    return `<section class="panel" id="payment-panel" tabindex="-1"><h2>お支払い</h2>${dl([['見積もりの確認',`第${q.version}版を確認済み`],['振込先・お支払いのご案内',q.paymentInstructions||'振込先と手数料は個別にご案内します。'],['振込の報告',reported(o.payment)?'報告済み':'未報告'],['実入金の確認',verified?'確認済み':'未確認'],...(verified?[['入金額',money(verified.amountYen)],['入金日',verified.receivedDate]]:[])])}${verified?.late&&!locked?'<p class="inline-note danger-note">支払期日後の入金です。制作開始前に納品日の再確認が必要です。</p>':''}${!locked&&!verified&&!admin()?`<p class="hint">ご案内した振込先へお振り込み後にご報告ください。入金の確認は制作側で行います。</p><p class="inline-note">お振込みの際は、振込名義の前に受付番号の末尾4文字「<strong>${esc(transferCode(o.id))}</strong>」を入れてください（例：${esc(transferCode(o.id))} ヤマダタロウ）。確認が早くなります。</p>${!reported(o.payment)?button('振込を報告する','command',true,'data-command="report_payment"'):''}`:''}${!locked&&!verified&&admin()?`<form data-form="payment"><h3>実入金を照合</h3><div class="grid">${input('amountYen','実際の入金額（税込円）','number','',true,'min="1" step="1"')}${input('receivedDate','入金日','date')}${area('evidence','照合した入金の根拠（管理者のみ）')}</div>${submit('入金の照合結果を記録')}</form>`:''}</section>`;
+    if(verified?.method==='card')return `<section class="panel" id="payment-panel" tabindex="-1"><h2>お支払い</h2>${dl([['見積もりの確認',`第${q.version}版を確認済み`],['お支払い方法','クレジットカード'],['お支払いの確認','確認済み'],['金額',money(verified.amountYen)],['お支払い日',verified.receivedDate],...(admin()&&verified.evidence?[['確認の根拠',verified.evidence]]:[])])}${verified.late&&!locked?'<p class="inline-note danger-note">支払期日後の入金です。制作開始前に納品日の再確認が必要です。</p>':''}${cardRecords(o)}</section>`;
+    return `<section class="panel" id="payment-panel" tabindex="-1"><h2>お支払い</h2>${!locked&&!verified?cardOption(o,q):''}${dl([['見積もりの確認',`第${q.version}版を確認済み`],['振込先・お支払いのご案内',q.paymentInstructions||'振込先と手数料は個別にご案内します。'],['振込の報告',reported(o.payment)?'報告済み':'未報告'],['実入金の確認',verified?'確認済み':'未確認'],...(verified?[['入金額',money(verified.amountYen)],['入金日',verified.receivedDate]]:[])])}${verified?.late&&!locked?'<p class="inline-note danger-note">支払期日後の入金です。制作開始前に納品日の再確認が必要です。</p>':''}${!locked&&!verified&&!admin()?`<p class="hint">ご案内した振込先へお振り込み後にご報告ください。入金の確認は制作側で行います。</p><p class="inline-note">お振込みの際は、振込名義の前に受付番号の末尾4文字「<strong>${esc(transferCode(o.id))}</strong>」を入れてください（例：${esc(transferCode(o.id))} ヤマダタロウ）。確認が早くなります。</p>${!reported(o.payment)?button('振込を報告する','command',true,'data-command="report_payment"'):''}`:''}${!locked&&!verified&&admin()?`<form data-form="payment"><h3>実入金を照合</h3><div class="grid">${input('amountYen','実際の入金額（税込円）','number','',true,'min="1" step="1"')}${input('receivedDate','入金日','date')}${area('evidence','照合した入金の根拠（管理者のみ）')}</div>${submit('入金の照合結果を記録')}</form>`:''}${cardRecords(o)}</section>`;
   }
   function videoProgress(v){
     if(v.status==='completed')return '確認完了';
@@ -1112,6 +1150,8 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
       else if(action==='invoice-issue'){const id=state.order.id,r=await api(`/api/orders/${encodeURIComponent(id)}/invoice`,{method:'POST',body:'{}'});await loadComms(id);notice(r.created?`請求書 ${r.invoice.number} を発行しました。${r.notice?.status==='accepted'?'お客様のLINEにも知らせました。':'お客様へのLINE通知は送れませんでした（'+(r.notice?.detail||'設定を確認してください')+'）。'}`:'この見積もりの請求書は発行済みです。',r.created&&r.notice?.status!=='accepted');}
       else if(action==='invoice-view'){if(state.comms?.invoice){state.view='invoice';$('content').innerHTML=invoiceSheet(state.comms.invoice);heading();}}
       else if(action==='invoice-print'){globalThis.print?.();}
+      else if(action==='card-checkout'){const o=state.order;const data=await api(`/api/orders/${encodeURIComponent(o.id)}/card-checkout`,{method:'POST',body:'{}'});if(data.paid){await loadOrder(o.id);heading();notice(cardResultText('paid'),false,o.id);}else if(typeof data.url==='string'&&data.url.startsWith('https://checkout.stripe.com/')){notice('カード決済の画面（Stripe）へ移動します。');globalThis.location.href=data.url;}else throw Error('カード決済の画面を開けませんでした。時間をおいてお試しいただくか、銀行振込をご利用ください。');}
+      else if(action==='card-refresh'){const o=state.order;const data=await api(`/api/orders/${encodeURIComponent(o.id)}/card-confirm`,{method:'POST',body:JSON.stringify({sessionId:target.dataset.session})});await loadOrder(o.id);heading();notice(cardResultText(data.status),data.status==='mismatch',o.id);}
       else if(action==='invoice-back'){await loadOrder(state.order.id);heading();}
       else if(action==='repeat-pick'){listPurpose='additional';state.filter='all';await loadList();heading();}
       else if(action==='open'){await loadOrder(target.dataset.id);heading();}
