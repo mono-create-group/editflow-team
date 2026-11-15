@@ -377,3 +377,10 @@ test('trial cases count as a confirmed 0 yen, so the morning delivery check can 
   assert.equal(plain[0].amountMissing, true, 'a non-trial 0 stays unconfirmed');
   assert.equal(logic.missingAmountUnits(joined.filter(unit => unit.isTrial)).length, 0);
 });
+
+test('the 22 jobs bulk-completed on 2026-11-11 are left out of delivery stats, other jobs are untouched', () => {
+  const excluded = { id: 'legacy_mtc9sm9t05j_mtc9sm9t2ny', _portalUid: '7k2YChVlTXTBke4JFN6mpVolctp1', status: '完了', completedDeliveryDate: '2026-11-11', businessType: 'edit_agency' };
+  const normal = { id: 'other', _portalUid: '7k2YChVlTXTBke4JFN6mpVolctp1', status: '完了', completedDeliveryDate: '2026-11-11', businessType: 'edit_agency' };
+  const units = logic.normalizeWorkUnits([excluded, normal], [], '__self');
+  assert.deepEqual(units.map(unit => unit.id), ['other']);
+});

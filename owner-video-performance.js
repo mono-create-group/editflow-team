@@ -95,13 +95,41 @@
     return direct || portalLegacyIds.has(text(row.id)) || portalLegacyIds.has(text(row.linkedLegacyJobId));
   }
 
+  // 2026-11-11 10:10〜10:15 に古い案件（9月ごろ）がまとめて「完了」にされ、完了日が全て11/11になった。
+  // 実際の納品日が不明なため、11月の納品実績・金額・朝の確認から外す（会長 2026-11-15「集計から外す」）。
+  // 案件そのもの・本番データは変更しない。実際の納品日を直したら、ここから消す。
+  const DELIVERY_STATS_EXCLUDED_KEYS = new Set([
+    'portal:7k2YChVlTXTBke4JFN6mpVolctp1:legacy_mt1cw6eh88f_mtcsw4legbr',
+    'portal:7k2YChVlTXTBke4JFN6mpVolctp1:legacy_mt1cw6eh88f_mtcsw4leik5',
+    'portal:7k2YChVlTXTBke4JFN6mpVolctp1:legacy_mt1cw6eh88f_mtcsw4lel29',
+    'portal:7k2YChVlTXTBke4JFN6mpVolctp1:legacy_mt1cw6eh88f_mtcsw4lensu',
+    'portal:7k2YChVlTXTBke4JFN6mpVolctp1:legacy_mt1cw6eh88f_mtcsw4leo1b',
+    'portal:7k2YChVlTXTBke4JFN6mpVolctp1:legacy_mt1cw6eh88f_mtcsw4lerb7',
+    'portal:7k2YChVlTXTBke4JFN6mpVolctp1:legacy_mt1cw6eh88f_mtcsw4lez3c',
+    'portal:7k2YChVlTXTBke4JFN6mpVolctp1:legacy_mtc9sm9t05j_mtc9sm9t2ny',
+    'portal:7k2YChVlTXTBke4JFN6mpVolctp1:legacy_mtc9sm9t05j_mtc9sm9t4j0',
+    'portal:7k2YChVlTXTBke4JFN6mpVolctp1:legacy_mtc9sm9t05j_mtc9sm9ta2w',
+    'portal:7k2YChVlTXTBke4JFN6mpVolctp1:legacy_mtc9sm9t05j_mtc9sm9tjve',
+    'portal:7k2YChVlTXTBke4JFN6mpVolctp1:legacy_mtc9sm9t05j_mtc9sm9tq83',
+    'portal:7k2YChVlTXTBke4JFN6mpVolctp1:legacy_mtc9sm9t05j_mtc9sm9tuqa',
+    'portal:7k2YChVlTXTBke4JFN6mpVolctp1:legacy_mtc9sm9t05j_mtc9sm9turi',
+    'portal:7k2YChVlTXTBke4JFN6mpVolctp1:legacy_mtc9sm9t05j_mtc9sm9tyoc',
+    'portal:WAEf1yeEpGTXPikQHINhRbzFRux2:legacy_mt1cw6eh88f_mtcsw4led5l',
+    'portal:bHzDUF3u5ONZKIyxDhsUgrSPztV2:legacy_mtl3y5oldvl_mtl3wffqiov',
+    'portal:bHzDUF3u5ONZKIyxDhsUgrSPztV2:legacy_mtl3y5oldvl_mtl3wg0ds40',
+    'portal:bHzDUF3u5ONZKIyxDhsUgrSPztV2:legacy_mtl3y5oldvl_mtl3wgihdbt',
+    'portal:bHzDUF3u5ONZKIyxDhsUgrSPztV2:legacy_mtl3y5oldvl_mtl3wh3k6h7',
+    'portal:yh6TaM2zUudlhLIvJozVDDC7BNP2:legacy_mtmthi2h1x6_mtmthi2h1x6',
+    'portal:yh6TaM2zUudlhLIvJozVDDC7BNP2:legacy_mtmtn6reu8p_mtmtn6reu8p',
+  ]);
+
   function normalizeWorkUnits(portalJobs = [], legacyJobs = [], selfWid = '__self') {
     const portal = Array.isArray(portalJobs) ? portalJobs : [];
     const legacy = Array.isArray(legacyJobs) ? legacyJobs : [];
     const portalLegacyIds = new Set(portal.flatMap(row => [row?.linkedLegacyJobId, row?.legacyJobId]).map(text).filter(Boolean));
     const units = [], seen = new Set();
     const push = raw => {
-      const key = text(raw.key); if (!key || seen.has(key)) return; seen.add(key);
+      const key = text(raw.key); if (!key || seen.has(key) || DELIVERY_STATS_EXCLUDED_KEYS.has(key)) return; seen.add(key);
       const completedDeliveryDate = dateOnly(raw.completedDeliveryDate);
       const completed = text(raw.status) === '完了' && !!completedDeliveryDate;
       units.push({ ...raw, key, completedDeliveryDate, completed, category: businessCategory(raw, selfWid) });
