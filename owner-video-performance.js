@@ -545,7 +545,7 @@
       const cats = [['社内', day.internal], ['代行', day.agency], ['派遣', day.dispatch]].filter(([, n]) => n).map(([label, n]) => `${label}${n}`).join('・');
       const list = day.rows.map(unit => {
         const title = unitTitle(unit), parent = text(unit.legacyParentTitle);
-        const meta = [clientLabelOf(unit), CATEGORY_LABELS[unit.category] || '編集代行', text(unit.editorName) || (unit.category === 'internal' ? '社内' : '担当者未設定')]
+        const meta = [clientLabelOf(unit), CATEGORY_LABELS[unit.category] || '編集代行', text(unit.editorName) || (unit.category === 'internal' ? '' : '担当者未設定')]
           .concat(unit.source === 'legacy' && unit.legacySubtaskId && parent && parent !== title ? [`親：${parent}`] : [])
           .filter(Boolean).map(escapeHtml).join(' ・ ');
         const amount = unit.amountMissing ? '<span class="owner-day-missing">金額未登録</span>' : yen(unit.amount);

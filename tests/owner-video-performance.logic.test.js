@@ -428,7 +428,9 @@ test('daily breakdown html names each delivered video with client, type, editor,
   assert.match(html, /<span class="owner-day-missing">金額未登録<\/span>/);
   assert.match(html, /未登録1件除く/);
   assert.match(html, /ownerPerformanceOpenUnit\(&quot;portal:u:a&quot;\)/);
-  assert.match(html, /<b>#3<\/b><small>社内編集 ・ 社内 ・ 親：9月分_歯科<\/small>|<b>#3<\/b><small>編集代行 ・ 担当者未設定 ・ 親：9月分_歯科<\/small>/);
+  assert.match(html, /<b>#3<\/b><small>編集代行 ・ 担当者未設定 ・ 親：9月分_歯科<\/small>/);
+  const internal = logic.dailyBreakdownHtml({ days: logic.deliveryDays(logic.normalizeWorkUnits([{ id: 'z', _portalUid: 'u', status: '完了', completedDeliveryDate: '2026-11-15', title: '社内の本', clientDisplay: '顧客', workerId: '__self' }], [], '__self'), { month: '2026-11', today: '2026-11-15' }) });
+  assert.match(internal, /<small>顧客 ・ 社内編集<\/small>/); // 「社内編集 ・ 社内」と重ねない
   const rhythm = logic.rhythmHtml(logic.dashboard({ portalJobs: [{ id: 'a', _portalUid: 'u', status: '完了', completedDeliveryDate: '2026-11-15' }], jobs: [], today: '2026-11-15', month: '2026-11' }));
   assert.match(rhythm, /ownerPerformanceShowDay\('2026-11-15'\)">何を納品したか見る<\/button>/);
   assert.match(rhythm, /id="owner-day-2026-11-15"/);
