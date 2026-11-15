@@ -148,7 +148,7 @@
         const merged = { ...parent, ...child };
         if (legacyHasPortalLink(merged, portalLegacyIds)) return;
         const childId = text(child.id || child.subtaskId || index);
-        push({ ...merged, source: 'legacy', key: `legacy:${text(parent.id)}:${children.length ? childId : 'parent'}`, legacyParentId: text(parent.id), legacySubtaskId: children.length ? childId : '', legacySubtaskIndex: children.length ? index : null, legacyChildUnitPrice: children.length ? number(child?.unitPrice ?? child?.clientUnitPrice) : null, legacyParentUnitPrice: number(parent.unitPrice ?? parent.clientUnitPrice), legacySiblingCount: rows.length, legacySiblingPriced: children.some(row => (number(row?.unitPrice) || 0) > 0 || (number(row?.clientUnitPrice) || 0) > 0), legacyJobId: text(merged.legacyJobId || (children.length ? `${text(parent.id)}:${childId}` : parent.id)), workerId: merged.workerId || merged.assigneeWorkerId || '', editorUid: merged.editorUid || merged.assignedUid || '', editorName: merged.editorName || merged.assignee || merged.assignedName || '', completedDeliveryDate: merged.completedDeliveryDate || merged.deliveryCompletedDate || '', deadline: merged.deadline || merged.deliveryDate || '' });
+        push({ ...merged, source: 'legacy', key: `legacy:${text(parent.id)}:${children.length ? childId : 'parent'}`, legacyParentId: text(parent.id), legacyParentTitle: text(parent.title || parent.name), legacySubtaskId: children.length ? childId : '', legacySubtaskIndex: children.length ? index : null, legacyChildUnitPrice: children.length ? number(child?.unitPrice ?? child?.clientUnitPrice) : null, legacyParentUnitPrice: number(parent.unitPrice ?? parent.clientUnitPrice), legacySiblingCount: rows.length, legacySiblingPriced: children.some(row => (number(row?.unitPrice) || 0) > 0 || (number(row?.clientUnitPrice) || 0) > 0), legacyJobId: text(merged.legacyJobId || (children.length ? `${text(parent.id)}:${childId}` : parent.id)), workerId: merged.workerId || merged.assigneeWorkerId || '', editorUid: merged.editorUid || merged.assignedUid || '', editorName: merged.editorName || merged.assignee || merged.assignedName || '', completedDeliveryDate: merged.completedDeliveryDate || merged.deliveryCompletedDate || '', deadline: merged.deadline || merged.deliveryDate || '' });
       });
     });
     return units;
@@ -337,6 +337,29 @@
     };
   }
 
+  const unitTitle = unit => text(unit?.title || unit?.jobTitle || unit?.name) || text(unit?.legacyParentTitle) || '（題名なし）';
+  // 日ごとの納品（実納品日ごとに、何を納めたか）。今月の納品がある日だけ・新しい日が上。今日は0本でも出す。
+  // 日ごとの本数を足すと今月の合計と同じになる（週の表と同じ数え方）。
+  function deliveryDays(units, { month = '', today = '' } = {}) {
+    const todayKey = dateOnly(today) || ymd(new Date());
+    const monthKey = monthOf(month || todayKey);
+    const byDate = new Map();
+    summarizeDelivery(units, { month: monthKey }).rows.forEach(unit => {
+      if (!byDate.has(unit.completedDeliveryDate)) byDate.set(unit.completedDeliveryDate, []);
+      byDate.get(unit.completedDeliveryDate).push(unit);
+    });
+    if (monthOf(todayKey) === monthKey && !byDate.has(todayKey)) byDate.set(todayKey, []);
+    const order = { internal: 0, agency: 1, dispatch: 2 };
+    return [...byDate.entries()].sort((a, b) => b[0].localeCompare(a[0])).map(([date, rows]) => {
+      const sum = summarizeDelivery(rows, { date });
+      return {
+        date, today: date === todayKey, count: sum.all.count, amount: sum.all.amount, missingAmountCount: sum.all.missingAmountCount,
+        internal: sum.internal.count, agency: sum.agency.count, dispatch: sum.dispatch.count,
+        rows: [...rows].sort((a, b) => (order[a.category] ?? 1) - (order[b.category] ?? 1) || unitTitle(a).localeCompare(unitTitle(b), 'ja')),
+      };
+    });
+  }
+
   function weeklyEditorRanking(units, qualityReviews = [], { weekStart, selfWid = '__self' } = {}) {
     const start = dateOnly(weekStart); const end = start ? addDays(start, 6) : '';
     const rows = completedWorkUnits(units).filter(unit => !start || (unit.completedDeliveryDate >= start && unit.completedDeliveryDate <= end));
@@ -373,7 +396,7 @@
     const currentMonth = monthOf(month || goal?.month || todayKey);
     const monthSummary = summarizeDelivery(financed, { month: currentMonth });
     const todaySummary = summarizeDelivery(financed, { date: todayKey });
-    return { units: financed, monthSummary, todaySummary, rhythm: deliveryRhythm(financed, { month: currentMonth, today: todayKey }), pace: monthlyPace({ ...(goal || {}), month: currentMonth }, monthSummary.all, todayKey), ranking: weeklyEditorRanking(financed, qualityReviews || [], { weekStart: weekStart || mondayOf(todayKey), selfWid: selfWid || g.selfWid }) };
+    return { units: financed, monthSummary, todaySummary, rhythm: deliveryRhythm(financed, { month: currentMonth, today: todayKey }), days: deliveryDays(financed, { month: currentMonth, today: todayKey }), pace: monthlyPace({ ...(goal || {}), month: currentMonth }, monthSummary.all, todayKey), ranking: weeklyEditorRanking(financed, qualityReviews || [], { weekStart: weekStart || mondayOf(todayKey), selfWid: selfWid || g.selfWid }) };
   }
 
   function mondayOf(date) { const d = new Date(`${dateOnly(date)}T12:00:00`); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return ymd(d); }
@@ -505,13 +528,43 @@
   const yen = value => `${Math.round(value).toLocaleString('ja-JP')}円`;
   const perDayText = value => value ? `${value.count.toFixed(2)}本` : '—';
   const monthDay = date => `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`;
+  const weekdayOf = date => '日月火水木金土'[new Date(`${date}T12:00:00`).getDay()] || '';
+  function clientLabelOf(unit) {
+    const direct = text(unit?.clientDisplay || unit?.clientName || (typeof unit?.client === 'string' ? unit.client : ''));
+    if (direct) return direct;
+    const id = text(unit?.clientId); if (!id) return '';
+    try { const clients = (typeof S !== 'undefined' && Array.isArray(S?.clients)) ? S.clients : (Array.isArray(global.S?.clients) ? global.S.clients : []); return text(clients.find(row => row?.id === id)?.name); } catch (_) { return ''; }
+  }
+  // 日付ごとの開閉。描き直し（データの更新）で閉じないように覚えておく。初めは今日だけ開く。
+  const dayOpen = new Map();
+  const dayIsOpen = day => dayOpen.has(day.date) ? dayOpen.get(day.date) : day.today;
+  function dailyBreakdownHtml(data) {
+    const days = Array.isArray(data.days) ? data.days : [];
+    if (!days.length) return '';
+    const items = days.map(day => {
+      const cats = [['社内', day.internal], ['代行', day.agency], ['派遣', day.dispatch]].filter(([, n]) => n).map(([label, n]) => `${label}${n}`).join('・');
+      const list = day.rows.map(unit => {
+        const title = unitTitle(unit), parent = text(unit.legacyParentTitle);
+        const meta = [clientLabelOf(unit), CATEGORY_LABELS[unit.category] || '編集代行', text(unit.editorName) || (unit.category === 'internal' ? '社内' : '担当者未設定')]
+          .concat(unit.source === 'legacy' && unit.legacySubtaskId && parent && parent !== title ? [`親：${parent}`] : [])
+          .filter(Boolean).map(escapeHtml).join(' ・ ');
+        const amount = unit.amountMissing ? '<span class="owner-day-missing">金額未登録</span>' : yen(unit.amount);
+        const open = `ownerPerformanceOpenUnit(${JSON.stringify(text(unit.key))})`;
+        return `<li><span class="owner-day-copy"><b>${escapeHtml(title)}</b><small>${meta}</small></span><span class="owner-day-amount">${amount}</span><button class="btn btn-g btn-sm" type="button" onclick="${escapeHtml(open)}">開く</button></li>`;
+      }).join('') || '<li class="owner-day-empty">まだ納品はありません</li>';
+      const sum = `${yen(day.amount)}${day.missingAmountCount ? `<small>未登録${day.missingAmountCount}件除く</small>` : ''}`;
+      return `<details class="owner-day${day.today ? ' is-today' : ''}" id="owner-day-${day.date}"${dayIsOpen(day) ? ' open' : ''} ontoggle="ownerPerformanceToggleDay('${day.date}',this.open)"><summary><span class="owner-day-date"><span class="owner-day-label">${monthDay(day.date)}（${weekdayOf(day.date)}）${day.today ? '<em>今日</em>' : ''}</span>${cats ? `<small>${cats}</small>` : ''}</span><b class="owner-day-count">${day.count}本</b><span class="owner-day-sum">${sum}</span></summary><ul>${list}</ul></details>`;
+    }).join('');
+    return `<h4>日ごとの納品<small>日付を押すと、その日に納品した案件が出ます</small></h4><div class="owner-day-list">${items}</div>`;
+  }
   // 今日・今月の1日あたり・今週・週ごとの納品本数。実績だけを数える（必要ペースは別カード）。
   function rhythmHtml(data) {
     const rhythm = data.rhythm, today = data.todaySummary.all, pace = data.pace;
     const thisWeek = rhythm.weeks.find(week => week.current);
+    const todayDay = (Array.isArray(data.days) ? data.days : []).find(day => day.today);
     const missingNote = count => count ? `<small>金額未登録 ${count}件を除く</small>` : '';
     const stats = [
-      ['今日の納品', `${today.count}本`, `<small>${yen(today.amount)}</small>`],
+      ['今日の納品', `${today.count}本`, `<small>${yen(today.amount)}</small>${todayDay && today.count ? `<button class="owner-rhythm-link" type="button" onclick="ownerPerformanceShowDay('${todayDay.date}')">何を納品したか見る</button>` : ''}`],
       ['今月の1日あたり（実績）', perDayText(rhythm.daily), `<small>${rhythm.count}本 ÷ ${rhythm.elapsedDays}日経過${rhythm.daily ? ` ・ ${yen(rhythm.daily.amount)}/日` : ''}</small>${missingNote(rhythm.missingAmountCount)}`],
       ['今週の納品（月〜日）', thisWeek ? `${thisWeek.count}本` : '—', thisWeek ? `<small>1日あたり ${perDayText(thisWeek.daily)} ・ ${yen(thisWeek.amount)}</small>` : '<small>当月に含まれない週です</small>'],
       ['目標までに必要な1日あたり', `${pace.daily.count.toFixed(2)}本`, `<small>残り ${pace.remainingCount}本 ÷ 残り${pace.remainingDays}日</small>`],
@@ -523,7 +576,7 @@
       return `<tr class="${week.current ? 'is-current' : ''}${week.future ? ' is-future' : ''}"><td>第${index + 1}週${week.current ? '・今週' : ''}<small>${monthDay(week.start)}〜${monthDay(week.end)}</small></td>${cells}</tr>`;
     }).join('');
     const total = data.monthSummary;
-    return `<div class="card owner-rhythm"><div class="section-title"><h3>納品の実績ペース</h3><span>${escapeHtml(rhythm.month)} ・ ${rhythm.elapsedDays}/${rhythm.daysInMonth}日経過</span></div><div class="owner-rhythm-stats">${stats}</div><h4>週ごとの納品本数</h4><div class="owner-rhythm-scroll"><table class="owner-rhythm-table"><thead><tr><th>週</th><th>合計</th><th>1日あたり</th><th>報酬額</th><th>社内編集</th><th>編集代行</th><th>編集者派遣</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td>今月の合計</td><td><b>${rhythm.count}本</b></td><td>${perDayText(rhythm.daily)}</td><td class="owner-rhythm-amount">${yen(rhythm.amount)}</td><td>${total.internal.count}本</td><td>${total.agency.count}本</td><td>${total.dispatch.count}本</td></tr></tfoot></table></div><p class="muted">週は月曜〜日曜で、月の初めと終わりの週はその月の日付だけを数えます。1日あたりは、暦の日数（今日まで）で割っています。</p></div>`;
+    return `<div class="card owner-rhythm"><div class="section-title"><h3>納品の実績ペース</h3><span>${escapeHtml(rhythm.month)} ・ ${rhythm.elapsedDays}/${rhythm.daysInMonth}日経過</span></div><div class="owner-rhythm-stats">${stats}</div><h4>週ごとの納品本数</h4><div class="owner-rhythm-scroll"><table class="owner-rhythm-table"><thead><tr><th>週</th><th>合計</th><th>1日あたり</th><th>報酬額</th><th>社内編集</th><th>編集代行</th><th>編集者派遣</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td>今月の合計</td><td><b>${rhythm.count}本</b></td><td>${perDayText(rhythm.daily)}</td><td class="owner-rhythm-amount">${yen(rhythm.amount)}</td><td>${total.internal.count}本</td><td>${total.agency.count}本</td><td>${total.dispatch.count}本</td></tr></tfoot></table></div><p class="muted">週は月曜〜日曜で、月の初めと終わりの週はその月の日付だけを数えます。1日あたりは、暦の日数（今日まで）で割っています。</p>${dailyBreakdownHtml(data)}</div>`;
   }
   function renderPage(target, options = {}) {
     state.lastOptions = { ...options, includeQuality: true }; lazyStart({ ...options, includeQuality: true, onChange: () => { if (target?.isConnected) renderPage(target, options); else options.onChange?.(); } });
@@ -592,7 +645,14 @@
     return notify('この案件は画面から開けません', 'warn');
   }
   global.ownerPerformanceOpenUnit = openUnitFromPage;
+  global.ownerPerformanceToggleDay = (date, open) => { if (dateOnly(date)) dayOpen.set(dateOnly(date), !!open); };
+  global.ownerPerformanceShowDay = date => {
+    const key = dateOnly(date); if (!key) return;
+    dayOpen.set(key, true);
+    const element = global.document?.getElementById(`owner-day-${key}`);
+    if (element) { element.open = true; element.scrollIntoView?.({ behavior: 'smooth', block: 'start' }); }
+  };
   global.ownerPerformanceSaveQuality = saveQualityFromPage;
   global.ownerPerformancePublishRanking = publishFromPage;
-  global.EditflowOwnerPerformance = { logic: { goalBreakdown, goalTotals, normalizeWorkUnits, completedWorkUnits, joinOwnerFinance, missingAmountUnits, missingAmountListHtml, summarizeDelivery, monthlyPace, deliveryRhythm, rhythmHtml, weeklyEditorRanking, dashboard, mondayOf, sourceHash }, lazyStart, stop, saveGoal, confirmDailyCheck, saveQualityReview, publishWeeklyRanking, gatePassed, allReady, renderGate, renderPage };
+  global.EditflowOwnerPerformance = { logic: { goalBreakdown, goalTotals, normalizeWorkUnits, completedWorkUnits, joinOwnerFinance, missingAmountUnits, missingAmountListHtml, summarizeDelivery, monthlyPace, deliveryRhythm, deliveryDays, rhythmHtml, dailyBreakdownHtml, weeklyEditorRanking, dashboard, mondayOf, sourceHash }, lazyStart, stop, saveGoal, confirmDailyCheck, saveQualityReview, publishWeeklyRanking, gatePassed, allReady, renderGate, renderPage };
 })(typeof window !== 'undefined' ? window : globalThis);

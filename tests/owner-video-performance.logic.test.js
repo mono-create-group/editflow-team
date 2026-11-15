@@ -384,3 +384,52 @@ test('the 22 jobs bulk-completed on 2026-11-11 are left out of delivery stats, o
   const units = logic.normalizeWorkUnits([excluded, normal], [], '__self');
   assert.deepEqual(units.map(unit => unit.id), ['other']);
 });
+
+// ---- 日ごとの納品（その日に何を納品したか） ----
+test('daily breakdown lists what was delivered on each day, newest first, and adds up to the month total', () => {
+  const data = rhythmFixture();
+  assert.deepEqual(data.days.map(day => [day.date, day.count]), [
+    ['2026-10-21', 1], ['2026-10-19', 2], ['2026-10-07', 1], ['2026-10-05', 1], ['2026-10-04', 1], ['2026-10-01', 1],
+  ]);
+  assert.equal(data.days.reduce((total, day) => total + day.count, 0), data.rhythm.count);
+  assert.deepEqual(data.days.find(day => day.date === '2026-10-19').rows.map(unit => unit.id).sort(), ['i2', 'i3']);
+  assert.equal(data.days[0].today, true);
+  const h1 = data.days.find(day => day.date === '2026-10-07');
+  assert.equal(h1.missingAmountCount, 1);
+  assert.equal(h1.dispatch, 1);
+});
+
+test('daily breakdown shows today even with no delivery and keeps other months out', () => {
+  const units = logic.normalizeWorkUnits([
+    { id: 'x', _portalUid: 'u', status: '完了', completedDeliveryDate: '2026-11-14' },
+    { id: 'old', _portalUid: 'u', status: '完了', completedDeliveryDate: '2026-10-31' },
+    { id: 'open', _portalUid: 'u', status: '編集中', completedDeliveryDate: '2026-11-15' },
+  ], [], '__self');
+  const days = logic.deliveryDays(units, { month: '2026-11', today: '2026-11-15' });
+  assert.deepEqual(days.map(day => [day.date, day.count, day.today]), [['2026-11-15', 0, true], ['2026-11-14', 1, false]]);
+});
+
+test('daily breakdown html names each delivered video with client, type, editor, amount and an open button', () => {
+  const units = logic.joinOwnerFinance(logic.normalizeWorkUnits([
+    { id: 'a', _portalUid: 'u', status: '完了', completedDeliveryDate: '2026-11-15', title: '<b>格付け</b>動画', clientDisplay: '大塚様', editorName: '田中', workerId: 'w' },
+    { id: 'b', _portalUid: 'u', status: '完了', completedDeliveryDate: '2026-11-15', title: '単価なし', workerId: 'w' },
+  ], [
+    { id: 'p1', title: '9月分_歯科', status: '完了', subtasks: [{ id: 's1', title: '#3', status: '完了', completedDeliveryDate: '2026-11-14', unitPrice: 3000 }] },
+  ], '__self'), [{ portalUid: 'u', portalJobId: 'a', clientUnitPrice: 3600 }]);
+  const days = logic.deliveryDays(units, { month: '2026-11', today: '2026-11-15' });
+  const html = logic.dailyBreakdownHtml({ days });
+  assert.match(html, /日ごとの納品/);
+  assert.match(html, /<details class="owner-day is-today" id="owner-day-2026-11-15" open/); // 今日は初めから開く
+  assert.match(html, /<details class="owner-day" id="owner-day-2026-11-14" ontoggle/); // 他の日は閉じている
+  assert.match(html, /11\/15（日）<em>今日<\/em>/);
+  assert.match(html, /&lt;b&gt;格付け&lt;\/b&gt;動画/); // 題名はエスケープする
+  assert.match(html, /大塚様 ・ 編集代行 ・ 田中/);
+  assert.match(html, /3,600円/);
+  assert.match(html, /<span class="owner-day-missing">金額未登録<\/span>/);
+  assert.match(html, /未登録1件除く/);
+  assert.match(html, /ownerPerformanceOpenUnit\(&quot;portal:u:a&quot;\)/);
+  assert.match(html, /<b>#3<\/b><small>社内編集 ・ 社内 ・ 親：9月分_歯科<\/small>|<b>#3<\/b><small>編集代行 ・ 担当者未設定 ・ 親：9月分_歯科<\/small>/);
+  const rhythm = logic.rhythmHtml(logic.dashboard({ portalJobs: [{ id: 'a', _portalUid: 'u', status: '完了', completedDeliveryDate: '2026-11-15' }], jobs: [], today: '2026-11-15', month: '2026-11' }));
+  assert.match(rhythm, /ownerPerformanceShowDay\('2026-11-15'\)">何を納品したか見る<\/button>/);
+  assert.match(rhythm, /id="owner-day-2026-11-15"/);
+});
