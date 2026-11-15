@@ -3952,6 +3952,9 @@ function _ownerPerformanceFallbackAmount(unit){
   if(!unit||unit.source!=='portal'||typeof _ownerPortalClientPricingSnapshot!=='function')return null;
   const job=(PORTAL_JOBS||[]).find(j=>String(j._portalUid||'')===String(unit._portalUid||unit.portalUid||'')&&String(j.id||'')===String(unit.id||''));
   if(!job)return null;
+  // 連携元の案件がトライアルなら0円で確定（0円を「金額未設定」にしない）
+  const linkedId=String(job.linkedLegacyJobId||job.legacyParentId||job.legacyJobId||'').replace(/^legacy:/,'');
+  if(job.isTrial===true||(linkedId&&(S.jobs||[]).some(row=>!row.deleted&&row.isTrial===true&&String(row.id)===linkedId)))return{amount:0,source:'trial'};
   let snapshot=null;try{snapshot=_ownerPortalClientPricingSnapshot(job);}catch(_){snapshot=null;}
   const amount=Number(snapshot?.amount);
   return Number.isInteger(amount)&&amount>0?{amount,source:'client_rate'}:null;
@@ -15152,7 +15155,7 @@ function openJobModal(id,preStatus,preClientId){
 	${materialSection}
 	${_isOwner()?`<div style="font-size:12px;font-weight:700;color:var(--t2);margin:10px 0 6px">💰 報酬</div>
 <div class="frow">
-  <div class="fg"><div class="fl" id="jl-unit">クライアント単価（円）<span id="j-unit-hint" style="font-size:10px;color:var(--t3);font-weight:400">${ownerFinanceLocked?' (オーナー専用台帳に保存)':subs.some(s=>s.unitPrice>0)?' (サブ案件から自動計算)':!j&&suggestedUnitPrice!==null?' (クライアント一覧から自動入力)':''}</span></div><input type="number" id="j-unit" min="0" step="1" value="${j?jobTotalIn(j)||'':up||''}" placeholder="0" data-client-price-auto="${!j&&suggestedUnitPrice!==null?'1':'0'}" oninput="this.dataset.clientPriceAuto='0';updJobProfit()" ${subs.some(s=>s.unitPrice>0)?'readonly style="opacity:.6"':''}><div style="font-size:10px;color:var(--t3);margin-top:3px">${ownerFinanceLocked?'オーナーはこの案件の金額を変更できます。変更内容はオーナー専用台帳へ保存され、編集者には表示されません。':'今回だけ金額が違う場合は、この案件の金額だけ変更できます。クライアント一覧の標準単価は変わりません。'}</div></div>
+  <div class="fg"><div class="fl" id="jl-unit">クライアント単価（円）<span id="j-unit-hint" style="font-size:10px;color:var(--t3);font-weight:400">${ownerFinanceLocked?' (オーナー専用台帳に保存)':subs.some(s=>s.unitPrice>0)?' (サブ案件から自動計算)':!j&&suggestedUnitPrice!==null?' (クライアント一覧から自動入力)':''}</span></div><input type="number" id="j-unit" min="0" step="1" value="${j?jobTotalIn(j)||'':up||''}" placeholder="0" data-client-price-auto="${!j&&suggestedUnitPrice!==null?'1':'0'}" oninput="this.dataset.clientPriceAuto='0';updJobProfit()" ${subs.some(s=>s.unitPrice>0)?'readonly style="opacity:.6"':''}>${subs.some(s=>s.unitPrice>0)?'':'<button type="button" id="j-unit-trial-zero" class="btn btn-g btn-sm" style="margin-top:6px" onclick="setJobTrialZero()">🔶 トライアルなので0円にする</button>'}<div style="font-size:10px;color:var(--t3);margin-top:3px">${ownerFinanceLocked?'オーナーはこの案件の金額を変更できます。変更内容はオーナー専用台帳へ保存され、編集者には表示されません。':'今回だけ金額が違う場合は、この案件の金額だけ変更できます。クライアント一覧の標準単価は変わりません。'}</div></div>
   <div class="fg" id="jf-wpay"><div class="fl" id="jl-wpay">ワーカー支払額（円）<span id="j-wpay-hint" style="font-size:10px;color:var(--t3);font-weight:400">${ownerFinanceLocked?' (オーナー専用台帳に保存)':subs.some(s=>s.workerPay>0)?' (自動計算)':''}</span></div><input type="number" id="j-wpay" value="${j?jobTotalOut(j)||'':''}" placeholder="0" oninput="updJobProfit()" ${subs.some(s=>s.workerPay>0)?'readonly style="opacity:.6"':''}></div>
 </div>
 <div class="fg" id="jf-profit"><div class="fl" id="jl-profit">利益（自動計算）</div>
@@ -15362,6 +15365,14 @@ function toggleJobTrial(){
   tog.querySelector('div').style.left=now?'3px':'21px';
   lbl.textContent=now?'通常案件':'🔶 トライアル案件';
   lbl.style.color=now?'var(--t2)':'var(--amber)';
+}
+// トライアル案件のワンタップ操作：トライアルをONにして、クライアント単価を0円にする。
+function setJobTrialZero(){
+  if(document.getElementById('j-trial-val')?.value!=='1')toggleJobTrial();
+  const unit=document.getElementById('j-unit');
+  if(unit&&!unit.readOnly){unit.value='0';unit.dataset.clientPriceAuto='0';}
+  if(typeof updJobProfit==='function')updJobProfit();
+  toast('トライアル案件・クライアント単価0円にしました');
 }
 function updSubPrices(){
   const rows=[...document.querySelectorAll('#j-sub-cont .j-sub-shell')].map(shell=>{
@@ -19557,7 +19568,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20261111-02';
+const APP_VERSION='20261115-01';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)

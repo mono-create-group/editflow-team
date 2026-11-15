@@ -189,6 +189,9 @@
   // 解決関数（クライアント単価表など）③案件自体に残る単価。どれも無ければ「金額未設定」。
   // 0円は金額として扱い、未設定と混同しない。
   function fallbackAmountOf(unit, resolver) {
+    // トライアル案件は売上が無いのが正しい状態。0円を「金額未設定」と扱うと朝の納品確認が閉じられなくなる。
+    // 台帳に金額が入っていればそちら（financeAmount）が先に使われ、ここへは来ない。
+    if (unit && unit.isTrial === true) return { amount: 0, source: 'trial' };
     if (typeof resolver === 'function') {
       let resolved = null;
       try { resolved = resolver(unit); } catch (_) { resolved = null; }

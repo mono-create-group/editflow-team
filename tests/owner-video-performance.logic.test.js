@@ -360,3 +360,20 @@ test('the performance page renders the weekly delivery table and labels the old 
   assert.match(source, /目標までに必要な1週間あたり：/);
   assert.doesNotMatch(source, /1日平均：|1週間平均：/);
 });
+
+test('trial cases count as a confirmed 0 yen, so the morning delivery check can close without an amount', () => {
+  const units = logic.normalizeWorkUnits([
+    { id: 'trial-portal', _portalUid: 'u', status: '完了', completedDeliveryDate: '2026-09-07', businessType: 'edit_agency', isTrial: true },
+  ], [
+    { id: 'trial-legacy', status: '完了', completedDeliveryDate: '2026-09-08', unitPrice: 0, isTrial: true },
+    { id: 'normal-zero', status: '完了', completedDeliveryDate: '2026-09-09', unitPrice: 0 },
+  ], '__self');
+  // 単価表の解決関数が正の金額を返しても、トライアルは0円のまま。
+  const joined = logic.joinOwnerFinance(units, [], { fallbackAmount: () => ({ amount: 5000, source: 'client_rate' }) });
+  const byId = Object.fromEntries(joined.map(unit => [unit.id, unit]));
+  assert.deepEqual([byId['trial-portal'].amount, byId['trial-portal'].amountSource, byId['trial-portal'].amountMissing], [0, 'trial', false]);
+  assert.deepEqual([byId['trial-legacy'].amount, byId['trial-legacy'].amountMissing], [0, false]);
+  const plain = logic.joinOwnerFinance(units.filter(unit => unit.id === 'normal-zero'), []);
+  assert.equal(plain[0].amountMissing, true, 'a non-trial 0 stays unconfirmed');
+  assert.equal(logic.missingAmountUnits(joined.filter(unit => unit.isTrial)).length, 0);
+});
