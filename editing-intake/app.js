@@ -601,7 +601,7 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
   }
   // ---- お客様への連絡（LINE）・請求書・お客様台帳 ----
   const lineStatusLabels={accepted:'送信済み',no_line:'LINE未連携',quota_blocked:'無料枠のため未送信',rejected:'LINEが受け付けず',failed:'送信できず',disabled:'送信設定オフ'};
-  const lineKindLabels={manual:'手動メッセージ',inquiry_created:'受付のご案内',issue_quote:'見積もりのご案内',verify_payment:'入金確認のご案内',verify_card_payment:'カード入金確認のご案内',deliver:'納品のご案内',invoice:'請求書のご案内'};
+  const lineKindLabels={manual:'手動メッセージ',inquiry_created:'受付のご案内',issue_quote:'見積もりのご案内',verify_payment:'入金確認のご案内',verify_card_payment:'カード入金確認のご案内',materials_folder:'素材フォルダのご案内',deliver:'納品のご案内',invoice:'請求書のご案内'};
   const jstDate=value=>{try{return new Date(value).toLocaleDateString('ja-JP',{timeZone:'Asia/Tokyo',year:'numeric',month:'long',day:'numeric'});}catch{return '';}};
   const jstTime=value=>{try{return new Date(value).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});}catch{return '';}};
   function commsCard(o){
