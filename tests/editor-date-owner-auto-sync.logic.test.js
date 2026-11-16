@@ -51,7 +51,7 @@ test('an editor draft date updates only the linked legacy child and is idempoten
     Array,
   };
   vm.createContext(context);
-  vm.runInContext(`${extract('_legacyPortalStatusLocked')}\n${extract('_aggregateSubcaseStatus')}\n${applySource}\nthis.applyPortal=_applyPortalToLegacy;`, context);
+  vm.runInContext(`${extract('_legacyPortalStatusLocked')}\n${extract('_aggregateSubcaseStatus')}\n${extract('_parentAutoStatus')}\n${applySource}\nthis.applyPortal=_applyPortalToLegacy;`, context);
 
   const portal = {
     id: 'legacy_legacy-parent_WD-S086',
@@ -111,7 +111,7 @@ test('a snapshot from the former assignee cannot revert a freshly reassigned chi
     Date, JSON, Object, String, Number, Array,
   };
   vm.createContext(context);
-  vm.runInContext(`${extract('_legacyPortalStatusLocked')}\n${extract('_aggregateSubcaseStatus')}\n${applySource}\nthis.applyPortal=_applyPortalToLegacy;`, context);
+  vm.runInContext(`${extract('_legacyPortalStatusLocked')}\n${extract('_aggregateSubcaseStatus')}\n${extract('_parentAutoStatus')}\n${applySource}\nthis.applyPortal=_applyPortalToLegacy;`, context);
 
   const staleMiuraPortal = {
     id: 'legacy_legacy-parent_WD-S083',

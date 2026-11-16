@@ -7,7 +7,7 @@ function context(subcase=false){
   const target={id:'parent',title:'案件',status:'進行中',subtasks:subcase?[{id:'child',status:'進行中'}]:[],statusHistory:[]};
   const c=vm.createContext({S:{jobs:[target]},ACCESS_RECORDS:[],Date:{now:()=>++clock},_myEmail:()=> 'owner@test.invalid',_isOwner:()=>true,
     _paymentRecipientSnapshot:()=>({}),_portalField:(j,k,v)=>Object.hasOwn(j,k)?j[k]:v,_editorDraftDateSetter:(_j,f='creator')=>f,_videoAttachments:a=>a,_caseManualIds:a=>a||[],
-    _videoUpdatedMillis:v=>Number(v)||0,jobBiz:()=> 'edit',_jobSubDefaultStatus:()=> '進行中',_aggregateSubcaseStatus:()=> '進行中',_legacyPortalStatusLocked:()=>false});
+    _videoUpdatedMillis:v=>Number(v)||0,jobBiz:()=> 'edit',_jobSubDefaultStatus:()=> '進行中',_aggregateSubcaseStatus:()=> '進行中',_parentAutoStatus:()=> '進行中',_legacyPortalStatusLocked:()=>false});
   vm.runInContext(extract('_applyPortalToLegacy'),c);
   const job={id:subcase?'child':'portal',_portalUid:'editor',linkedLegacyJobId:'parent',status:'進行中',title:'案件'};
   return {c,target,job};

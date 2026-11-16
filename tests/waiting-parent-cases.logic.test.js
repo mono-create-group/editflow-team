@@ -107,3 +107,58 @@ test('the strip shows the label, client, child count and the open button, and ne
   const doneHtml = strip([parent({ status: '完了' })], { biz: 'edit', query: '横井', owner: true });
   assert.match(doneHtml, /完了済みの親案件/);
 });
+
+function loadAutoStatus() {
+  const context = {
+    bizCfgOf: () => ({ statuses: ['未着手', '進行中', '初稿提出済み', '完了', 'キャンセル'] }),
+  };
+  vm.createContext(context);
+  vm.runInContext([
+    sourceBetween('_aggregateSubcaseStatus', '_jobSubDefaultStatus'),
+    sourceBetween('_jobSubDefaultStatus', '_parentAutoStatus'),
+    sourceBetween('_parentAutoStatus', 'bizScopeOpts'),
+    'this.auto = _parentAutoStatus;',
+  ].join('\n'), context);
+  return context;
+}
+
+const allDone = [{ status: '完了', done: true }, { status: 'キャンセル', done: false }];
+
+test('awaiting materials ON keeps the parent from auto-completing', () => {
+  const { auto } = loadAutoStatus();
+  assert.equal(auto({ awaitingMaterials: true }, 'edit', allDone), '未着手');
+  assert.equal(auto({ awaitingMaterials: true }, 'edit', [{ status: 'キャンセル' }]), '未着手');
+  assert.equal(auto({ awaitingMaterials: true }, 'edit', [{ status: '完了', done: true }, { status: '進行中' }]), '進行中');
+});
+
+test('awaiting materials OFF behaves exactly as before', () => {
+  const { auto } = loadAutoStatus();
+  assert.equal(auto({ awaitingMaterials: false }, 'edit', allDone), '完了');
+  assert.equal(auto({}, 'edit', [{ status: 'キャンセル' }]), 'キャンセル');
+  assert.equal(auto(null, 'edit', [{ status: '初稿提出済み' }, { status: '進行中' }]), '進行中');
+});
+
+test('every parent auto-status site goes through the shared helper', () => {
+  const calls = index.match(/_aggregateSubcaseStatus\(/g) || [];
+  assert.equal(calls.length, 2, 'only the definition and the helper itself may call the aggregate');
+  assert.match(index, /parent\.status=found\?_parentAutoStatus\(parent,biz,parent\.subtasks\):status;/);
+  assert.match(index, /parent\.status=_parentAutoStatus\(parent,jobBiz\(parent\),parent\.subtasks\);/);
+  assert.match(index, /target\.status=_parentAutoStatus\(target,jobBiz\(target\),target\.subtasks\);/);
+  assert.match(index, /const finalStatus=parentStatusAuto\?_parentAutoStatus\(\{awaitingMaterials\},currentBiz,subtasks\):requestedStatus;/);
+  assert.match(index, /hasSubcases:hasSubcaseStructure,awaitingMaterials,/);
+  assert.match(index, /_source:'legacy',_raw:j,biz:jobBiz\(j\),id:j\.id,awaitingMaterials:j\.awaitingMaterials===true,/);
+});
+
+test('a parent with awaiting materials ON is listed even with open children', () => {
+  const { pick, strip } = load();
+  const job = parent({ awaitingMaterials: true, subtasks: [{ id: 's1', status: '完了', done: true }, { id: 's2', status: '進行中' }, { id: 's3', status: '未着手' }] });
+  const result = pick([job], { biz: 'edit', query: '' });
+  assert.equal(result.waiting.length, 1);
+  assert.equal(result.waiting[0].awaiting, true);
+  const html = strip([job], { biz: 'edit', query: '', owner: true });
+  assert.match(html, /素材待ち ・ 子案件 3本（完了 1本）/);
+  assert.equal(pick([{ ...job, _source: 'portal' }], { biz: 'edit', query: '' }).waiting.length, 0, 'portal jobs have no switch');
+  assert.equal(pick([{ ...job, status: 'キャンセル' }], { biz: 'edit', query: '' }).waiting.length, 0);
+  assert.equal(pick([job], { biz: 'edit', query: '別の人' }).waiting.length, 0);
+  assert.equal(pick([{ ...job, awaitingMaterials: false, _raw: { awaitingMaterials: true } }], { biz: 'edit', query: '' }).waiting.length, 1, 'raw field is honoured');
+});

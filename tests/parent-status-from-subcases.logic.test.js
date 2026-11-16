@@ -72,7 +72,7 @@ test('the case form shows parent status for ordinary cases and hides it for subc
 test('saveJob writes the derived status and does not lock the save behind the ops checklist', () => {
   const save = functionSource(index, 'saveJob');
   assert.match(save, /let parentStatusAuto=subtasks\.length>0&&!_legacyPortalStatusLocked\(current\);/);
-  assert.match(save, /const finalStatus=parentStatusAuto\?_aggregateSubcaseStatus\(currentBiz,subtasks,_jobSubDefaultStatus\(currentBiz\)\):requestedStatus;/);
+  assert.match(save, /const finalStatus=parentStatusAuto\?_parentAutoStatus\(\{awaitingMaterials\},currentBiz,subtasks\):requestedStatus;/);
   assert.match(save, /const requestedStatus=ownerCanEditStandaloneStatus\?String\(statusField\?\.value\|\|current\?\.status\|\|JOB_MODAL_PRE_STATUS\|\|_jobSubDefaultStatus\(currentBiz\)\):String\(current\?\.status\|\|JOB_MODAL_PRE_STATUS\|\|_jobSubDefaultStatus\(currentBiz\)\);/);
   assert.match(save, /type:'owner_modal_status_update'/);
   assert.match(save, /status:finalStatus,/);

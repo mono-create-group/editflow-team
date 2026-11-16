@@ -8,7 +8,7 @@ function syncContext(parents,jobs,access=[]){
   let saves=0,clock=1000,conflicts=[];
   const c=vm.createContext({S:{jobs:parents},PORTAL_JOBS:jobs,ACCESS_RECORDS:access,Date:{now:()=>++clock},_myEmail:()=> 'owner@test.invalid',_isOwner:()=>true,_teamCloudLoaded:true,_fbQuotaBlocked:false,
     _paymentRecipientSnapshot:()=>({}),_portalField:(j,k,v)=>Object.hasOwn(j,k)?j[k]:v,_editorDraftDateSetter:(_j,f='creator')=>f,_videoAttachments:a=>a,_caseManualIds:a=>a||[],
-    _videoUpdatedMillis:v=>Number(v)||0,jobBiz:()=> 'edit',_jobSubDefaultStatus:()=> '進行中',_aggregateSubcaseStatus:()=> '進行中',_legacyPortalStatusLocked:()=>false,
+    _videoUpdatedMillis:v=>Number(v)||0,jobBiz:()=> 'edit',_jobSubDefaultStatus:()=> '進行中',_aggregateSubcaseStatus:()=> '進行中',_parentAutoStatus:()=> '進行中',_legacyPortalStatusLocked:()=>false,
     save:()=>saves++,renderSyncSafe:()=>{},_showPortalLegacySyncConflicts:rows=>{conflicts=rows}});
   vm.runInContext(['_portalLegacySyncPlan','_syncPortalJobsIntoLegacy','_applyPortalToLegacy'].map(extract).join('\n'),c);
   return{c,saves:()=>saves,conflicts:()=>conflicts};

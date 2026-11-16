@@ -50,7 +50,7 @@ test('subcase detail lets the owner edit ordinary statuses while linked portal s
   assert.match(saver, /requestedStatus=ownerCanEditStatus\?String\(document\.getElementById\('vs-status'\)\?\.value\|\|''\):/);
   assert.match(saver, /status:requestedStatus/);
   assert.match(saver, /done:requestedStatus==='完了'/);
-  assert.match(saver, /parent\.status=_aggregateSubcaseStatus/);
+  assert.match(saver, /parent\.status=_parentAutoStatus/);
   assert.match(saver, /type:requestedStatus===previousStatus\?'subcase_schedule_update':'subcase_status_update'/);
   assert.match(saver, /fromStatus:previousStatus/);
 });
