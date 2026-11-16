@@ -18,7 +18,7 @@ test('board horizontal position survives a full view replacement', () => {
   const after = { scrollLeft: 0, isConnected: true };
   let current = before;
   const context = {
-    document: { querySelector: selector => selector === '#view .board-wrap' ? current : null },
+    document: { querySelector: selector => selector.split(',').map(s => s.trim()).includes('#view .board-wrap') ? current : null },
     requestAnimationFrame: callback => callback(),
   };
   vm.createContext(context);
@@ -34,6 +34,28 @@ test('board horizontal position survives a full view replacement', () => {
   context.restore(saved);
   assert.equal(saved, 480);
   assert.equal(after.scrollLeft, 480);
+});
+
+test('the process board (.app-kanban) keeps its horizontal position too', () => {
+  const before = { scrollLeft: 900, isConnected: false };
+  const after = { scrollLeft: 0, isConnected: true };
+  let current = before;
+  const context = {
+    document: { querySelector: selector => selector.split(',').map(s => s.trim()).includes('#view .app-kanban') ? current : null },
+    requestAnimationFrame: callback => callback(),
+  };
+  vm.createContext(context);
+  vm.runInContext([
+    sourceBetween('_captureViewBoardScroll', '_restoreViewBoardScroll'),
+    sourceBetween('_restoreViewBoardScroll', 'render'),
+    'this.capture = _captureViewBoardScroll;',
+    'this.restore = _restoreViewBoardScroll;',
+  ].join('\n'), context);
+  const saved = context.capture();
+  current = after;
+  context.restore(saved);
+  assert.equal(saved, 900);
+  assert.equal(after.scrollLeft, 900);
 });
 
 test('render captures before replacing #view and restores immediately after', () => {
