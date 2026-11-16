@@ -888,7 +888,8 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
   const SHORT_DEFAULT_SECONDS=120;
   const SHORT_OVERAGE_NOTE='完成尺が2分を超えた場合は、超えた1分ごとに1,000円を納品時に追加でご請求します。';
   // お客様に見せる完成尺：120秒のショートは「ちょうど120秒」の約束に読めないよう「2分まで」と出す。
-  function durationText(type,seconds){return type==='short'&&Number(seconds)===SHORT_DEFAULT_SECONDS?'2分まで':`${seconds}秒`;}
+  // オープニング・エンディングは固定料金なので秒数を出さない（尺で料金が変わらない）。
+  function durationText(type,seconds){return type==='opening'||type==='ending'?'尺による料金の変動なし':type==='short'&&Number(seconds)===SHORT_DEFAULT_SECONDS?'2分まで':`${seconds}秒`;}
   const looseInput=(name,label,type,value='',extra='')=>`<label class="field"><span>${esc(label)}</span><input name="${name}" type="${type}" value="${esc(value)}" ${extra}></label>`;
   // The value most lines share (ties keep the first seen); '' when none.
   function commonOf(lines,key){const counts=new Map();for(const l of lines||[]){const v=l?.[key];if(v)counts.set(v,(counts.get(v)||0)+1);}let best='',n=0;for(const [v,c] of counts)if(c>n){best=v;n=c;}return best;}
@@ -1025,9 +1026,54 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
     const group=grouped?`<details id="unsubmitted-group" class="unsubmitted-group" tabindex="-1"><summary><span class="group-art" aria-hidden="true">${decorativeVideo}</span><strong>${esc(groupTitle)}</strong><span class="badge">素材未提出 ${unsubmitted.length}本</span><span class="group-open-label">提出する動画を選ぶ<span aria-hidden="true">⌄</span></span></summary><div>${unsubmitted.map(row).join('')}</div></details>`:'';
     return `<section class="customer-workspace" aria-label="ご依頼の進行状況"><div class="request-overview">${decorativeVideo}<div><h2>${esc(orderTitle(o))}</h2><p>${videos.length}本ご依頼${paid?'・お支払い確認済み':''}</p></div><p class="request-overview-note">${esc(nextAction(o))}</p></div><div class="workspace-next"><div class="next-copy"><h2>次にすること</h2><div class="next-inner">${decorativeVideo}<p>${nextActionMarkup(o)}</p></div></div>${button(extraTarget&&target?'追加のお手続きを確認':target?'動画を確認':paid&&!locked&&unsubmitted.length?'素材を提出':'手続きを確認','jump',true,`data-target="${esc(nextTarget)}"`)}</div><div class="workspace-facts"><section class="materials-summary ${paid&&!locked&&unsubmitted.length?'can-submit':''}">${paid&&!locked&&unsubmitted.length?`<button type="button" class="materials-summary-mobile" data-action="jump" data-target="${unsubmitted.length>1?'unsubmitted-group':'workspace-videos'}" aria-label="提出する動画を選ぶ">${progressIcon('document')}<span>素材の提出</span><strong>${submitted}<small> / ${videos.length}本</small></strong><span aria-hidden="true">›</span></button>`:''}<h2>素材の提出</h2><p class="workspace-number">${submitted}<small> / ${videos.length}本</small></p><p>${paid&&!locked?`あと${unsubmitted.length}本の素材が未提出です。`:'素材の提出状況です。制作は見積もり・入金・素材の確認後に開始します。'}</p>${paid&&!locked&&unsubmitted.length?button('提出する動画を選ぶ','jump',false,`data-target="${unsubmitted.length>1?'unsubmitted-group':'workspace-videos'}"`):''}</section><section><h2>進行状況</h2><div class="video-counts"><p>${progressIcon('check')}<span>納品確認</span><strong>${delivered.length}<small>本</small></strong></p><p>${progressIcon('gear')}<span>編集中</span><strong>${working.length}<small>本</small></strong></p><p>${progressIcon('document')}<span>素材未提出</span><strong>${unsubmitted.length}<small>本</small></strong></p></div></section></div><section id="workspace-videos" tabindex="-1"><div class="video-list-heading"><h2>動画の一覧</h2><p class="hint">${paid?'お支払い確認済みのご依頼です。必要な動画の素材を、順番にご提出いただけます。':'お支払い状況とお見積もりは、下の手続き欄でご確認ください。'}</p></div><div class="workspace-video-list">${videos.filter(v=>!grouped||!unsubmitted.includes(v)).map(row).join('')}${group}</div></section><div class="workspace-footer">${button('新しい動画を追加発注','entry',false,'data-entry="additional"')}${button('修正・質問','entry',false,'data-entry="support"')}</div></section>`;
   }
+  // ---- まとめて素材確認・まとめて編集開始（2026-11-16 会長：13本で26回押さずに済むように） ----
+  // サーバーは1回に1つの命令（expectedRevision・requestId）なので、画面から1本ずつ順に送り、返ってきた最新の注文（revision）で次を送る。
+  // サーバー側にまとめて送る口は作らない：1本ずつの保存・二重送信の防止（requestId）・やり直しの仕組みをそのまま使え、途中の状態も
+  // 「その動画のボタンを1本ずつ押した」のと同じになるため。失敗したらそこで止め、何本保存できたかを出し、注文を読み直す。
+  const bulkVideoLabel=(o,v)=>`${o.videos.findIndex(x=>x.id===v.id)+1}. ${v.title}`;
+  function bulkMaterialsTargets(o){return o.videos.filter(v=>v.status==='awaiting'&&!v.materials?.verified);}
+  // Same conditions as start_editing on the server; the reason is shown for each video that cannot start yet.
+  function bulkStartReason(o,v){
+    if(v.status!=='awaiting')return null;
+    if(!o.acceptedQuote)return '見積もりが確定していません';
+    if(!o.payment?.verified||o.payment.verified.quoteVersion!==o.acceptedQuote.quoteVersion)return '入金（または0円の確定）が確認できていません';
+    if(!v.materials?.verified)return '素材の確認が済んでいません';
+    if(o.payment.verified.late&&!v.deliveryReconfirmation)return '入金が遅れたため、納品日の再合意が必要です';
+    return '';
+  }
+  function bulkStartPlan(o){
+    const waiting=o.videos.filter(v=>v.status==='awaiting');
+    return {ready:waiting.filter(v=>bulkStartReason(o,v)===''),skipped:waiting.filter(v=>bulkStartReason(o,v)).map(v=>({v,reason:bulkStartReason(o,v)}))};
+  }
+  function bulkPanel(o){
+    if(!admin()||cancellationLocked(o)||o.status==='completed')return '';
+    const targets=bulkMaterialsTargets(o),plan=bulkStartPlan(o);
+    if(!targets.length&&!plan.ready.length&&!plan.skipped.length)return '';
+    const materials=targets.length?`<form data-form="bulk-materials"><h3>まとめて素材を確認済みにする</h3><p class="hint">チェックした動画を、下の確認記録で素材確認済みにします（お客様が提出完了を報告した動画に、最初からチェックを入れています）。</p><div class="bulk-list">${targets.map(v=>`<label class="check"><input type="checkbox" name="bulkVideo" value="${esc(v.id)}"${reported(v.materials)?' checked':''}><span>${esc(bulkVideoLabel(o,v))}${reported(v.materials)?'（提出完了の報告あり）':'（報告なし）'}</span></label>`).join('')}</div><label class="field full"><span>必要素材の確認記録（チェックした動画すべてに入ります・管理者のみ）</span><textarea name="note" required maxlength="10000" placeholder="例：13本ぶんの素材がフォルダにそろっていることを確認"></textarea></label>${submit('チェックした動画の素材を確認済みにする')}</form>`:'';
+    const skipped=plan.skipped.length?`<ul class="hint">${plan.skipped.map(({v,reason})=>`<li>${esc(bulkVideoLabel(o,v))}：${esc(reason)}</li>`).join('')}</ul>`:'';
+    const start=plan.ready.length||plan.skipped.length?`<form data-form="bulk-start"><h3>まとめて編集を開始する</h3><p class="hint">${plan.ready.length?`開始できる${plan.ready.length}本の編集をまとめて開始します。`:'今まとめて開始できる動画はありません。'}${plan.skipped.length?`次の${plan.skipped.length}本は条件がそろっていないため飛ばします。`:''}</p>${skipped}${plan.ready.length?submit(`${plan.ready.length}本の編集をまとめて開始する`):''}</form>`:'';
+    return `<section class="panel bulk-panel" id="bulk-video-tools">${materials}${materials&&start?'<hr class="separator">':''}${start}</section>`;
+  }
+  async function runBulk(type,videos,payloadOf,label){
+    let order=state.order,done=0;
+    for(const v of videos){
+      try{
+        const result=await mutation(`/api/orders/${encodeURIComponent(order.id)}/commands`,{expectedRevision:order.revision,command:{type,payload:payloadOf(v)}},`${order.id}:${type}:${v.id}`);
+        order=result.order;done++;
+      }catch(error){
+        // Every saved step is a complete single-video command; read the order again so the screen shows what the server holds.
+        state.order=order;
+        try{await loadOrder(order.id);}catch{renderDetail();}
+        notice(`${label}：${videos.length}本中${done}本を保存しました。「${bulkVideoLabel(order,v)}」で止まりました（${errorText(error)}）。\n保存できた${done}本はそのままです。画面を最新にしてから、残りの動画でもう一度押してください。`,true,order.id);
+        return {done,failed:v.id};
+      }
+    }
+    await showSaved({order,replayed:false},`${label}：${done}本を保存しました。`);
+    return {done,failed:null};
+  }
   function renderDetail() {
     const o=state.order,q=latest(o.quotes),isComplete=o.status==='completed'||cancellationLocked(o);
-    $('content').innerHTML=`<div class="toolbar"><div><p class="eyebrow id" title="${esc(o.id)}">受付番号 ${esc(receiptNumber(o.id))}</p><h1>${admin()?esc(orderTitle(o)):'ご依頼中の動画'}</h1>${admin()?badge(orderStatus(o))+(repeatInfo(o)?'<span class="kind-chip repeat">追加発注</span>':''):'<p class="muted">制作と納品の進行状況をご確認いただけます。</p>'}</div>${button('最新情報に更新','refresh')}</div>${!admin()?customerWorkspace(o):`<div class="detail-shortcuts" role="navigation" aria-label="案件内の操作">${button('見積もり・支払い','jump',false,'data-target="case-information"')}${button('素材','jump',false,'data-target="materials-card"')}${button('制作・納品','jump',false,'data-target="video-progress"')}</div><p class="inline-note">${esc(!latest(o.quotes)&&repeatInfo(o)?'追加発注です。前回と同じ編集内容で、今回の本数を確認して見積もりを作成してください':nextAction(o))}</p>`}${!admin()?'<details class="case-tools"><summary>見積もり・お支払い・素材などのお手続き</summary>':''}${cancellationLocked(o)?cancellationPanel(o):''}${!admin()?'<details class="panel case-accordion"><summary>ご相談・見積もり・お支払い</summary>':''}${consultationPanel(o)}${hearingPanel(o)}${q?`<section class="panel" id="quote-panel" tabindex="-1">${quoteSummary(q,o)}${!admin()&&!o.acceptedQuote&&!isComplete?`<form data-form="accept">${legalLinks()}<label class="check"><input type="checkbox" name="agreement" required><span>第${q.version}版の料金・編集範囲・日付・キャンセル条件を確認しました。</span></label>${submit('この見積もりで依頼する')}<p class="hint">この操作で決済は行われません。</p></form>`:o.acceptedQuote?`<p class="badge">${o.acceptedQuote.autoConfirmed?'無料のため確定済み':'お客様確認済み'}</p>`:!isComplete?'<p>お客様の確認をお待ちしています。</p>':''}</section>`:''}${admin()&&!o.acceptedQuote&&!isComplete?trialStartPanel(o)+quoteEditor(o):''}${q?paymentPanel(o,q):''}<div id="comms-card" tabindex="-1">${commsCard(o)}</div>${!admin()?'</details>':''}<div id="materials-card" tabindex="-1">${materialsPanel(o)}</div><h2 id="video-progress" tabindex="-1">動画ごとの進行・手続き</h2>${!admin()?button('すべての動画の手続きを表示','all-video-tools'):""}${o.videos.map(v=>admin()?videoPanel(v,o):`<details class="video-accordion"><summary>${esc(v.title)}<span class="badge">${esc(videoProgress(v))}</span></summary>${videoPanel(v,o)}</details>`).join('')}${!cancellationLocked(o)?cancellationPanel(o):''}${o.quotes.length>1?`<details class="panel"><summary>以前の見積もり（${o.quotes.length-1}件）</summary>${o.quotes.slice(0,-1).reverse().map(old=>`<section class="panel">${quoteSummary(old,o)}</section>`).join('')}</details>`:''}${admin()?`<details class="panel"><summary>操作履歴</summary><ol class="history">${(o.history||[]).slice().reverse().map(h=>`<li>${esc(new Date(h.at).toLocaleString('ja-JP'))} · ${esc(commandLabels[h.type]||h.type)} · ${esc(h.actorId)}</li>`).join('')}</ol></details>`:''}${!admin()?'</details>':''}`;
+    $('content').innerHTML=`<div class="toolbar"><div><p class="eyebrow id" title="${esc(o.id)}">受付番号 ${esc(receiptNumber(o.id))}</p><h1>${admin()?esc(orderTitle(o)):'ご依頼中の動画'}</h1>${admin()?badge(orderStatus(o))+(repeatInfo(o)?'<span class="kind-chip repeat">追加発注</span>':''):'<p class="muted">制作と納品の進行状況をご確認いただけます。</p>'}</div>${button('最新情報に更新','refresh')}</div>${!admin()?customerWorkspace(o):`<div class="detail-shortcuts" role="navigation" aria-label="案件内の操作">${button('見積もり・支払い','jump',false,'data-target="case-information"')}${button('素材','jump',false,'data-target="materials-card"')}${button('制作・納品','jump',false,'data-target="video-progress"')}</div><p class="inline-note">${esc(!latest(o.quotes)&&repeatInfo(o)?'追加発注です。前回と同じ編集内容で、今回の本数を確認して見積もりを作成してください':nextAction(o))}</p>`}${!admin()?'<details class="case-tools"><summary>見積もり・お支払い・素材などのお手続き</summary>':''}${cancellationLocked(o)?cancellationPanel(o):''}${!admin()?'<details class="panel case-accordion"><summary>ご相談・見積もり・お支払い</summary>':''}${consultationPanel(o)}${hearingPanel(o)}${q?`<section class="panel" id="quote-panel" tabindex="-1">${quoteSummary(q,o)}${!admin()&&!o.acceptedQuote&&!isComplete?`<form data-form="accept">${legalLinks()}<label class="check"><input type="checkbox" name="agreement" required><span>第${q.version}版の料金・編集範囲・日付・キャンセル条件を確認しました。</span></label>${submit('この見積もりで依頼する')}<p class="hint">この操作で決済は行われません。</p></form>`:o.acceptedQuote?`<p class="badge">${o.acceptedQuote.autoConfirmed?'無料のため確定済み':'お客様確認済み'}</p>`:!isComplete?'<p>お客様の確認をお待ちしています。</p>':''}</section>`:''}${admin()&&!o.acceptedQuote&&!isComplete?trialStartPanel(o)+quoteEditor(o):''}${q?paymentPanel(o,q):''}<div id="comms-card" tabindex="-1">${commsCard(o)}</div>${!admin()?'</details>':''}<div id="materials-card" tabindex="-1">${materialsPanel(o)}</div><h2 id="video-progress" tabindex="-1">動画ごとの進行・手続き</h2>${!admin()?button('すべての動画の手続きを表示','all-video-tools'):""}${bulkPanel(o)}${o.videos.map(v=>admin()?videoPanel(v,o):`<details class="video-accordion"><summary>${esc(v.title)}<span class="badge">${esc(videoProgress(v))}</span></summary>${videoPanel(v,o)}</details>`).join('')}${!cancellationLocked(o)?cancellationPanel(o):''}${o.quotes.length>1?`<details class="panel"><summary>以前の見積もり（${o.quotes.length-1}件）</summary>${o.quotes.slice(0,-1).reverse().map(old=>`<section class="panel">${quoteSummary(old,o)}</section>`).join('')}</details>`:''}${admin()?`<details class="panel"><summary>操作履歴</summary><ol class="history">${(o.history||[]).slice().reverse().map(h=>`<li>${esc(new Date(h.at).toLocaleString('ja-JP'))} · ${esc(commandLabels[h.type]||h.type)} · ${esc(h.actorId)}</li>`).join('')}</ol></details>`:''}${!admin()?'</details>':''}`;
     updatePrices();updateSettlementPreview();
     if(admin()&&!o.acceptedQuote&&!isComplete&&!q)void prefillQuoteFromPrevious(o);
   }
@@ -1160,6 +1206,19 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
     else if(type==='payment')await mutateOrder('verify_payment',{quoteVersion:q.version,amountYen:n('amountYen'),receivedDate:get('receivedDate'),evidence:get('evidence')});
     else if(type==='material-details'){const title=get('title'),materialNotes=get('materialNotes');if(title.length>500||materialNotes.length>2000)throw Error('呼び名は500文字、素材メモは2000文字以内で入力してください。');await mutateOrder('update_video_material_details',{videoId,title,materialNotes});}
     else if(type==='materials')await mutateOrder('verify_materials',{videoId,note:get('note')});
+    else if(type==='bulk-materials'){
+      const ids=[...form.querySelectorAll('[name=bulkVideo]')].filter(x=>x.checked).map(x=>x.value),note=get('note');
+      if(!ids.length)throw Error('素材を確認済みにする動画にチェックを入れてください。');
+      if(!note)throw Error('必要素材の確認記録を入れてください。');
+      const targets=bulkMaterialsTargets(o).filter(x=>ids.includes(x.id));
+      if(targets.length!==ids.length)throw Error('素材確認の対象が変わっています。画面を最新にしてから、もう一度選んでください。');
+      await runBulk('verify_materials',targets,x=>({videoId:x.id,note}),'まとめて素材確認');
+    }
+    else if(type==='bulk-start'){
+      const {ready}=bulkStartPlan(o);
+      if(!ready.length)throw Error('今まとめて開始できる動画はありません。');
+      await runBulk('start_editing',ready,x=>({videoId:x.id}),'まとめて編集開始');
+    }
     else if(type==='reconfirm')await mutateOrder('reconfirm_delivery',{videoId,dueDate:get('dueDate'),reason:get('reason'),customerConfirmation:{channel:get('channel'),confirmedAt:new Date(`${get('confirmedAt')}:00+09:00`).toISOString(),evidence:get('evidence')}});
     else if(type==='delivery') {if(!safeUrl(get('url')))throw Error('納品URLはユーザー名・パスワードを含まない https:// のURLを入力してください。');await mutateOrder('deliver',{videoId,url:get('url'),reviewDueDate:get('reviewDueDate')});}
     else if(type==='revision')await mutateOrder('request_revision',{videoId,deliveryVersion:latest(v.deliveries).version,kind:get('kind'),instructions:get('instructions')});
