@@ -802,7 +802,8 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
       // A timed-out prepare may have started sharing. Re-read the server lock
       // before permitting another identity edit; never infer a successful upload.
       if(identity===materialsIdentity()&&state.order?.id===id)await loadMaterials(id);
-      if(error.unknown)throw Error('操作結果の応答を確認できませんでした。素材提出先の最新状態を確認してからお進みください。');
+      // The server answered with its reason (e.g. the Drive script lost its permission): show it as is.
+      if(error.unknown&&!error.code)throw Error('操作結果の応答を確認できませんでした。素材提出先の最新状態を確認してからお進みください。');
       throw error;
     }
     if(generation!==materialsGeneration||identity!==materialsIdentity()||state.order?.id!==id)return;
