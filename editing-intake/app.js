@@ -330,6 +330,8 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
   function adminTask(o,today=new Date(Date.now()+9*60*60*1000).toISOString().slice(0,10)) {
     if(o.listSummary)return o.adminTask;
     const task=(category,label)=>({category,label});
+    // 完成尺の超過分（2026-11-16 会長）：全動画の確認が終わっても、未払いの超過分があれば「対応が必要」に残す。
+    if(orderStatus(o)==='completed'&&(o.videos||[]).some(v=>v.overage?.amountYen>0&&!v.overage.payment?.verified))return task('action','完成尺の超過分の入金が未確認です。入金を照合してください');
     if(['completed','cancelled'].includes(orderStatus(o)))return task('done','すべてのお手続きが完了しました');
     if(cancellationLocked(o)) {
       const c=o.cancellation,s=latest(c?.settlements);
@@ -492,11 +494,11 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
   async function loadOpsStatus(){try{state.ops=await api('/api/ops-status');paintOpsStatus();}catch{}}
   function renderCards() {
     const query=state.search.trim().toLocaleLowerCase();
-    const orders=state.pageMeta?state.orders:state.orders.filter(o=>(state.filter==='all'||(admin()&&['attention','waiting','working'].includes(state.filter)?adminTask(o).category===(state.filter==='attention'?'action':state.filter):state.filter==='active'?!['completed','cancelled'].includes(orderStatus(o)):orderStatus(o)===state.filter))&&[o.id,receiptNumber(o.id),o.customerName||'',...o.videos.map(v=>v.title),...(admin()?[o.customerId]:[])].join(' ').toLocaleLowerCase().includes(query));
+    const orders=state.pageMeta?state.orders:state.orders.filter(o=>(state.filter==='all'||(admin()&&['attention','waiting','working'].includes(state.filter)?adminTask(o).category===(state.filter==='attention'?'action':state.filter):state.filter==='active'?(!['completed','cancelled'].includes(orderStatus(o))||(orderStatus(o)==='completed'&&unpaidOverages(o).length>0)):orderStatus(o)===state.filter))&&[o.id,receiptNumber(o.id),o.customerName||'',...o.videos.map(v=>v.title),...(admin()?[o.customerId]:[])].join(' ').toLocaleLowerCase().includes(query));
     if(!state.pageMeta)orders.sort((a,b)=>(admin()?['action','working','waiting','done'].indexOf(adminTask(a).category)-['action','working','waiting','done'].indexOf(adminTask(b).category):0)||Date.parse(b.updatedAt)-Date.parse(a.updatedAt));
     $('order-list').innerHTML=orders.length?orders.map((o,i)=>{
       const q=o.listSummary?(o.latestQuoteTotalYen!==null?{totalYen:o.latestQuoteTotalYen}:null):latest(o.quotes),due=o.listSummary?(o.dueDate||'未定'):o.videos.find(v=>v.dueDate)?.dueDate||q?.lines?.[0]?.dueDate||'未定';
-      return `<article class="order-card ${admin()?'admin-order':'customer-order'} ${i===0?'featured':''}"><div class="order-card-heading">${admin()?videoMark:decorativeVideo}<div><h2 class="order-title">${esc(orderTitle(o))}</h2><p class="order-meta" title="${esc(o.id)}">${admin()?esc(customerDisplayName(o))+' · ':''}受付番号 ${esc(receiptNumber(o.id))}${admin()&&o.repeatOf?' · 前回 '+esc(o.repeatOf):''}</p>${badge(orderStatus(o))}${admin()&&o.repeatOf?'<span class="kind-chip repeat">追加発注</span>':admin()&&o.repeatOf===null?'<span class="kind-chip">新規相談</span>':''}${(o.trial||latest(o.quotes)?.lines?.some(l=>l.trial))?'<span class="kind-chip trial">無料トライアル</span>':''}${(o.pack||latest(o.quotes)?.lines?.some(l=>l.pack))?'<span class="kind-chip pack">回数券パック</span>':''}</div></div>${!admin()?`<p class="request-count">${esc(o.listSummary?o.videoCount:o.videos.length)}本のご依頼</p>`:''}<div class="order-next"><div><strong>${esc(nextAction(o))}</strong>${admin()?`<p class="hint">納品日 ${esc(due)}</p>`:''}</div>${!admin()&&q?`<p class="card-amount">${money(q.totalYen)}<small>税込</small></p>`:''}${button(admin()?'確認する':listPurpose==='additional'?'この案件を参考に追加発注':listPurpose==='materials'?'提出する動画を選ぶ':listPurpose==='support'?'対象の動画を選ぶ':'動画と手続きを確認',!admin()&&listPurpose==='additional'?'repeat-order':'open',i===0,`data-id="${esc(o.id)}"`)}</div></article>`;
+      return `<article class="order-card ${admin()?'admin-order':'customer-order'} ${i===0?'featured':''}"><div class="order-card-heading">${admin()?videoMark:decorativeVideo}<div><h2 class="order-title">${esc(orderTitle(o))}</h2><p class="order-meta" title="${esc(o.id)}">${admin()?esc(customerDisplayName(o))+' · ':''}受付番号 ${esc(receiptNumber(o.id))}${admin()&&o.repeatOf?' · 前回 '+esc(o.repeatOf):''}</p>${badge(orderStatus(o))}${admin()&&o.repeatOf?'<span class="kind-chip repeat">追加発注</span>':admin()&&o.repeatOf===null?'<span class="kind-chip">新規相談</span>':''}${(o.trial||latest(o.quotes)?.lines?.some(l=>l.trial))?'<span class="kind-chip trial">無料トライアル</span>':''}${(o.pack||latest(o.quotes)?.lines?.some(l=>l.pack))?'<span class="kind-chip pack">回数券パック</span>':''}${admin()&&unpaidOverages(o).length?'<span class="kind-chip danger">未払いの超過分あり</span>':''}</div></div>${!admin()?`<p class="request-count">${esc(o.listSummary?o.videoCount:o.videos.length)}本のご依頼</p>`:''}<div class="order-next"><div><strong>${esc(nextAction(o))}</strong>${admin()?`<p class="hint">納品日 ${esc(due)}</p>`:''}</div>${!admin()&&q?`<p class="card-amount">${money(q.totalYen)}<small>税込</small></p>`:''}${button(admin()?'確認する':listPurpose==='additional'?'この案件を参考に追加発注':listPurpose==='materials'?'提出する動画を選ぶ':listPurpose==='support'?'対象の動画を選ぶ':'動画と手続きを確認',!admin()&&listPurpose==='additional'?'repeat-order':'open',i===0,`data-id="${esc(o.id)}"`)}</div></article>`;
     }).join(''):'<section class="panel empty"><h2>該当する案件はありません</h2><p class="muted">検索条件を変更してご確認ください。</p></section>';
     const preview=$('order-preview');
     if(preview){const o=orders[0],q=o?.listSummary?(o.latestQuoteTotalYen!==null?{totalYen:o.latestQuoteTotalYen}:null):latest(o?.quotes);preview.innerHTML=o?`<section class="panel preview-card"><div class="preview-art">${videoMark}<span>${o.listSummary?o.videoCount:o.videos.length}本のご依頼</span></div><h2>${esc(orderTitle(o))}</h2><p class="muted">${esc(customerDisplayName(o))}</p>${dl([['見積もり金額',q?money(q.totalYen)+'（税込）':'未提示'],['納品日',o.listSummary?(o.dueDate||'未定'):o.videos.find(v=>v.dueDate)?.dueDate||q?.lines?.[0]?.dueDate||'未定']])}<div class="inline-note">${esc(nextAction(o))}</div>${button('案件を開いて確認する','open',true,`data-id="${esc(o.id)}"`)}</section>`:'';}
@@ -669,32 +671,45 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
       return {date,amount,text:textCol>=0?r[textCol]||'':r.filter((_,i)=>i!==amountCol).join(' ')};
     }).filter(x=>Number.isSafeInteger(x.amount)&&x.amount>0&&/^\d{4}-\d{2}-\d{2}$/.test(x.date));
   }
-  // Orders accepted but not yet verified: summaries at progress stage 2 carry the quote total.
+  // 未払いの完成尺の超過分（一覧の要約は unpaidOverages を持つ・案件そのものなら動画から数える）。
+  function unpaidOverages(o){return o.listSummary?(Array.isArray(o.unpaidOverages)?o.unpaidOverages:[]):(o.videos||[]).filter(v=>v.overage?.amountYen>0&&!v.overage.payment?.verified).map(v=>({videoId:v.id,title:v.title,amountYen:v.overage.amountYen}));}
+  // Orders accepted but not yet verified (summaries at progress stage 2 carry the quote total), and unpaid overages.
   async function paymentWaiting(){
     const out=[];let cursor=null;
     for(let i=0;i<20;i++){const data=await api('/api/orders?limit=100&status=all'+(cursor?'&cursor='+encodeURIComponent(cursor):''));out.push(...(data.orders||[]));cursor=data.nextCursor;if(!cursor)break;}
-    return out.filter(o=>o.progressStage===2&&Number.isSafeInteger(o.latestQuoteTotalYen)&&o.latestQuoteTotalYen>0);
+    return out.filter(o=>(o.progressStage===2&&Number.isSafeInteger(o.latestQuoteTotalYen)&&o.latestQuoteTotalYen>0)||unpaidOverages(o).length);
   }
   function matchDeposits(deposits,orders){
     const matches=[];
     for(const dep of deposits){const text=halfWidth(dep.text).toUpperCase();
-      for(const o of orders){if(o.latestQuoteTotalYen!==dep.amount)continue;
-        matches.push({deposit:dep,order:o,sure:text.includes(transferCode(o.id).toUpperCase())});}}
+      for(const o of orders){const sure=text.includes(transferCode(o.id).toUpperCase());
+        if(o.progressStage===2&&o.latestQuoteTotalYen===dep.amount)matches.push({deposit:dep,order:o,sure});
+        for(const x of unpaidOverages(o))if(x.amountYen===dep.amount)matches.push({deposit:dep,order:o,sure,overage:x});}}
     return matches.sort((a,b)=>Number(b.sure)-Number(a.sure)||b.deposit.date.localeCompare(a.deposit.date));
   }
   function renderReconcile(){
     const r=state.reconcile;
-    const rows=r?.matches?.length?r.matches.map((x,i)=>`<section class="panel reconcile-row"><p><span class="kind-chip ${x.sure?'trial':''}">${x.sure?'受付番号と金額が一致':'金額だけ一致（名義を確認）'}</span></p>${dl([['入金',`${x.deposit.date} · ${money(x.deposit.amount)}`],['明細の摘要',x.deposit.text||'（なし）'],['案件',`${customerDisplayName(x.order)} · 受付番号 ${receiptNumber(x.order.id)}`],['見積もり合計',money(x.order.latestQuoteTotalYen)]])}${x.done?'<p class="inline-note">照合を記録しました。</p>':button('この入金で照合を記録','reconcile-apply',x.sure,`data-index="${i}"`)}</section>`).join(''):r?'<section class="panel empty"><h2>一致する入金はありませんでした</h2><p class="hint">お支払い待ちの案件と、金額が同じ入金が見つかりません。</p></section>':'';
+    const rows=r?.matches?.length?r.matches.map((x,i)=>`<section class="panel reconcile-row"><p><span class="kind-chip ${x.sure?'trial':''}">${x.sure?'受付番号と金額が一致':'金額だけ一致（名義を確認）'}</span></p>${dl([['入金',`${x.deposit.date} · ${money(x.deposit.amount)}`],['明細の摘要',x.deposit.text||'（なし）'],['案件',`${customerDisplayName(x.order)} · 受付番号 ${receiptNumber(x.order.id)}`],x.overage?['完成尺の超過分',`${x.overage.title} · ${money(x.overage.amountYen)}`]:['見積もり合計',money(x.order.latestQuoteTotalYen)]])}${x.done?'<p class="inline-note">照合を記録しました。</p>':button('この入金で照合を記録','reconcile-apply',x.sure,`data-index="${i}"`)}</section>`).join(''):r?'<section class="panel empty"><h2>一致する入金はありませんでした</h2><p class="hint">お支払い待ちの案件と、金額が同じ入金が見つかりません。</p></section>':'';
     $('content').innerHTML=`<div class="toolbar page-heading"><div><p class="eyebrow">管理者用</p><h1>入金明細の照合</h1><p class="muted">銀行の入出金明細（CSV）を選ぶと、お支払い待ちの案件と金額・受付番号で突き合わせます。明細はこの画面の中だけで読み、どこにも送りません。</p></div><div class="heading-actions">${button('案件一覧へ戻る','list')}</div></div><form class="panel" data-form="statement"><label class="field full"><span>入出金明細のCSV（PayPay銀行など）</span><input name="statement" type="file" accept=".csv,text/csv" required></label>${submit('照合する')}</form>${r?`<p class="hint">明細の入金 ${r.deposits}件 · お支払い待ちの案件 ${r.waiting}件 · 候補 ${r.matches.length}件</p>`:''}${rows}`;
   }
   async function applyReconcile(index){
     const x=state.reconcile?.matches?.[index];if(!x||x.done)return;
     const data=await api('/api/orders/'+encodeURIComponent(x.order.id)),o=data.order,q=latest(o.quotes);
-    if(!q||o.payment?.verified||q.totalYen!==x.deposit.amount)throw Error('この案件の状態が変わっています。案件を開いて確認してください。');
     const evidence=`入出金明細 ${x.deposit.date} 摘要「${x.deposit.text}」 ${x.deposit.amount}円（明細の照合で${x.sure?'受付番号と金額':'金額'}が一致）`.slice(0,1000);
-    const result=await mutation(`/api/orders/${encodeURIComponent(o.id)}/commands`,{expectedRevision:o.revision,command:{type:'verify_payment',payload:{quoteVersion:q.version,amountYen:x.deposit.amount,receivedDate:x.deposit.date,evidence}}},`${o.id}:verify_payment:`);
-    state.reconcile.matches.forEach(m=>{if(m.order.id===o.id||m.deposit===x.deposit)m.done=m===x;});
-    state.reconcile.matches=state.reconcile.matches.filter(m=>m===x||(m.order.id!==o.id&&m.deposit!==x.deposit));
+    let result;
+    if(x.overage){
+      // 完成尺の超過分：その動画の超過分が未払いで、金額が同じ時だけ記録する。
+      const v=o.videos.find(item=>item.id===x.overage.videoId);
+      if(!v?.overage||v.overage.payment?.verified||v.overage.amountYen!==x.deposit.amount)throw Error('この案件の状態が変わっています。案件を開いて確認してください。');
+      result=await mutation(`/api/orders/${encodeURIComponent(o.id)}/commands`,{expectedRevision:o.revision,command:{type:'verify_overage_payment',payload:{videoId:v.id,amountYen:x.deposit.amount,receivedDate:x.deposit.date,evidence}}},`${o.id}:verify_overage_payment:${v.id}`);
+    } else {
+      if(!q||o.payment?.verified||q.totalYen!==x.deposit.amount)throw Error('この案件の状態が変わっています。案件を開いて確認してください。');
+      result=await mutation(`/api/orders/${encodeURIComponent(o.id)}/commands`,{expectedRevision:o.revision,command:{type:'verify_payment',payload:{quoteVersion:q.version,amountYen:x.deposit.amount,receivedDate:x.deposit.date,evidence}}},`${o.id}:verify_payment:`);
+    }
+    // One deposit pays one thing; the same receivable (order + what it pays) is not offered again.
+    const key=m=>m.order.id+':'+(m.overage?m.overage.videoId:'quote');
+    state.reconcile.matches.forEach(m=>{if(key(m)===key(x)||m.deposit===x.deposit)m.done=m===x;});
+    state.reconcile.matches=state.reconcile.matches.filter(m=>m===x||(key(m)!==key(x)&&m.deposit!==x.deposit));
     renderReconcile();notice(`${customerDisplayName(o)}様の入金を照合しました（${money(x.deposit.amount)}）。${result.replayed?' 前回の保存結果を確認しました。':''}`);
   }
   function customerRow(c){
@@ -852,8 +867,10 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
     if(n>=1)return '<p class="hint">延長は1回までです（これ以上は延長できません）。</p>';
     return `<form data-form="pack-extend" data-customer="${esc(c.customerId)}" data-pack="${esc(first.id)}" data-extensions="${esc(n)}"><label class="pack-check"><input type="checkbox" name="confirmExtend" required> 初回購入のパック（${esc(first.size)}本・入金日 ${esc(first.paidDate)}）を、あと1か月延長します（今は${n?`${esc(n)}回延長済み`:'未延長'}・延長後は入金日から${esc(4+n)}か月後まで）。取り消せません。</label>${submit('最初のパックを1か月延長する')}</form>`;
   }
+  // 振込先：見積もりの振込案内が無ければ、請求書と同じ振込先（サーバーの設定）を出す。保存された見積もりは変えない（2026-11-16 会長）。
+  function paymentText(q){return q?.paymentInstructions||state.config?.bankText||'振込先と手数料は個別にご案内します。';}
   function quoteSummary(q,o) {
-    return `<h2>見積もり 第${q.version}版</h2><p class="amount">${money(q.totalYen)} <small>税込・${q.lines.length}本合計</small></p>${q.lines.map(line=>`<details open><summary>${esc(o.videos.find(v=>v.id===line.videoId)?.title||line.videoId)} · ${money(line.totalYen)}${line.trial?' · 無料トライアル':line.pack?' · 回数券パック':''}</summary>${dl([['完成尺',durationText(o.videos.find(v=>v.id===line.videoId)?.type,line.durationSeconds)],['今回の編集範囲',line.scope],['対象外の作業',line.excludedScope],['基本料金',money(line.baseYen)],['追加料金',money(line.extraYen)],...(line.extraYen?[['追加の理由',line.extraReason]]:[]),...(line.trial?[['無料トライアル',`−${money(line.discountYen)}（最初の1本は基本料金が無料です）`]]:line.pack?[['回数券パック',`−${money(line.discountYen)}（完成尺2分までの基本料金を、回数券パック1本でお支払い済み）`]]:line.discountYen?[['割引',`−${money(line.discountYen)}（${line.discountReason}）`]]:[]),['納品日',line.dueDate],['素材提出期限',line.materialsDueDate]])}</details>`).join('')}${q.totalYen===0?`${dl([['お支払い',`ありません（${waiverText(q)}）`],['キャンセル・精算基準',q.cancellationBasis]])}`:dl([['支払期日',q.paymentDueDate],['振込先・お支払いのご案内',q.paymentInstructions||'振込先と手数料は個別にご案内します。'],['キャンセル・精算基準',q.cancellationBasis]])}${q.lines.some(line=>o.videos.find(v=>v.id===line.videoId)?.type==='short')?`<p class="hint">${esc(SHORT_OVERAGE_NOTE)}</p>`:''}<p class="hint">お客様都合の無料修正は2回まで。制作側の不備は回数に含めません。</p>`;
+    return `<h2>見積もり 第${q.version}版</h2><p class="amount">${money(q.totalYen)} <small>税込・${q.lines.length}本合計</small></p>${q.lines.map(line=>`<details open><summary>${esc(o.videos.find(v=>v.id===line.videoId)?.title||line.videoId)} · ${money(line.totalYen)}${line.trial?' · 無料トライアル':line.pack?' · 回数券パック':''}</summary>${dl([['完成尺',durationText(o.videos.find(v=>v.id===line.videoId)?.type,line.durationSeconds)],['今回の編集範囲',line.scope],['対象外の作業',line.excludedScope],['基本料金',money(line.baseYen)],['追加料金',money(line.extraYen)],...(line.extraYen?[['追加の理由',line.extraReason]]:[]),...(line.trial?[['無料トライアル',`−${money(line.discountYen)}（最初の1本は基本料金が無料です）`]]:line.pack?[['回数券パック',`−${money(line.discountYen)}（完成尺2分までの基本料金を、回数券パック1本でお支払い済み）`]]:line.discountYen?[['割引',`−${money(line.discountYen)}（${line.discountReason}）`]]:[]),['納品日',line.dueDate],['素材提出期限',line.materialsDueDate]])}</details>`).join('')}${q.totalYen===0?`${dl([['お支払い',`ありません（${waiverText(q)}）`],['キャンセル・精算基準',q.cancellationBasis]])}`:dl([['支払期日',q.paymentDueDate],['振込先・お支払いのご案内',paymentText(q)],['キャンセル・精算基準',q.cancellationBasis]])}${q.lines.some(line=>o.videos.find(v=>v.id===line.videoId)?.type==='short')?`<p class="hint">${esc(SHORT_OVERAGE_NOTE)}</p>`:''}<p class="hint">お客様都合の無料修正は2回まで。制作側の不備は回数に含めません。</p>`;
   }
   // Rate shown when revising: the discount of the first discounted line over its pre-discount amount.
   function quoteDiscountPercent(q){const l=q?.lines?.find(line=>line.discountYen&&!line.trial&&!line.pack);return l?Math.round(100*l.discountYen/(l.baseYen+l.extraYen)):0;}
@@ -1002,7 +1019,7 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
     const verified=o.payment.verified,locked=cancellationLocked(o);
     if(verified?.waived)return `<section class="panel" id="payment-panel" tabindex="-1"><h2>お支払い</h2><p>${esc(waiverText(q))}のため、お支払いはありません。</p></section>`;
     if(verified?.method==='card')return `<section class="panel" id="payment-panel" tabindex="-1"><h2>お支払い</h2>${dl([['見積もりの確認',`第${q.version}版を確認済み`],['お支払い方法','クレジットカード'],['お支払いの確認','確認済み'],['金額',money(verified.amountYen)],['お支払い日',verified.receivedDate],...(admin()&&verified.evidence?[['確認の根拠',verified.evidence]]:[])])}${verified.late&&!locked?'<p class="inline-note danger-note">支払期日後の入金です。制作開始前に納品日の再確認が必要です。</p>':''}${cardRecords(o)}</section>`;
-    return `<section class="panel" id="payment-panel" tabindex="-1"><h2>お支払い</h2>${!locked&&!verified?cardOption(o,q):''}${dl([['見積もりの確認',`第${q.version}版を確認済み`],['振込先・お支払いのご案内',q.paymentInstructions||'振込先と手数料は個別にご案内します。'],['振込の報告',reported(o.payment)?'報告済み':'未報告'],['実入金の確認',verified?'確認済み':'未確認'],...(verified?[['入金額',money(verified.amountYen)],['入金日',verified.receivedDate]]:[])])}${verified?.late&&!locked?'<p class="inline-note danger-note">支払期日後の入金です。制作開始前に納品日の再確認が必要です。</p>':''}${!locked&&!verified&&!admin()?`<p class="hint">ご案内した振込先へお振り込み後にご報告ください。入金の確認は制作側で行います。</p><p class="inline-note">お振込みの際は、振込名義の前に受付番号の末尾4文字「<strong>${esc(transferCode(o.id))}</strong>」を入れてください（例：${esc(transferCode(o.id))} ヤマダタロウ）。確認が早くなります。</p>${!reported(o.payment)?button('振込を報告する','command',true,'data-command="report_payment"'):''}`:''}${!locked&&!verified&&admin()?`<form data-form="payment"><h3>実入金を照合</h3><div class="grid">${input('amountYen','実際の入金額（税込円）','number','',true,'min="1" step="1"')}${input('receivedDate','入金日','date')}${area('evidence','照合した入金の根拠（管理者のみ）')}</div>${submit('入金の照合結果を記録')}</form>`:''}${cardRecords(o)}</section>`;
+    return `<section class="panel" id="payment-panel" tabindex="-1"><h2>お支払い</h2>${!locked&&!verified?cardOption(o,q):''}${dl([['見積もりの確認',`第${q.version}版を確認済み`],['振込先・お支払いのご案内',paymentText(q)],['振込の報告',reported(o.payment)?'報告済み':'未報告'],['実入金の確認',verified?'確認済み':'未確認'],...(verified?[['入金額',money(verified.amountYen)],['入金日',verified.receivedDate]]:[])])}${verified?.late&&!locked?'<p class="inline-note danger-note">支払期日後の入金です。制作開始前に納品日の再確認が必要です。</p>':''}${!locked&&!verified&&!admin()?`<p class="hint">ご案内した振込先へお振り込み後にご報告ください。入金の確認は制作側で行います。</p><p class="inline-note">お振込みの際は、振込名義の前に受付番号の末尾4文字「<strong>${esc(transferCode(o.id))}</strong>」を入れてください（例：${esc(transferCode(o.id))} ヤマダタロウ）。確認が早くなります。</p>${!reported(o.payment)?button('振込を報告する','command',true,'data-command="report_payment"'):''}`:''}${!locked&&!verified&&admin()?`<form data-form="payment"><h3>実入金を照合</h3><div class="grid">${input('amountYen','実際の入金額（税込円）','number','',true,'min="1" step="1"')}${input('receivedDate','入金日','date')}${area('evidence','照合した入金の根拠（管理者のみ）')}</div>${submit('入金の照合結果を記録')}</form>`:''}${cardRecords(o)}</section>`;
   }
   function videoProgress(v){
     if(v.status==='completed')return '確認完了';
@@ -1130,7 +1147,7 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
   }
   function overagePanel(v,o){
     const x=v.overage,paid=x?.payment?.verified,q=o.quotes?.find(item=>item.version===o.acceptedQuote?.quoteVersion);
-    const info=x?`<div class="inline-note overage-note"><strong>完成尺の超過分 ${money(x.amountYen)}（税込）</strong>${dl([['理由',overageReason(v,x)],['お支払い',paid?`入金を確認しました（${paid.receivedDate}）`:q?.paymentInstructions||'振込先と手数料は個別にご案内します。']])}<p class="hint">${v.type==='short'?esc(SHORT_OVERAGE_NOTE):'完成尺の料金の区分が上がった分の差額です。'}この分は見積もり・請求書とは別のご請求です。</p></div>`:'';
+    const info=x?`<div class="inline-note overage-note"><strong>完成尺の超過分 ${money(x.amountYen)}（税込）</strong>${dl([['理由',overageReason(v,x)],['お支払い',paid?`入金を確認しました（${paid.receivedDate}）`:paymentText(q)]])}<p class="hint">${v.type==='short'?esc(SHORT_OVERAGE_NOTE):'完成尺の料金の区分が上がった分の差額です。'}この分は見積もり・請求書とは別のご請求です。</p></div>`:'';
     if(!admin())return info;
     const canRecord=v.deliveries?.length&&!paid&&o.status!=='cancelled'&&!cancellationLocked(o);
     const record=canRecord?`<details><summary>${v.actualDuration?`実際の完成尺を記録し直す（今は${esc(minSec(v.actualDuration.seconds))}）`:'実際の完成尺を記録する'}</summary><form data-form="record-duration" data-video="${esc(v.id)}"><p class="hint">見積もりの完成尺より長い時は、超過分をサーバーが自動で計算し、お客様のLINEに金額を1文でお知らせします（同じか短い時は何も送りません）。入金を記録した後は変えられません。</p>${input('actualSeconds','実際の完成尺（秒）','number',v.actualDuration?.seconds??'',true,'min="1" step="1"')}${submit('実際の完成尺を記録する')}</form></details>`:'';
