@@ -1065,7 +1065,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 <script src="./ai-bridge-client.js"></script>
 <script src="./owner-video-performance.js?v=20261115-07"></script>
 <script src="./feedback-workflow.js?v=20261021-01"></script>
-<script src="./editing-intake-integration.js?v=20261116-03"></script>
+<script src="./editing-intake-integration.js?v=20261116-04"></script>
 <script>/* lz-string 1.5.0 (MIT) — CDN非依存でオフライン/圧縮チーム同期を保証するためインライン化 */
 var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",e={};function t(r,o){if(!e[r]){e[r]={};for(var n=0;n<r.length;n++)e[r][r.charAt(n)]=n}return e[r][o]}var i={compressToBase64:function(r){if(null==r)return"";var n=i._compress(r,6,function(r){return o.charAt(r)});switch(n.length%4){default:case 0:return n;case 1:return n+"===";case 2:return n+"==";case 3:return n+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(n){return t(o,r.charAt(n))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(r){return null==r?"":""==r?null:i._decompress(r.length,16384,function(o){return r.charCodeAt(o)-32})},compressToUint8Array:function(r){for(var o=i.compress(r),n=new Uint8Array(2*o.length),e=0,t=o.length;e<t;e++){var s=o.charCodeAt(e);n[2*e]=s>>>8,n[2*e+1]=s%256}return n},decompressFromUint8Array:function(o){if(null==o)return i.decompress(o);for(var n=new Array(o.length/2),e=0,t=n.length;e<t;e++)n[e]=256*o[2*e]+o[2*e+1];var s=[];return n.forEach(function(o){s.push(r(o))}),i.decompress(s.join(""))},compressToEncodedURIComponent:function(r){return null==r?"":i._compress(r,6,function(r){return n.charAt(r)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),i._decompress(r.length,32,function(o){return t(n,r.charAt(o))}))},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(r,o,n){if(null==r)return"";var e,t,i,s={},u={},a="",p="",c="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<r.length;i+=1)if(a=r.charAt(i),Object.prototype.hasOwnProperty.call(s,a)||(s[a]=f++,u[a]=!0),p=c+a,Object.prototype.hasOwnProperty.call(s,p))c=p;else{if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++),s[p]=f++,c=String(a)}if(""!==c){if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++)}for(t=2,e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;for(;;){if(m<<=1,v==o-1){d.push(n(m));break}v++}return d.join("")},decompress:function(r){return null==r?"":""==r?null:i._decompress(r.length,32768,function(o){return r.charCodeAt(o)})},_decompress:function(o,n,e){var t,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:e(0),position:n,index:1};for(t=0;t<3;t+=1)l[t]=t;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return i}();"function"==typeof define&&define.amd?define(function(){return LZString}):"undefined"!=typeof module&&null!=module?module.exports=LZString:"undefined"!=typeof angular&&null!=angular&&angular.module("LZString",[]).factory("LZString",function(){return LZString});
 </script>
@@ -8520,7 +8520,9 @@ function rVideoOperations(showBusinessSwitcher=false,biz=PBIZ){
     const filtered=_videoFiltered(biz,all),{byPhase,phaseCounts,perPhaseLimit,renderedCount,totalCount}=_videoPhaseBuckets(filtered,VIDEO_RENDER_LIMIT,VIDEO_STATUS);
     // 全体の先頭だけを切らず、各工程へ表示枠を均等に配る。
     // これにより見出しに案件数があるのに列内だけ「0件」になる矛盾を防ぐ。
-    board=`<div class="app-kanban">${VIDEO_PHASES.map((p,index)=>{const phaseJobs=byPhase.get(p.id)||[],shown=phaseJobs.slice(0,perPhaseLimit),remaining=phaseJobs.length-shown.length,count=phaseCounts.get(p.id)||0;return`<details class="app-kanban-column" data-phase="${p.id}" open><summary><span class="kanban-stage-marker" aria-hidden="true">${index+1}</span><span class="kanban-stage-heading"><b>${p.label}</b><small>${p.hint}</small></span><span class="kanban-stage-count"><b>${count}</b><small>件</small></span></summary><div class="app-kanban-list">${shown.map(_videoCard).join('')||'<div class="app-kanban-empty"><b>現在0件</b><span>この工程に案件はありません</span></div>'}${remaining>0?`<div class="app-kanban-remaining">ほか${remaining}グループ</div>`:''}</div></details>`}).join('')}</div>${totalCount>renderedCount?`<div style="display:flex;justify-content:center;margin:14px 0"><button class="btn btn-g" onclick="showMoreVideoCases()">さらに表示する（残り${totalCount-renderedCount}グループ）</button></div>`:''}`;
+    // 子案件がすべて完了した親案件は列に残らないことがあるため、ボードの上に別枠で必ず出す（表示のみ）。
+    const waitingParents=_waitingParentStrip(all,{biz,query:VIDEO_QUERY,owner:_isOwner()});
+    board=`${waitingParents}<div class="app-kanban">${VIDEO_PHASES.map((p,index)=>{const phaseJobs=byPhase.get(p.id)||[],shown=phaseJobs.slice(0,perPhaseLimit),remaining=phaseJobs.length-shown.length,count=phaseCounts.get(p.id)||0;return`<details class="app-kanban-column" data-phase="${p.id}" open><summary><span class="kanban-stage-marker" aria-hidden="true">${index+1}</span><span class="kanban-stage-heading"><b>${p.label}</b><small>${p.hint}</small></span><span class="kanban-stage-count"><b>${count}</b><small>件</small></span></summary><div class="app-kanban-list">${shown.map(_videoCard).join('')||'<div class="app-kanban-empty"><b>現在0件</b><span>この工程に案件はありません</span></div>'}${remaining>0?`<div class="app-kanban-remaining">ほか${remaining}グループ</div>`:''}</div></details>`}).join('')}</div>${totalCount>renderedCount?`<div style="display:flex;justify-content:center;margin:14px 0"><button class="btn btn-g" onclick="showMoreVideoCases()">さらに表示する（残り${totalCount-renderedCount}グループ）</button></div>`:''}`;
   }else if(VIDEO_TAB==='queue'){
     queue=[['期限超過',overdue,'var(--red)'],['停止中',blocked,'var(--amber)'],['確認・修正待ち',review,'var(--pl)'],['未割当',unassigned,'var(--red)']].map(([label,list,color])=>`<div class="card" style="border-left:3px solid ${color}"><div style="display:flex;justify-content:space-between"><b>${label}</b><span>${list.length}件</span></div>${_videoSortJobs(list).slice(0,20).map(_videoCard).join('')||'<div style="font-size:11px;color:var(--t3);padding-top:8px">該当なし</div>'}</div>`).join('');
   }
@@ -10033,6 +10035,46 @@ function _priorityRowsByWindow(rows,todayKey){
 }
 function _jobHasSubcaseStructure(job){
   return job?.subcaseMode==='with_subcases'||job?.hasSubcases===true||Array.isArray(job?.subtasks)&&job.subtasks.length>0;
+}
+// 工程ボードで、子案件がすべて完了した親案件（次の素材待ち）を見失わないための一覧。
+// 表示専用：S や案件データには一切書き込まない。
+// waiting  = 親自身は完了・キャンセルでなく、子案件が1本以上あり、未完了の子案件が0本の親。
+// completed = 検索語があり、それに合う「完了」の親（古い親を開き直すため）。検索語が無い時は出さない。
+function _waitingParentCases(source,{biz='edit',query=''}={}){
+  const q=String(query||'').trim().toLowerCase(),closed=new Set(['完了','キャンセル']);
+  const isOpenSub=sub=>sub&&!sub.done&&!closed.has(String(sub.status||''));
+  const matches=job=>!q||[job.title,job.clientDisplay,job.assignee,job.status,...(job.subtasks||[]).flatMap(s=>[s?.title,s?.assignee,s?.status])].join(' ').toLowerCase().includes(q);
+  const waiting=[],completed=[];
+  (source||[]).forEach(job=>{
+    if(!job||job.biz!==biz)return;
+    const subs=Array.isArray(job.subtasks)?job.subtasks.filter(Boolean):[];
+    if(!subs.length||!(_jobHasSubcaseStructure(job)||_jobHasSubcaseStructure(job._raw)))return;
+    if(subs.some(isOpenSub))return;
+    const status=String(job.status||'');
+    if(status==='キャンセル'||!matches(job))return;
+    const row={job,total:subs.length};
+    if(status==='完了'){if(q)completed.push(row);}
+    else waiting.push(row);
+  });
+  const order=(a,b)=>_videoUpdatedMillis(b.job.updatedAt)-_videoUpdatedMillis(a.job.updatedAt)||String(a.job.title||'').localeCompare(String(b.job.title||''),'ja');
+  return{waiting:waiting.sort(order),completed:completed.sort(order)};
+}
+function _waitingParentOpenButton(job,owner){
+  let action='',label='親案件を開く';
+  if(job._source==='portal')action=`openPortalJobModal(${JSON.stringify(job._portalUid||'')},${JSON.stringify(String(job.id||''))})`;
+  else if(job._source==='portal-parent'){
+    const last=(job.subtasks||[]).filter(s=>s&&s._portalChildJobId).slice(-1)[0];
+    if(!last)return'';
+    action=`openPortalJobModal(${JSON.stringify(last._portalChildPortalUid||job._portalUid||'')},${JSON.stringify(String(last._portalChildJobId))})`;label='最後の子案件を開く';
+  }else action=owner?`openJobModal(${JSON.stringify(String(job.id||''))})`:`openVideoLegacySafeModal(${JSON.stringify(String(job.id||''))})`;
+  return`<button type="button" class="btn btn-g btn-sm" onclick="${esc(action)}" aria-label="${esc(job.title||'親案件')}を開く">${label}</button>`;
+}
+function _waitingParentStrip(source,{biz='edit',query='',owner=false}={}){
+  const{waiting,completed}=_waitingParentCases(source,{biz,query});
+  if(!waiting.length&&!completed.length)return'';
+  const row=({job,total},doneParent)=>`<div class="video-waiting-parent-row" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 10px;padding:8px 10px;border:1px solid var(--app-border,#dce2e9);border-radius:8px;background:#fff"><div style="min-width:0;flex:1 1 220px"><b style="display:block;font-size:13px;overflow-wrap:anywhere">${esc(job.title||'親案件')}</b><span style="font-size:11px;color:var(--t2)">${esc(job.clientDisplay||'クライアント未設定')} ・ 子案件 ${total}本すべて完了${doneParent?' ・ 親案件も完了':''}</span></div>${_waitingParentOpenButton(job,owner)}</div>`;
+  const section=(label,list,doneParent)=>list.length?`<div style="display:grid;gap:6px"><div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:700"><span>${label}</span><span>${list.length}件</span></div>${list.map(item=>row(item,doneParent)).join('')}</div>`:'';
+  return`<section class="card video-waiting-parents" aria-label="次の素材待ちの親案件" style="display:grid;gap:10px;margin:0 0 12px;padding:12px;border-left:3px solid var(--amber)">${section('次の素材待ちの親案件（子案件はすべて完了）',waiting,false)}${section('完了済みの親案件',completed,true)}<div style="font-size:11px;color:var(--t3)">親案件を開くと、次の子案件を追加できます。</div></section>`;
 }
 function _caseScheduleRows(field,biz=PBIZ,source=_videoJobs()){
   const rows=[];
@@ -19569,7 +19611,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20261116-03';
+const APP_VERSION='20261116-04';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
