@@ -1065,7 +1065,7 @@ button.video-subcase-row{width:100%;font:inherit;text-align:left;cursor:pointer}
 <script src="./ai-bridge-client.js"></script>
 <script src="./owner-video-performance.js?v=20261115-07"></script>
 <script src="./feedback-workflow.js?v=20261021-01"></script>
-<script src="./editing-intake-integration.js?v=20261116-11"></script>
+<script src="./editing-intake-integration.js?v=20261120-01"></script>
 <script>/* lz-string 1.5.0 (MIT) — CDN非依存でオフライン/圧縮チーム同期を保証するためインライン化 */
 var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",e={};function t(r,o){if(!e[r]){e[r]={};for(var n=0;n<r.length;n++)e[r][r.charAt(n)]=n}return e[r][o]}var i={compressToBase64:function(r){if(null==r)return"";var n=i._compress(r,6,function(r){return o.charAt(r)});switch(n.length%4){default:case 0:return n;case 1:return n+"===";case 2:return n+"==";case 3:return n+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(n){return t(o,r.charAt(n))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(r){return null==r?"":""==r?null:i._decompress(r.length,16384,function(o){return r.charCodeAt(o)-32})},compressToUint8Array:function(r){for(var o=i.compress(r),n=new Uint8Array(2*o.length),e=0,t=o.length;e<t;e++){var s=o.charCodeAt(e);n[2*e]=s>>>8,n[2*e+1]=s%256}return n},decompressFromUint8Array:function(o){if(null==o)return i.decompress(o);for(var n=new Array(o.length/2),e=0,t=n.length;e<t;e++)n[e]=256*o[2*e]+o[2*e+1];var s=[];return n.forEach(function(o){s.push(r(o))}),i.decompress(s.join(""))},compressToEncodedURIComponent:function(r){return null==r?"":i._compress(r,6,function(r){return n.charAt(r)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),i._decompress(r.length,32,function(o){return t(n,r.charAt(o))}))},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(r,o,n){if(null==r)return"";var e,t,i,s={},u={},a="",p="",c="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<r.length;i+=1)if(a=r.charAt(i),Object.prototype.hasOwnProperty.call(s,a)||(s[a]=f++,u[a]=!0),p=c+a,Object.prototype.hasOwnProperty.call(s,p))c=p;else{if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++),s[p]=f++,c=String(a)}if(""!==c){if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++)}for(t=2,e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;for(;;){if(m<<=1,v==o-1){d.push(n(m));break}v++}return d.join("")},decompress:function(r){return null==r?"":""==r?null:i._decompress(r.length,32768,function(o){return r.charCodeAt(o)})},_decompress:function(o,n,e){var t,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:e(0),position:n,index:1};for(t=0;t<3;t+=1)l[t]=t;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return i}();"function"==typeof define&&define.amd?define(function(){return LZString}):"undefined"!=typeof module&&null!=module?module.exports=LZString:"undefined"!=typeof angular&&null!=angular&&angular.module("LZString",[]).factory("LZString",function(){return LZString});
 </script>
@@ -1374,6 +1374,9 @@ let _personalTaskBaseline=new Map();
 let _fbQuotaBlocked=false;
 let _fbQuotaNoticeShown=false;
 let _fbQuotaReadCircuitOpen=false;
+// 放置タブの接続休止中(quota停止とは別フラグ。再開は再読み込みだけ)
+let _fbIdlePaused=false;
+let _fbSaveRun=null;
 const _fbQuotaExternalStops=new Set();
 let _fbPersonalSaveInFlight=false;
 let _fbPersonalSaveQueued=false;
@@ -1436,7 +1439,7 @@ function _fbInstallQuotaWriteBlock(){
   const guard=(sample,name)=>{
     const proto=sample&&Object.getPrototypeOf(sample),original=proto&&proto[name];
     if(typeof original!=='function'||original.__editflowQuotaGuard)return;
-    const wrapped=function(...args){if(_fbQuotaReadCircuitOpen)return Promise.reject(_fbQuotaWriteError());return original.apply(this,args)};
+    const wrapped=function(...args){if(_fbQuotaReadCircuitOpen||_fbIdlePaused)return Promise.reject(_fbQuotaWriteError());return original.apply(this,args)};
     wrapped.__editflowQuotaGuard=true;wrapped.__editflowOriginal=original;proto[name]=wrapped;
   };
   try{
@@ -1471,11 +1474,11 @@ window.EditflowFirestoreQuota=Object.freeze({
   registerStop:stop=>{
     if(typeof stop!=='function')return()=>{};
     _fbQuotaExternalStops.add(stop);
-    if(_fbQuotaReadCircuitOpen){try{stop()}catch(_){}}
+    if(_fbQuotaReadCircuitOpen||_fbIdlePaused){try{stop()}catch(_){}}
     return()=>_fbQuotaExternalStops.delete(stop);
   },
-  isOpen:()=>_fbQuotaReadCircuitOpen,
-  writeAllowed:()=>!_fbQuotaReadCircuitOpen
+  isOpen:()=>_fbQuotaReadCircuitOpen||_fbIdlePaused,
+  writeAllowed:()=>!_fbQuotaReadCircuitOpen&&!_fbIdlePaused
 });
 function _fbHandleSnapshotError(e,scope,onNonQuota){
   if(_fbEnterQuotaReadCircuit(e,scope))return true;
@@ -1492,12 +1495,145 @@ function _fbFailClosed(e,scope){
 window.EditflowFirestorePressure?.install(firebase,_fbEnterQuotaReadCircuit);
 _fbCooldown?.listen(_fbEnterQuotaReadCircuit);
 
+// ── 放置タブの接続休止(2026-11-20) ──
+// 11/19〜20 に開きっぱなしのタブが夜通し読み取りを続け、無料枠(1日5万読み取り)を超えて全停止した。
+// 非表示が10分続く、または表示中でも30分操作が無いタブは、保留中の保存を流し切ってから
+// 購読・書き込み・ネットワークを止める。保存を確かめられない時は休止せず次の判定に回す(データを捨てない)。
+// 再開は必ず location.reload()。enableNetwork で戻すと古い S が他タブの最新データを上書きする(CLAUDE.md §11)。
+const FB_IDLE_HIDDEN_MS=10*60*1000,FB_IDLE_ACTIVE_MS=30*60*1000,FB_IDLE_FLUSH_MS=8000,FB_IDLE_TICK_MS=60*1000;
+let _fbIdleEntering=false,_fbIdleResuming=false,_fbIdleRetrySave=false;
+let _fbIdleLastActivity=Date.now();
+let _fbIdleHiddenSince=(typeof document!=='undefined'&&document.hidden)?Date.now():0;
+const _fbPendingWrites=new Set();
+let _fbWriteFailSeq=0;
+// Firestore の書き込み口(set/update/delete/add/commit/runTransaction)を追跡し、
+// 休止前に「書き込みが全部終わったか・失敗が無いか」を確かめられるようにする。
+function _fbTrackWrite(p){
+  const tracked=Promise.resolve(p);
+  _fbPendingWrites.add(tracked);
+  tracked.then(()=>{},()=>{_fbWriteFailSeq++;}).finally(()=>_fbPendingWrites.delete(tracked));
+  return p;
+}
+function _fbInstallWriteTracker(db){
+  const track=(sample,name)=>{
+    const proto=sample&&Object.getPrototypeOf(sample),original=proto&&proto[name];
+    if(typeof original!=='function'||original.__editflowWriteTrack)return;
+    const wrapped=function(...args){return _fbTrackWrite(original.apply(this,args))};
+    wrapped.__editflowWriteTrack=true;wrapped.__editflowOriginal=original;proto[name]=wrapped;
+  };
+  try{
+    const collection=db.collection('__editflow_write_track__'),doc=collection.doc('__probe__'),batch=db.batch();
+    ['set','update','delete'].forEach(name=>track(doc,name));
+    track(collection,'add');track(batch,'commit');track(db,'runTransaction');
+    return true;
+  }catch(error){console.warn('Firestore write tracker setup failed',error);return false;}
+}
+// 純関数: 休止に入る理由('hidden'|'inactive')、入らないなら ''。
+function _fbIdleReason(st){
+  if(!st||st.paused||st.entering||st.quotaOpen||!st.signedIn)return '';
+  if(st.hidden&&st.hiddenSince&&st.now-st.hiddenSince>=FB_IDLE_HIDDEN_MS)return 'hidden';
+  if(st.now-st.lastActivity>=FB_IDLE_ACTIVE_MS)return 'inactive';
+  return '';
+}
+function _fbIdleState(){
+  return{now:Date.now(),hidden:typeof document!=='undefined'&&!!document.hidden,hiddenSince:_fbIdleHiddenSince,
+    lastActivity:_fbIdleLastActivity,paused:_fbIdlePaused,entering:_fbIdleEntering,
+    quotaOpen:_fbQuotaReadCircuitOpen,signedIn:!!FB_USER};
+}
+function _fbSavesSettled(){
+  return !_fbSaveTimer&&!_fbPendingWrites.size&&!_fbPersonalSaveInFlight&&!_teamSaveInFlight&&
+    !_fbPersonalSaveQueued&&!_teamSaveQueued&&!_invoiceStatusSaving;
+}
+// 遅延保存のタイマーを即時に流し、後続の保存も含めて落ち着くまで待つ。成功だけ true。
+async function _fbFlushPendingSaves(limitMs){
+  const failBase=_fbWriteFailSeq,deadline=Date.now()+limitMs;
+  for(;;){
+    if(_fbQuotaReadCircuitOpen)return false;
+    if(_fbSaveTimer&&typeof _fbSaveRun==='function'){
+      const run=_fbSaveRun;clearTimeout(_fbSaveTimer);_fbSaveTimer=null;_fbSaveRun=null;
+      try{run();}catch(e){console.warn('idle pause flush failed',e);return false;}
+    }
+    if(_fbSavesSettled())return _fbWriteFailSeq===failBase;
+    if(Date.now()>=deadline)return false;
+    const waits=[..._fbPendingWrites].map(p=>p.catch(()=>{}));
+    waits.push(new Promise(r=>setTimeout(r,120)));
+    await Promise.race(waits);
+  }
+}
+async function _fbEnterIdlePause(reason){
+  if(_fbIdlePaused||_fbIdleEntering||_fbQuotaReadCircuitOpen||!FB_USER)return false;
+  _fbIdleEntering=true;
+  const startedAt=Date.now();
+  try{
+    // 前回の保存が失敗していた時は、捨てずにもう一度だけ保存を試してから確かめる。
+    if(_fbIdleRetrySave){_fbIdleRetrySave=false;fbSave();}
+    const flushed=await _fbFlushPendingSaves(FB_IDLE_FLUSH_MS);
+    if(!flushed){_fbIdleRetrySave=true;console.warn('idle pause postponed: pending saves were not confirmed');return false;}
+    _fbIdleEntering=false;
+    // 流している間に操作・表示復帰・quota停止があれば休止しない。
+    if(_fbIdleLastActivity>startedAt||!_fbIdleReason(_fbIdleState()))return false;
+    _fbIdlePaused=true;
+    _fbInstallQuotaWriteBlock();
+    try{_stopRoleSubscriptions();}catch(_){}
+    _fbQuotaExternalStops.forEach(stop=>{try{stop()}catch(_){}});
+    try{Promise.resolve(fbDb.disableNetwork()).catch(err=>console.warn('Firestore idle pause failed',err));}catch(err){console.warn('Firestore idle pause failed',err);}
+    _fbShowIdlePauseNotice();
+    console.info('Firestore connection paused while idle:',reason);
+    return true;
+  }finally{_fbIdleEntering=false;}
+}
+function _fbResumeFromIdle(){
+  if(!_fbIdlePaused||_fbIdleResuming)return;
+  _fbIdleResuming=true;
+  location.reload();
+}
+function _fbShowIdlePauseNotice(){
+  if(typeof document==='undefined'||document.getElementById('firestore-idle-pause'))return;
+  const el=document.createElement('div');el.id='firestore-idle-pause';el.setAttribute('role','status');
+  el.style.cssText='position:fixed;z-index:100050;left:50%;bottom:16px;transform:translateX(-50%);width:max-content;max-width:calc(100vw - 32px);display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;background:#fff8e1;border:2px solid #d88a00;border-radius:12px;padding:10px 14px;color:#4f3100;font-size:13px;line-height:1.5;box-shadow:0 8px 24px rgba(0,0,0,.22)';
+  el.innerHTML='<span>しばらく操作がなかったので接続を休止しています。押すと最新の状態で再開します</span><button type="button" class="btn btn-p btn-sm" style="flex:none" onclick="_fbResumeFromIdle()">再開する</button>';
+  document.body.appendChild(el);
+}
+function _fbIdleTick(){
+  const reason=_fbIdleReason(_fbIdleState());
+  if(reason)_fbEnterIdlePause(reason);
+}
+if(typeof window!=='undefined'&&typeof document!=='undefined'){
+  try{_fbInstallWriteTracker(fbDb);}catch(_){}
+  // 休止中の操作は画面に渡さず、再読み込みで最新の状態から再開する(quota停止中はその画面に任せる)。
+  const onActivity=event=>{
+    if(_fbIdlePaused){
+      if(_fbQuotaReadCircuitOpen||document.hidden||event.type==='wheel')return;
+      if(event.cancelable)event.preventDefault();
+      event.stopImmediatePropagation();
+      _fbResumeFromIdle();
+      return;
+    }
+    _fbIdleLastActivity=Date.now();
+  };
+  window.addEventListener('pointerdown',onActivity,true);
+  window.addEventListener('keydown',onActivity,true);
+  window.addEventListener('wheel',onActivity,{capture:true,passive:true});
+  window.addEventListener('touchstart',onActivity,{capture:true,passive:true});
+  let hiddenTimer=null;
+  document.addEventListener('visibilitychange',()=>{
+    clearTimeout(hiddenTimer);hiddenTimer=null;
+    if(document.hidden){
+      _fbIdleHiddenSince=Date.now();
+      hiddenTimer=setTimeout(_fbIdleTick,FB_IDLE_HIDDEN_MS+1000);
+    }else _fbIdleHiddenSince=0;
+  });
+  setInterval(_fbIdleTick,FB_IDLE_TICK_MS);
+}
+
 function fbSave(){
   if(!FB_USER||_fbQuotaBlocked)return;
   S._uid=FB_USER.uid;
   _stampTeamChanges();
   clearTimeout(_fbSaveTimer);
-  _fbSaveTimer=setTimeout(()=>{
+  // 休止前に即時実行できるよう、タイマー本体を _fbSaveRun に残す。
+  _fbSaveTimer=setTimeout(_fbSaveRun=()=>{
+    _fbSaveTimer=null;_fbSaveRun=null;
     // 共有台帳は個人データと別に差分判定して保存する。
     _teamSave();
     if(_fbQuotaBlocked)return;
@@ -3330,6 +3466,8 @@ function migrate(d){
 //   共有端末で編集者・未承認者がindex.htmlを開いても、過去の案件・金額・顧客・他スタッフ情報が残らない。
 //   salesLeadsは従来どおりshard、他キーはshared/mcappから認証後に再読み込みする。
 function _lsSaveState(obj){
+  // 休止中のタブは古い S を端末へ書き戻さない(再読み込み時の beforeunload を含む)。
+  if(_fbIdlePaused)return false;
   const strip=(o,keys)=>{const c=_lsSanitizeState(o);keys.forEach(k=>{delete c[k];});return c;};
   try{
     _lsPutState(strip(obj,LS_OMIT_KEYS));
@@ -3363,6 +3501,7 @@ function load(){try{const d=Object.assign(defState(),_lsReadState()||{});return 
 // localStorageへの書き込みをRAFでバッチ化（同フレーム内の複数save()を1回に集約）
 let _lsPending=false;
 function save(){
+  if(_fbIdlePaused)return;
   S._savedAt=Date.now();
   fbSave();
   if(!_lsPending){
@@ -19630,7 +19769,7 @@ slMigrateFoodToShift();
 slMigrateAssignee();
 slMigrateDirectivesToWomen();
 // ===VERSION CHECK & AUTO-UPDATE===
-const APP_VERSION='20261116-11';
+const APP_VERSION='20261120-01';
 
 render();
 try{const _h=location.hash||'';const _m=_h.match(/^#igkey=(.+)$/);if(_m){try{localStorage.setItem('mc_ig_viewkey',decodeURIComponent(_m[1]));}catch(_){}history.replaceState(null,'',location.pathname+location.search);}}catch(_){}  // IGアカウント閲覧キーの受け渡し(会長のみ・1回開けば保存)
