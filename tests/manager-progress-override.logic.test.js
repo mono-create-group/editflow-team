@@ -15,6 +15,9 @@ test('case modal offers every official workflow status without unlocking the raw
   assert.match(control, /変更理由\$\{_portalStatusReasonRequired\(\)\?'（必須）':'（省略可）'\}/);
   assert.match(control, /setPortalWorkflowStatus/);
   assert.match(control, /status==='完了'&&editorCompletion\?'disabled':''/);
+  // 派遣案件の完了ロックはオーナー本人には掛けない（ディレクターのみロック）。
+  assert.match(control, /editorCompletion=_portalCompletionLockedForMe\(job\)/);
+  assert.match(index, /function _portalCompletionLockedForMe\(job\)\{return _editorOwnsPortalCompletion\(job\)&&!\(_isActualOwner\(\)&&/);
   assert.match(modal, /<input id="vp-status"[^>]*readonly aria-readonly="true">/);
 });
 
@@ -27,7 +30,7 @@ test('manual progress save keeps role, final-state, completion, and audit safegu
     "if(!reason&&_portalStatusReasonRequired())return toast('変更理由を入力してください'",
     'const auditReason=_portalStatusAuditReason(reason)',
     "if(evidenceRequired&&!evidenceUrl)return toast('提出・納品リンクを http:// または https:// から入力してください'",
-    "status==='完了'&&_editorOwnsPortalCompletion(j)",
+    "status==='完了'&&_portalCompletionLockedForMe(j)",
     "status==='完了'&&!clientApprovalConfirmed",
     '_validPortalCompletionDate(completionDate)',
     "type:'manager_status_changed'",
@@ -71,7 +74,7 @@ test('Firestore accepts only audited manager overrides and preserves completion 
   assert.match(override, /event\.get\('evidenceUrl', ''\) == request\.resource\.data\.get\('evidenceUrl', ''\)/);
   assert.match(override, /event\.get\('completedDeliveryDate', ''\) == request\.resource\.data\.get\('completedDeliveryDate', ''\)/);
   assert.match(override, /event\.get\('clientApprovalConfirmed', false\) == true/);
-  assert.match(override, /managerMayCompleteJob\(\)/);
+  assert.match(override, /\(owner\(\) \|\| managerMayCompleteJob\(\)\)/);
   assert.match(rules, /return validManagerStatusOverride\(\)\s*\|\| validCurrentManagerReviewTransition\(\)/);
   assert.match(rules, /function preservesFinalJob\(\)/);
 });

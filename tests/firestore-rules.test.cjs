@@ -288,6 +288,10 @@ async function expectAllowed(label, promise) {
         title: '手動進捗変更-派遣完了', businessType: 'dispatch', status: '先方確認中',
         evidenceUrl: 'https://example.com/dispatch-delivery', blocker: '', workflow: { round: 1, stage: 'client_review' },
       }));
+      await setDoc(doc(db, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-dispatch-owner-complete'), externalWorkflowJob({
+        title: '手動進捗変更-派遣完了(オーナー)', businessType: 'dispatch', status: '先方確認中',
+        evidenceUrl: 'https://example.com/dispatch-delivery', blocker: '', workflow: { round: 1, stage: 'client_review' },
+      }));
       await setDoc(doc(db, 'editor_portals', 'direct1', 'editor_jobs', 'workflow-live-legacy-complete'), externalWorkflowJob({
         submittedByUid: 'direct1', editorUid: 'direct1', editorEmail: 'direct1@example.com', editorName: 'Direct 1',
         directorUid: '', title: '台本101', caseName: '8月分', parentCaseId: 'legacy:parent-august',
@@ -649,6 +653,21 @@ async function expectAllowed(label, promise) {
     await expectDenied('manager cannot take the assigned editors final-delivery action', updateDoc(
       doc(dir1, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-dispatch-complete'),
       managerOverrideUpdate(dispatchCompletion)
+    ));
+    const ownerDispatchCompletion = managerOverrideEvent({
+      byUid: 'owner', byEmail: 'mono.create.group@gmail.com', byRole: 'owner',
+      fromStatus: '先方確認中', fromStage: 'client_review', status: '完了',
+      toStage: 'delivered', completedDeliveryDate: completedDate,
+      evidenceUrl: 'https://example.com/dispatch-delivery', clientApprovalConfirmed: true,
+      reason: '編集者が記録できないためオーナーが完了へ変更',
+    });
+    const ownerDispatchRef = doc(owner, 'editor_portals', 'external1', 'editor_jobs', 'workflow-manual-dispatch-owner-complete');
+    await expectDenied('owner dispatch completion still requires explicit client approval confirmation', updateDoc(
+      ownerDispatchRef,
+      managerOverrideUpdate({ ...ownerDispatchCompletion, clientApprovalConfirmed: false })
+    ));
+    await expectAllowed('owner can complete a dispatch job through the audited manual override', updateDoc(
+      ownerDispatchRef, managerOverrideUpdate(ownerDispatchCompletion)
     ));
 
     await expectAllowed('editor changes only own Chatwork display name', updateDoc(doc(direct1, 'access', 'direct1'), { name: 'Direct Chatwork', updatedAt: 2 }));

@@ -7,7 +7,7 @@ const statuses = ['アサイン済み','進行中','編集者進行中','初稿�
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function context(extra = {}) {
   const c = vm.createContext({esc,console,Date,Set,VIDEO_WORKFLOW_STATUSES:statuses,SCOLBG:{},S:{jobs:[]},PORTAL_JOBS:[],JOB_MODAL_SUB_RECORDS:[],_isActualOwner:()=>true,_isOwner:()=>true,_rolePreviewActive:()=>false,_videoCanEdit:()=>true,today:()=> '2026-09-23',_myEmail:()=> 'owner@example.test',_editorOwnsPortalCompletion:()=>false,videoStatusLabel:s=>s,jobBiz:()=> 'edit',bizCfgOf:()=>({statuses}),bizStatusLabel:(_b,s)=>s,_jobSubDefaultStatus:()=> 'アサイン済み',...extra});
-  ['_legacyPortalStatusLocked','_ownerCanOverridePortalStatus','_ownerCanEditProgress','_ownerProgressAction','_ownerProgressButton','_ownerStatusBadge','_ownerPortalInlineHtml','_legacySubcasePortalDetailStatus','toggleOwnerInlineProgress','saveOwnerInlineProgress'].forEach(n=>vm.runInContext(extract(n),c));
+  ['_portalCompletionLockedForMe','_legacyPortalStatusLocked','_ownerCanOverridePortalStatus','_ownerCanEditProgress','_ownerProgressAction','_ownerProgressButton','_ownerStatusBadge','_ownerPortalInlineHtml','_legacySubcasePortalDetailStatus','toggleOwnerInlineProgress','saveOwnerInlineProgress'].forEach(n=>vm.runInContext(extract(n),c));
   return c;
 }
 function nodes(html) {const all=[]; const visit=n=>{if(n.tagName)all.push(n);(n.childNodes||[]).forEach(visit)};visit(parse5.parseFragment(html));return all;}
@@ -55,12 +55,12 @@ test('inline owner save sends completion confirmation and date through the audit
   passed=null;c._rolePreviewActive=()=>true;c.toast=()=>{};await c.saveOwnerInlineProgress('k');assert.equal(passed,null);
 });
 
-function writerFixture({fail=false,owner=true}={}){
-  const job={_portalUid:'u',id:'p',status:'先方確認中',workflow:{round:1,stage:'client_review'},progressEvents:[],history:[]};
+function writerFixture({fail=false,owner=true,dispatch=false}={}){
+  const job={_portalUid:'u',id:'p',status:'先方確認中',workflow:{round:1,stage:'client_review'},progressEvents:[],history:[],...(dispatch?{businessType:'dispatch'}:{})};
   const writes=[],persisted={},toasts=[];
   const ref={collection(){return this},doc(){return this}};
-  const c=context({PORTAL_JOBS:[job],FB_USER:{uid:'u-owner',emailVerified:true},_isActualOwner:()=>owner,_canManagePortalWorkflow:()=>owner,_videoSafeUrl:s=>s,_videoWorkflow:j=>j.workflow,document:{getElementById:()=>null},toast:(...v)=>toasts.push(v),fbDb:{collection:()=>ref,batch:()=>({set:(_ref,data)=>writes.push(data),commit:async()=>{if(fail)throw {code:'permission-denied'};Object.assign(persisted,JSON.parse(JSON.stringify(writes[0])))}})},firebase:{firestore:{FieldValue:{serverTimestamp:()=>123}}},_applyPortalToLegacy:()=>true,save:()=>{},closeModal:()=>{},_refreshJobModalPortalSubProgress:()=>true});
-  ['_videoWorkflowStageForStatus','_videoManualProgressRound','_portalStatusReasonRequired','_portalStatusAuditReason','_portalStatusEvidenceRequired','_portalWorkflowSaveErrorMessage','_validPortalCompletionDate','setPortalWorkflowStatus'].forEach(n=>vm.runInContext(extract(n),c));
+  const c=context({PORTAL_JOBS:[job],_editorOwnsPortalCompletion:j=>j.businessType==='dispatch',FB_USER:{uid:'u-owner',emailVerified:true},_isActualOwner:()=>owner,_canManagePortalWorkflow:()=>owner,_videoSafeUrl:s=>s,_videoWorkflow:j=>j.workflow,document:{getElementById:()=>null},toast:(...v)=>toasts.push(v),fbDb:{collection:()=>ref,batch:()=>({set:(_ref,data)=>writes.push(data),commit:async()=>{if(fail)throw {code:'permission-denied'};Object.assign(persisted,JSON.parse(JSON.stringify(writes[0])))}})},firebase:{firestore:{FieldValue:{serverTimestamp:()=>123}}},_applyPortalToLegacy:()=>true,save:()=>{},closeModal:()=>{},_refreshJobModalPortalSubProgress:()=>true});
+  ['_portalCompletionLockedForMe','_videoWorkflowStageForStatus','_videoManualProgressRound','_portalStatusReasonRequired','_portalStatusAuditReason','_portalStatusEvidenceRequired','_portalWorkflowSaveErrorMessage','_validPortalCompletionDate','setPortalWorkflowStatus'].forEach(n=>vm.runInContext(extract(n),c));
   vm.runInContext('var PORTAL_WORKFLOW_ACTION_PENDING=new Set()',c);
   return{c,job,writes,persisted,toasts};
 }
@@ -70,6 +70,29 @@ test('completion persists status/date/audit and reconstructs correctly after rel
   const reopened=JSON.parse(JSON.stringify(f.persisted));
   assert.equal(reopened.status,'完了');assert.equal(reopened.completedDeliveryDate,'2026-09-18');assert.equal(reopened.workflow.stage,'delivered');
   assert.equal(reopened.progressEvents[0].fromStatus,'先方確認中');assert.equal(reopened.progressEvents[0].clientApprovalConfirmed,true);
+});
+test('owner can complete a dispatch job from the status selector; a director still cannot',async()=>{
+  // セレクタ: オーナーは「完了」が選べる。ロール確認中・オーナー以外は無効のまま。
+  const portal={_portalUid:'u',id:'p',status:'先方確認中',businessType:'dispatch'};
+  const completionOption=html=>nodes(html).find(n=>n.tagName==='option'&&attr(n,'value')==='完了');
+  const inline=extra=>context({PORTAL_JOBS:[portal],_editorOwnsPortalCompletion:j=>j.businessType==='dispatch',...extra})._legacySubcasePortalDetailStatus({},{portalUid:'u',portalJobId:'p'},true).statusControl;
+  assert.equal(attr(completionOption(inline()),'disabled'),undefined);
+  // ロール確認中・オーナー以外では完了ロックが掛かる（ロック判定を直接確認）。
+  const lock=extra=>context({_editorOwnsPortalCompletion:j=>j.businessType==='dispatch',...extra})._portalCompletionLockedForMe(portal);
+  assert.equal(lock(),false);
+  assert.equal(lock({_rolePreviewActive:()=>true}),true);
+  assert.equal(lock({_isActualOwner:()=>false}),true);
+  assert.equal(context({_editorOwnsPortalCompletion:()=>false,_isActualOwner:()=>false})._portalCompletionLockedForMe({}),false);
+  // 保存: オーナーは監査イベントつきで完了になる。ディレクターは書き込まれず未変更。
+  const owner=writerFixture({dispatch:true});
+  await owner.c.setPortalWorkflowStatus('u','p',{status:'完了',completionDate:'2026-09-18',clientApprovalConfirmed:true,keepOpen:true});
+  assert.equal(owner.writes.length,2);assert.equal(owner.job.status,'完了');
+  assert.equal(owner.persisted.completedDeliveryDate,'2026-09-18');assert.equal(owner.persisted.progressEvents[0].type,'manager_status_changed');
+  const director=writerFixture({dispatch:true,owner:false});
+  director.c._canManagePortalWorkflow=()=>true;
+  await director.c.setPortalWorkflowStatus('u','p',{status:'完了',reason:'完了へ変更',evidenceUrl:'https://example.com/d',completionDate:'2026-09-18',clientApprovalConfirmed:true,keepOpen:true});
+  assert.equal(director.writes.length,0);assert.equal(director.job.status,'先方確認中');
+  assert.match(director.toasts.at(-1)[0],/担当編集者が本人画面で記録/);
 });
 test('missing completion confirmation/date or failed remote write never pretends success',async()=>{
   for(const input of [{status:'完了',completionDate:'2026-09-18'},{status:'完了',clientApprovalConfirmed:true,completionDate:'2026-09-24'}]){const f=writerFixture();await f.c.setPortalWorkflowStatus('u','p',input);assert.equal(f.writes.length,0);assert.equal(f.job.status,'先方確認中');}
