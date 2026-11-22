@@ -1077,15 +1077,15 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
   }
   function bulkPanel(o){
     if(!admin()||cancellationLocked(o)||o.status==='completed')return '';
-    const targets=bulkMaterialsTargets(o),plan=bulkStartPlan(o),dueTargets=o.videos.filter(v=>canSetDueDate(o,v));
+    const targets=bulkMaterialsTargets(o),plan=bulkStartPlan(o),dueTargets=o.videos.filter(v=>canSetDueDate(o,v)),dueDates=[...new Set(dueTargets.map(v=>v.dueDate||''))],sharedDue=dueDates.length===1?dueDates[0]:'';
     if(!targets.length&&!plan.ready.length&&!plan.skipped.length&&!dueTargets.length)return '';
-    const dues=dueTargets.length?`<form data-form="bulk-due-date"><h3>まとめて納品日を入れる</h3><p class="hint">LINEで合意した納期を、チェックした動画にまとめて入れます（納品日が未定の動画に、最初からチェックを入れています）。</p><div class="bulk-list">${dueTargets.map(v=>`<label class="check"><input type="checkbox" name="bulkDueVideo" value="${esc(v.id)}"${v.dueDate?'':' checked'}><span>${esc(bulkVideoLabel(o,v))}（${v.dueDate?`今は${esc(v.dueDate)}`:'未定'}）</span></label>`).join('')}</div><div class="grid">${input('dueDate','LINEで合意した納品日','date','')}${input('note','メモ（例：11/20 LINEで合意）','text','',false,'maxlength="500"')}</div>${submit('チェックした動画の納品日を記録する')}</form>`:'';
+    const dues=dueTargets.length?`<form data-form="bulk-due-date"><h3>まとめて納品日を入れる</h3><p class="hint">LINEで合意した納期を、チェックした動画にまとめて入れます（納品日が未定の動画に、最初からチェックを入れています）。</p><div class="bulk-list">${dueTargets.map(v=>`<label class="check"><input type="checkbox" name="bulkDueVideo" value="${esc(v.id)}"${v.dueDate?'':' checked'}><span>${esc(bulkVideoLabel(o,v))}（${v.dueDate?`今は${esc(v.dueDate)}`:'未定'}）</span></label>`).join('')}</div><div class="grid">${input('dueDate','LINEで合意した納品日','date',sharedDue)}${input('note','メモ（例：11/20 LINEで合意）','text','',false,'maxlength="500"')}</div>${submit('チェックした動画の納品日を記録する')}</form>`:'';
     const materials=targets.length?`<form data-form="bulk-materials"><h3>まとめて素材を確認済みにする</h3><p class="hint">チェックした動画を、下の確認記録で素材確認済みにします（お客様が提出完了を報告した動画に、最初からチェックを入れています）。</p><div class="bulk-list">${targets.map(v=>`<label class="check"><input type="checkbox" name="bulkVideo" value="${esc(v.id)}"${reported(v.materials)?' checked':''}><span>${esc(bulkVideoLabel(o,v))}${reported(v.materials)?'（提出完了の報告あり）':'（報告なし）'}</span></label>`).join('')}</div><label class="field full"><span>必要素材の確認記録（チェックした動画すべてに入ります・管理者のみ）</span><textarea name="note" required maxlength="10000" placeholder="例：13本ぶんの素材がフォルダにそろっていることを確認"></textarea></label>${submit('チェックした動画の素材を確認済みにする')}</form>`:'';
     const skipped=plan.skipped.length?`<ul class="hint">${plan.skipped.map(({v,reason})=>`<li>${esc(bulkVideoLabel(o,v))}：${esc(reason)}</li>`).join('')}</ul>`:'';
     const start=plan.ready.length||plan.skipped.length?`<form data-form="bulk-start"><h3>まとめて編集を開始する</h3><p class="hint">${plan.ready.length?`開始できる${plan.ready.length}本の編集をまとめて開始します。`:'今まとめて開始できる動画はありません。'}${plan.skipped.length?`次の${plan.skipped.length}本は条件がそろっていないため飛ばします。`:''}</p>${skipped}${plan.ready.length?submit(`${plan.ready.length}本の編集をまとめて開始する`):''}</form>`:'';
     return `<section class="panel bulk-panel" id="bulk-video-tools">${[dues,materials,start].filter(Boolean).join('<hr class="separator">')}</section>`;
   }
-  async function runBulk(type,videos,payloadOf,label){
+  async function runBulk(type,videos,payloadOf,label,detail=''){
     let order=state.order,done=0;
     for(const v of videos){
       try{
@@ -1099,7 +1099,7 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
         return {done,failed:v.id};
       }
     }
-    await showSaved({order,replayed:false},`${label}：${done}本を保存しました。`);
+    await showSaved({order,replayed:false},`${label}：${done}本を保存しました。${detail}`);
     return {done,failed:null};
   }
   function renderDetail() {
@@ -1269,7 +1269,7 @@ globalThis.MonoEditingIntake = {mount: function mount(mountOptions={}) {
       if(!dueDate)throw Error('LINEで合意した納品日を入れてください。');
       const targets=o.videos.filter(x=>ids.includes(x.id)&&canSetDueDate(o,x));
       if(targets.length!==ids.length)throw Error('対象の動画が変わっています。画面を最新にしてから、もう一度選んでください。');
-      await runBulk('set_video_due_date',targets,x=>({videoId:x.id,dueDate,...(note?{note}:{})}),'まとめて納品日');
+      await runBulk('set_video_due_date',targets,x=>({videoId:x.id,dueDate,...(note?{note}:{})}),'まとめて納品日',`納品日は${dueDate}です。`);
     }
     else if(type==='bulk-start'){
       const {ready}=bulkStartPlan(o);
