@@ -1564,7 +1564,9 @@ service cloud.firestore {
             && request.resource.data.get('evidenceUrl', '').matches('^https?://.+')
             && event.get('evidenceUrl', '') == request.resource.data.get('evidenceUrl', '')))
         && (status != '完了'
-          || (managerMayCompleteJob()
+          // 派遣・直接契約案件の完了は担当編集者のもの。例外はオーナー本人の
+          // 監査つき手動変更だけで、ディレクターは従来どおり完了にできない。
+          || ((owner() || managerMayCompleteJob())
             && request.resource.data.get('completedDeliveryDate', '') is string
             && request.resource.data.get('completedDeliveryDate', '') != ''
             && event.get('completedDeliveryDate', '') == request.resource.data.get('completedDeliveryDate', '')
@@ -1586,7 +1588,9 @@ service cloud.firestore {
 
     // Completion of a dispatch/direct-client job belongs to its assigned
     // editor and is protected by the paired delivery-completion event.  The
-    // manager completion path remains for edit-agency jobs only.
+    // guided manager completion path remains for edit-agency jobs only; the
+    // owner alone may also complete a dispatch job through the audited manual
+    // override (validManagerStatusOverride).
     function managerMayCompleteJob() {
       return resource.data.get('businessType', '') != 'dispatch'
         && resource.data.get('source', '') != 'direct_client';
